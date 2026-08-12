@@ -321,7 +321,7 @@ export function TechAdminDashboard() {
                 </div>
 
                 <Button size="sm" onClick={() => setIsEnableModuleOpen(true)} className={`h-9 font-medium ${isDark ? "bg-cyan-500 hover:bg-cyan-400 text-slate-950 border border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.4)]" : "bg-blue-500 hover:bg-blue-600 text-white shadow-md shadow-blue-500/20"}`}>
-                  <Plus className="w-4 h-4 mr-2" />Enable New Module
+                  <Plus className="w-4 h-4 mr-2" />Create Module
                 </Button>
               </div>
             </CardHeader>

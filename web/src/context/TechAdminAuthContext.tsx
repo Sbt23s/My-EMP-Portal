@@ -233,6 +233,53 @@ function mergeModules(saved: any[]): CompanyModuleItem[] {
     }
     return { ...tpl, enabled: !!row.enabled, visibleRoles };
   });
+
+  /*
+   * Modules created here rather than shipped in the template.
+   *
+   * The loop above walks the template, so a saved row whose code the template
+   * has never heard of was silently dropped — a module someone created would
+   * save to the server and then vanish from the list, which reads as the
+   * create button being broken.
+   *
+   * Their name and blurb ride in featureFlags, the free-text column the row
+   * already has. That keeps this to no schema change: a custom module is an
+   * ordinary company_modules row that happens to carry its own label.
+   */
+  const templateCodes = new Set(defaultModulesTemplate.map((t) => t.code));
+  const custom: CompanyModuleItem[] = saved
+    .filter((s) => s?.moduleCode && !templateCodes.has(s.moduleCode))
+    .map((s, i) => {
+      let name = s.moduleCode;
+      let description = "Custom module";
+      let visibleRoles: string[] = [...ALL_ROLES];
+      try {
+        if (s.featureFlags) {
+          const parsed = JSON.parse(s.featureFlags);
+          if (typeof parsed?.name === "string" && parsed.name.trim()) name = parsed.name.trim();
+          if (typeof parsed?.description === "string" && parsed.description.trim()) {
+            description = parsed.description.trim();
+          }
+          if (Array.isArray(parsed?.visibleRoles)) visibleRoles = parsed.visibleRoles;
+        }
+      } catch {
+        // Unreadable flags fall back to the code as its own label.
+      }
+      return {
+        // Ids here only have to be unique within the list; the server keys on
+        // the code. Starting past the template avoids colliding with it.
+        id: 1000 + i,
+        code: s.moduleCode,
+        name,
+        description,
+        category: "Custom",
+        enabled: !!s.enabled,
+        visibleRoles,
+        custom: true
+      } as CompanyModuleItem;
+    });
+
+  return [...fromTemplate, ...custom];
 }
 
 function readStoredAdmin(): TechAdmin | null {

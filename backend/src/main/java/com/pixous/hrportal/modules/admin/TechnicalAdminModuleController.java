@@ -54,10 +54,20 @@ public class TechnicalAdminModuleController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<?>> configureModule(@PathVariable Long companyId, @RequestBody CompanyModule payload) {
+        // A bare RuntimeException surfaces as a 500 with no usable message, so
+        // "company does not exist" and "the save failed" looked identical from
+        // the browser — both just "Failed to toggle module".
         Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new RuntimeException("Company not found"));
-                
-        CompanyModule module = moduleRepository.findByCompanyIdAndModuleCode(companyId, payload.getModuleCode())
+                .orElseThrow(() -> com.pixous.hrportal.common.ApiException.notFound("Company"));
+
+        // Without this the row saves with a null module_code and the database
+        // rejects it, which again reaches the browser as an unexplained 500.
+        String code = payload.getModuleCode() == null ? "" : payload.getModuleCode().trim();
+        if (code.isEmpty()) {
+            throw com.pixous.hrportal.common.ApiException.business("Module code is required");
+        }
+
+        CompanyModule module = moduleRepository.findByCompanyIdAndModuleCode(companyId, code)
                 .orElseGet(() -> {
                     CompanyModule newModule = new CompanyModule();
                     newModule.setCompany(company);

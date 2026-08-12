@@ -1236,7 +1236,7 @@ function ExecutiveDashboardView({
   const d = exec.data;
   const [payslipOpen, setPayslipOpen] = useState(false);
   const canApprovePayslips = !!user?.permissions?.includes("PAYROLL_RUN");
-  const { hasModule, user } = useAuth();
+  const { hasModule } = useAuth();
 
   /**
    * Whether to offer the Overall / Digital / Infra switch.

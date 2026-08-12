@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 export function TechAdminDashboard() {
-  const { theme, currentCompany, companies, companyModules, toggleCompanyModule, updateCompany } = useTechAdminAuth();
+  const { theme, currentCompany, companies, companyModules, toggleCompanyModule, updateCompany, createCustomModule } = useTechAdminAuth();
   const isDark = theme === 'dark';
   const navigate = useNavigate();
 

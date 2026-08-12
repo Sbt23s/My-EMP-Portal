@@ -27,7 +27,10 @@ export function TechAdminDashboard() {
   // Modals
   const [isEnableModuleOpen, setIsEnableModuleOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
-  const [newModuleCode, setNewModuleCode] = useState("Payroll");
+  const [newModuleName, setNewModuleName] = useState("");
+  const [newModuleDesc, setNewModuleDesc] = useState("");
+  const [moduleBusy, setModuleBusy] = useState(false);
+  const [moduleError, setModuleError] = useState<string | null>(null);
 
   // Real-time user count from backend
   const [realUserCount, setRealUserCount] = useState<number>(0);

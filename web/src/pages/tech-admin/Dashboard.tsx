@@ -464,19 +464,39 @@ export function TechAdminDashboard() {
 
             <form onSubmit={handleEnableNewModule} className="space-y-4 pt-4">
               <div>
-                <Label className={isDark ? "text-slate-300" : "text-purple-300"}>Select Module to Enable</Label>
-                <select
-                  value={newModuleCode}
-                  onChange={(e) => setNewModuleCode(e.target.value)}
-                  className={`w-full mt-1.5 p-2.5 rounded-lg border text-sm ${isDark ? "bg-slate-800 border-slate-700 text-white" : "bg-purple-950/50 border-purple-500/30 text-purple-100"}`}
-                >
-                  <option value="Payroll">Payroll (Salary processing and tax calculations)</option>
-                  <option value="Leave Management">Leave Management (Leave requests and holiday calendar)</option>
-                  <option value="Assets Management">Assets Management (Hardware & software tracking)</option>
-                  <option value="Helpdesk">Helpdesk (Support ticket resolution)</option>
-                  <option value="Reports">Reports & Analytics (Custom reports and export)</option>
-                </select>
+                <Label className={isDark ? "text-slate-300" : "text-purple-300"}>Module name</Label>
+                <input
+                  value={newModuleName}
+                  onChange={(e) => setNewModuleName(e.target.value)}
+                  disabled={moduleBusy}
+                  maxLength={60}
+                  autoFocus
+                  placeholder="Site Visits"
+                  className={`w-full mt-1.5 p-2.5 rounded-lg border text-sm ${isDark ? "bg-slate-800 border-slate-700 text-white placeholder:text-slate-500" : "bg-purple-950/50 border-purple-500/30 text-purple-100 placeholder:text-purple-400/60"}`}
+                />
               </div>
+
+              <div>
+                <Label className={isDark ? "text-slate-300" : "text-purple-300"}>What it is for</Label>
+                <input
+                  value={newModuleDesc}
+                  onChange={(e) => setNewModuleDesc(e.target.value)}
+                  disabled={moduleBusy}
+                  maxLength={140}
+                  placeholder="Logging visits to client sites"
+                  className={`w-full mt-1.5 p-2.5 rounded-lg border text-sm ${isDark ? "bg-slate-800 border-slate-700 text-white placeholder:text-slate-500" : "bg-purple-950/50 border-purple-500/30 text-purple-100 placeholder:text-purple-400/60"}`}
+                />
+              </div>
+
+              {/* Created switched off — say so, rather than let someone go
+                  looking for it in the navigation and find nothing. */}
+              <p className={`text-xs ${isDark ? "text-slate-400" : "text-purple-300/80"}`}>
+                Added to this company switched off. Turn it on in the table below when it is ready.
+              </p>
+
+              {moduleError && (
+                <p className="text-xs font-medium text-rose-400">{moduleError}</p>
+              )}
 
               <div className={`pt-4 flex justify-end gap-3 border-t ${isDark ? "border-cyan-500/20" : "border-purple-500/20"}`}>
                 <Button type="button" variant="outline" onClick={() => setIsEnableModuleOpen(false)} className={`${isDark ? "text-slate-300 border-cyan-500/30 hover:bg-cyan-900/30" : "text-purple-300 border-purple-500/30 hover:bg-purple-900/30"}`}>

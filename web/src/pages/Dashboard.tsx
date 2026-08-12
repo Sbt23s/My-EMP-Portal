@@ -1236,7 +1236,18 @@ function ExecutiveDashboardView({
   const d = exec.data;
   const [payslipOpen, setPayslipOpen] = useState(false);
   const canApprovePayslips = !!user?.permissions?.includes("PAYROLL_RUN");
-  const { hasModule } = useAuth();
+  const { hasModule, user } = useAuth();
+
+  /**
+   * Whether to offer the Overall / Digital / Infra switch.
+   *
+   * Those are Pixous's own two divisions. Every other tenant runs one line of
+   * business, so the switch offered them a choice between "everything" and two
+   * empty sets — three buttons where two of them could only ever blank the page.
+   */
+  const showIndustrySwitch = (user?.companyName ?? "")
+    .toLowerCase()
+    .includes("pixous");
 
   // The organisation at a glance, following the Overall / Digital / Infra choice.
   const insights = useQuery({

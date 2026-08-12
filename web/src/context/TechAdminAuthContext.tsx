@@ -72,6 +72,8 @@ interface TechAdminContextValue {
   deleteCompany: (companyId: string) => Promise<void>;
   companyModules: { [companyId: string]: CompanyModuleItem[] };
   toggleCompanyModule: (companyId: string, moduleCode: string) => Promise<void>;
+  /** Define a module for this tenant. Created switched off. */
+  createCustomModule: (companyId: string, name: string, description: string) => Promise<void>;
   toggleCompanyModuleRole: (companyId: string, moduleCode: string, roleName: string) => Promise<void>;
   enableAllCompanyModules: (companyId: string) => Promise<void>;
   disableAllCompanyModules: (companyId: string) => Promise<void>;

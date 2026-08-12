@@ -87,6 +87,32 @@ ships them to the client, so the data still leaves the server. Filtering server
 side is the better answer and is the one to take unless there is a reason not
 to.
 
+## Still pending — tech-admin Users page (raised 13 Aug, not started)
+
+The page at `/tech-admin/users` needs five separate things. Taking them in the
+order they matter:
+
+1. **Credentials must not be shown for most companies.** Today the table has a
+   PASSWORD column for everyone. For every tenant except Pixous Technologies,
+   list only that company's **company admin** — name, email, status, with edit
+   and delete — and no login details for their HR, team leads or employees. A
+   technical admin has no business reading another company's staff passwords,
+   and the column makes it look like part of the job.
+2. **Pixous Technologies keeps the full view** — the current list with
+   credentials and every column.
+3. **Role counts must be real.** HR Managers / Team Leads / Employees all read
+   0 while the company has staff. They should count real rows, per company, and
+   update when a company admin adds or removes someone — same treatment the
+   dashboard tiles got.
+4. **Adding a company admin must produce a working login immediately.** Today
+   creating one does not reliably give a usable account.
+5. **The page's own styling is wrong** — a background image and washed-out text
+   that no other tech-admin page uses. It should match Dashboard and Companies.
+
+Note on 3: the counts want the same server-side treatment as
+`GET /api/my-modules` — a real query per company, not a number derived in the
+browser.
+
 ## Still pending — mobile
 
 Working today: login with refresh, dashboard, attendance, leave, approvals,

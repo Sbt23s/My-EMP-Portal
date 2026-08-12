@@ -219,7 +219,7 @@ function toCompanyPayload(t: Partial<CompanyTenant>) {
  * rather than disappearing from the list.
  */
 function mergeModules(saved: any[]): CompanyModuleItem[] {
-  return defaultModulesTemplate.map((tpl) => {
+  const fromTemplate = defaultModulesTemplate.map((tpl) => {
     const row = saved.find((s) => s.moduleCode === tpl.code);
     if (!row) return { ...tpl, enabled: false };
     let visibleRoles = tpl.visibleRoles;

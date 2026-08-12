@@ -1,0 +1,103 @@
+# Local development infrastructure — MySQL and Redis only.
+#
+#   docker compose up -d
+#
+# The backend and the web app are run from source while developing, not from
+# here; this file exists so they have a database to talk to. Production is a
+# different file entirely (docker-compose.prod.yml) and is not affected by
+# anything below.
+#
+# The user and database match the defaults baked into backend/src/main/resources/
+# application.yml. The port does not — see the note on it below — so start the
+# backend with .\run-local.ps1, which supplies it.
+name: hr-portal-local
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: hrportal-mysql-local
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root123     # application.yml: DB_PASSWORD default
+      MYSQL_DATABASE: nobile               # application.yml: DB_NAME default
+    ports:
+      # 3307 on the host, not 3306: this machine already runs a MySQL of its own
+      # for another project and taking its port would break it. Inside the
+      # container it is still 3306. Override with LOCAL_DB_PORT if 3307 is busy
+      # too, and pass the same value to the backend as DB_PORT.
+      - "${LOCAL_DB_PORT:-3307}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command:
+      # A restored production dump carries emoji (chat reactions, call logs) and
+      # rows wide enough to matter, so match what production runs on.
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      # Imports of a large dump arrive as single big statements.
+      - --max-allowed-packet=256M
+    healthcheck:
+      # Against this container, not some remote host — the old check named a
+      # hosting provider's server and could therefore never pass.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot123 --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # On the backend's classpath but not required: its health indicator is off and
+  # no code path needs it. Left here for when something does.
+  redis:
+    image: redis:7-alpine
+    container_name: hrportal-redis-local
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  # Kafka in KRaft mode — no Zookeeper, one container, ready in about half a
+  # minute. The backend has Kafka on its classpath and is configured for
+  # localhost:9092; it starts perfectly well without a broker, so this is here
+  # for when something actually publishes rather than because anything needs it.
+  kafka:
+    # The official Apache image, not bitnami/kafka — that tag no longer resolves.
+    image: apache/kafka:3.9.0
+    container_name: hrportal-kafka-local
+    restart: unless-stopped
+    # Without an init process the JVM's children are never reaped, and Docker
+    # Desktop then refuses to stop the container at all: "PID is zombie and can
+    # not be killed", which takes a restart of the whole engine to clear.
+    init: true
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # One broker, so one copy of anything — the defaults assume three and the
+      # broker refuses to create its internal topics.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      # A bare TCP check, deliberately. Both of the CLI checks one would reach
+      # for first spawn a JVM inside this container, which on Docker Desktop
+      # takes about 160 seconds — so the container reported unhealthy purely
+      # because the probe could not finish, while the broker was serving fine.
+      # This answers in two.
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/9092'"]
+      interval: 20s
+      timeout: 10s
+      retries: 6
+      start_period: 45s
+
+volumes:
+  mysql_data:
+  kafka_data:

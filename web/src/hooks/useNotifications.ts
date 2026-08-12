@@ -1,0 +1,267 @@
+import { useEffect, useRef } from "react";
+import React from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
+import toast from "react-hot-toast";
+import { api, tokenStore } from "@/lib/api";
+import { notificationAllowed } from "@/lib/notificationModules";
+import { useAuth } from "@/context/AuthContext";
+import type { ApiEnvelope, AppNotification, PageEnvelope } from "@/types";
+
+const BASE = import.meta.env.VITE_API_URL || "";
+
+// Three invented notifications used to be returned whenever this request failed
+// or came back empty, so the bell showed unread items that did not exist and an
+// empty inbox was indistinguishable from a broken one. The error is passed to
+// the caller now; an empty page is returned as the empty page it is.
+async function fetchFeed(): Promise<PageEnvelope<AppNotification>> {
+  const res = await api.get<PageEnvelope<AppNotification>>("/notifications?size=20");
+  if (!res.data) throw new Error("Notifications returned no data");
+  return res.data;
+}
+
+async function fetchUnreadCount(): Promise<number> {
+  // This returned 2 on any failure, so the bell wore an unread badge for two
+  // notifications that were never there. The caller already falls back to 0 when
+  // there is no answer, which is the right thing to show when we do not know.
+  const res = await api.get<ApiEnvelope<{ count: number }>>("/notifications/unread-count");
+  const count = res.data?.data?.count;
+  if (count === undefined) throw new Error("Unread count returned no data");
+  return count;
+}
+
+/** Icon shown on the toast for each notification type. */
+function toastIcon(type?: string): string {
+  switch (type) {
+    case "CHAT": return "💬";
+    case "LEAVE": return "🗓";
+    case "PERMISSION": return "⏰";
+    case "TASK": return "✅";
+    case "HELPDESK": return "🎫";
+    case "CELEBRATION": return "🎉";
+    case "ASSET": return "📦";
+    case "PAYSLIP": return "💰";
+    case "ANNOUNCEMENT": return "📢";
+    case "CALENDAR": return "📅";
+    default: return "🔔";
+  }
+}
+
+export function useNotifications(userId?: number) {
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const { hasModule } = useAuth();
+
+  // Poll as well as listen: the feed is the source of truth, so toasts still
+  // appear even if the WebSocket can't connect (proxy, sleep/resume, etc.).
+  const feed = useQuery({
+    queryKey: ["notifications"],
+    queryFn: fetchFeed,
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true
+  });
+  const unread = useQuery({
+    queryKey: ["notifications", "unread"],
+    queryFn: fetchUnreadCount,
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true
+  });
+
+  // Rich, clickable toast for any notification. `id` keeps a notification from
+  // being toasted twice when both the socket and the poll see it.
+  const showToast = (n: AppNotification) => {
+    // The list is filtered further down, but a toast arrives on its own from
+    // the WebSocket and would otherwise pop up for a module that is off.
+    if (!notificationAllowed(n.type, hasModule)) return;
+
+    toast.custom(
+      (t) =>
+        React.createElement(
+          "div",
+          {
+            onClick: () => { toast.dismiss(t.id); if (n.link) navigate(n.link); },
+            className:
+              "flex w-80 items-start gap-3 rounded-lg border border-border bg-popover p-3 shadow-lg transition-opacity relative group"
+              + (n.link ? " cursor-pointer" : ""),
+            style: { opacity: t.visible ? 1 : 0 }
+          },
+          React.createElement(
+            "span",
+            { className: "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-base" },
+            toastIcon(n.type)
+          ),
+          React.createElement(
+            "div",
+            { className: "min-w-0 flex-1 pr-6" },
+            React.createElement("div", { className: "text-sm font-semibold text-foreground" }, n.title),
+            n.body
+              ? React.createElement("div", { className: "line-clamp-2 text-xs text-muted-foreground" }, n.body)
+              : null
+          ),
+          React.createElement(
+            "button",
+            {
+              onClick: (e: any) => { e.stopPropagation(); toast.dismiss(t.id); },
+              className: "absolute right-2 top-2 rounded p-1 text-muted-foreground opacity-60 transition-all hover:bg-muted hover:opacity-100 hover:text-foreground"
+            },
+            React.createElement(
+              "svg",
+              {
+                xmlns: "http://www.w3.org/2000/svg",
+                width: "14",
+                height: "14",
+                viewBox: "0 0 24 24",
+                fill: "none",
+                stroke: "currentColor",
+                strokeWidth: "2",
+                strokeLinecap: "round",
+                strokeLinejoin: "round"
+              },
+              React.createElement("path", { d: "M18 6 6 18" }),
+              React.createElement("path", { d: "m6 6 12 12" })
+            )
+          )
+        ),
+      { id: `n-${n.id}`, duration: 5000 }
+    );
+  };
+
+  // How many unread notifications get toasted when the app first loads.
+  const LOGIN_TOAST_LIMIT = 3;
+
+  // Ids already toasted, so the socket and the poll never double-toast.
+  const seenIds = useRef<Set<number>>(new Set());
+  const firstLoadDone = useRef(false);
+
+  const toastOnce = (n: AppNotification) => {
+    if (seenIds.current.has(n.id)) return;
+    seenIds.current.add(n.id);
+    showToast(n);
+  };
+
+  useEffect(() => {
+    const items = feed.data?.content;
+    if (!items) return;
+
+    // On login / first load, surface what the user missed: toast the most
+    // recent unread ones (capped), with a count for the rest.
+    if (!firstLoadDone.current) {
+      firstLoadDone.current = true;
+      const unreadItems = items.filter((n) => !n.read);
+      items.forEach((n) => { if (n.read) seenIds.current.add(n.id); });
+
+      unreadItems.slice(0, LOGIN_TOAST_LIMIT).reverse().forEach(toastOnce);
+      const rest = unreadItems.length - LOGIN_TOAST_LIMIT;
+      if (rest > 0) {
+        unreadItems.slice(LOGIN_TOAST_LIMIT).forEach((n) => seenIds.current.add(n.id));
+        toast.custom(
+          (t) =>
+            React.createElement(
+              "div",
+              {
+                className: "flex items-center gap-2 rounded-lg bg-[hsl(222_47%_11%)] px-4 py-3 text-sm text-[hsl(210_40%_98%)] shadow-lg transition-opacity relative group",
+                style: { opacity: t.visible ? 1 : 0 }
+              },
+              React.createElement("span", { className: "text-base" }, "🔔"),
+              React.createElement("span", { className: "font-medium pr-6" }, `+${rest} more unread notification${rest === 1 ? "" : "s"}`),
+              React.createElement(
+                "button",
+                {
+                  onClick: (e: any) => { e.stopPropagation(); toast.dismiss(t.id); },
+                  className: "absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[hsl(210_40%_98%)] opacity-60 transition-all hover:bg-white/20 hover:opacity-100"
+                },
+                React.createElement(
+                  "svg",
+                  {
+                    xmlns: "http://www.w3.org/2000/svg",
+                    width: "14",
+                    height: "14",
+                    viewBox: "0 0 24 24",
+                    fill: "none",
+                    stroke: "currentColor",
+                    strokeWidth: "2",
+                    strokeLinecap: "round",
+                    strokeLinejoin: "round"
+                  },
+                  React.createElement("path", { d: "M18 6 6 18" }),
+                  React.createElement("path", { d: "m6 6 12 12" })
+                )
+              )
+            ),
+          { id: "n-more-unread", duration: 5000 }
+        );
+      }
+      return;
+    }
+
+    // Afterwards: toast anything new, oldest first.
+    [...items].reverse().forEach(toastOnce);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feed.data]);
+
+  // Live push. The frame already carries the notification, so toast straight
+  // from it — no waiting on a refetch — then refresh the bell/feed counts.
+  useEffect(() => {
+    if (!userId || !tokenStore.access) return;
+
+    const client = new Client({
+      webSocketFactory: () => new SockJS(`${BASE}/ws`),
+      connectHeaders: { Authorization: `Bearer ${tokenStore.access}` },
+      reconnectDelay: 5000,
+      onConnect: () => {
+        const onFrame = (body: string) => {
+          try {
+            const n = JSON.parse(body) as AppNotification;
+            if (n && typeof n.id === "number") toastOnce(n);
+          } catch {
+            /* malformed frame — the feed refresh below still picks it up */
+          }
+          qc.invalidateQueries({ queryKey: ["notifications"] });
+        };
+
+        client.subscribe(`/topic/notifications/${userId}`, (msg) => onFrame(msg.body));
+        client.subscribe("/user/queue/notifications", (msg) => onFrame(msg.body));
+      }
+    });
+
+    client.activate();
+    return () => {
+      client.deactivate();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, qc]);
+
+  async function markAllRead() {
+    await api.post("/notifications/mark-all-read");
+    qc.invalidateQueries({ queryKey: ["notifications"] });
+  }
+
+  async function markRead(id: number) {
+    await api.post(`/notifications/${id}/read`);
+    qc.invalidateQueries({ queryKey: ["notifications"] });
+  }
+
+  // Filtering here rather than at each screen, so the bell, its count, the
+  // notifications page and the dashboard feed cannot disagree about what
+  // exists. A count of nine over an empty list is its own bug.
+  const visible = (feed.data?.content ?? []).filter((n) =>
+    notificationAllowed(n.type, hasModule)
+  );
+
+  return {
+    notifications: visible,
+    // Recomputed from the visible list rather than taken from the server's
+    // total, which still counts notifications belonging to switched-off
+    // modules and would leave the badge permanently unclearable.
+    unreadCount: visible.filter((n) => !n.read).length,
+    loading: feed.isLoading,
+    // Exposed so a screen can tell "you have no notifications" apart from "we
+    // could not find out". Both used to look identical.
+    failed: feed.isError,
+    retry: () => feed.refetch(),
+    markAllRead,
+    markRead
+  };
+}

@@ -1,0 +1,155 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Pixous HR Portal — design tokens
+  Identity: "blueprint indigo" (software + architectural drawings) with a
+  "safety amber" accent (field / construction). Deep slate ink, disciplined
+  surfaces, monospace for the system's many codes (employee / asset / ticket).
+*/
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 243 75% 59%;          /* blueprint indigo #4F46E5 */
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 222 47% 11%;        /* slate ink */
+    --secondary-foreground: 210 40% 98%;
+
+    --accent: 38 92% 50%;            /* safety amber #F59E0B */
+    --accent-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --success: 160 84% 39%;          /* emerald — present / approved */
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 11%;
+
+    --destructive: 347 77% 50%;      /* rose — late / rejected */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 243 75% 59%;
+
+    --radius: 0.65rem;
+  }
+
+  /* Dark theme: a clean neutral near-black. Surfaces step up in lightness
+     (background -> card -> popover) so panels separate without heavy borders,
+     and semantic colours are brightened to stay legible on black. */
+  .dark {
+    --background: 240 6% 7%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 5% 11%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 5% 13%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 243 90% 70%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 5% 18%;
+    --secondary-foreground: 0 0% 96%;
+
+    --accent: 38 95% 58%;
+    --accent-foreground: 240 6% 7%;
+
+    --muted: 240 5% 17%;
+    --muted-foreground: 240 5% 68%;
+
+    --success: 158 76% 46%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 95% 58%;
+    --warning-foreground: 240 6% 7%;
+
+    --destructive: 350 85% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 5% 20%;
+    --input: 240 5% 22%;
+    --ring: 243 90% 70%;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  /* Signature: faint blueprint grid, used on auth + empty states */
+  .blueprint-grid {
+    background-color: hsl(var(--secondary));
+    background-image:
+      linear-gradient(hsla(243, 75%, 70%, 0.10) 1px, transparent 1px),
+      linear-gradient(90deg, hsla(243, 75%, 70%, 0.10) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .code-chip {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    letter-spacing: -0.02em;
+  }
+
+  .focus-ring:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+/* Interactive polish: theme switches and hover states ease instead of
+   snapping. Honoured by the reduced-motion block below. */
+button,
+a,
+input,
+select,
+textarea,
+[role="button"] {
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Thin, unobtrusive scrollbars */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 9999px;
+  border: 2px solid hsl(var(--background));
+}

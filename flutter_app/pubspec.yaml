@@ -1,0 +1,48 @@
+name: hr_portal_mobile
+description: "Pixous HR Portal — mobile client for the existing HR Portal backend."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State. Riverpod throughout — one solution, used consistently, as specified.
+  flutter_riverpod: ^2.6.1
+
+  # Networking. Dio for interceptors: the access token goes on every request and
+  # a 401 triggers one refresh-and-retry, which is the behaviour the web client
+  # already has and the part a hand-rolled http client usually gets wrong.
+  dio: ^5.7.0
+
+  # Tokens live in the platform keystore/keychain, never in plain preferences.
+  flutter_secure_storage: ^9.2.2
+
+  # Non-secret preferences: theme choice, last-used username.
+  shared_preferences: ^2.3.3
+
+  # Routing with guards, so an unauthenticated deep link lands on the login page
+  # rather than a half-built screen.
+  go_router: ^14.6.2
+
+  # Dates and numbers formatted the way the portal shows them.
+  intl: ^0.19.0
+
+  # Images fetched once and kept: profile photos appear in long lists.
+  cached_network_image: ^3.4.1
+
+  # Loading states that show the shape of what is coming.
+  shimmer: ^3.0.0
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true

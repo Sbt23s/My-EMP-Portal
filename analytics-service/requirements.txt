@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+mysql-connector-python
+pydantic
+sqlalchemy
+python-dotenv
+python-multipart
+face_recognition
+numpy
+Pillow
+easyocr
+pytesseract
+opencv-python-headless

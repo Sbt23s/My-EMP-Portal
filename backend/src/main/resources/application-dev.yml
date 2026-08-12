@@ -1,0 +1,37 @@
+# Dev profile overrides. Activated by default (spring.profiles.active=dev).
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+logging:
+  level:
+    com.pixous.hrportal: DEBUG
+    org.hibernate.SQL: DEBUG
+
+# Twilio SMS (local dev) reads TWILIO_* from the environment and stays off when
+# they are unset. The account is a trial one, so it can only send to numbers
+# verified in the Twilio Console.
+#
+# The SID and token that used to sit in this file are in git history and must
+# be rotated in the Twilio console — removing them from the file does not
+# make them dead.
+app:
+  jwt:
+    # Dev-only fallback so `mvn spring-boot:run` works with zero setup. Never
+    # used in prod: application.yml requires APP_JWT_SECRET with no default,
+    # and this profile isn't active there (SPRING_PROFILES_ACTIVE=prod).
+    secret: Y2hhbmdlLXRoaXMtc2VjcmV0LWluLXByb2R1Y3Rpb24tcGxlYXNlLTEyMzQ1Njc4OTA=
+  twilio:
+    # Off unless you supply credentials. These used to be written out in full
+    # here, which put a live account SID and auth token into git history where
+    # rotating the file cannot remove them. Set TWILIO_* in your shell (or your
+    # IDE run configuration) when you need to send a real SMS locally.
+    #
+    # Everything else about local dev is unchanged: with no credentials set,
+    # SMS is disabled and the rest of the application starts exactly as before.
+    enabled: ${TWILIO_ENABLED:false}
+    account-sid: ${TWILIO_ACCOUNT_SID:}
+    auth-token: ${TWILIO_AUTH_TOKEN:}
+    from-number: ${TWILIO_FROM_NUMBER:}
+    default-country-code: "+91"

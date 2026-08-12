@@ -1,0 +1,178 @@
+# Production stack for a single AWS EC2 instance.
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Services:
+#   mysql      MySQL 8.4          (internal only — NOT exposed to the internet)
+#   backend    Spring Boot API    (internal only, port 7060)
+#   analytics  Python FastAPI     (internal only, port 8082; optional profile)
+#   web        Nginx              (THE only public entry point, port 80/443)
+#
+# Secrets come from a .env file next to this compose file — copy
+# .env.production.example to .env and fill it in. Never commit .env.
+
+name: hr-portal
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: hrportal-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?put MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${DB_NAME:-hr_portal}
+      MYSQL_USER: ${DB_USER:-hruser}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?put DB_PASSWORD in .env}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks: [hrnet]
+    # No "ports:" on purpose — only containers on hrnet can reach MySQL.
+
+  backend:
+    build: ./backend
+    container_name: hrportal-backend
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      # Run the backend in India time so LocalDateTime.now() (attendance punch
+      # times, timestamps) is IST, not the container's default UTC.
+      TZ: Asia/Kolkata
+      # Defaults to the mysql container below. Point DB_HOST at the hosted
+      # database in .env to use the real one instead — and then do not start the
+      # mysql container at all, or half the stack talks to an empty copy.
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-hr_portal}
+      DB_USER: ${DB_USER:-hruser}
+      DB_PASSWORD: ${DB_PASSWORD}
+      # Connection parameters and pool size. Shared hosting needs both changed —
+      # see the notes in .env.production.example, which explain why.
+      DB_PARAMS: ${DB_PARAMS:-useSSL=false&serverTimezone=Asia/Kolkata&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true}
+      DB_POOL_MAX: ${DB_POOL_MAX:-10}
+      DB_POOL_MIN: ${DB_POOL_MIN:-2}
+      # The cache. Absent Redis is not an error: the backend falls back to caching
+      # in its own memory and logs which one it chose.
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      CACHE_ENABLED: ${CACHE_ENABLED:-true}
+      APP_JWT_SECRET: ${APP_JWT_SECRET:?put APP_JWT_SECRET in .env (32+ random chars)}
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost}
+      STORAGE_PATH: /app/storage
+      # Twilio SMS (leave/task notifications). Enabled by default; the account
+      # SID, auth token and from-number are read from the host .env (never
+      # committed). NOTE: a Twilio TRIAL account only delivers to numbers
+      # verified in the Twilio Console — other recipients are silently skipped.
+      TWILIO_ENABLED: ${TWILIO_ENABLED:-true}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
+      TWILIO_DEFAULT_CC: ${TWILIO_DEFAULT_CC:-+91}
+      # Fast2SMS — preferred SMS provider for Indian numbers. The API key comes
+      # from the host .env (synced from a GitHub secret), never from git.
+      FAST2SMS_ENABLED: ${FAST2SMS_ENABLED:-true}
+      FAST2SMS_API_KEY: ${FAST2SMS_API_KEY:-}
+      FAST2SMS_ROUTE: ${FAST2SMS_ROUTE:-q}
+      FAST2SMS_SENDER_ID: ${FAST2SMS_SENDER_ID:-}
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx768m -Duser.timezone=Asia/Kolkata}
+    volumes:
+      - backend_storage:/app/storage   # payslip PDFs, QR codes, uploads survive restarts
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      # temurin-jre image has bash but no curl/wget — TCP check on the app port
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/7060' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 90s
+    networks: [hrnet]
+
+  # Optional: heavy image (PyTorch + dlib). Start it with:
+  #   docker compose -f docker-compose.prod.yml --profile analytics up -d --build
+  # Without it, the app still works — the dashboard hides the extra analytics
+  # cards and face punch-in/train reports "service unavailable".
+  analytics:
+    build: ./analytics-service
+    container_name: hrportal-analytics
+    restart: unless-stopped
+    profiles: ["analytics"]
+    environment:
+      DB_HOST: mysql
+      DB_USER: ${DB_USER:-hruser}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME:-hr_portal}
+    volumes:
+      - faces_data:/app/faces          # trained face encodings survive restarts
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8082/', timeout=3)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks: [hrnet]
+
+  web:
+    build: ./web
+    container_name: hrportal-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      # Uncomment together with the 443 block in web/nginx.conf, after certbot
+      # has issued a certificate for employeeportal.pixoustech.app. HTTPS is
+      # what makes the microphone and GPS available to the browser at all.
+      # - "443:443"
+    # volumes:
+    #   - /etc/letsencrypt:/etc/letsencrypt:ro
+    #   - certbot-webroot:/var/www/certbot
+    depends_on:
+      - backend
+    networks: [hrnet]
+
+  # The cache. Master data and settings live here instead of being re-read from
+  # the database on every page load — which matters most when the database is the
+  # hosted one, because there the connections are what is scarce.
+  #
+  # Still optional. Stop this container and the portal carries on: the backend
+  # falls back to caching in its own memory, and every cache failure after that is
+  # logged and ignored rather than turned into a failed request.
+  redis:
+    image: redis:7-alpine
+    container_name: hrportal-redis
+    restart: unless-stopped
+    # Cached values are all re-readable from the database, so there is nothing
+    # here worth writing to disk. A bounded memory limit that evicts the oldest
+    # keys is the right shape for a cache; an unbounded one is how Redis ends up
+    # being the reason the server runs out of memory.
+    command: >
+      redis-server
+      --save ""
+      --appendonly no
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks: [hrnet]
+    # No "ports:" — only the backend needs to reach it.
+
+networks:
+  hrnet:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  backend_storage:
+  faces_data:

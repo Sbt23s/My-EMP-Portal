@@ -1,0 +1,25 @@
+# Netlify config for the Pixous HR Portal frontend (React/Vite in web/).
+# The backend (Java/Spring Boot) is NOT hosted on Netlify — it runs elsewhere
+# (Render/Railway/etc.). Set VITE_API_URL in Netlify env to that backend URL.
+
+[build]
+  base = "web"
+  command = "npm run build"
+  publish = "dist"
+
+# SPA fallback: serve index.html for client-side routes.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Strict Security Headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"

@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "Pixous HR",
+    "slug": "pixous-hr-portal",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "pixoushr",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#0F172A"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pixous.hrportal",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Your location is used to verify attendance punches at your office or site."
+      }
+    },
+    "android": {
+      "package": "com.pixous.hrportal",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "plugins": [
+      "expo-location",
+      "expo-secure-store",
+      "expo-asset"
+    ],
+    "extra": {
+      "apiUrl": "http://localhost:8081"
+    }
+  }
+}

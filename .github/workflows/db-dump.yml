@@ -1,0 +1,276 @@
+name: Download a database dump
+
+# ---------------------------------------------------------------------------
+# Takes a read-only snapshot of the live database and hands it back as a
+# downloadable artifact, so a copy can be restored locally without anybody
+# needing an SSH key on their laptop.
+#
+#   Actions -> "Download a database dump" -> Run workflow
+#   ...wait...  then download the artifact from the finished run.
+#
+# Nothing on the server is written to. mysqldump with --single-transaction reads
+# a consistent snapshot without locking, so the portal keeps serving throughout.
+#
+# WHAT THE ARTIFACT CONTAINS: the whole employee database — names, phone numbers,
+# Aadhaar, bank details, salaries, chat history, and the encrypted password vault.
+# It is private to people with access to this repository, and it is deleted after
+# one day. Treat the downloaded file the same way: it is the company's HR data.
+# ---------------------------------------------------------------------------
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Why (recorded in the run for auditing)'
+        type: string
+        required: true
+        default: 'restore a copy locally'
+      include_storage:
+        description: 'Also bundle uploaded files (photos, attachments) — can be very large'
+        type: boolean
+        required: false
+        default: false
+      host_override:
+        description: 'New server IP, if it changed (leave blank to use the EC2_HOST secret)'
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+# An instance without an Elastic IP gets a new public address every time it is
+# started, which would otherwise mean editing two secrets before a dump can be
+# taken. host_override stands in for EC2_HOST for this run only.
+env:
+  TARGET_HOST: ${{ inputs.host_override != '' && inputs.host_override || secrets.EC2_HOST }}
+
+# Never run two dumps at once, and never race a deployment: a deploy restarts
+# MySQL, which would truncate a dump in flight.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  dump:
+    name: Snapshot the live database
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: production
+
+    steps:
+      - name: Record why this ran
+        shell: bash
+        env:
+          REASON: ${{ inputs.reason }}
+        run: |
+          echo "Requested by : ${{ github.actor }}"
+          echo "Reason       : $REASON"
+          echo "Storage too  : ${{ inputs.include_storage }}"
+
+      - name: Configure SSH (key + pinned host fingerprint)
+        shell: bash
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_SSH_FINGERPRINT: ${{ secrets.EC2_SSH_FINGERPRINT }}
+          HOST_OVERRIDE: ${{ inputs.host_override }}
+        run: |
+          set -Eeuo pipefail
+          if [[ -z "${EC2_SSH_KEY}" || -z "${EC2_SSH_FINGERPRINT}" ]]; then
+            echo "::error::EC2_SSH_KEY / EC2_SSH_FINGERPRINT are not configured."
+            exit 1
+          fi
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          ( umask 077; printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/deploy_key )
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$EC2_SSH_FINGERPRINT" > ~/.ssh/known_hosts
+
+          # Restarting an instance changes its address but not its host key — the
+          # key lives on the same disk. So when the address is overridden, the
+          # pinned entry is re-addressed rather than abandoned: the key is still
+          # verified, which is the part that matters.
+          if [[ -n "${HOST_OVERRIDE}" ]]; then
+            awk -v h="$HOST_OVERRIDE" '{ $1 = h; print }' ~/.ssh/known_hosts > ~/.ssh/known_hosts.new
+            mv ~/.ssh/known_hosts.new ~/.ssh/known_hosts
+            echo "Pinned host key re-addressed to the override."
+          fi
+          chmod 644 ~/.ssh/known_hosts
+          echo "SSH configured for ${TARGET_HOST}."
+
+      # A raw "ssh: connect to host *** port ***: Connection timed out" reads as a
+      # broken workflow when the usual cause is simply that the instance is not
+      # running. Say which it is before spending the run on it.
+      - name: Check the server is reachable
+        shell: bash
+        env:
+          EC2_PORT: ${{ secrets.EC2_PORT }}
+        run: |
+          set -Eeuo pipefail
+          PORT="${EC2_PORT:-22}"
+          if timeout 15 bash -c "cat < /dev/null > /dev/tcp/${TARGET_HOST}/${PORT}" 2>/dev/null; then
+            echo "SSH port ${PORT} is open."
+            exit 0
+          fi
+          echo "::error::Cannot reach the server on port ${PORT}. Nothing can be dumped."
+          {
+            echo "## Cannot reach the server"
+            echo ""
+            echo "The SSH port did not answer within 15 seconds. The database lives on"
+            echo "that machine, so there is nothing to snapshot until it is back."
+            echo ""
+            echo "Most likely, in order:"
+            echo ""
+            echo "1. **The EC2 instance is stopped.** Start it in the AWS console"
+            echo "   (EC2 → Instances → select → Instance state → Start instance)."
+            echo "2. **Its public IP changed.** An instance without an Elastic IP gets a"
+            echo "   new address every time it starts. Update the \`EC2_HOST\` secret, and"
+            echo "   re-pin the host key: \`ssh-keyscan -t rsa,ecdsa,ed25519 <new-ip>\` into"
+            echo "   \`EC2_SSH_FINGERPRINT\`."
+            echo "3. **The security group no longer allows port ${PORT} inbound.**"
+            echo ""
+            echo "Then re-run this workflow."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
+      # The dump is produced on the server and streamed straight back down the
+      # SSH connection, so it is never left lying on the server's disk. Progress
+      # messages go to stderr; stdout carries nothing but the gzip.
+      - name: Dump the database
+        id: dbdump
+        shell: bash
+        env:
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_PORT: ${{ secrets.EC2_PORT }}
+        run: |
+          set -Eeuo pipefail
+          PORT="${EC2_PORT:-22}"
+          mkdir -p out
+
+          payload="$(mktemp)"
+          trap 'rm -f "$payload"' EXIT
+          cat > "$payload" <<'REMOTE'
+          set -Eeuo pipefail
+          exec 3>&1            # fd 3 = the real stdout, reserved for the gzip
+          exec 1>&2            # everything else becomes stderr
+
+          CONTAINER=hrportal-mysql
+
+          if ! docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"; then
+            echo "MySQL container '$CONTAINER' is not running on this host."
+            exit 1
+          fi
+
+          echo "Dumping from $CONTAINER (read-only, no locking)..."
+          # Credentials come from the container's own environment and never touch
+          # a command line, so they cannot be seen in `ps`.
+          docker exec "$CONTAINER" sh -c '
+            exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" \
+              --single-transaction --quick --routines --events \
+              --default-character-set=utf8mb4 \
+              "$MYSQL_DATABASE"
+          ' | gzip -9 >&3
+          echo "Dump streamed."
+          REMOTE
+
+          ssh -i ~/.ssh/deploy_key -p "$PORT" \
+              -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+              -o PasswordAuthentication=no \
+              -o BatchMode=yes -o ConnectTimeout=20 \
+              -o ServerAliveInterval=30 -o ServerAliveCountMax=40 \
+              "$EC2_USER@$TARGET_HOST" 'bash -s' \
+              < "$payload" > "out/hr-live-$(date -u +%Y%m%d-%H%M%S).sql.gz"
+
+          file="$(ls out/*.sql.gz | head -1)"
+          bytes="$(stat -c '%s' "$file")"
+          # A dump that is suspiciously small failed silently — better to say so
+          # than to hand over a file that restores an empty database.
+          if (( bytes < 10240 )); then
+            echo "::error::The dump is only ${bytes} bytes, which means it failed."
+            exit 1
+          fi
+          echo "size=$(numfmt --to=iec "$bytes")" >> "$GITHUB_OUTPUT"
+          echo "file=$(basename "$file")" >> "$GITHUB_OUTPUT"
+          echo "Dump: $file ($(numfmt --to=iec "$bytes"))"
+
+      - name: Bundle uploaded files
+        if: ${{ inputs.include_storage }}
+        shell: bash
+        env:
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_PORT: ${{ secrets.EC2_PORT }}
+        run: |
+          set -Eeuo pipefail
+          PORT="${EC2_PORT:-22}"
+
+          payload="$(mktemp)"
+          trap 'rm -f "$payload"' EXIT
+          cat > "$payload" <<'REMOTE'
+          set -Eeuo pipefail
+          exec 3>&1
+          exec 1>&2
+          VOLUME=hr-portal_backend_storage
+          if ! docker volume inspect "$VOLUME" >/dev/null 2>&1; then
+            echo "No such volume: $VOLUME — nothing to bundle."
+            exit 1
+          fi
+          size_kb="$(docker run --rm -v "$VOLUME":/data alpine du -sk /data | awk '{print $1}')"
+          echo "Storage volume holds $(( size_kb / 1024 )) MB."
+          docker run --rm -v "$VOLUME":/data alpine tar czf - -C /data . >&3
+          REMOTE
+
+          ssh -i ~/.ssh/deploy_key -p "$PORT" \
+              -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+              -o PasswordAuthentication=no \
+              -o BatchMode=yes -o ConnectTimeout=20 \
+              -o ServerAliveInterval=30 -o ServerAliveCountMax=60 \
+              "$EC2_USER@$TARGET_HOST" 'bash -s' \
+              < "$payload" > "out/storage.tar.gz"
+
+          echo "Storage bundle: $(numfmt --to=iec "$(stat -c '%s' out/storage.tar.gz)")"
+
+      - name: Upload for download
+        uses: actions/upload-artifact@v4
+        with:
+          name: hr-live-data
+          path: out/
+          # One day only. This is the company's whole HR database; it should not
+          # sit in the Actions storage for a fortnight.
+          retention-days: 1
+          if-no-files-found: error
+          compression-level: 0   # already gzipped
+
+      - name: Explain what to do with it
+        if: success()
+        shell: bash
+        run: |
+          {
+            echo "## Database snapshot ready"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| File | \`${{ steps.dbdump.outputs.file }}\` |"
+            echo "| Size | ${{ steps.dbdump.outputs.size }} |"
+            echo "| Kept until | tomorrow (retention is 1 day) |"
+            echo ""
+            echo "Download **hr-live-data** from the Artifacts section of this run, then:"
+            echo ""
+            echo '```powershell'
+            echo 'cd c:\Users\balas\Documents\GitHub\hr-port'
+            echo 'docker compose up -d'
+            echo '.\deploy\local-restore.ps1 -Dump C:\Users\balas\Downloads\${{ steps.dbdump.outputs.file }}'
+            echo '.\run-local.ps1'
+            echo '```'
+            echo ""
+            echo "The live server was only read from. Nothing on it changed."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove SSH credentials from the runner
+        if: always()
+        shell: bash
+        run: |
+          set -Euo pipefail
+          shred -u ~/.ssh/deploy_key 2>/dev/null || rm -f ~/.ssh/deploy_key
+          rm -f ~/.ssh/known_hosts

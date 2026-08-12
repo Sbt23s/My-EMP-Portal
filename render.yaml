@@ -1,0 +1,96 @@
+# Render Blueprint for the Pixous HR Portal.
+# Deploys two services:
+#   1. pixous-ems-backend  — Spring Boot API (Docker)
+#   2. pixous-ems-web       — React/Vite static site
+#
+# Render has NO managed MySQL, so the backend connects to an external MySQL
+# (e.g. a free Aiven MySQL). You provide the connection details as the
+# SPRING_DATASOURCE_* env vars below. Full walkthrough: see DEPLOY.md.
+
+services:
+  # ---------------------------------------------------------------------------
+  # Backend — Spring Boot 3.5 / Java 17, built from backend/Dockerfile
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: pixous-ems-backend
+    runtime: docker
+    plan: free
+    region: singapore              # closest Render region to India; change if you like
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /actuator/health
+    autoDeploy: true
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod                # disables verbose dev SQL logging
+      # Strong random JWT signing secret, generated & stored by Render.
+      - key: APP_JWT_SECRET
+        generateValue: true
+      # --- External MySQL (fill these in when prompted during Blueprint setup) ---
+      #
+      # For the Pixous hosted database, paste exactly this as SPRING_DATASOURCE_URL:
+      #
+      #   jdbc:mysql://mysql1002.site4now.net:3306/db_ab2fe4_ems?useSSL=false&serverTimezone=Asia/Kolkata&allowPublicKeyRetrieval=true
+      #
+      # Do NOT add createDatabaseIfNotExist=true, however many examples show it.
+      # The connector then issues CREATE DATABASE on every connect, and a shared
+      # hosting account has no privilege to do that -- so the application refuses
+      # to start against a database that already exists and is perfectly healthy.
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      # The hosted MySQL account allows 20 connections in TOTAL, across everything
+      # that uses it -- this service, a laptop running the same backend, a mysql
+      # client somebody left open. Six leaves room for a deploy that briefly runs
+      # the old and new instance together; the default of ten does not.
+      - key: DB_POOL_MAX
+        value: "6"
+      - key: DB_POOL_MIN
+        value: "1"
+      # Comma-separated frontend origin(s) allowed by CORS. Set this to the
+      # pixous-ems-web URL after its first deploy (e.g. https://pixous-ems-web.onrender.com).
+      - key: APP_CORS_ALLOWED_ORIGINS
+        sync: false
+      # BOTH SMS providers, off. Twilio alone was set here, and Fast2SMS defaults to
+      # enabled in application.yml -- so a deployment made with no API key had an
+      # "enabled" provider that failed on every notification it was asked to send.
+      - key: TWILIO_ENABLED
+        value: "false"
+      - key: FAST2SMS_ENABLED
+        value: "false"
+      # Where uploaded files go: punch selfies, registered faces, profile photos,
+      # chat attachments.
+      #
+      # WORTH KNOWING BEFORE YOU RELY ON IT: Render's free plan has no persistent
+      # disk. This path lives inside the container, so every redeploy and every
+      # restart after a sleep starts it empty, while the database keeps pointing at
+      # files that are no longer there -- a punch that says it has a selfie and
+      # shows a broken image. The database rows are safe; only the files go.
+      # Attach a Render disk (paid) or move storage to S3 before these matter.
+      - key: STORAGE_PATH
+        value: /app/storage
+
+  # ---------------------------------------------------------------------------
+  # Frontend — React 19 + Vite, served as a static site
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: pixous-ems-web
+    runtime: static
+    rootDir: web
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+    envVars:
+      # Base URL of the backend API. Set this to the pixous-ems-backend URL
+      # after its first deploy (e.g. https://pixous-ems-backend.onrender.com),
+      # then trigger a redeploy so the value is baked into the build.
+      - key: VITE_API_URL
+        sync: false
+    routes:
+      # SPA fallback: serve index.html for client-side routes.
+      - type: rewrite
+        source: /*
+        destination: /index.html

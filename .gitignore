@@ -1,0 +1,36 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+# Node
+node_modules/
+dist/
+build/
+.expo/
+*.log
+.env
+.env.local
+
+# Java / Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# Runtime storage (generated PDFs, QR codes, uploads)
+backend/storage/
+
+# Python (analytics-service)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Generated face embeddings (enrolled at runtime, not source)
+analytics-service/faces/*.npy
+
+# Two empty files created by mistyped shell commands. Left on disk rather
+# than deleted, but they are not part of the project.
+backend/\[Help
+backend/localStorage.removeItem(k))

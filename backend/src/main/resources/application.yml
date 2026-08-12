@@ -1,0 +1,226 @@
+spring:
+  application:
+    name: hr-portal
+  profiles:
+    active: dev
+  datasource:
+    # The connection parameters are one overridable value rather than hard-coded,
+    # because the default below is a local-Docker default and a shared MySQL host
+    # needs different ones. createDatabaseIfNotExist in particular asks the server
+    # to CREATE DATABASE on every connect, which a hosting account without that
+    # privilege refuses — so the app would not start at all against a database that
+    # already exists and is perfectly fine. Set DB_PARAMS to leave it out.
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:hr}?${DB_PARAMS:useSSL=false&serverTimezone=Asia/Kolkata&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true}
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:root123}
+    hikari:
+      # Shared MySQL hosting caps the account, not the server: the live account
+      # allows twenty connections in total, across every process that uses it —
+      # this app, a second copy of it, a mysql client somebody left open. Ten is
+      # the local default; set DB_POOL_MAX lower on shared hosting so a deployment
+      # that briefly runs two copies cannot exhaust the account and lock the
+      # portal out of its own database.
+      maximum-pool-size: ${DB_POOL_MAX:10}
+      minimum-idle: ${DB_POOL_MIN:2}
+      # Tuned to the server rather than to a guess. The hosted MySQL closes an idle
+      # connection after wait_timeout, which is THIRTY SECONDS there -- so a pool
+      # holding them for four minutes spent its time being handed dead connections
+      # and logging "Failed to validate connection" on every housekeeping pass. It
+      # recovered each time, but it was reconnecting constantly for no reason.
+      #
+      # 30000 is Hikari's own floor for max-lifetime; a lower value is ignored and
+      # replaced by the default, which is how this gets worse while looking fixed.
+      max-lifetime: ${DB_POOL_MAX_LIFETIME:30000}
+      idle-timeout: ${DB_POOL_IDLE_TIMEOUT:10000}
+      connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT:30000}
+      pool-name: HrPortalHikari
+  jpa:
+    hibernate:
+      ddl-auto: validate          # Flyway owns the schema; Hibernate only validates
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          time_zone: Asia/Kolkata
+          # Rows per network round trip when reading a result set. The default of
+          # ten means a hundred rows cross the wire in ten trips, which is free
+          # locally and is not against a database in another datacentre.
+          fetch_size: 200
+          batch_size: 50
+        # THE single biggest thing in this file for speed.
+        #
+        # Roles are EAGER on User and permissions are EAGER on Role, so loading a
+        # list of people fetched each person's roles in its own query, then each of
+        # those roles' permissions in another. Six employees cost 112 queries; sixty
+        # would cost roughly a thousand, each one a round trip to hosted MySQL. That
+        # is why listing employees took forty seconds to return four kilobytes.
+        #
+        # This makes Hibernate gather those collections for up to fifty owners at a
+        # time -- one IN query instead of fifty separate ones. Nothing about what is
+        # loaded changes, only how many trips it takes, so no code and no behaviour
+        # depends on it. Chosen over marking the associations LAZY on purpose: the
+        # application runs with open-in-view disabled, so anything touching roles
+        # outside its transaction would start throwing LazyInitializationException,
+        # and those places are not all obvious from reading the code.
+        default_batch_fetch_size: 50
+        query:
+          # Rounds IN-clause parameter counts to a few fixed sizes, so a batch of 47
+          # and a batch of 50 share one prepared-statement plan instead of forcing
+          # the server to parse a new one for every distinct count.
+          in_clause_parameter_padding: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    repair-on-migrate: true
+    validate-on-migrate: false
+    locations: classpath:db/migration
+  data:
+    # Every JPA repository in the project was being offered to Spring Data Redis as
+    # a possible Redis repository, which printed forty lines of advice at every
+    # startup and found nothing. Redis here is a cache, not a store.
+    redis:
+      repositories:
+        enabled: false
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      # Short, because Redis is optional and a missing one must cost a moment at
+      # startup rather than a request that hangs waiting for a cache. Not as short
+      # as it first was: one second timed out against a Redis running on the same
+      # machine, because the probe happens while the application is at its busiest,
+      # and the portal then spent its whole life caching in local memory while a
+      # perfectly good Redis sat idle.
+      timeout: ${REDIS_TIMEOUT:2000ms}
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:3000ms}
+      lettuce:
+        pool:
+          enabled: true
+          max-active: ${REDIS_POOL_MAX:8}
+          max-idle: 8
+          min-idle: 0
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USER:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+  servlet:
+    multipart:
+      # Chat carries video, so one file may be up to 2GB and a batch of
+      # attachments up to 5GB. nginx allows the same at the server level.
+      #
+      # Nothing of this size is held in memory: past the threshold below, the
+      # upload is streamed to a temporary file on disk. What this does consume is
+      # disk on the host, and that is the real ceiling — an upload larger than
+      # the free space will fail however generous these numbers are.
+      max-file-size: 10GB
+      max-request-size: 10GB
+      file-size-threshold: 1MB
+  kafka:
+    bootstrap-servers: ${KAFKA_HOST:localhost}:${KAFKA_PORT:9092}
+    consumer:
+      group-id: hr-portal-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+server:
+  # Render (and most PaaS) inject the listen port as PORT. Fall back to
+  # SERVER_PORT, then the local default 7060.
+  port: ${PORT:${SERVER_PORT:7060}}
+  error:
+    include-message: always
+
+# ---- Application-specific settings (bound to AppProperties) ----
+app:
+  jwt:
+    # No fallback here on purpose: this value MUST come from the APP_JWT_SECRET
+    # env var in every non-dev profile, or the app fails to start rather than
+    # running with a publicly-known signing key. The dev profile supplies its
+    # own fallback in application-dev.yml so local runs still work unset.
+    secret: ${APP_JWT_SECRET}
+    # A four-hour session, and four hours means four hours: the refresh token
+    # expires with the access token rather than quietly extending the session for
+    # a week. Inside the window nothing expires and no request can fail on auth;
+    # at the boundary the refresh fails and the client returns to the login page.
+    access-token-ttl-seconds: ${ACCESS_TOKEN_TTL_SECONDS:14400}   # 4 hours
+    refresh-token-ttl-seconds: ${REFRESH_TOKEN_TTL_SECONDS:14400} # 4 hours
+    issuer: hr-portal
+  cors:
+    # Comma-separated list of allowed web origins. In production set the
+    # APP_CORS_ALLOWED_ORIGINS env var to your deployed frontend URL(s).
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5174,http://localhost:3000}
+  cache:
+    # On. A Redis that is simply absent already falls back to an in-memory cache,
+    # so the only reason to switch this off is to rule the cache out while
+    # diagnosing something else.
+    enabled: ${CACHE_ENABLED:true}
+  storage:
+    type: local                          # local | s3 | minio
+    local-path: ${STORAGE_PATH:/mnt/2tb-storage/hr-files}
+  attendance:
+    default-geofence-radius-metres: 200
+    # Office hours are 09:00-18:00. Grace is zero: a punch at or before 09:00 is
+    # on time, anything after it is late by the difference. Time worked past
+    # 18:00 is overtime.
+    late-grace-minutes: 0
+    standard-work-hours: 8
+    office-start: ${OFFICE_START:09:00}
+    office-end: ${OFFICE_END:18:00}
+  security:
+    max-failed-login-attempts: 5
+    account-lock-minutes: 15
+  twilio:
+    # Twilio SMS is OFF by default. Enable it and supply credentials via env
+    # vars in production (Render dashboard). Never commit real credentials.
+    enabled: ${TWILIO_ENABLED:false}
+    account-sid: ${TWILIO_ACCOUNT_SID:}
+    auth-token: ${TWILIO_AUTH_TOKEN:}
+    from-number: ${TWILIO_FROM_NUMBER:}
+    default-country-code: ${TWILIO_DEFAULT_CC:+91}
+
+  fast2sms:
+    # Preferred SMS provider for Indian numbers. Supply the API key via an env
+    # var (GitHub secret -> server .env). Never commit the key.
+    enabled: ${FAST2SMS_ENABLED:true}
+    api-key: ${FAST2SMS_API_KEY:}
+    # "q" = quick transactional route (no DLT template needed).
+    route: ${FAST2SMS_ROUTE:q}
+    sender-id: ${FAST2SMS_SENDER_ID:}
+
+# ---- Actuator (health check for Render / uptime monitors) ----
+# Expose only /actuator/health. Redis and mail are optional at runtime, so their
+# health indicators are disabled — otherwise the endpoint would report DOWN (503)
+# whenever Redis/SMTP are absent and hosting platforms would wrongly consider a
+# healthy app unhealthy. DB health stays on (the app truly needs it).
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+  health:
+    redis:
+      enabled: false
+    mail:
+      enabled: false
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+
+logging:
+  level:
+    com.pixous.hrportal: INFO
+    org.springframework.security: WARN

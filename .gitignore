@@ -13,6 +13,12 @@ build/
 *.log
 .env
 .env.local
+.env.backup
+.env.*
+!.env.example
+!.env.production.example
+!**/.env.example
+!**/.env.production.example
 
 # Java / Maven
 target/

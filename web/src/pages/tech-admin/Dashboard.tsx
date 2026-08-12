@@ -455,7 +455,7 @@ export function TechAdminDashboard() {
           <div className={`w-full max-w-md rounded-2xl p-6 shadow-2xl border ${isDark ? "bg-slate-900/80 backdrop-blur-xl border-cyan-500/30 text-white" : "bg-[#13002b]/90 backdrop-blur-xl border-purple-500/30 text-purple-50"}`}>
             <div className={`flex items-center justify-between pb-4 border-b ${isDark ? "border-slate-800" : "border-purple-500/30"}`}>
               <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Plus className={`w-5 h-5 ${isDark ? "text-indigo-500" : "text-purple-400"}`} /> Enable New Module for Tenant
+                <Plus className={`w-5 h-5 ${isDark ? "text-indigo-500" : "text-purple-400"}`} /> Create a module for this company
               </h3>
               <button onClick={() => setIsEnableModuleOpen(false)} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />

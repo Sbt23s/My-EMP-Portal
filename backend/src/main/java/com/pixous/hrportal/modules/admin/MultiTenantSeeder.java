@@ -15,7 +15,22 @@ import java.util.Optional;
 import java.util.Set;
 
 @Component
+@org.springframework.context.annotation.Profile("!prod")
 public class MultiTenantSeeder implements CommandLineRunner {
+
+    /*
+     * Local development only, from here on.
+     *
+     * This runs on every start and writes: it creates two companies if they are
+     * missing, deletes ten named accounts, and adds four roles. That is
+     * reasonable against a throwaway local database and indefensible against the
+     * live one, where it had already added a company nobody asked for and would
+     * delete a real account any time somebody happened to share one of those
+     * usernames.
+     *
+     * Setting up a production tenant is a deliberate act, not something a
+     * restart should do quietly.
+     */
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;

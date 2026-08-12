@@ -502,8 +502,8 @@ export function TechAdminDashboard() {
                 <Button type="button" variant="outline" onClick={() => setIsEnableModuleOpen(false)} className={`${isDark ? "text-slate-300 border-cyan-500/30 hover:bg-cyan-900/30" : "text-purple-300 border-purple-500/30 hover:bg-purple-900/30"}`}>
                   Cancel
                 </Button>
-                <Button type="submit" className={`${isDark ? "bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold border border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.4)]" : "bg-purple-600 hover:bg-purple-500 text-white border border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.5)]"}`}>
-                  Enable Module
+                <Button type="submit" disabled={moduleBusy || !newModuleName.trim()} className={`${isDark ? "bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold border border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.4)]" : "bg-purple-600 hover:bg-purple-500 text-white border border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.5)]"}`}>
+                  {moduleBusy ? "Creating…" : "Create module"}
                 </Button>
               </div>
             </form>

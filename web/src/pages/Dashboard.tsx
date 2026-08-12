@@ -1553,8 +1553,11 @@ function ExecutiveDashboardView({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {/* Industry Toggle */}
-          <div className="flex gap-1.5 bg-muted/60 p-1.5 rounded-full border shadow-inner">
+          {/* Industry Toggle — Pixous only; see showIndustrySwitch. */}
+          <div className={cn(
+            "flex gap-1.5 bg-muted/60 p-1.5 rounded-full border shadow-inner",
+            !showIndustrySwitch && "hidden"
+          )}>
             <button
               type="button"
               onClick={() => setSelectedIndustry("ALL")}

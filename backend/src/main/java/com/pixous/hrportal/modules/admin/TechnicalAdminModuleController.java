@@ -71,7 +71,7 @@ public class TechnicalAdminModuleController {
                 .orElseGet(() -> {
                     CompanyModule newModule = new CompanyModule();
                     newModule.setCompany(company);
-                    newModule.setModuleCode(payload.getModuleCode());
+                    newModule.setModuleCode(code);
                     return newModule;
                 });
 

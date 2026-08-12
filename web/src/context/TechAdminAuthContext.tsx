@@ -496,6 +496,58 @@ export function TechAdminProvider({ children }: { children: ReactNode }) {
     [companyModules]
   );
 
+  /**
+   * Create a module this company defines for itself.
+   *
+   * Saved as an ordinary company_modules row whose featureFlags carry the name
+   * and blurb, so this needs no new table and no migration — the row shape the
+   * server already accepts is enough. mergeModules reads them back.
+   *
+   * @param companyId which tenant, as the caller already keys them
+   * @param name      what people will see; the code is derived from it
+   */
+  const createCustomModule = useCallback(
+    async (companyId: string, name: string, description: string) => {
+      const label = name.trim();
+      if (!label) throw new Error("Give the module a name");
+
+      // A stable, comparable code: letters, digits and underscores only, since
+      // it is what every lookup matches on.
+      const code = label.toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      if (!code) throw new Error("That name has no letters or digits to build a code from");
+
+      const existing = currentList(companyId);
+      if (existing.some((m) => m.code === code)) {
+        throw new Error(`A module called ${label} already exists`);
+      }
+
+      const tenant = companies.find(
+        (c) => c.companyId === companyId || String(c.id) === companyId
+      );
+      if (!tenant) throw new Error("Company not found");
+
+      await api.post(`/technical-admin/companies/${tenant.id}/modules`, {
+        moduleCode: code,
+        // Created switched off. A new module has no screens behind it yet, and
+        // turning it on for everyone the moment it is named would put an empty
+        // entry in their navigation.
+        enabled: false,
+        featureFlags: JSON.stringify({
+          name: label,
+          description: description.trim() || "Custom module",
+          visibleRoles: [...ALL_ROLES]
+        })
+      });
+
+      // Re-read from the server rather than guessing the new list, so what is
+      // shown is what was actually stored.
+      const res = await api.get(`/technical-admin/companies/${tenant.id}/modules`);
+      const rows = (res.data?.data ?? []) as any[];
+      setCompanyModules((prev) => ({ ...prev, [companyId]: mergeModules(rows) }));
+    },
+    [companies, currentList]
+  );
+
   const toggleCompanyModule = useCallback((companyId: string, moduleCode: string) => {
     const next = currentList(companyId).map(m => m.code === moduleCode ? { ...m, enabled: !m.enabled } : m);
     return persistModules(companyId, next);

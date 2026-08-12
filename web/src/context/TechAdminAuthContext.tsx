@@ -402,11 +402,29 @@ export function TechAdminProvider({ children }: { children: ReactNode }) {
       if (!tenant) throw new Error("Company not found");
 
       const previous = companyModules[companyIdKey];
-      // Only what actually changed is sent; each module is one row on the server.
+
+      /*
+       * Only what actually changed is sent; each module is one row on the server.
+       *
+       * Matched by module code, not by position. This compared next[i] against
+       * previous[i], which held only while both lists were the same length in
+       * the same order — adding a module to the template shifted every index by
+       * one, so each module was compared against its neighbour and a single
+       * toggle sent a burst of unrelated writes. One of those failing is what
+       * produced "Failed to toggle module" for a switch that had worked moments
+       * before.
+       */
+      const before = new Map((previous ?? []).map((m) => [m.code, m]));
       const changed = previous
-        ? next.filter((m, i) =>
-            m.enabled !== previous[i]?.enabled ||
-            JSON.stringify(m.visibleRoles) !== JSON.stringify(previous[i]?.visibleRoles))
+        ? next.filter((m) => {
+            const was = before.get(m.code);
+            // A module the previous list had never heard of is new, so send it.
+            if (!was) return true;
+            return (
+              m.enabled !== was.enabled ||
+              JSON.stringify(m.visibleRoles) !== JSON.stringify(was.visibleRoles)
+            );
+          })
         : next;
 
       await Promise.all(changed.map(m =>

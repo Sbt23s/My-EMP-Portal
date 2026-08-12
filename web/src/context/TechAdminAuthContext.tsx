@@ -52,6 +52,8 @@ export interface CompanyModuleItem {
   category: string;
   enabled: boolean;
   visibleRoles?: string[];
+  /** Created here rather than shipped in defaultModulesTemplate. */
+  custom?: boolean;
 }
 
 interface TechAdminContextValue {

@@ -54,6 +54,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // The cost is a brief loading state on every reload while /auth/me answers.
   // That is the honest thing to show while the answer is genuinely unknown.
   const [user, setUser] = useState<AuthUser | null>(null);
+
+  /**
+   * Module settings as the server reports them, or null until it has answered.
+   *
+   * Null means "not asked yet", which is why {@link hasModule} falls through to
+   * its older behaviour rather than treating it as "nothing enabled" — during
+   * the first moments after sign-in the portal should not flicker down to an
+   * empty sidebar and back.
+   */
+  const [serverModules, setServerModules] = useState<{
+    enabled: string[];
+    configured: boolean;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   // On mount: if we have a token but the stored user is stale, refresh it.
@@ -162,11 +175,76 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user]
   );
 
+  /*
+   * Load the module settings once there is a confirmed user, and reload them
+   * when the tab is returned to — so a module switched on in the admin screens
+   * takes effect on coming back to the portal, rather than only after a manual
+   * refresh.
+   */
+  useEffect(() => {
+    if (!user) {
+      setServerModules(null);
+      return;
+    }
+    let active = true;
+
+    async function load() {
+      try {
+        const res = await api.get<ApiEnvelope<{ enabled: string[]; configured: boolean }>>(
+          "/my-modules"
+        );
+        const data = res.data?.data;
+        if (active && data && Array.isArray(data.enabled)) {
+          setServerModules({
+            enabled: data.enabled.map((c) => String(c).toUpperCase()),
+            configured: Boolean(data.configured)
+          });
+        }
+      } catch {
+        // Leave it null and let hasModule fall back. A portal that cannot reach
+        // this endpoint should keep working, not hide half its navigation.
+      }
+    }
+
+    load();
+    const onFocus = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      active = false;
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [user]);
+
   const hasModule = useCallback(
     (moduleCode: string) => {
       if (!user) return false;
+
+      /*
+       * The server's answer wins when it has one.
+       *
+       * Everything below this block reads a copy of the module settings out of
+       * localStorage, written by the technical-admin screens. That only worked in
+       * a browser where somebody had opened those screens — an ordinary employee
+       * never does, so their copy was always missing and every module read as
+       * enabled. Switching a module off changed nothing for the people it was
+       * switched off for.
+       *
+       * `configured` distinguishes "this company switched everything off" from
+       * "nobody ever set this up". With no rows at all we must not hide
+       * everything, or a company that never visited the module screen would find
+       * its portal empty.
+       */
+      if (serverModules?.configured) {
+        return serverModules.enabled.includes(moduleCode.toUpperCase());
+      }
+      if (serverModules && !serverModules.configured) {
+        return true; // nothing configured server-side: show everything
+      }
+
       const lookupId = user.companyId || (user as any).tenantId || "PIX-MASTER";
-      
+
       const userRoles = user.roles || [];
       const isCompanyAdmin = userRoles.includes("SUPER_ADMIN") || userRoles.includes("COMPANY_ADMIN") || userRoles.includes("BOARD_ADMIN");
       const isHrManager = userRoles.includes("HR_MANAGER") || userRoles.includes("IT_HR") || userRoles.includes("CV_HR") || userRoles.includes("IT_MGR");
@@ -195,7 +273,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (e) {}
       return true;
     },
-    [user]
+    [user, serverModules]
   );
 
   /**
@@ -211,6 +289,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const hasDashboard = useCallback(() => {
     if (!user) return false;
+
+    // Same rule as hasModule, and for the same reason: prefer the server, and
+    // treat an unconfigured company as "on" so nobody is stranded.
+    if (serverModules?.configured) {
+      return serverModules.enabled.includes("DASHBOARD");
+    }
+    if (serverModules && !serverModules.configured) return true;
+
     const lookupId = user.companyId || (user as any).tenantId || "PIX-MASTER";
     try {
       const raw = localStorage.getItem("hrp.tech_admin_company_modules");
@@ -224,7 +310,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Unreadable settings are not a reason to lock someone out.
     }
     return true;
-  }, [user]);
+  }, [user, serverModules]);
 
   const value = useMemo(
     () => ({ user, loading, login, logout, refreshUser, hasRole, hasPermission, hasModule, hasDashboard }),

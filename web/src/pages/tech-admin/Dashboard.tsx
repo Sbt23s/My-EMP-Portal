@@ -144,10 +144,30 @@ export function TechAdminDashboard() {
     }
   };
 
-  const handleEnableNewModule = (e: React.FormEvent) => {
+  /**
+   * Create a module this tenant defines for itself.
+   *
+   * This used to flip a row in local state and close, which is why the button
+   * appeared to work and changed nothing: no request was ever sent, and the
+   * next reload showed the module untouched. The five names it offered were
+   * also modules the table below already lists, so the dialog could only ever
+   * duplicate a switch that was already there.
+   */
+  const handleEnableNewModule = async (e: React.FormEvent) => {
     e.preventDefault();
-    setModules(modules.map(m => m.name === newModuleCode ? { ...m, status: 'ENABLED' } : m));
-    setIsEnableModuleOpen(false);
+    if (moduleBusy) return; // one module per submit
+    setModuleError(null);
+    setModuleBusy(true);
+    try {
+      await createCustomModule(activeCompanyId, newModuleName, newModuleDesc);
+      setNewModuleName("");
+      setNewModuleDesc("");
+      setIsEnableModuleOpen(false);
+    } catch (err: any) {
+      setModuleError(err?.response?.data?.message || err?.message || "Could not create the module");
+    } finally {
+      setModuleBusy(false);
+    }
   };
 
   const handleSaveProfile = (e: React.FormEvent) => {

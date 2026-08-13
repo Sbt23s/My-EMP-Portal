@@ -348,14 +348,26 @@ export function TechAdminUsers() {
     const matchesSearch = u.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           u.email?.toLowerCase().includes(searchQuery.toLowerCase());
     const roleCode = getRoleCode(u);
+
+    /*
+     * Matched against every role the person holds, using the shared groups.
+     *
+     * Two things were wrong. The lists were hand-written here and had drifted
+     * from the ones the tiles count with — CV_SUP was missing, so a team lead
+     * counted on the tile vanished when you clicked it. And this read only the
+     * first of a person's roles, while the tiles read all of them, so anyone
+     * with a second role was counted but not listed.
+     */
     let matchesRole = selectedRoleFilter === "All";
     if (!matchesRole) {
-      if (selectedRoleFilter === "HR_MANAGER") matchesRole = roleCode === "HR_MANAGER" || roleCode === "IT_HR" || roleCode === "IT_MGR";
-      else if (selectedRoleFilter === "TEAM_LEAD") matchesRole = roleCode === "TEAM_LEAD" || roleCode === "IT_TL";
-      else if (selectedRoleFilter === "EMPLOYEE") matchesRole = roleCode === "EMPLOYEE" || roleCode === "IT_EMP";
-      else matchesRole = roleCode === selectedRoleFilter;
+      const group = ROLE_GROUPS[selectedRoleFilter];
+      const mine = rolesOf(u);
+      matchesRole = group
+        ? mine.some((r) => group.includes(r))
+        : mine.includes(selectedRoleFilter) || roleCode === selectedRoleFilter;
     }
-    
+
+
     const userStatus = u.profileStatus || u.status || "ACTIVE";
     const matchesStatus = statusFilter === "ALL" || userStatus === statusFilter;
 

@@ -793,8 +793,16 @@ export function TechAdminUsers() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  minLength={8}
                   className={`mt-1 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-white border-slate-300 text-slate-800 focus:border-purple-500"}`}
                 />
+                {/* The server requires eight. Saying so here beats submitting
+                    the form to find out. */}
+                <p className={`mt-1 text-[11px] ${password && password.length < 8
+                  ? "text-rose-500 font-medium"
+                  : (isDark ? "text-slate-400" : "text-slate-500")}`}>
+                  At least 8 characters
+                </p>
               </div>
 
               <div className={`pt-4 flex justify-end gap-3 border-t ${isDark ? "border-cyan-500/20" : "border-purple-500/30"}`}>

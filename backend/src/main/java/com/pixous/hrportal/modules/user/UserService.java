@@ -59,7 +59,9 @@ public class UserService {
                        RoleRepository roleRepository,
                        com.pixous.hrportal.modules.org.DesignationRepository designationRepository,
                        org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
-                       com.pixous.hrportal.modules.auth.PasswordVault passwordVault) {
+                       com.pixous.hrportal.modules.auth.PasswordVault passwordVault,
+                       com.pixous.hrportal.modules.org.CompanyRepository companyRepository) {
+        this.companyRepository = companyRepository;
         this.passwordEncoder = passwordEncoder;
         this.passwordVault = passwordVault;
         this.userRepository = userRepository;
@@ -608,6 +610,8 @@ public class UserService {
                         : userRepository.findById(u.getFaceRegisteredBy())
                                 .map(User::getName).orElse(null));
     }
+
+    private final com.pixous.hrportal.modules.org.CompanyRepository companyRepository;
 
     private UserSummary toSummary(User u) {
         String plainPassword = passwordVault != null ? passwordVault.open(u.getPasswordVault()) : null;

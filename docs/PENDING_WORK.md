@@ -246,6 +246,38 @@ Do the company-wide default first and get it rendering; per-module overrides on
 top of it are a smaller step once the first one works, and shipping the default
 alone is already useful.
 
+## Still pending — raised 13 Aug, later batch
+
+**Reload signs a technical admin out.** Pressing the browser reload button on
+`/tech-admin/dashboard` returns a page that is still nominally signed in but has
+Total Companies 0 and an empty Company Information panel — the company list
+failed to load and the session did not survive. Start at
+`TechAdminAuthContext`'s bootstrap: the sign-in stores an access token with `""`
+for the refresh token, so anything that re-validates on mount has nothing to
+refresh with. Highest priority of this batch: it makes the whole section feel
+unreliable.
+
+**Company admin created but counts do not move.** After creating a company admin
+the role counts stay put, and the counts shown do not match the company selected
+in the header. The directory now loads (the placeholder company name is fixed),
+so this is the next layer: check that the create call refetches, and that the
+counts follow `selectedCompanyFilter` rather than the logged-in tenant.
+
+**Technical-admin login page.** Remove the control top-right, add a sound on/off
+button, and put a video behind the form. The file the user supplied is at
+`C:\Users\balas\Downloads\Use_the_uploaded_image_as_the (3).mp4` — it needs
+copying into `web/public` first; a path outside the project will not survive a
+build. Autoplay only works muted, so the sound toggle and the video have to be
+wired together, and `prefers-reduced-motion` should fall back to a still.
+
+**Branding & Appearance.** `/tech-admin/branding` currently renders the
+technical-admin profile and MFA settings, not branding at all — and
+`Branding.tsx` does not exist, so the sidebar entry lands on whatever the router
+points at. What is wanted: about 20 ready-made looks, about 20 font pairings,
+and per-module colour and font overrides that can be added and removed. Build
+the company-wide default first; per-module overrides sit on top of it, in the
+`company_modules.featureFlags` JSON that custom modules already use.
+
 ## Still pending — mobile
 
 Working today: login with refresh, dashboard, attendance, leave, approvals,

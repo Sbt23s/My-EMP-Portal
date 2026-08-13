@@ -797,8 +797,19 @@ export function TechAdminUsers() {
                     placeholder="rahul_s"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
+                    minLength={3}
+                    maxLength={60}
                     className={`mt-1 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-white border-slate-300 text-slate-800 placeholder:text-slate-400 focus:border-purple-500"}`}
                   />
+                  {/* The server wants three characters, and nothing beyond
+                      letters, numbers, dot, underscore and hyphen. A two-letter
+                      username was refused with nothing on screen saying which
+                      field had failed. */}
+                  <p className={`mt-1 text-[11px] ${username && username.length < 3
+                    ? "text-rose-500 font-medium"
+                    : (isDark ? "text-slate-400" : "text-slate-500")}`}>
+                    3+ characters · letters, numbers, . _ -
+                  </p>
                 </div>
               </div>
 
@@ -897,8 +908,19 @@ export function TechAdminUsers() {
                     placeholder="rahul_s"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
+                    minLength={3}
+                    maxLength={60}
                     className={`mt-1 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-white border-slate-300 text-slate-800 placeholder:text-slate-400 focus:border-purple-500"}`}
                   />
+                  {/* The server wants three characters, and nothing beyond
+                      letters, numbers, dot, underscore and hyphen. A two-letter
+                      username was refused with nothing on screen saying which
+                      field had failed. */}
+                  <p className={`mt-1 text-[11px] ${username && username.length < 3
+                    ? "text-rose-500 font-medium"
+                    : (isDark ? "text-slate-400" : "text-slate-500")}`}>
+                    3+ characters · letters, numbers, . _ -
+                  </p>
                 </div>
               </div>
 

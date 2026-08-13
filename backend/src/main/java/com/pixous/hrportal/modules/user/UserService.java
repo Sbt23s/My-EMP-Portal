@@ -615,8 +615,36 @@ public class UserService {
                 u.getPhone(), u.getIndustry(), u.getDepartmentId(), u.getProfileStatus(),
                 u.getPhotoPath(), u.getDob(), u.getRoles().stream().map(Role::getCode).toList(),
                 u.getDesignationId(), u.getDesignationTitle(), u.getTechStack(), plainPassword,
-                u.getCompanyId(), "Company Name");
+                u.getCompanyId(), companyNameOf(u.getCompanyId()));
     }
+
+    /**
+     * The company a row belongs to, by name.
+     *
+     * <p>This field was the literal string "Company Name" for every user. The
+     * technical-admin directory filters its rows by matching this against the
+     * company being viewed, so nothing ever matched and the table showed no
+     * accounts and all three role counts as zero — while the dashboard beside it
+     * correctly reported sixty-one employees.
+     *
+     * <p>Looked up through a small per-request cache rather than joined, because
+     * this runs once per row and a directory page asks for three hundred of them.
+     * Three hundred lookups against a database that allows twenty connections in
+     * total is not a trade worth making for a name that repeats.
+     */
+    private String companyNameOf(Long companyId) {
+        if (companyId == null) return null;
+        return companyNameCache.computeIfAbsent(companyId, id ->
+                companyRepository.findById(id)
+                        .map(com.pixous.hrportal.modules.org.Company::getCompanyName)
+                        .orElse(null));
+    }
+
+    /**
+     * Cleared on every directory call, so a company renamed while the
+     * application is running shows its new name rather than a remembered one.
+     */
+    private final java.util.Map<Long, String> companyNameCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     private BankResponse toBank(BankDetail b) {
         return new BankResponse(b.getId(), b.getBankName(), b.getBranchName(),

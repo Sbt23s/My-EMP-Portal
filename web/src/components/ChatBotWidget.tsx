@@ -657,7 +657,7 @@ export function ChatBotWidget() {
             {/* Quick suggestions */}
             {showSuggestions && (
               <div className="flex flex-wrap gap-2 pt-1">
-                {SUGGESTIONS[lang].map((s) => (
+                {SUGGESTIONS.filter((s) => hasModule(s.module)).map((item) => item[lang]).map((s) => (
                   <button
                     key={s}
                     onClick={() => void handleSend(s)}

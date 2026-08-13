@@ -323,9 +323,25 @@ export function TechAdminUsers() {
     .toLowerCase()
     .includes("pixous");
 
+  /**
+   * Which role codes belong to each group, defined once.
+   *
+   * The tiles and the role filter each kept their own copy of these lists, and
+   * they drifted apart: IT_MGR counted as a team lead but filtered as HR, and
+   * CV_SUP counted as a team lead but was missing from the team-lead filter. A
+   * tile would read 1 and open onto "No accounts match these filters" — the
+   * page disagreeing with itself. Both now read from here.
+   */
+  const ROLE_GROUPS: Record<string, string[]> = {
+    HR_MANAGER: ["HR_MANAGER", "IT_HR", "CV_HR", "IT_MGR"],
+    TEAM_LEAD: ["TEAM_LEAD", "IT_TL", "CV_SUP"],
+    EMPLOYEE: ["EMPLOYEE", "IT_EMP", "CV_EMP"],
+    COMPANY_ADMIN: ["COMPANY_ADMIN", "SUPER_ADMIN", "BOARD_ADMIN", "CV_ADM", "IT_ADM"]
+  };
+
   /** The roles that run a company, in both the generic and industry namings. */
   const isAdminRole = (roleCode: string) =>
-    ["COMPANY_ADMIN", "SUPER_ADMIN", "BOARD_ADMIN", "CV_ADM", "IT_ADM"].includes(roleCode);
+    ROLE_GROUPS.COMPANY_ADMIN.includes(roleCode);
 
   const filteredUsers = users.filter((u: any) => {
     const matchesCompany = !selectedCompanyFilter || u.companyName === selectedCompanyFilter;

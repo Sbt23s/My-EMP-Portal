@@ -223,8 +223,18 @@ export function TechAdminAuditLogs() {
               <tbody className={`divide-y ${isDark ? 'divide-cyan-500/10' : 'divide-purple-500/20'}`}>
                 {filteredLogs.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center py-12 text-slate-500">
-                      No usage logs found for the selected filters.
+                    {/* "None for the selected filters" implied that clearing
+                        them would find some. Nothing writes usage rows yet, so
+                        no filter can produce any, and saying which is missing
+                        beats letting someone hunt through the dropdowns. */}
+                    <td colSpan={5} className="text-center py-12">
+                      <p className={`font-medium ${isDark ? "text-slate-300" : "text-slate-700"}`}>
+                        Usage tracking is not switched on yet
+                      </p>
+                      <p className={`mt-1 text-sm ${isDark ? "text-slate-500" : "text-slate-500"}`}>
+                        Nothing is recording which modules people open, so there is
+                        nothing to show here for any company or filter.
+                      </p>
                     </td>
                   </tr>
                 ) : (

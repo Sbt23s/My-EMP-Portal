@@ -83,7 +83,6 @@ export function TechAdminLayout() {
         { name: "Module Management", path: "/tech-admin/module-management", icon: SlidersHorizontal },
         { name: "Roles & Permissions", path: "/tech-admin/roles", icon: ShieldCheck },
         { name: "Users & Administrators", path: "/tech-admin/users", icon: Users },
-        { name: "Employees", path: "/tech-admin/employees", icon: Users },
         // Organization removed on request. It pointed at the Companies page, so
         // it was a second door into a room this list already has an entry for.
       ]
@@ -97,10 +96,10 @@ export function TechAdminLayout() {
       label: "SYSTEM",
       items: [
         { name: "Audit Logs", path: "/tech-admin/audit-logs", icon: History },
-        { name: "Integrations", path: "/tech-admin/integrations", icon: Plug },
+        // Employees, Integrations, Security and System Settings were removed
+        // from this sidebar on request. Their routes are untouched, so anything
+        // linking to them still works and putting an entry back is one line.
         { name: "Branding & Appearance", path: "/tech-admin/branding", icon: Palette },
-        { name: "Security", path: "/tech-admin/security", icon: Shield },
-        { name: "System Settings", path: "/tech-admin/settings", icon: Settings2 },
       ]
     }
   ];

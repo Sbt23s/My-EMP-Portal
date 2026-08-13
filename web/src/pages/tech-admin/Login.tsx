@@ -69,17 +69,20 @@ export function TechAdminLogin() {
       {/* Overlay to ensure readability */}
       <div className={`absolute inset-0 pointer-events-none transition-colors duration-300 ${isDark ? "bg-slate-950/40" : "bg-[#0a0118]/60 backdrop-blur-[2px]"}`} />
 
-      {/* Theme Toggle Positioned Top Right */}
+      {/* Sound, where the theme switch used to be. The theme control was
+          removed on request; there was little for it to change here anyway,
+          since the background is a video either way. */}
       <div className="absolute top-6 right-6 z-10">
         <Button
           type="button"
           variant="outline"
           size="icon"
-          onClick={toggleTheme}
-          className={`rounded-full transition backdrop-blur-md ${isDark ? "bg-slate-900/40 border-cyan-500/30 text-amber-400 hover:bg-cyan-900/50" : "bg-purple-900/40 border-purple-500/30 text-amber-500 hover:bg-purple-900/60"}`}
-          title={`Switch to ${isDark ? "Light" : "Dark"} Mode`}
+          onClick={toggleSound}
+          aria-pressed={soundOn}
+          className={`rounded-full transition backdrop-blur-md ${isDark ? "bg-slate-900/40 border-cyan-500/30 text-cyan-300 hover:bg-cyan-900/50" : "bg-purple-900/40 border-purple-500/30 text-purple-200 hover:bg-purple-900/60"}`}
+          title={soundOn ? "Turn sound off" : "Turn sound on"}
         >
-          {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          {soundOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
         </Button>
       </div>
 

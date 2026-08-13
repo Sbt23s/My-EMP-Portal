@@ -143,11 +143,27 @@ export function TechAdminUsers() {
     };
   }, [fetchUsers]);
 
+  /**
+   * Point the create form at a company, resolving its id from the real list.
+   *
+   * This used to map three names by hand and send MASTER-7H21LP for anything
+   * else. Every tenant added since — Sethu Technologies among them — fell
+   * through to that final else, so an account created for one company was filed
+   * under another and appeared in a directory it did not belong to. A hard-coded
+   * list of three companies cannot be right on a platform whose whole purpose is
+   * adding more.
+   */
   const handleCompanyChange = (cName: string) => {
     setCompanyName(cName);
-    if (cName === "Pixous Technologies") setCompanyId("PIX-MASTER");
-    else if (cName === "Bala Corp") setCompanyId("BALA-3P91QX");
-    else setCompanyId("MASTER-7H21LP");
+    const match = companies.find((c) => c.companyName === cName);
+    if (match) {
+      setCompanyId(String(match.companyId || match.id));
+      return;
+    }
+    // Refusing to guess. Sending the wrong company writes a real account into
+    // somebody else's tenant, and nothing on screen would say so.
+    setCompanyId("");
+    toast.error(`Could not resolve the tenant for ${cName}. Reload and try again.`);
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {

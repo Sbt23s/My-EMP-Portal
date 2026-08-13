@@ -9,7 +9,7 @@ import { Loader2, Plus, Users, ShieldCheck, Key, Search, Filter, Check, X, Build
 import { useTechAdminAuth } from "@/context/TechAdminAuthContext";
 
 export function TechAdminUsers() {
-  const { theme, currentCompany } = useTechAdminAuth();
+  const { theme, currentCompany, companies } = useTechAdminAuth();
   const isDark = theme === "dark";
 
   const [users, setUsers] = useState<any[]>([]);

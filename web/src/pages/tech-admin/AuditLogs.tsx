@@ -145,7 +145,12 @@ export function TechAdminAuditLogs() {
     );
   }
 
-  const cardBg = isDark ? "bg-slate-900/40 backdrop-blur-xl border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.15)] text-slate-100" : "bg-[#13002b]/40 backdrop-blur-xl border-purple-500/30 text-purple-100 shadow-[0_0_20px_rgba(168,85,247,0.15)]";
+  // Matched to Dashboard, Companies and Users. In light mode this was a dark
+  // purple panel at 40% over a photograph, with light text on top — the image
+  // came through the panel and sat behind the words.
+  const cardBg = isDark
+    ? "bg-slate-900/40 backdrop-blur-xl border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.15)] text-slate-100"
+    : "bg-white/90 backdrop-blur-md border border-white text-slate-800 shadow-xl shadow-slate-200/50";
 
   return (
     <div className={`min-h-screen pb-10 ${isDark ? 'text-slate-100' : 'text-purple-100'}`}>

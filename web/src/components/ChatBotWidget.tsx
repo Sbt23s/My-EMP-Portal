@@ -165,7 +165,7 @@ function BotAvatar({ className = "" }: { className?: string }) {
 // ---- widget ---------------------------------------------------------------
 
 export function ChatBotWidget() {
-  const { user } = useAuth();
+  const { user, hasModule } = useAuth();
   const location = useLocation();
 
   const [config, setConfig] = useState<ChatbotConfig | null>(null);
@@ -469,7 +469,7 @@ export function ChatBotWidget() {
     unlockAudio();
     setMessages((prev) =>
       prev.length === 0
-        ? [{ id: "greeting", sender: "bot", text: GREETING[langRef.current], timestamp: new Date() }]
+        ? [{ id: "greeting", sender: "bot", text: greeting(langRef.current, hasModule), timestamp: new Date() }]
         : prev
     );
   }, []);
@@ -484,7 +484,7 @@ export function ChatBotWidget() {
   // sitting in English.
   useEffect(() => {
     setMessages((prev) => prev.some((m) => m.id === "greeting")
-      ? prev.map((m) => m.id === "greeting" ? { ...m, text: GREETING[lang] } : m)
+      ? prev.map((m) => m.id === "greeting" ? { ...m, text: greeting(lang, hasModule) } : m)
       : prev);
   }, [lang]);
 

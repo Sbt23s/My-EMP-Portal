@@ -379,8 +379,11 @@ export function TechAdminUsers() {
     ).length;
 
   const privacyMaskedCounts = {
-    hr: countWithAnyRole(["HR_MANAGER", "IT_HR", "CV_HR"]),
-    tl: countWithAnyRole(["TEAM_LEAD", "IT_TL", "IT_MGR", "CV_SUP"]),
+    // IT_MGR counts as HR, matching the role filter above. It was counted under
+    // team leads while the filter treated it as HR, so clicking the HR tile
+    // listed people the HR tile had just reported as zero.
+    hr: countWithAnyRole(["HR_MANAGER", "IT_HR", "CV_HR", "IT_MGR"]),
+    tl: countWithAnyRole(["TEAM_LEAD", "IT_TL", "CV_SUP"]),
     emp: countWithAnyRole(["EMPLOYEE", "IT_EMP", "CV_EMP"]),
     admin: countWithAnyRole(["COMPANY_ADMIN", "SUPER_ADMIN", "BOARD_ADMIN"]),
     total: users.filter((u: any) => inSelectedCompany(u) && checkStatus(u)).length,

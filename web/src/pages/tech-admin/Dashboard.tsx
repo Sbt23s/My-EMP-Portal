@@ -197,7 +197,10 @@ export function TechAdminDashboard() {
   const displayUserCount = realUserCount;
 
   const statCards = [
-    { title: 'Total Companies', value: companies?.length || 0, subtitle: 'SaaS Tenants Provisioned', icon: Building2, colorClass: isDark ? 'bg-cyan-900/40 text-cyan-400 border border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.3)]' : 'bg-indigo-500/10 text-indigo-500 dark:text-indigo-400', trend: 'Active Network' },
+    // A dash, not 0, when the list could not be read. Showing zero tenants for
+    // a failed request is the reason a reload looked like everything had been
+    // wiped: the panels went blank and the tiles calmly reported nothing there.
+    { title: 'Total Companies', value: companiesFailed ? '—' : (companies?.length || 0), subtitle: companiesFailed ? 'Could not load — press Retry' : 'SaaS Tenants Provisioned', icon: Building2, colorClass: isDark ? 'bg-cyan-900/40 text-cyan-400 border border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.3)]' : 'bg-indigo-500/10 text-indigo-500 dark:text-indigo-400', trend: 'Active Network' },
     { title: 'Total Modules', value: '22', subtitle: 'Available System Modules', icon: Layers, colorClass: isDark ? 'bg-cyan-900/40 text-cyan-400 border border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.3)]' : 'bg-purple-500/10 text-purple-500 dark:text-purple-400', trend: 'System Wide' },
     { title: 'Enabled Modules', value: modules.filter(m => m.status === 'ENABLED').length, subtitle: `Active in ${currentCompany?.companyName || 'Tenant'}`, icon: CheckCircle2, colorClass: isDark ? 'bg-cyan-900/40 text-cyan-400 border border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.3)]' : 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400', trend: 'Current Tenant' },
     { title: 'Active Employees', value: Math.max(0, displayUserCount - 1), subtitle: 'Standard Employees', icon: UserSquare2, colorClass: isDark ? 'bg-cyan-900/40 text-cyan-400 border border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.3)]' : 'bg-teal-500/10 text-teal-500 dark:text-teal-400', trend: 'Excluding Admins' },

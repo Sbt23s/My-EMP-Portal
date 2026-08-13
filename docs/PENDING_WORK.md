@@ -123,9 +123,21 @@ It should answer only about enabled modules, and say plainly that a feature is
 not available otherwise rather than giving directions to a page that does not
 exist.
 
-The module list is already available server-side via the same query behind
-`GET /api/my-modules`; the chatbot service needs to read it and filter both its
-suggestions and its answers. Backend work — `modules/chatbot`.
+Found it: `ChatbotService.java` around lines 600-615 answers from a hardcoded
+if-chain — `if (leave) return "..."; if (pay) return "...";` — with no reference
+to module settings anywhere. The same chain is repeated per language (English,
+Tamil, Hindi and others), so each one needs the same guard; fixing only the
+English branch would leave the others wrong.
+
+`CompanyModuleRepository.findByCompanyId(SecurityUtils.currentCompanyId())` is
+the query to use — the same one behind `GET /api/my-modules`. Resolve the
+enabled set once per request and skip the branches whose module is off, and give
+the greeting the same treatment: it currently lists leave, attendance, payslips
+and assets regardless.
+
+When a feature is off, say it is not available rather than falling through to
+the generic reply — otherwise someone asking about payroll gets a non-answer and
+tries again.
 
 ## Still pending — HTTPS (raised 13 Aug)
 

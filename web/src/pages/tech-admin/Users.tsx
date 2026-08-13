@@ -183,8 +183,21 @@ export function TechAdminUsers() {
       await fetchUsers();
       window.dispatchEvent(new Event("hrp_users_updated"));
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || "Failed to create user";
-      toast.error(msg);
+      /*
+       * Show which field the server rejected, and why.
+       *
+       * It sends the reasons per field — "Password must be at least 8
+       * characters" — under data.data, and this read only data.message, so
+       * every rejection reached the screen as the bare words "Validation
+       * failed". Whoever typed a short password was told something was wrong
+       * with the form, but not what, and the form gave no clue either.
+       */
+      const body = err?.response?.data;
+      const fields = body?.data && typeof body.data === "object" ? body.data : null;
+      const detail = fields
+        ? Object.values(fields as Record<string, string>).filter(Boolean).join(" · ")
+        : null;
+      toast.error(detail || body?.message || err?.message || "Failed to create user");
     } finally {
       setIsSubmitting(false);
     }

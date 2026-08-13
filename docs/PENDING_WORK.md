@@ -109,9 +109,32 @@ order they matter:
 5. **The page's own styling is wrong** — a background image and washed-out text
    that no other tech-admin page uses. It should match Dashboard and Companies.
 
-Note on 3: the counts want the same server-side treatment as
-`GET /api/my-modules` — a real query per company, not a number derived in the
-browser.
+### The one cause behind 3, 4 and 5
+
+`GET /api/users` is what this page reads, and a technical admin gets nothing
+back from it. They are allowed to call it — the `@PreAuthorize` includes
+`hasRole('TECHNICAL_ADMIN')` — but the Hibernate tenant filter narrows the query
+by `SecurityUtils.currentCompanyId()`, and a technical admin has no company by
+design. Null tenant, no rows.
+
+That is why the table is empty and all three role counts read 0, while the
+dashboard beside it correctly reports 61 active employees: the dashboard uses a
+different endpoint that does not go through that filter.
+
+So the fix is one change, not three: let this endpoint take an explicit
+`companyId` when the caller is a technical admin, and scope to that instead of
+to their own (absent) tenant. Counts, the admin row, and provisioning all read
+the same list, so all three follow from it.
+
+**Treat this as high-risk work.** It touches tenant scoping, which is where the
+V94 mistake in this project came from — a change that looked right and quietly
+hid every holiday and leave type from all 62 users. Whatever is written here,
+verify by calling the endpoint as a technical admin for two different companies
+and confirming each sees only its own rows, before trusting it.
+
+Do not widen the filter globally to "null tenant sees everything". That would
+make every tenant-scoped query in the application leak across companies for any
+caller without a tenant. Scope this endpoint explicitly.
 
 ## Still pending — chatbot ignores module settings (raised 13 Aug)
 

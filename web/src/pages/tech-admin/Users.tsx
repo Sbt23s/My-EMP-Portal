@@ -362,7 +362,19 @@ export function TechAdminUsers() {
     total: users.filter((u: any) => inSelectedCompany(u) && checkStatus(u)).length,
   };
 
-  const cardBg = isDark ? "bg-slate-900/40 backdrop-blur-xl border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.15)] text-slate-100" : "bg-[#13002b]/40 backdrop-blur-xl border-purple-500/30 text-purple-100 shadow-[0_0_20px_rgba(168,85,247,0.15)]";
+  /*
+   * Matched to the Dashboard and Companies pages.
+   *
+   * In light mode this page used a dark purple panel at 40% over the same
+   * background image the others use, with light text on top. At that opacity
+   * the photograph came through the panel and sat behind the words, which is
+   * why the headings and the empty-state line read as greyed out — they were
+   * competing with a beach. The rest of the section uses a near-opaque white
+   * card and dark text; this now does the same.
+   */
+  const cardBg = isDark
+    ? "bg-slate-900/40 backdrop-blur-xl border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.15)] text-slate-100"
+    : "bg-white/90 backdrop-blur-md border border-white text-slate-800 shadow-xl shadow-slate-200/50";
 
   if (loading) return <div className="flex p-12 justify-center"><Loader2 className="animate-spin text-blue-500 w-8 h-8"/></div>;
 

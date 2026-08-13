@@ -316,8 +316,19 @@ export function TechAdminUsers() {
     
     const userStatus = u.profileStatus || u.status || "ACTIVE";
     const matchesStatus = statusFilter === "ALL" || userStatus === statusFilter;
-    
-    return matchesCompany && matchesSearch && matchesRole && matchesStatus;
+
+    /*
+     * Outside Pixous, list only each company's administrator.
+     *
+     * This screen showed every tenant's HR, team leads and employees with a
+     * PASSWORD column beside them. Reading another company's staff passwords is
+     * not part of running the platform, and putting the column there made it
+     * look as though it were. The administrator is the account a technical
+     * admin genuinely needs — it is who they hand a tenant over to.
+     */
+    const adminOnly = !isPixous && !isAdminRole(roleCode);
+
+    return matchesCompany && matchesSearch && matchesRole && matchesStatus && !adminOnly;
   });
 
   const checkStatus = (u: any) => {

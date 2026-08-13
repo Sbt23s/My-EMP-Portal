@@ -249,7 +249,34 @@ export function TechAdminDashboard() {
 
   return (
     <div className={`min-h-screen p-6 ${isDark ? 'bg-transparent text-slate-100' : 'bg-transparent text-slate-800'}`}>
-      
+
+      {/* Said out loud, with a way out of it. Without this the page after a
+          failed reload was indistinguishable from a platform with no tenants —
+          the tiles read zero and the company panel sat empty, and nothing on
+          screen suggested trying again. */}
+      {companiesFailed && (
+        <div
+          role="alert"
+          className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/60 bg-amber-50 px-4 py-3 dark:border-amber-500/40 dark:bg-amber-950/30"
+        >
+          <div>
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+              Could not load your companies
+            </p>
+            <p className="mt-0.5 text-xs text-amber-800/90 dark:text-amber-200/80">
+              You are still signed in. The figures below are incomplete until this loads.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void refreshCompanies()}
+            className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-500"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* 1. TOP STAT CARDS */}
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {statCards.map((stat, i) => (

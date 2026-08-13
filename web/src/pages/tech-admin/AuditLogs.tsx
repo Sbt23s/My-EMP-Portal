@@ -164,7 +164,11 @@ export function TechAdminAuditLogs() {
               Tenant Module Usage Logs
             </h2>
             <p className={`text-sm mt-1 max-w-2xl font-medium ${isDark ? "text-cyan-400" : "text-purple-200"}`}>
-              Real-time monitoring of how employees, HRs, and Team Leads are utilizing platform modules within <span className={`font-semibold ${isDark ? "text-cyan-400" : "text-purple-400"}`}>{currentCompany?.companyName || "the selected company"}</span>.
+              {/* Was "Real-time monitoring of…", which promised something the
+                  application does not do yet. Nothing records usage, so the
+                  heading was writing a cheque the empty table below could not
+                  cash. */}
+              How employees, HRs and Team Leads use platform modules within <span className={`font-semibold ${isDark ? "text-cyan-400" : "text-purple-400"}`}>{currentCompany?.companyName || "the selected company"}</span>, once usage tracking is switched on.
             </p>
           </div>
           

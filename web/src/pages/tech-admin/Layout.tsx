@@ -88,31 +88,11 @@ export function TechAdminLayout() {
         // it was a second door into a room this list already has an entry for.
       ]
     },
-    {
-      label: "MODULES",
-      items: [
-        { name: "Attendance", path: "/tech-admin/module-management", icon: Calendar, badge: { label: isModEnabled("ATTENDANCE") ? "ON" : "OFF", active: isModEnabled("ATTENDANCE") } },
-        { name: "Chat", path: "/tech-admin/module-management", icon: MessageSquare, badge: { label: isModEnabled("CHAT") ? "ON" : "OFF", active: isModEnabled("CHAT") } },
-        { name: "Payroll", path: "/tech-admin/module-management", icon: FileText, badge: { label: isModEnabled("PAYROLL") ? "ON" : "OFF", active: isModEnabled("PAYROLL") } },
-        { name: "Leave Management", path: "/tech-admin/module-management", icon: CalendarOff, badge: { label: isModEnabled("LEAVE") ? "ON" : "OFF", active: isModEnabled("LEAVE") } },
-        { name: "Assets", path: "/tech-admin/module-management", icon: Box, badge: { label: isModEnabled("ASSETS") ? "ON" : "OFF", active: isModEnabled("ASSETS") } },
-        { name: "Helpdesk", path: "/tech-admin/module-management", icon: HelpCircle, badge: { label: isModEnabled("HELPDESK") ? "ON" : "OFF", active: isModEnabled("HELPDESK") } },
-        { name: "Reports", path: "/tech-admin/module-management", icon: BarChart3, badge: { label: isModEnabled("REPORTS") ? "ON" : "OFF", active: isModEnabled("REPORTS") } },
-        { name: "Tasks", path: "/tech-admin/module-management", icon: CheckSquare, badge: { label: isModEnabled("TASKS") ? "ON" : "OFF", active: isModEnabled("TASKS") } },
-        { name: "Employee Onboarding", path: "/tech-admin/module-management", icon: UserCheck, badge: { label: isModEnabled("ONBOARDING") ? "ON" : "OFF", active: isModEnabled("ONBOARDING") } },
-        { name: "Expense Claims", path: "/tech-admin/module-management", icon: CreditCard, badge: { label: isModEnabled("EXPENSES") ? "ON" : "OFF", active: isModEnabled("EXPENSES") } },
-        { name: "Calendar", path: "/tech-admin/module-management", icon: CalendarDays, badge: { label: isModEnabled("CALENDAR") ? "ON" : "OFF", active: isModEnabled("CALENDAR") } },
-        { name: "Teams", path: "/tech-admin/module-management", icon: Users2, badge: { label: isModEnabled("TEAMS") ? "ON" : "OFF", active: isModEnabled("TEAMS") } },
-        { name: "Audit Log", path: "/tech-admin/module-management", icon: History, badge: { label: isModEnabled("AUDIT_LOG") ? "ON" : "OFF", active: isModEnabled("AUDIT_LOG") } },
-        { name: "Document Management", path: "/tech-admin/module-management", icon: FileText, badge: { label: isModEnabled("DOCUMENTS") ? "ON" : "OFF", active: isModEnabled("DOCUMENTS") } },
-        { name: "Project Management", path: "/tech-admin/module-management", icon: FolderGit2, badge: { label: isModEnabled("PROJECTS") ? "ON" : "OFF", active: isModEnabled("PROJECTS") } },
-        { name: "Communities", path: "/tech-admin/module-management", icon: Users2, badge: { label: isModEnabled("COMMUNITIES") ? "ON" : "OFF", active: isModEnabled("COMMUNITIES") } },
-        // Performance Appraisals, Recruitment & ATS, Time Tracking, Learning &
-        // Development, Employee Surveys, Company Directory and OKR were listed
-        // here as well. None of them has a page, so they have gone from this
-        // sidebar along with the module list they were toggling.
-      ]
-    },
+    // The MODULES group is gone from this sidebar. Its seventeen entries all
+    // pointed at the same page -- /tech-admin/module-management -- which the
+    // Module Management link above already opens, so the list was seventeen
+    // doors into one room. The ON/OFF badges beside them repeated what that
+    // page shows in full, and only there can they be changed.
     {
       label: "SYSTEM",
       items: [

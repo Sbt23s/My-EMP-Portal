@@ -16,8 +16,31 @@ export function TechAdminLogin() {
   const { login } = useTechAdminAuth();
   const navigate = useNavigate();
 
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  const [soundOn, setSoundOn] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  /**
+   * Start or stop the background music.
+   *
+   * Off to begin with, and started only from this click. Browsers refuse to
+   * autoplay audio until someone has interacted with the page, so a track that
+   * tried to start on load simply never played — and nothing said why. Tying it
+   * to the button makes the click itself the permission.
+   */
+  const toggleSound = () => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (soundOn) {
+      el.pause();
+      setSoundOn(false);
+      return;
+    }
+    el.volume = 0.35; // background, not a performance
+    void el
+      .play()
+      .then(() => setSoundOn(true))
+      // Refused anyway: leave the button showing "off", which is the truth.
+      .catch(() => setSoundOn(false));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

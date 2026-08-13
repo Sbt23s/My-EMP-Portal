@@ -168,6 +168,15 @@ export function TechAdminUsers() {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Refuse rather than let the server fall back to somewhere. An account
+    // written into the wrong tenant shows up in another company's directory,
+    // and nothing about the success message would reveal it.
+    if (!companyId) {
+      toast.error("Pick the company this account belongs to first.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {

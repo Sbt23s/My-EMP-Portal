@@ -332,6 +332,18 @@ export function TechAdminUsers() {
    * tile would read 1 and open onto "No accounts match these filters" — the
    * page disagreeing with itself. Both now read from here.
    */
+  /**
+   * Every role a person holds, not just the first.
+   *
+   * Declared above the directory filter because that filter runs while this
+   * component renders; leaving it further down threw a reference error before
+   * the page could paint.
+   */
+  const rolesOf = (u: any): string[] => {
+    if (Array.isArray(u.roles) && u.roles.length > 0) return u.roles.map(String);
+    return u.role ? [String(u.role)] : [];
+  };
+
   const ROLE_GROUPS: Record<string, string[]> = {
     HR_MANAGER: ["HR_MANAGER", "IT_HR", "CV_HR", "IT_MGR"],
     TEAM_LEAD: ["TEAM_LEAD", "IT_TL", "CV_SUP"],
@@ -398,10 +410,6 @@ export function TechAdminUsers() {
    * happened to be first in the array — which is why the totals never added up
    * to the number of rows in the table.
    */
-  const rolesOf = (u: any): string[] => {
-    if (Array.isArray(u.roles) && u.roles.length > 0) return u.roles.map(String);
-    return u.role ? [String(u.role)] : [];
-  };
 
   /**
    * No company filter means "everyone this admin can see"; a filter narrows it.

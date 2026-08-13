@@ -32,6 +32,7 @@ log "On change -> auto commit + push to $REMOTE/$BRANCH -> GitHub Actions auto-d
 log "Poll: ${POLL_SECS}s | Debounce: ${DEBOUNCE_SECS}s | Ctrl+C to stop"
 
 while true; do
+  touch "$HOME/.hr-watch-alive" 2>/dev/null || true   # heartbeat for the watchdog
   if [ -n "$(git status --porcelain)" ]; then
     sleep "$DEBOUNCE_SECS"   # let the edit settle before committing
 

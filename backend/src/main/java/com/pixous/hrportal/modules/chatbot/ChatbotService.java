@@ -585,12 +585,72 @@ public class ChatbotService {
         return clean;
     }
 
+    /**
+     * Module codes switched on for the caller's company.
+     *
+     * <p>Empty means "could not tell", and every caller below treats that as
+     * "answer about everything" — the assistant going quiet about leave because
+     * a lookup failed is worse than it mentioning a page somebody cannot open.
+     */
+    private java.util.Set<String> enabledModules() {
+        try {
+            Long companyId = com.pixous.hrportal.security.SecurityUtils.currentCompanyId();
+            if (companyId == null) return java.util.Set.of();
+            java.util.Set<String> codes = new java.util.HashSet<>();
+            companyModuleRepository.findByCompanyId(companyId).forEach(m -> {
+                if (m.isEnabled() && m.getModuleCode() != null) {
+                    codes.add(m.getModuleCode().trim().toUpperCase());
+                }
+            });
+            return codes;
+        } catch (Exception e) {
+            log.debug("Could not read module settings for the assistant", e);
+            return java.util.Set.of();
+        }
+    }
+
+    /** True when this module may be talked about. Unknown counts as yes. */
+    private boolean canDiscuss(java.util.Set<String> on, String moduleCode) {
+        return on.isEmpty() || on.contains(moduleCode);
+    }
+
     private String localFallback(String message, String lang) {
         String q = message.toLowerCase();
-        boolean leave = q.contains("leave") || q.contains("விடுப்பு") || q.contains("छुट्टी") || q.contains("अवकाश");
-        boolean attendance = q.contains("attendance") || q.contains("punch") || q.contains("வருகை") || q.contains("हाज़िरी") || q.contains("उपस्थिति");
-        boolean pay = q.contains("pay") || q.contains("salary") || q.contains("payslip") || q.contains("சம்பளம்") || q.contains("वेतन") || q.contains("सैलरी");
-        boolean asset = q.contains("asset") || q.contains("laptop") || q.contains("சொத்து") || q.contains("संपत्ति");
+
+        /*
+         * Each topic is gated by its module, in one place, so every language
+         * below is fixed at once.
+         *
+         * This answered about payslips while payroll was switched off — sending
+         * someone to a 'Payslips' menu the navigation no longer has. Clearing
+         * the flag here makes the topic fall through to the general reply
+         * instead of naming a page that is not there.
+         */
+        java.util.Set<String> on = enabledModules();
+
+        boolean leaveAsked = q.contains("leave") || q.contains("விடுப்பு") || q.contains("छुट्टी") || q.contains("अवकाश");
+        boolean attendanceAsked = q.contains("attendance") || q.contains("punch") || q.contains("வருகை") || q.contains("हाज़िरी") || q.contains("उपस्थिति");
+        boolean payAsked = q.contains("pay") || q.contains("salary") || q.contains("payslip") || q.contains("சம்பளம்") || q.contains("वेतन") || q.contains("सैलरी");
+        boolean assetAsked = q.contains("asset") || q.contains("laptop") || q.contains("சொத்து") || q.contains("संपत्ति");
+
+        boolean leave = leaveAsked && canDiscuss(on, "LEAVE");
+        boolean attendance = attendanceAsked && canDiscuss(on, "ATTENDANCE");
+        boolean pay = payAsked && canDiscuss(on, "PAYROLL");
+        boolean asset = assetAsked && canDiscuss(on, "ASSETS");
+
+        // Asked about something real that this company does not have. Saying so
+        // is kinder than a general reply, which reads as not having understood
+        // and invites the same question again.
+        boolean askedSomethingOff =
+                (leaveAsked && !leave) || (attendanceAsked && !attendance)
+                        || (payAsked && !pay) || (assetAsked && !asset);
+        if (askedSomethingOff) {
+            return switch (lang) {
+                case "ta" -> "அந்த வசதி உங்கள் நிறுவனத்தில் இயக்கப்படவில்லை. நிர்வாகியை அணுகுங்கள்.";
+                case "hi" -> "यह सुविधा आपकी कंपनी में सक्रिय नहीं है। कृपया अपने प्रशासक से संपर्क करें।";
+                default -> "That is not switched on for your company. Ask your administrator if you need it.";
+            };
+        }
 
         switch (lang) {
             case "ta" -> {

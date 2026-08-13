@@ -51,22 +51,55 @@ export function TechAdminModuleManagement() {
   // Recruitment & ATS, Time Tracking, Learning & Development, Employee Surveys,
   // Company Directory, OKR); they have been removed rather than left as promises.
   // Add one back only together with its page.
-  const masterModulesList = [
-    { id: 1, code: 'ATTENDANCE', name: 'Attendance', icon: <Calendar className="w-5 h-5 text-purple-500" />, description: 'Track attendance, shifts and biometric data', category: 'Core HR', categoryColor: 'bg-purple-500/10 text-purple-600 dark:text-purple-400', dependencies: 'Employees' },
-    { id: 2, code: 'CHAT', name: 'Chat', icon: <MessageSquare className="w-5 h-5 text-blue-500" />, description: 'Team chat, groups and announcements', category: 'Collaboration', categoryColor: 'bg-blue-500/10 text-blue-600 dark:text-blue-400', dependencies: 'Users' },
-    { id: 3, code: 'PAYROLL', name: 'Payroll', icon: <FileText className="w-5 h-5 text-emerald-500" />, description: 'Salary processing, payslips and tax management', category: 'Finance', categoryColor: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', dependencies: 'Employees' },
-    { id: 4, code: 'LEAVE', name: 'Leave Management', icon: <CalendarOff className="w-5 h-5 text-purple-500" />, description: 'Leave requests and balance tracking', category: 'Core HR', categoryColor: 'bg-purple-500/10 text-purple-600 dark:text-purple-400', dependencies: 'Employees' },
-    { id: 5, code: 'ASSETS', name: 'Assets', icon: <Box className="w-5 h-5 text-orange-500" />, description: 'Asset allocation and inventory management', category: 'Operations', categoryColor: 'bg-orange-500/10 text-orange-600 dark:text-orange-400', dependencies: 'Employees' },
-    { id: 6, code: 'HELPDESK', name: 'Helpdesk', icon: <HelpCircle className="w-5 h-5 text-orange-500" />, description: 'Support tickets and issue tracking', category: 'Operations', categoryColor: 'bg-orange-500/10 text-orange-600 dark:text-orange-400', dependencies: 'Users' },
-    { id: 7, code: 'REPORTS', name: 'Reports', icon: <BarChart3 className="w-5 h-5 text-red-500" />, description: 'Analytics and custom compliance reports', category: 'Analytics', categoryColor: 'bg-red-500/10 text-red-600 dark:text-red-400', dependencies: '-' },
-    { id: 8, code: 'TASKS', name: 'Tasks', icon: <CheckSquare className="w-5 h-5 text-blue-500" />, description: 'Task management and team collaboration', category: 'Collaboration', categoryColor: 'bg-blue-500/10 text-blue-600 dark:text-blue-400', dependencies: 'Users' },
-    { id: 11, code: 'ONBOARDING', name: 'Employee Onboarding', icon: <UserCheck className="w-5 h-5 text-purple-500" />, description: 'Automated onboarding workflows, checklists and document submission', category: 'Core HR', categoryColor: 'bg-purple-500/10 text-purple-600 dark:text-purple-400', dependencies: 'Employees' },
-    { id: 12, code: 'EXPENSES', name: 'Expense Claims', icon: <CreditCard className="w-5 h-5 text-emerald-500" />, description: 'Travel and operational expense claim approvals and reimbursement', category: 'Finance', categoryColor: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', dependencies: 'Employees' },
-    { id: 13, code: 'CALENDAR', name: 'Calendar', icon: <CalendarDays className="w-5 h-5 text-blue-500" />, description: 'Company calendar, events, and meeting scheduling', category: 'Collaboration', categoryColor: 'bg-blue-500/10 text-blue-600 dark:text-blue-400', dependencies: '-' },
-    { id: 14, code: 'TEAMS', name: 'Teams', icon: <Users2 className="w-5 h-5 text-blue-500" />, description: 'Department and project team management', category: 'Collaboration', categoryColor: 'bg-blue-500/10 text-blue-600 dark:text-blue-400', dependencies: 'Employees' },
-    { id: 15, code: 'AUDIT_LOG', name: 'Audit Log', icon: <History className="w-5 h-5 text-orange-500" />, description: 'Track system access and data modifications', category: 'Operations', categoryColor: 'bg-orange-500/10 text-orange-600 dark:text-orange-400', dependencies: '-' },
-    { id: 23, code: 'COMMUNITIES', name: 'Communities', icon: <Users2 className="w-5 h-5 text-blue-500" />, description: 'Employee interest groups and company clubs', category: 'Collaboration', categoryColor: 'bg-blue-500/10 text-blue-600 dark:text-blue-400', dependencies: 'Users' }
-  ];
+  /**
+   * Built from defaultModulesTemplate, the same list the rest of the section
+   * reads.
+   *
+   * This was a second hard-coded catalogue of fourteen modules kept beside the
+   * template's twenty-three, so this page reported 14 total while the dashboard
+   * reported 22 for the same company. Two copies of the same list will always
+   * end up disagreeing; only one of them can be right, and it is the one the
+   * server stores against.
+   *
+   * Icons and category colours stay here, keyed by code, because they are
+   * presentation and have no business in the shared template.
+   */
+  const MODULE_ICONS: Record<string, React.ReactNode> = {
+    ATTENDANCE: <Calendar className="w-5 h-5 text-purple-500" />,
+    CHAT: <MessageSquare className="w-5 h-5 text-blue-500" />,
+    PAYROLL: <FileText className="w-5 h-5 text-emerald-500" />,
+    LEAVE: <CalendarOff className="w-5 h-5 text-purple-500" />,
+    ASSETS: <Box className="w-5 h-5 text-orange-500" />,
+    HELPDESK: <HelpCircle className="w-5 h-5 text-orange-500" />,
+    REPORTS: <BarChart3 className="w-5 h-5 text-red-500" />,
+    TASKS: <CheckSquare className="w-5 h-5 text-blue-500" />,
+    ONBOARDING: <UserCheck className="w-5 h-5 text-purple-500" />,
+    EXPENSES: <CreditCard className="w-5 h-5 text-emerald-500" />,
+    CALENDAR: <CalendarDays className="w-5 h-5 text-blue-500" />,
+    TEAMS: <Users2 className="w-5 h-5 text-blue-500" />,
+    AUDIT_LOG: <History className="w-5 h-5 text-orange-500" />,
+    COMMUNITIES: <Users2 className="w-5 h-5 text-blue-500" />,
+  };
+
+  const CATEGORY_COLOURS: Record<string, string> = {
+    'Core HR': 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
+    Collaboration: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+    Finance: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+    Operations: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+    Analytics: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
+    Custom: 'bg-slate-500/10 text-slate-600 dark:text-slate-300'
+  };
+
+  const masterModulesList = defaultModulesTemplate.map((m) => ({
+    id: m.id,
+    code: m.code,
+    name: m.name,
+    icon: MODULE_ICONS[m.code] ?? <Boxes className="w-5 h-5 text-slate-400" />,
+    description: m.description,
+    category: m.category,
+    categoryColor: CATEGORY_COLOURS[m.category] ?? CATEGORY_COLOURS.Custom,
+    dependencies: '-'
+  }));
 
   // Current company modules state
   const activeTenantModules = companyModules[tenantId] || [];

@@ -90,6 +90,8 @@ public class ChatbotService {
     private final ChatbotKnowledgeRepository knowledgeRepo;
     private final ObjectMapper mapper;
     private final ChatbotOrgContext orgContext;
+    /** Read so the assistant does not describe features this company switched off. */
+    private final com.pixous.hrportal.modules.admin.CompanyModuleRepository companyModuleRepository;
     private final HttpClient http = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(15))
             .build();

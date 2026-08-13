@@ -186,7 +186,28 @@ for it to read.
 What is wanted there: who used which module, how many of each role used it, and
 which modules are used most.
 
-That needs a recording step first. Sketch:
+Confirmed by reading the code: `TechnicalAuditLog`, `TechnicalAuditLogRepository`
+and `TechnicalAdminAuditController` all exist and the page reads them correctly —
+but a search for anything constructing a `TechnicalAuditLog` finds nothing. The
+table is empty because no code has ever written a row. (`AuditLog.java` beside it
+is a deliberately empty file, replaced by this one.)
+
+So the read side is already built. Only the write side is missing.
+
+Two separate things are wanted, and they are not the same size:
+
+1. **Technical-admin actions** — who toggled a module, edited a company, created
+   or deleted a user. Small: those all pass through a handful of controllers in
+   `modules/admin`, and `TechnicalAuditLog` already has the columns for it
+   (adminId, action, entityType, oldValue, newValue, ipAddress). A day's work,
+   and it makes the existing page real.
+
+2. **Employee module usage** — which modules staff actually open, how many of
+   each role, which are used most. Larger, and needs its own table; see below.
+
+Do (1) first. It fills the page that exists, using a table that exists.
+
+For (2), the recording step:
 
 - a `module_usage` table — user, company, module code, action, timestamp; the
   session-duration column the page already renders needs a start/end or it

@@ -383,10 +383,10 @@ export function TechAdminUsers() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className={`text-xl font-semibold flex items-center gap-2 ${isDark ? "text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" : "text-purple-300 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]"}`}>
+          <h2 className={`text-xl font-semibold flex items-center gap-2 ${isDark ? "text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" : "text-purple-700"}`}>
             <Users className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-purple-400"}`} /> Multi-Tenant Company User Directory
           </h2>
-          <p className={`text-sm mt-1 font-medium ${isDark ? "text-cyan-400" : "text-purple-200"}`}>
+          <p className={`text-sm mt-1 font-medium ${isDark ? "text-cyan-400" : "text-slate-600"}`}>
             Manage login credentials, roles (Company Admin, HR, Team Lead, Employee) and company assignments.
           </p>
         </div>
@@ -410,7 +410,7 @@ export function TechAdminUsers() {
               placeholder="Search user name, email, tenant ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={`pl-9 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-purple-950/50 border-purple-500/30 text-purple-100 placeholder:text-purple-400/50 focus:border-purple-400"}`}
+              className={`pl-9 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-white border-slate-300 text-slate-800 placeholder:text-slate-400 focus:border-purple-500"}`}
             />
           </div>
 
@@ -418,19 +418,19 @@ export function TechAdminUsers() {
             <div className={`flex items-center p-1 rounded-lg ${isDark ? "bg-slate-900/40 border-cyan-500/20 border shadow-[0_0_8px_rgba(6,182,212,0.1)]" : "bg-purple-900/40 border border-purple-500/20"}`}>
               <button
                 onClick={() => setStatusFilter("ACTIVE")}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${statusFilter === "ACTIVE" ? (isDark ? "bg-emerald-500 text-white shadow-sm" : "bg-purple-600 text-white shadow-[0_0_10px_rgba(168,85,247,0.4)]") : (isDark ? "text-slate-500 hover:text-slate-300" : "text-purple-300/70 hover:text-purple-100")}`}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${statusFilter === "ACTIVE" ? (isDark ? "bg-emerald-500 text-white shadow-sm" : "bg-purple-600 text-white shadow-[0_0_10px_rgba(168,85,247,0.4)]") : (isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-500 hover:text-slate-800")}`}
               >
                 Onboard
               </button>
               <button
                 onClick={() => setStatusFilter("OFFBOARDED")}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${statusFilter === "OFFBOARDED" ? (isDark ? "bg-slate-400 text-white shadow-sm" : "bg-purple-600 text-white shadow-[0_0_10px_rgba(168,85,247,0.4)]") : (isDark ? "text-slate-500 hover:text-slate-300" : "text-purple-300/70 hover:text-purple-100")}`}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${statusFilter === "OFFBOARDED" ? (isDark ? "bg-slate-400 text-white shadow-sm" : "bg-purple-600 text-white shadow-[0_0_10px_rgba(168,85,247,0.4)]") : (isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-500 hover:text-slate-800")}`}
               >
                 Offboard
               </button>
               <button
                 onClick={() => setStatusFilter("ALL")}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${statusFilter === "ALL" ? (isDark ? "bg-blue-500 text-white shadow-sm" : "bg-purple-600 text-white shadow-[0_0_10px_rgba(168,85,247,0.4)]") : (isDark ? "text-slate-500 hover:text-slate-300" : "text-purple-300/70 hover:text-purple-100")}`}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${statusFilter === "ALL" ? (isDark ? "bg-blue-500 text-white shadow-sm" : "bg-purple-600 text-white shadow-[0_0_10px_rgba(168,85,247,0.4)]") : (isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-500 hover:text-slate-800")}`}
               >
                 All
               </button>
@@ -441,7 +441,7 @@ export function TechAdminUsers() {
               <select
                 value={selectedRoleFilter}
                 onChange={(e) => setSelectedRoleFilter(e.target.value)}
-                className={`p-2 rounded text-xs font-semibold ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-purple-950/50 border-purple-500/30 text-purple-100 focus:border-purple-400"}`}
+                className={`p-2 rounded text-xs font-semibold ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-white border-slate-300 text-slate-800 focus:border-purple-500"}`}
               >
                 <option value="All">All Roles</option>
                 <option value="COMPANY_ADMIN">Company Admin</option>
@@ -463,7 +463,7 @@ export function TechAdminUsers() {
           >
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className={`text-sm font-bold ${isDark ? "text-cyan-400" : "text-purple-200"}`}>HR Managers</p>
+                <p className={`text-sm font-bold ${isDark ? "text-cyan-400" : "text-slate-600"}`}>HR Managers</p>
                 <h3 className={`text-2xl font-bold mt-1 ${isDark ? "text-cyan-400" : "text-purple-300"}`}>{privacyMaskedCounts.hr}</h3>
               </div>
               <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-cyan-900/40 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "bg-purple-900/60 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.3)]"}`}>
@@ -477,7 +477,7 @@ export function TechAdminUsers() {
           >
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className={`text-sm font-bold ${isDark ? "text-cyan-400" : "text-purple-200"}`}>Team Leads</p>
+                <p className={`text-sm font-bold ${isDark ? "text-cyan-400" : "text-slate-600"}`}>Team Leads</p>
                 <h3 className={`text-2xl font-bold mt-1 ${isDark ? "text-cyan-400" : "text-purple-300"}`}>{privacyMaskedCounts.tl}</h3>
               </div>
               <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-cyan-900/40 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "bg-purple-900/60 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.3)]"}`}>
@@ -491,7 +491,7 @@ export function TechAdminUsers() {
           >
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className={`text-sm font-bold ${isDark ? "text-cyan-400" : "text-purple-200"}`}>Employees</p>
+                <p className={`text-sm font-bold ${isDark ? "text-cyan-400" : "text-slate-600"}`}>Employees</p>
                 <h3 className={`text-2xl font-bold mt-1 ${isDark ? "text-cyan-400" : "text-purple-300"}`}>{privacyMaskedCounts.emp}</h3>
               </div>
               <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-cyan-900/40 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "bg-purple-900/60 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.3)]"}`}>
@@ -557,7 +557,7 @@ export function TechAdminUsers() {
                       {u.name.charAt(0)}
                     </div>
                     <div>
-                      <span className={`block font-medium ${isDark ? "text-slate-200" : "text-purple-100"}`}>{u.name}</span>
+                      <span className={`block font-medium ${isDark ? "text-slate-200" : "text-slate-800"}`}>{u.name}</span>
                       <span className={`text-[11px] ${isDark ? 'text-slate-500' : 'text-purple-400/80'}`}>@{u.username}</span>
                     </div>
                   </td>
@@ -571,7 +571,7 @@ export function TechAdminUsers() {
                       }
                       return (
                         <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded text-xs font-semibold ${isDark ? "bg-slate-900/50 border border-cyan-500/30 text-slate-200" : "bg-purple-900/40 border border-purple-500/20 text-purple-200"}`}>
+                          <span className={`px-2 py-0.5 rounded text-xs font-semibold ${isDark ? "bg-slate-900/50 border border-cyan-500/30 text-slate-200" : "bg-purple-900/40 border border-purple-500/20 text-slate-600"}`}>
                              {visiblePasswords[u.id] ? (u.password || "admin123") : "••••••••"}
                           </span>
                           <button onClick={() => togglePasswordVisibility(u.id)} className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -582,12 +582,12 @@ export function TechAdminUsers() {
                     })()}
                   </td>
                   <td className="p-4">
-                    <span className={`font-semibold block ${isDark ? "text-slate-200" : "text-purple-100"}`}>{u.companyName}</span>
+                    <span className={`font-semibold block ${isDark ? "text-slate-200" : "text-slate-800"}`}>{u.companyName}</span>
                     <span className={`font-mono text-[11px] font-bold ${isDark ? "text-cyan-400" : "text-purple-400"}`}>{u.companyId}</span>
                   </td>
                   <td className="p-4">
                     <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${
-                      (u.role === 'COMPANY_ADMIN' || (u.roles && u.roles.includes('COMPANY_ADMIN'))) ? (isDark ? 'bg-cyan-900/40 text-cyan-400 border-cyan-500/30 shadow-[0_0_8px_rgba(6,182,212,0.3)]' : 'bg-purple-600/30 text-purple-200 border-purple-500/50 shadow-[0_0_8px_rgba(168,85,247,0.3)]') :
+                      (u.role === 'COMPANY_ADMIN' || (u.roles && u.roles.includes('COMPANY_ADMIN'))) ? (isDark ? 'bg-cyan-900/40 text-cyan-400 border-cyan-500/30 shadow-[0_0_8px_rgba(6,182,212,0.3)]' : 'bg-purple-600/30 text-slate-600 border-purple-500/50 shadow-[0_0_8px_rgba(168,85,247,0.3)]') :
                       (u.role === 'HR_MANAGER' || (u.roles && u.roles.includes('HR_MANAGER'))) ? (isDark ? 'bg-indigo-900/40 text-indigo-400 border-indigo-500/30 shadow-[0_0_8px_rgba(99,102,241,0.3)]' : 'bg-indigo-900/50 text-indigo-300 border-indigo-500/40 shadow-[0_0_8px_rgba(99,102,241,0.3)]') :
                       (u.role === 'TEAM_LEAD' || (u.roles && u.roles.includes('TEAM_LEAD'))) ? (isDark ? 'bg-teal-900/40 text-teal-400 border-teal-500/30 shadow-[0_0_8px_rgba(20,184,166,0.3)]' : 'bg-teal-900/50 text-teal-300 border-teal-500/40 shadow-[0_0_8px_rgba(20,184,166,0.3)]') :
                       (isDark ? 'bg-emerald-900/40 text-emerald-400 border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-emerald-900/50 text-emerald-300 border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.3)]')
@@ -596,7 +596,7 @@ export function TechAdminUsers() {
                     </span>
                   </td>
                   <td className="p-4">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${isDark ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)]" : "bg-purple-600/30 text-purple-200 border-purple-500/50 shadow-[0_0_8px_rgba(168,85,247,0.3)]"}`}>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${isDark ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)]" : "bg-purple-600/30 text-slate-600 border-purple-500/50 shadow-[0_0_8px_rgba(168,85,247,0.3)]"}`}>
                       {u.status}
                     </span>
                   </td>
@@ -661,12 +661,12 @@ export function TechAdminUsers() {
                   placeholder="Enter new password (e.g. NewPass123!)"
                   value={newResetPassword}
                   onChange={(e) => setNewResetPassword(e.target.value)}
-                  className={`mt-1 font-mono ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-purple-950/50 border-purple-500/30 text-purple-100 placeholder:text-purple-400/50 focus:border-purple-400"}`}
+                  className={`mt-1 font-mono ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-white border-slate-300 text-slate-800 placeholder:text-slate-400 focus:border-purple-500"}`}
                 />
               </div>
 
               <div className={`pt-4 flex justify-end gap-3 border-t ${isDark ? "border-cyan-500/20" : "border-purple-500/30"}`}>
-                <Button type="button" variant="outline" onClick={() => setIsResetModalOpen(false)} className={isDark ? "text-slate-300 border-cyan-500/30 hover:bg-cyan-900/30" : "text-purple-300 border-purple-500/30 hover:bg-purple-900/40 hover:text-purple-100"}>
+                <Button type="button" variant="outline" onClick={() => setIsResetModalOpen(false)} className={isDark ? "text-slate-300 border-cyan-500/30 hover:bg-cyan-900/30" : "text-purple-300 border-purple-500/30 hover:bg-purple-900/40 hover:text-slate-800"}>
                   Cancel
                 </Button>
                 <Button type="submit" className={isDark ? "bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold border border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.4)]" : "bg-purple-600 hover:bg-purple-500 text-white border border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.5)]"}>
@@ -699,7 +699,7 @@ export function TechAdminUsers() {
                   placeholder="e.g. Rahul Sharma"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className={`mt-1 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-purple-950/50 border-purple-500/30 text-purple-100 placeholder:text-purple-400/50 focus:border-purple-400"}`}
+                  className={`mt-1 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-white border-slate-300 text-slate-800 placeholder:text-slate-400 focus:border-purple-500"}`}
                 />
               </div>
 
@@ -712,7 +712,7 @@ export function TechAdminUsers() {
                     placeholder="rahul@pixoustech.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className={`mt-1 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-purple-950/50 border-purple-500/30 text-purple-100 placeholder:text-purple-400/50 focus:border-purple-400"}`}
+                    className={`mt-1 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-white border-slate-300 text-slate-800 placeholder:text-slate-400 focus:border-purple-500"}`}
                   />
                 </div>
                 <div>
@@ -722,7 +722,7 @@ export function TechAdminUsers() {
                     placeholder="rahul_s"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className={`mt-1 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-purple-950/50 border-purple-500/30 text-purple-100 placeholder:text-purple-400/50 focus:border-purple-400"}`}
+                    className={`mt-1 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-white border-slate-300 text-slate-800 placeholder:text-slate-400 focus:border-purple-500"}`}
                   />
                 </div>
               </div>
@@ -730,7 +730,7 @@ export function TechAdminUsers() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className={isDark ? "text-slate-300" : "text-purple-300"}>Target Company Tenant</Label>
-                  <div className={`w-full mt-1 p-2 rounded border text-sm font-semibold opacity-70 cursor-not-allowed ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white" : "bg-purple-950/50 border-purple-500/30 text-purple-300"}`}>
+                  <div className={`w-full mt-1 p-2 rounded border text-sm font-semibold opacity-70 cursor-not-allowed ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white" : "bg-slate-100 border-slate-300 text-slate-600"}`}>
                     {currentCompany?.companyName} ({currentCompany?.id})
                   </div>
                 </div>
@@ -740,7 +740,7 @@ export function TechAdminUsers() {
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className={`w-full mt-1 p-2 rounded border text-sm ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-purple-950/50 border-purple-500/30 text-purple-100 focus:border-purple-400"}`}
+                    className={`w-full mt-1 p-2 rounded border text-sm ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-white border-slate-300 text-slate-800 focus:border-purple-500"}`}
                   >
                     <option value="COMPANY_ADMIN">Company Admin</option>
                   </select>
@@ -753,12 +753,12 @@ export function TechAdminUsers() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className={`mt-1 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-purple-950/50 border-purple-500/30 text-purple-100 focus:border-purple-400"}`}
+                  className={`mt-1 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-white border-slate-300 text-slate-800 focus:border-purple-500"}`}
                 />
               </div>
 
               <div className={`pt-4 flex justify-end gap-3 border-t ${isDark ? "border-cyan-500/20" : "border-purple-500/30"}`}>
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className={isDark ? "text-slate-300 border-cyan-500/30 hover:bg-cyan-900/30" : "text-purple-300 border-purple-500/30 hover:bg-purple-900/40 hover:text-purple-100"}>
+                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className={isDark ? "text-slate-300 border-cyan-500/30 hover:bg-cyan-900/30" : "text-purple-300 border-purple-500/30 hover:bg-purple-900/40 hover:text-slate-800"}>
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isSubmitting} className={isDark ? "bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold border border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.4)]" : "bg-purple-600 hover:bg-purple-500 text-white border border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.5)]"}>
@@ -791,7 +791,7 @@ export function TechAdminUsers() {
                   placeholder="e.g. Rahul Sharma"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className={`mt-1 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-purple-950/50 border-purple-500/30 text-purple-100 placeholder:text-purple-400/50 focus:border-purple-400"}`}
+                  className={`mt-1 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-white border-slate-300 text-slate-800 placeholder:text-slate-400 focus:border-purple-500"}`}
                 />
               </div>
 
@@ -804,7 +804,7 @@ export function TechAdminUsers() {
                     placeholder="rahul@sethu.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className={`mt-1 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-purple-950/50 border-purple-500/30 text-purple-100 placeholder:text-purple-400/50 focus:border-purple-400"}`}
+                    className={`mt-1 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-white border-slate-300 text-slate-800 placeholder:text-slate-400 focus:border-purple-500"}`}
                   />
                 </div>
                 <div>
@@ -814,7 +814,7 @@ export function TechAdminUsers() {
                     placeholder="rahul_s"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className={`mt-1 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-purple-950/50 border-purple-500/30 text-purple-100 placeholder:text-purple-400/50 focus:border-purple-400"}`}
+                    className={`mt-1 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-white border-slate-300 text-slate-800 placeholder:text-slate-400 focus:border-purple-500"}`}
                   />
                 </div>
               </div>
@@ -822,7 +822,7 @@ export function TechAdminUsers() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className={isDark ? "text-slate-300" : "text-purple-300"}>Target Company Tenant</Label>
-                  <div className={`w-full mt-1 p-2 rounded border text-sm font-semibold opacity-70 cursor-not-allowed ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white" : "bg-purple-950/50 border-purple-500/30 text-purple-300"}`}>
+                  <div className={`w-full mt-1 p-2 rounded border text-sm font-semibold opacity-70 cursor-not-allowed ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white" : "bg-slate-100 border-slate-300 text-slate-600"}`}>
                     {selectedUserForEdit.companyName}
                   </div>
                 </div>
@@ -832,7 +832,7 @@ export function TechAdminUsers() {
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className={`w-full mt-1 p-2 rounded border text-sm ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-purple-950/50 border-purple-500/30 text-purple-100 focus:border-purple-400"}`}
+                    className={`w-full mt-1 p-2 rounded border text-sm ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-white border-slate-300 text-slate-800 focus:border-purple-500"}`}
                   >
                     <option value="COMPANY_ADMIN">Company Admin</option>
                   </select>
@@ -840,7 +840,7 @@ export function TechAdminUsers() {
               </div>
 
               <div className={`pt-4 flex justify-end gap-3 border-t ${isDark ? "border-cyan-500/20" : "border-purple-500/30"}`}>
-                <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className={isDark ? "text-slate-300 border-cyan-500/30 hover:bg-cyan-900/30" : "text-purple-300 border-purple-500/30 hover:bg-purple-900/40 hover:text-purple-100"}>
+                <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className={isDark ? "text-slate-300 border-cyan-500/30 hover:bg-cyan-900/30" : "text-purple-300 border-purple-500/30 hover:bg-purple-900/40 hover:text-slate-800"}>
                   Cancel
                 </Button>
                 <Button type="submit" className={isDark ? "bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold border border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.4)]" : "bg-purple-600 hover:bg-purple-500 text-white border border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.5)]"}>

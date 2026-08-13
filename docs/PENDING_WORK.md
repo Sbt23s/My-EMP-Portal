@@ -176,6 +176,55 @@ A record, a certbot certificate, uncommenting those blocks, and pointing
 Worth doing for its own sake, not only for calls: passwords, payslips and
 identity documents currently cross the network unencrypted.
 
+## Still pending — Audit Logs shows nothing (raised 13 Aug)
+
+`/tech-admin/audit-logs` reads "Real-time monitoring of how employees, HRs and
+Team Leads are utilising platform modules" and then shows an empty table. It is
+not a bug in that page: **nothing records module usage**, so there is nothing
+for it to read.
+
+What is wanted there: who used which module, how many of each role used it, and
+which modules are used most.
+
+That needs a recording step first. Sketch:
+
+- a `module_usage` table — user, company, module code, action, timestamp; the
+  session-duration column the page already renders needs a start/end or it
+  should be dropped from the table rather than left blank
+- something that writes a row. An interceptor over the module routes is less
+  invasive than touching each controller, and cheaper to remove if it turns out
+  to cost too much
+- aggregation endpoints for the counts, grouped by role and by module
+
+Two cautions. Writing a row per request against a database that allows twenty
+connections in total needs batching or async writes, or the tracking becomes
+the outage. And the table grows without limit — decide the retention window
+when you create it, not after it is large.
+
+Until any of that exists, the honest thing on that page is to say usage
+tracking is not switched on, rather than show an empty table under a heading
+that promises real-time monitoring.
+
+## Still pending — Branding & Appearance (raised 13 Aug)
+
+`/tech-admin/branding` should let a technical admin choose the look for a
+tenant, and change it per module. Scope, as the user narrowed it: **about twenty
+presets, not a hundred** — enough to pick from without becoming a design tool.
+
+- roughly 20 ready-made looks (colour set, type, and a header image or pattern)
+- editable text: product name, greeting, empty-state and login wording
+- colours: accent, surface and text, with a live preview beside the choice
+- per-module overrides, so one module can differ from the company default
+
+Where it goes: the same `company_modules.featureFlags` JSON that custom modules
+already use will hold a per-module override, and the company-wide default wants
+a column or a settings row of its own. No new table is needed for the module
+side.
+
+Do the company-wide default first and get it rendering; per-module overrides on
+top of it are a smaller step once the first one works, and shipping the default
+alone is already useful.
+
 ## Still pending — mobile
 
 Working today: login with refresh, dashboard, attendance, leave, approvals,

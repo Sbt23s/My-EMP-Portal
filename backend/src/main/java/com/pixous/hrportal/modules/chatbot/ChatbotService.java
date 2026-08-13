@@ -99,11 +99,13 @@ public class ChatbotService {
     public ChatbotService(ChatbotSettingsService settings,
                           ChatbotKnowledgeRepository knowledgeRepo,
                           ObjectMapper mapper,
-                          ChatbotOrgContext orgContext) {
+                          ChatbotOrgContext orgContext,
+                          com.pixous.hrportal.modules.admin.CompanyModuleRepository companyModuleRepository) {
         this.settings = settings;
         this.knowledgeRepo = knowledgeRepo;
         this.mapper = mapper;
         this.orgContext = orgContext;
+        this.companyModuleRepository = companyModuleRepository;
     }
 
     // ---------------------------------------------------------------- config

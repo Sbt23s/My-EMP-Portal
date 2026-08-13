@@ -74,10 +74,18 @@ const welcomeText = (lang: Lang, name: string): string => {
   }
 };
 
-const SUGGESTIONS: Record<Lang, string[]> = {
-  en: ["How do I apply for leave?", "How do I punch attendance?", "Where are my payslips?"],
-  ta: ["விடுப்புக்கு எப்படி விண்ணப்பிப்பது?", "வருகையை எப்படி பதிவு செய்வது?", "என் பேஸ்லிப் எங்கே?"]
-};
+/**
+ * Starter questions, each tied to the module that can answer it.
+ *
+ * Offering "Where are my payslips?" with payroll switched off invites the one
+ * question the assistant has to refuse — and it is the assistant's own prompt
+ * that led there.
+ */
+const SUGGESTIONS: { module: string; en: string; ta: string }[] = [
+  { module: "LEAVE", en: "How do I apply for leave?", ta: "விடுப்புக்கு எப்படி விண்ணப்பிப்பது?" },
+  { module: "ATTENDANCE", en: "How do I punch attendance?", ta: "வருகையை எப்படி பதிவு செய்வது?" },
+  { module: "PAYROLL", en: "Where are my payslips?", ta: "என் பேஸ்லிப் எங்கே?" }
+];
 
 const PLACEHOLDER: Record<Lang, string> = {
   en: "Type your message…",

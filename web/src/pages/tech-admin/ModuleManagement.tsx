@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useTechAdminAuth } from '@/context/TechAdminAuthContext';
+import { useTechAdminAuth, defaultModulesTemplate } from '@/context/TechAdminAuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -94,7 +94,7 @@ export function TechAdminModuleManagement() {
     id: m.id,
     code: m.code,
     name: m.name,
-    icon: MODULE_ICONS[m.code] ?? <Boxes className="w-5 h-5 text-slate-400" />,
+    icon: MODULE_ICONS[m.code] ?? <Box className="w-5 h-5 text-slate-400" />,
     description: m.description,
     category: m.category,
     categoryColor: CATEGORY_COLOURS[m.category] ?? CATEGORY_COLOURS.Custom,

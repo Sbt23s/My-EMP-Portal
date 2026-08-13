@@ -113,6 +113,34 @@ Note on 3: the counts want the same server-side treatment as
 `GET /api/my-modules` — a real query per company, not a number derived in the
 browser.
 
+## Still pending — chatbot ignores module settings (raised 13 Aug)
+
+The HR assistant answers about modules the company has switched off. With
+payroll off it still replies "View and download your monthly payslips under the
+'Payslips' menu" — pointing at a menu that is no longer there.
+
+It should answer only about enabled modules, and say plainly that a feature is
+not available otherwise rather than giving directions to a page that does not
+exist.
+
+The module list is already available server-side via the same query behind
+`GET /api/my-modules`; the chatbot service needs to read it and filter both its
+suggestions and its answers. Backend work — `modules/chatbot`.
+
+## Still pending — HTTPS (raised 13 Aug)
+
+Calls do not work because browsers only grant microphone and camera on a secure
+origin, and the portal is served over plain HTTP at an IP address. Chat and
+messages are unaffected.
+
+`docker-compose.prod.yml` and `web/nginx.conf` already carry the HTTPS blocks,
+commented out, for `employeeportal.pixoustech.app`. The remaining work is a DNS
+A record, a certbot certificate, uncommenting those blocks, and pointing
+`APP_CORS_ALLOWED_ORIGINS` at the https host.
+
+Worth doing for its own sake, not only for calls: passwords, payslips and
+identity documents currently cross the network unencrypted.
+
 ## Still pending — mobile
 
 Working today: login with refresh, dashboard, attendance, leave, approvals,

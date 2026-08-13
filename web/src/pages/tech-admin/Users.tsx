@@ -301,6 +301,19 @@ export function TechAdminUsers() {
 
   const getRoleCode = (u: any) => u.role || (u.roles && u.roles.length > 0 ? u.roles[0] : "EMPLOYEE");
 
+  /**
+   * Pixous sees its own staff in full; every other tenant is shown only its
+   * administrator. Read from the company being viewed, not from who is logged
+   * in — a technical admin switches between tenants from the header.
+   */
+  const isPixous = (selectedCompanyFilter ?? currentCompany?.companyName ?? "")
+    .toLowerCase()
+    .includes("pixous");
+
+  /** The roles that run a company, in both the generic and industry namings. */
+  const isAdminRole = (roleCode: string) =>
+    ["COMPANY_ADMIN", "SUPER_ADMIN", "BOARD_ADMIN", "CV_ADM", "IT_ADM"].includes(roleCode);
+
   const filteredUsers = users.filter((u: any) => {
     const matchesCompany = !selectedCompanyFilter || u.companyName === selectedCompanyFilter;
     const matchesSearch = u.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 

@@ -40,19 +40,31 @@ export function TechAdminLogin() {
   return (
     <div className={`relative flex min-h-screen items-center justify-center lg:justify-end lg:pr-32 transition-colors duration-300 px-4 overflow-hidden ${isDark ? "bg-slate-950 text-slate-50" : "bg-[#0a0118] text-purple-100"}`}>
       
-      {/* Background Video */}
-      <video 
-        autoPlay 
-        loop 
-        muted 
-        playsInline 
-        className="absolute inset-0 w-full h-full object-cover"
+      {/*
+        Both files are served from web/public.
+
+        They were referenced as /@fs/C:/Users/balas/Downloads/... — a path the
+        Vite dev server resolves and a built bundle cannot. On the deployed site
+        the video and the audio were simply absent, which is why this page was a
+        flat dark rectangle there while it looked right locally. Anything the
+        browser has to fetch must live inside the project.
+
+        Muted, because no browser will autoplay sound unmuted; the button below
+        is what turns it on, and it counts as the click that grants permission.
+      */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        // Nothing here needs the video to be understood, so it is decoration.
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full object-cover motion-reduce:hidden"
       >
-        <source src="/@fs/C:/Users/balas/Downloads/Use_the_uploaded_image_as_the (3).mp4" type="video/mp4" />
+        <source src="/tech-admin-login.mp4" type="video/mp4" />
       </video>
 
-      {/* Background Audio */}
-      <audio autoPlay loop src="/@fs/C:/Users/balas/Downloads/latest puthiya manitha.mp3.mpeg" />
+      <audio ref={audioRef} loop src="/tech-admin-login.mp3" />
 
       {/* Overlay to ensure readability */}
       <div className={`absolute inset-0 pointer-events-none transition-colors duration-300 ${isDark ? "bg-slate-950/40" : "bg-[#0a0118]/60 backdrop-blur-[2px]"}`} />

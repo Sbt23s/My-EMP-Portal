@@ -26,10 +26,43 @@ const WELCOME_KEY = "hrp.chatbot.welcomed";
 
 // ---- localized copy -------------------------------------------------------
 
-const GREETING: Record<Lang, string> = {
-  en: "Hi! I'm your Pixous HR Assistant 🤖 — ask me about leave, attendance, payslips, assets or anything about the portal. You can type or tap the mic to talk.",
-  ta: "வணக்கம்! நான் உங்கள் Pixous HR உதவியாளர் 🤖 — விடுப்பு, வருகை, சம்பளம், சொத்துக்கள் அல்லது போர்ட்டல் பற்றி எதையும் கேளுங்கள். தட்டச்சு செய்யலாம் அல்லது பேச மைக்கை அழுத்தவும்."
-};
+/**
+ * The topics the greeting offers, each with the module it belongs to.
+ *
+ * The greeting used to name leave, attendance, payslips and assets whatever the
+ * company had switched on, so it invited questions about pages that were not
+ * there — and the first thing the assistant did was contradict itself.
+ */
+const GREETING_TOPICS: { module: string; en: string; ta: string }[] = [
+  { module: "LEAVE", en: "leave", ta: "விடுப்பு" },
+  { module: "ATTENDANCE", en: "attendance", ta: "வருகை" },
+  { module: "PAYROLL", en: "payslips", ta: "சம்பளம்" },
+  { module: "ASSETS", en: "assets", ta: "சொத்துக்கள்" }
+];
+
+/** Joins a list the way a person would: "a, b and c". */
+function listOut(items: string[], and: string): string {
+  if (items.length <= 1) return items[0] ?? "";
+  return `${items.slice(0, -1).join(", ")} ${and} ${items[items.length - 1]}`;
+}
+
+function greeting(lang: Lang, hasModule: (code: string) => boolean): string {
+  const topics = GREETING_TOPICS.filter((t) => hasModule(t.module));
+
+  if (lang === "ta") {
+    const named = listOut(topics.map((t) => t.ta), "மற்றும்");
+    // With nothing switched on, ask the open question rather than naming
+    // subjects that would only lead somewhere empty.
+    return named
+      ? `வணக்கம்! நான் உங்கள் Pixous HR உதவியாளர் 🤖 — ${named} அல்லது போர்ட்டல் பற்றி எதையும் கேளுங்கள். தட்டச்சு செய்யலாம் அல்லது பேச மைக்கை அழுத்தவும்.`
+      : "வணக்கம்! நான் உங்கள் Pixous HR உதவியாளர் 🤖 — போர்ட்டல் பற்றி எதையும் கேளுங்கள். தட்டச்சு செய்யலாம் அல்லது பேச மைக்கை அழுத்தவும்.";
+  }
+
+  const named = listOut(topics.map((t) => t.en), "and");
+  return named
+    ? `Hi! I'm your Pixous HR Assistant 🤖 — ask me about ${named}, or anything about the portal. You can type or tap the mic to talk.`
+    : "Hi! I'm your Pixous HR Assistant 🤖 — ask me anything about the portal. You can type or tap the mic to talk.";
+}
 
 const welcomeText = (lang: Lang, name: string): string => {
   const who = name ? `, ${name}` : "";

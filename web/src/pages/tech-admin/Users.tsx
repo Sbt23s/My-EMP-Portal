@@ -526,13 +526,21 @@ export function TechAdminUsers() {
     // Administrators are excluded here rather than left to fall through. An
     // account whose role matched no group was landing in this tile, which is
     // how a newly created administrator turned up as an employee.
+    // Requires an actual role. An account carrying none was landing here too,
+    // so "Employees" was really "everyone left over" — and a role that failed to
+    // save looked like an ordinary member of staff instead of a broken account.
+    // Those are counted separately below and said out loud.
     emp: users.filter(
       (u: any) =>
         inSelectedCompany(u) &&
         checkStatus(u) &&
+        rolesOf(u).length > 0 &&
         !rolesOf(u).some((r) => isAdminRole(r)) &&
         !rolesOf(u).some((r) => ROLE_GROUPS.HR_MANAGER.includes(r)) &&
         !rolesOf(u).some((r) => ROLE_GROUPS.TEAM_LEAD.includes(r))
+    ).length,
+    noRole: users.filter(
+      (u: any) => inSelectedCompany(u) && checkStatus(u) && rolesOf(u).length === 0
     ).length,
     admin: users.filter(
       (u: any) => inSelectedCompany(u) && checkStatus(u) && rolesOf(u).some((r) => isAdminRole(r))
@@ -704,9 +712,31 @@ export function TechAdminUsers() {
               {/* Says why the tiles above can show more people than the table
                   below lists — otherwise the two look like they disagree. */}
               {!isPixous
-                ? "Company administrators only. The counts above cover everyone; staff logins are that company's own business."
+                ? showNonAdmins
+                  ? "Every account in this tenant. Passwords stay hidden for anyone who is not an administrator."
+                  : "Company administrators only. The counts above cover everyone; staff logins are that company's own business."
                 : "User accounts isolated by tenant scope ID."}
             </CardDescription>
+
+            {/* Names what the table is not showing, and offers it.
+                Without this, an account created with the wrong role was both
+                invisible here and impossible to correct anywhere. */}
+            {!isPixous && otherAccounts > 0 && (
+              <p className={`mt-1.5 text-xs ${isDark ? "text-amber-400" : "text-amber-600"}`}>
+                {otherAccounts} other account{otherAccounts === 1 ? "" : "s"} in this tenant
+                {privacyMaskedCounts.noRole > 0
+                  ? `, ${privacyMaskedCounts.noRole} with no role assigned`
+                  : ""}
+                .{" "}
+                <button
+                  type="button"
+                  onClick={() => setShowNonAdmins((v) => !v)}
+                  className="font-semibold underline underline-offset-2"
+                >
+                  {showNonAdmins ? "Show administrators only" : "Show them"}
+                </button>
+              </p>
+            )}
           </div>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">

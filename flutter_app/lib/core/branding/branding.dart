@@ -64,20 +64,16 @@ class BrandFont {
   final String id;
   final String name;
 
-  /// A family name and its fallbacks, in Flutter's order.
+  /// A family name, or empty for "whatever the platform uses".
+  ///
+  /// Empty rather than naming a default: passing null to `fontFamily` is how you
+  /// say "the system one" in Flutter, and spelling out "Roboto" would be wrong
+  /// on iOS and wrong again on any Android skin that ships something else.
   final String heading;
-  final List<String> headingFallback;
   final String body;
-  final List<String> bodyFallback;
 
-  const BrandFont._full({
-    required this.id,
-    required this.name,
-    required this.heading,
-    required this.body,
-    this.headingFallback = const [],
-    this.bodyFallback = const [],
-  });
+  String? get headingFamily => heading.isEmpty ? null : heading;
+  String? get bodyFamily => body.isEmpty ? null : body;
 }
 
 /// The twenty pairings the admin screen offers.
@@ -88,26 +84,26 @@ class BrandFont {
 /// several of them is smaller on a phone than in a browser. That is honest: the
 /// choice still applies, it simply has less to work with.
 const List<BrandFont> kBrandFonts = [
-  BrandFont._full(id: 'system', name: 'System', heading: '', body: ''),
-  BrandFont._full(id: 'grotesk', name: 'Grotesk', heading: 'Segoe UI', body: 'Segoe UI'),
-  BrandFont._full(id: 'helvetica', name: 'Helvetica', heading: 'Helvetica', body: 'Helvetica'),
-  BrandFont._full(id: 'arial', name: 'Arial', heading: 'Arial', body: 'Arial'),
-  BrandFont._full(id: 'verdana', name: 'Verdana', heading: 'Verdana', body: 'Verdana'),
-  BrandFont._full(id: 'tahoma', name: 'Tahoma', heading: 'Tahoma', body: 'Tahoma'),
-  BrandFont._full(id: 'trebuchet', name: 'Trebuchet', heading: 'Trebuchet MS', body: 'Trebuchet MS'),
-  BrandFont._full(id: 'calibri', name: 'Calibri', heading: 'Calibri', body: 'Calibri'),
-  BrandFont._full(id: 'optima', name: 'Optima', heading: 'Optima', body: 'Candara'),
-  BrandFont._full(id: 'georgia', name: 'Georgia', heading: 'Georgia', body: 'Georgia'),
-  BrandFont._full(id: 'garamond', name: 'Garamond', heading: 'Garamond', body: 'Garamond'),
-  BrandFont._full(id: 'cambria', name: 'Cambria', heading: 'Cambria', body: 'Cambria'),
-  BrandFont._full(id: 'book', name: 'Bookman', heading: 'Bookman Old Style', body: 'Georgia'),
-  BrandFont._full(id: 'palatino', name: 'Palatino', heading: 'Palatino', body: 'Palatino'),
-  BrandFont._full(id: 'times', name: 'Times', heading: 'Times New Roman', body: 'Times New Roman'),
-  BrandFont._full(id: 'serif-sans', name: 'Serif + Sans', heading: 'Georgia', body: ''),
-  BrandFont._full(id: 'sans-serif', name: 'Sans + Serif', heading: 'Segoe UI', body: 'Georgia'),
-  BrandFont._full(id: 'condensed', name: 'Condensed', heading: 'Arial Narrow', body: 'Arial'),
-  BrandFont._full(id: 'mono-head', name: 'Mono Headings', heading: 'Consolas', body: ''),
-  BrandFont._full(id: 'mono', name: 'Monospace', heading: 'Courier New', body: 'Courier New'),
+  BrandFont(id: 'system', name: 'System', heading: '', body: ''),
+  BrandFont(id: 'grotesk', name: 'Grotesk', heading: 'Segoe UI', body: 'Segoe UI'),
+  BrandFont(id: 'helvetica', name: 'Helvetica', heading: 'Helvetica', body: 'Helvetica'),
+  BrandFont(id: 'arial', name: 'Arial', heading: 'Arial', body: 'Arial'),
+  BrandFont(id: 'verdana', name: 'Verdana', heading: 'Verdana', body: 'Verdana'),
+  BrandFont(id: 'tahoma', name: 'Tahoma', heading: 'Tahoma', body: 'Tahoma'),
+  BrandFont(id: 'trebuchet', name: 'Trebuchet', heading: 'Trebuchet MS', body: 'Trebuchet MS'),
+  BrandFont(id: 'calibri', name: 'Calibri', heading: 'Calibri', body: 'Calibri'),
+  BrandFont(id: 'optima', name: 'Optima', heading: 'Optima', body: 'Candara'),
+  BrandFont(id: 'georgia', name: 'Georgia', heading: 'Georgia', body: 'Georgia'),
+  BrandFont(id: 'garamond', name: 'Garamond', heading: 'Garamond', body: 'Garamond'),
+  BrandFont(id: 'cambria', name: 'Cambria', heading: 'Cambria', body: 'Cambria'),
+  BrandFont(id: 'book', name: 'Bookman', heading: 'Bookman Old Style', body: 'Georgia'),
+  BrandFont(id: 'palatino', name: 'Palatino', heading: 'Palatino', body: 'Palatino'),
+  BrandFont(id: 'times', name: 'Times', heading: 'Times New Roman', body: 'Times New Roman'),
+  BrandFont(id: 'serif-sans', name: 'Serif + Sans', heading: 'Georgia', body: ''),
+  BrandFont(id: 'sans-serif', name: 'Sans + Serif', heading: 'Segoe UI', body: 'Georgia'),
+  BrandFont(id: 'condensed', name: 'Condensed', heading: 'Arial Narrow', body: 'Arial'),
+  BrandFont(id: 'mono-head', name: 'Mono Headings', heading: 'Consolas', body: ''),
+  BrandFont(id: 'mono', name: 'Monospace', heading: 'Courier New', body: 'Courier New'),
 ];
 
 /// What one scope can set. Both optional — an override may change only colour.
@@ -220,9 +216,13 @@ class ResolvedBranding {
   final String? productName;
   final String? welcomeText;
 
+  /// The app's own palette, for a company that has chosen nothing.
+  ///
+  /// Not `const` with a list index — indexing a const list is not a constant
+  /// expression in Dart, so this names the defaults outright.
   static const fallback = ResolvedBranding(
-    theme: kBrandThemes[0],
-    font: kBrandFonts[0],
+    theme: BrandTheme(id: 'indigo', name: 'Indigo', accent: Color(0xFF4F46E5), surface: Color(0xFFFFFFFF), ink: Color(0xFF0F172A)),
+    font: BrandFont(id: 'system', name: 'System', heading: '', body: ''),
   );
 }
 

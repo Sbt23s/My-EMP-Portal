@@ -81,7 +81,11 @@ export function TechAdminLayout() {
         { name: "Dashboard", path: "/tech-admin/dashboard", icon: LayoutDashboard },
         { name: "Company Configuration", path: "/tech-admin/companies", icon: Building2 },
         { name: "Module Management", path: "/tech-admin/module-management", icon: SlidersHorizontal },
-        { name: "Roles & Permissions", path: "/tech-admin/roles", icon: ShieldCheck },
+        // Roles & Permissions removed on request. The page was read-only — it
+        // listed the eighteen roles and what each grants but changed nothing —
+        // and a company's roles are now decided where its accounts are, on the
+        // Users screen. The route stays registered, so restoring this is one
+        // line if the page ever gains controls.
         { name: "Users & Administrators", path: "/tech-admin/users", icon: Users },
         // Organization removed on request. It pointed at the Companies page, so
         // it was a second door into a room this list already has an entry for.

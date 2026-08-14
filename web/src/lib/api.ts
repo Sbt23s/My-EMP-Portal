@@ -114,6 +114,19 @@ api.interceptors.response.use(
       const canRefresh = Boolean(tokenStore.refresh);
       const onTechAdmin = location.pathname.startsWith("/tech-admin");
 
+      /*
+       * One refused request in the technical-admin section is about that
+       * request. That area is full of endpoints a technical admin may not call
+       * — /auth/me among them, since they are not an employee — and treating
+       * any of those refusals as the end of the session cleared a token that
+       * was still valid, which is what made reload behave like sign-out.
+       *
+       * The session ends when its own four-hour token expires, checked below.
+       */
+      if (onTechAdmin && !tokenExpired(tokenStore.access)) {
+        return Promise.reject(error);
+      }
+
       if (!canRefresh && !tokenExpired(tokenStore.access)) {
         // Still inside the token's lifetime — leave the session alone and let
         // the caller handle its own 401.

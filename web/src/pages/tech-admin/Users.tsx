@@ -822,7 +822,11 @@ export function TechAdminUsers() {
                 <tr key={u.id} className={`transition-colors ${isDark ? "hover:bg-cyan-900/20" : "hover:bg-slate-50"}`}>
                   <td className="p-4 font-semibold text-slate-200 flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-full font-bold flex items-center justify-center ${isDark ? "bg-cyan-900/40 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "bg-slate-100 text-slate-600"}`}>
-                      {u.name.charAt(0)}
+                      {/* Guarded. An account with no name — which the directory
+                          does return — threw here and took the whole table down
+                          with it, so one bad row read as "accounts failed to
+                          load". */}
+                      {(u.name || u.username || "?").charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <span className={`block font-medium ${isDark ? "text-slate-200" : "text-slate-800"}`}>{u.name}</span>

@@ -262,6 +262,8 @@ def main():
                os.path.join(OUT, "Pixous_HR_Requirements_v1.0.docx"))
     md_to_docx(os.path.join(DOCS, "UNIT-TESTING.md"),
                os.path.join(OUT, "Pixous_HR_Unit_Testing_v1.0.docx"))
+    md_to_docx(os.path.join(DOCS, "ROLE-WISE-TESTING.md"),
+               os.path.join(OUT, "Pixous_HR_RoleWise_Testing_v1.0.docx"))
     api_list_to_docx()
 
 

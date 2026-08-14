@@ -65,6 +65,7 @@ const TechAdminCompanies = lazy(() => import("@/pages/tech-admin/Companies").the
 const TechAdminCompanyConfig = lazy(() => import("@/pages/tech-admin/CompanyConfig").then(m => ({ default: m.TechAdminCompanyConfig })));
 const TechAdminAuditLogs = lazy(() => import("@/pages/tech-admin/AuditLogs").then(m => ({ default: m.TechAdminAuditLogs })));
 const TechAdminSettings = lazy(() => import("@/pages/tech-admin/Settings").then(m => ({ default: m.TechAdminSettings })));
+const TechAdminBranding = lazy(() => import("@/pages/tech-admin/Branding").then(m => ({ default: m.TechAdminBranding })));
 const TechAdminModuleManagement = lazy(() => import("@/pages/tech-admin/ModuleManagement").then(m => ({ default: m.TechAdminModuleManagement })));
 const TechAdminUsers = lazy(() => import("@/pages/tech-admin/Users").then(m => ({ default: m.TechAdminUsers })));
 const TechAdminRoles = lazy(() => import("@/pages/tech-admin/Roles").then(m => ({ default: m.TechAdminRoles })));
@@ -307,7 +308,7 @@ export const router = createBrowserRouter([
       { path: "module/*", element: page(<TechAdminModuleManagement />) },
       { path: "audit-logs", element: page(<TechAdminAuditLogs />) },
       { path: "integrations", element: page(<TechAdminSettings />) },
-      { path: "branding", element: page(<TechAdminSettings />) },
+      { path: "branding", element: page(<TechAdminBranding />) },
       { path: "security", element: page(<TechAdminSettings />) },
       { path: "settings", element: page(<TechAdminSettings />) }
     ]

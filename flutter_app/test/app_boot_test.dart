@@ -8,6 +8,7 @@ import 'package:hr_portal_mobile/features/auth/login_screen.dart';
 import 'package:hr_portal_mobile/main.dart';
 import 'package:hr_portal_mobile/models/auth_user.dart';
 import 'package:hr_portal_mobile/providers/app_providers.dart';
+import 'package:hr_portal_mobile/repositories/auth_repository.dart';
 import 'package:hr_portal_mobile/providers/modules_provider.dart';
 import 'package:hr_portal_mobile/routes/app_shell.dart';
 

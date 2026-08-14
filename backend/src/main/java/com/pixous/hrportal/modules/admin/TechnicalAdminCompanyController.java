@@ -61,10 +61,25 @@ public class TechnicalAdminCompanyController {
         }
     }
 
+    /**
+     * Gone. Company administrators are created through {@code POST
+     * /api/auth/employees} with {@code roleCode: "COMPANY_ADMIN"}.
+     *
+     * <p>This used to answer {@code 200 "Company admin created successfully"}
+     * while creating nothing at all — it never even read the payload. A caller
+     * could not tell it apart from a real creation, so an administrator that did
+     * not exist was reported as made, and the failure only surfaced later as
+     * somebody unable to sign in.
+     *
+     * <p>Answering plainly rather than being deleted: something may still be
+     * calling it, and a 404 reads as a typo in the path. This says what happened
+     * and where to go instead.
+     */
     @PostMapping("/{companyId}/admins")
-    public ResponseEntity<ApiResponse<?>> createCompanyAdmin(@PathVariable Long companyId, @RequestBody java.util.Map<String, String> payload) {
-        // Here we would typically call a UserService or AdminService to create the user and assign COMPANY_ADMIN role.
-        // For the scope of this implementation, we can just return success or integrate directly with UserRepository.
-        return ResponseEntity.ok(ApiResponse.ok("Company admin created successfully"));
+    public ResponseEntity<ApiResponse<?>> createCompanyAdmin(@PathVariable Long companyId,
+                                                             @RequestBody java.util.Map<String, String> payload) {
+        return ResponseEntity.status(410).body(ApiResponse.fail(
+                "This endpoint never created anything. Use POST /api/auth/employees with "
+                        + "roleCode COMPANY_ADMIN and companyId " + companyId + ".", null));
     }
 }

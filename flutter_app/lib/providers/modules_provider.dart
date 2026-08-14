@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/branding/branding.dart';
@@ -76,17 +78,11 @@ class ModuleSettings {
   static dynamic _tryDecode(String raw) {
     if (raw.trim().isEmpty) return null;
     try {
-      return const _Json().decode(raw);
+      return jsonDecode(raw);
     } catch (_) {
       return null;
     }
   }
-}
-
-/// Tiny indirection so the import stays at the top of the file where it reads.
-class _Json {
-  const _Json();
-  dynamic decode(String source) => jsonDecode(source);
 }
 
 /// The company's module settings, refreshed whenever the session changes.

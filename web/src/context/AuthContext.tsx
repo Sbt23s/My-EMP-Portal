@@ -76,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     enabled: string[];
     configured: boolean;
   } | null>(null);
+  const [branding, setBranding] = useState<BrandingDoc | null>(null);
   const [loading, setLoading] = useState(true);
 
   // On mount: if we have a token but the stored user is stale, refresh it.
@@ -246,21 +247,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) {
       setServerModules(null);
+      setBranding(null);
       return;
     }
     let active = true;
 
     async function load() {
       try {
-        const res = await api.get<ApiEnvelope<{ enabled: string[]; configured: boolean }>>(
-          "/my-modules"
-        );
+        const res = await api.get<
+          ApiEnvelope<{ enabled: string[]; configured: boolean; branding?: string }>
+        >("/my-modules");
         const data = res.data?.data;
         if (active && data && Array.isArray(data.enabled)) {
           setServerModules({
             enabled: data.enabled.map((c) => String(c).toUpperCase()),
             configured: Boolean(data.configured)
           });
+          /*
+           * Set on every load, including to null.
+           *
+           * This runs again whenever the tab is returned to, so clearing a
+           * company's branding in the admin screen has to take the colour back
+           * off the portal. Only assigning when there is a document would leave
+           * the old one on screen until a full reload.
+           */
+          setBranding(parseBranding(data.branding));
         }
       } catch {
         // Leave it null and let hasModule fall back. A portal that cannot reach

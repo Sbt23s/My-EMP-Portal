@@ -33,7 +33,7 @@ export function TechAdminDashboard() {
   const [moduleError, setModuleError] = useState<string | null>(null);
 
   // Real-time user count from backend
-  const [realUserCount, setRealUserCount] = useState<number>(0);
+  const [realUserCount, setRealUserCount] = useState<number | null>(0);
 
   const activeCompanyName = currentCompany?.companyName || "Pixous Technologies";
   const activeCompanyId = currentCompany?.companyId || "PIX-MASTER";
@@ -44,29 +44,43 @@ export function TechAdminDashboard() {
   useEffect(() => {
     const fetchUserCount = async () => {
       try {
-        // One path for every company, and it is the server.
-        //
-        // This used to branch: PIX-MASTER asked the API, and every other company
-        // counted rows in a localStorage list — falling back to 2 for "Bala Corp"
-        // and 1 for "Master Company" when that list was missing. Those numbers
-        // were invented, they lived in one browser, and they had nothing to do
-        // with how many accounts existed.
-        const res = await api.get("/users?size=1");
+        /*
+         * Counted for the company on screen, not across the platform.
+         *
+         * This asked for totalElements and showed it whole, so every tenant
+         * reported the same figure — 62 appeared beside Sethu Technologies
+         * because 62 is how many accounts exist altogether. Switching companies
+         * in the header changed the name above the number and never the number,
+         * and the effect had no dependency on the company either, so it would
+         * not have recounted even if it had been asking the right question.
+         */
+        const res = await api.get("/users?size=300");
         const payload = res.data?.data;
-        if (payload?.totalElements) {
-          setRealUserCount(payload.totalElements);
-        } else if (payload?.content) {
-          // Fallback: fetch all users
-          const allRes = await api.get("/users?size=300");
-          const allPayload = allRes.data?.data;
-          if (allPayload?.content) {
-            setRealUserCount(allPayload.content.length);
-          } else if (Array.isArray(allPayload)) {
-            setRealUserCount(allPayload.length);
-          }
-        }
+        const rows: any[] = Array.isArray(payload?.content)
+          ? payload.content
+          : Array.isArray(payload)
+            ? payload
+            : [];
+
+        // "Excluding Admins" was done by subtracting one, which is right only
+        // for a company with exactly one administrator. Counted properly here.
+        const ADMIN_ROLES = ["COMPANY_ADMIN", "SUPER_ADMIN", "BOARD_ADMIN", "CV_ADM", "IT_ADM"];
+        const isAdmin = (u: any) => {
+          const roles: string[] = Array.isArray(u?.roles)
+            ? u.roles.map(String)
+            : u?.role
+              ? [String(u.role)]
+              : [];
+          return roles.some((r) => ADMIN_ROLES.includes(r));
+        };
+
+        setRealUserCount(
+          rows.filter((u) => u?.companyName === activeCompanyName && !isAdmin(u)).length
+        );
       } catch {
-        setRealUserCount(currentCompany?.employeeCount || 32);
+        // Was `|| 32` — a number with no source, shown as though it were real.
+        // Null renders as a dash, which is what "we could not count" looks like.
+        setRealUserCount(null);
       }
     };
     fetchUserCount();
@@ -203,7 +217,7 @@ export function TechAdminDashboard() {
     { title: 'Total Companies', value: companiesFailed ? '—' : (companies?.length || 0), subtitle: companiesFailed ? 'Could not load — press Retry' : 'SaaS Tenants Provisioned', icon: Building2, colorClass: isDark ? 'bg-cyan-900/40 text-cyan-400 border border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.3)]' : 'bg-indigo-500/10 text-indigo-500 dark:text-indigo-400', trend: 'Active Network' },
     { title: 'Total Modules', value: '22', subtitle: 'Available System Modules', icon: Layers, colorClass: isDark ? 'bg-cyan-900/40 text-cyan-400 border border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.3)]' : 'bg-purple-500/10 text-purple-500 dark:text-purple-400', trend: 'System Wide' },
     { title: 'Enabled Modules', value: modules.filter(m => m.status === 'ENABLED').length, subtitle: `Active in ${currentCompany?.companyName || 'Tenant'}`, icon: CheckCircle2, colorClass: isDark ? 'bg-cyan-900/40 text-cyan-400 border border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.3)]' : 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400', trend: 'Current Tenant' },
-    { title: 'Active Employees', value: Math.max(0, displayUserCount - 1), subtitle: 'Standard Employees', icon: UserSquare2, colorClass: isDark ? 'bg-cyan-900/40 text-cyan-400 border border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.3)]' : 'bg-teal-500/10 text-teal-500 dark:text-teal-400', trend: 'Excluding Admins' },
+    { title: 'Active Employees', value: displayUserCount === null ? '—' : displayUserCount, subtitle: displayUserCount === null ? 'Could not count' : 'Standard Employees', icon: UserSquare2, colorClass: isDark ? 'bg-cyan-900/40 text-cyan-400 border border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.3)]' : 'bg-teal-500/10 text-teal-500 dark:text-teal-400', trend: 'Excluding Admins' },
   ];
 
   const roleAccessMatrix = [

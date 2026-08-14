@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode
 } from "react";
-import { api, tokenStore } from "@/lib/api";
+import { api, tokenStore, tokenExpired } from "@/lib/api";
 import type { ApiEnvelope } from "@/types";
 
 const TECH_ADMIN_KEY = "hrp.tech_admin";
@@ -580,7 +580,18 @@ export function TechAdminProvider({ children }: { children: ReactNode }) {
     [persistModules]);
 
   useEffect(() => {
-    if (!tokenStore.access) {
+    /*
+     * Restored from what is stored, and ended only when the token is actually
+     * gone or actually expired.
+     *
+     * The sign-in keeps no refresh token — there is nothing to refresh with —
+     * so the stored admin plus a live access token is the whole session. This
+     * checked only that a token existed; combined with the request layer
+     * treating any failed call as a dead session, a reload could land on one
+     * unlucky response and drop someone back at the login screen while their
+     * four-hour token still had hours left.
+     */
+    if (!tokenStore.access || tokenExpired(tokenStore.access)) {
       setAdmin(null);
       localStorage.removeItem(TECH_ADMIN_KEY);
     }

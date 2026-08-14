@@ -43,7 +43,7 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
  * Anything unreadable counts as expired: a token this cannot parse is not one
  * worth holding a session open for.
  */
-function tokenExpired(token: string | null): boolean {
+export function tokenExpired(token: string | null): boolean {
   if (!token) return true;
   try {
     const [, payload] = token.split(".");

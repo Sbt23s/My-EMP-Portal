@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode
 } from "react";
-import { api, tokenStore } from "@/lib/api";
+import { api, tokenStore, tokenExpired } from "@/lib/api";
 import type { AuthUser, ApiEnvelope, LoginResponse } from "@/types";
 
 const USER_KEY = "hrp.user";
@@ -94,24 +94,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      /**
+       * Ask who this is, allowing for the request that fails on the way up.
+       *
+       * A reload fires this the instant the page loads, which is exactly when a
+       * proxy is still waking or the backend is mid-restart. One attempt made
+       * that moment decisive; three spread over a second and a half let it pass.
+       */
+      async function whoAmI(attempt = 1): Promise<AuthUser | null> {
+        try {
+          const res = await api.get<ApiEnvelope<AuthUser>>("/auth/me");
+          return res.data?.data ?? null;
+        } catch (err: any) {
+          const status = err?.response?.status;
+          const rejected = status === 401 || status === 403;
+          // A refusal is final; there is no point asking again more politely.
+          if (rejected || attempt >= 3) throw err;
+          await new Promise((r) => setTimeout(r, attempt * 500));
+          return whoAmI(attempt + 1);
+        }
+      }
+
       try {
-        const res = await api.get<ApiEnvelope<AuthUser>>("/auth/me");
+        const me = await whoAmI();
         if (!active) return;
-        if (res.data?.data) {
-          setUser(res.data.data);
+        if (me) {
+          setUser(me);
         } else {
           // A 200 with no user in it is not a confirmation.
           clearSession();
         }
-      } catch {
-        // Any failure to confirm ends the session, whether the server rejected
-        // the token or could not be reached at all. The previous version kept
-        // the session alive through a 5xx or a network error so a brief outage
-        // would not sign everyone out — but with no user to show, what that
-        // actually produced was the signed-in shell with nothing in it. Sending
-        // someone to the login screen at least tells them the truth, and
-        // signing in again is a smaller cost than a portal that looks broken.
-        if (active) clearSession();
+      } catch (err: any) {
+        if (!active) return;
+
+        /*
+         * Being rejected and being unable to ask are different answers.
+         *
+         * A 401 or 403 is the server saying this token is no good — end the
+         * session. Anything else (offline for a moment, a 502 while the backend
+         * restarts, a request that timed out) means we did not get an answer,
+         * and throwing the session away for that is what made pressing reload
+         * look like being signed out: one unlucky request on page load and
+         * everyone was back at the login screen with a token still valid for
+         * hours.
+         *
+         * The token's own expiry is the tie-breaker. Still inside it, keep the
+         * session and let the page retry; past it, there is nothing to keep.
+         */
+        const status = err?.response?.status;
+        const rejected = status === 401 || status === 403;
+
+        if (rejected || tokenExpired(tokenStore.access)) {
+          clearSession();
+        }
       } finally {
         if (active) setLoading(false);
       }

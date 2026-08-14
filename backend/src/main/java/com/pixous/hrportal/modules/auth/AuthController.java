@@ -249,10 +249,26 @@ public class AuthController {
         return ApiResponse.ok(Map.of("exists", exists));
     }
 
+    /**
+     * Resolves the caller's real address for the rate limiter.
+     *
+     * <p>Trusts {@code X-Real-IP} first: nginx sets it to the socket's
+     * {@code $remote_addr}, which overwrites anything a client sends, so it
+     * cannot be spoofed. {@code X-Forwarded-For} is only a fallback for hosts
+     * that do not send {@code X-Real-IP}, and it is read from the right so a
+     * proxy's appended value wins over any client-supplied one — a client that
+     * writes its own header would otherwise rotate addresses at will and the
+     * per-IP lockout would never trigger.
+     */
     private String clientIp(HttpServletRequest request) {
+        String real = request.getHeader("X-Real-IP");
+        if (real != null && !real.isBlank()) {
+            return real.trim();
+        }
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
+            String[] parts = forwarded.split(",");
+            return parts[parts.length - 1].trim();
         }
         return request.getRemoteAddr();
     }

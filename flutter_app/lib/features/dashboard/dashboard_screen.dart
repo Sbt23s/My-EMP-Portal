@@ -259,20 +259,36 @@ class _Content extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 12),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.35,
-            children: [
+          /*
+           * Columns from the width available, not a fixed two.
+           *
+           * Two was right on a phone and wrong everywhere else: in landscape and
+           * on a tablet each tile stretched to half the screen, so four numbers
+           * occupied a page and the card read as an empty box with a digit in
+           * the corner. Sized by a target tile width instead, so the count grows
+           * with the window and the tiles keep their proportions.
+           */
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const target = 190.0;
+              final columns =
+                  (constraints.maxWidth / target).floor().clamp(2, 4);
+              return GridView.count(
+                crossAxisCount: columns,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.35,
+                children: [
               for (var i = 0; i < tiles.length; i++)
                 tiles[i]
                     .animate()
                     .fadeIn(delay: (i * 60).ms, duration: 240.ms)
-                    .slideY(begin: 0.10, end: 0, curve: Curves.easeOutCubic),
-            ],
+                        .slideY(begin: 0.10, end: 0, curve: Curves.easeOutCubic),
+                ],
+              );
+            },
           ),
         ],
         if (modules.has('LEAVE') && data.leaveBalances.isNotEmpty) ...[

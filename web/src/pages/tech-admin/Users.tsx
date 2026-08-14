@@ -344,7 +344,7 @@ export function TechAdminUsers() {
     // is no undo -- typing the username is deliberate in a way that clicking OK
     // is not.
     const typed = window.prompt(
-      `Permanently delete ${u.name}?\n\nThis removes the account and cannot be undone.\n\nType the username "${u.username}" to confirm:`
+     `Permanently delete ${u.name}?\n\nThis removes the account and cannot be undone.\n\nType the username "${u.username}" to confirm:`
     );
     if (typed === null) return;
     if (typed.trim() !== u.username) {
@@ -613,13 +613,13 @@ export function TechAdminUsers() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className={`text-xl font-semibold flex items-center gap-2 ${isDark ? "text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" : "text-purple-700"}`}>
-            <Users className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-purple-400"}`} /> Multi-Tenant Company User Directory
+            <Users className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-slate-500"}`} /> Multi-Tenant Company User Directory
           </h2>
           <p className={`text-sm mt-1 font-medium ${isDark ? "text-cyan-400" : "text-slate-600"}`}>
             Manage login credentials, roles (Company Admin, HR, Team Lead, Employee) and company assignments.
           </p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className={`${isDark ? "bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold border border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.4)]" : "bg-purple-600 hover:bg-purple-500 text-white border border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.5)]"} font-medium`}>
+        <Button onClick={() => setIsModalOpen(true)} className={`${isDark ? "bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold border border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.4)]" : "bg-purple-600 hover:bg-purple-500 text-white border border-purple-400 "} font-medium`}>
           <Plus className="w-4 h-4 mr-2" /> Add Company User
         </Button>
       </div>
@@ -644,7 +644,7 @@ export function TechAdminUsers() {
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className={`flex items-center p-1 rounded-lg ${isDark ? "bg-slate-900/40 border-cyan-500/20 border shadow-[0_0_8px_rgba(6,182,212,0.1)]" : "bg-purple-900/40 border border-purple-500/20"}`}>
+            <div className={`flex items-center p-1 rounded-lg ${isDark ? "bg-slate-900/40 border-cyan-500/20 border shadow-[0_0_8px_rgba(6,182,212,0.1)]" : "bg-slate-100 border border-slate-200"}`}>
               <button
                 onClick={() => setStatusFilter("ACTIVE")}
                 className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${statusFilter === "ACTIVE" ? (isDark ? "bg-emerald-500 text-white shadow-sm" : "bg-purple-600 text-white shadow-[0_0_10px_rgba(168,85,247,0.4)]") : (isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-500 hover:text-slate-800")}`}
@@ -688,42 +688,42 @@ export function TechAdminUsers() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card 
             onClick={() => setSelectedRoleFilter("HR_MANAGER")}
-            className={`${cardBg} ${isDark ? "border-cyan-500/30 hover:border-cyan-400" : "border-purple-500/20 hover:border-purple-500/50"} cursor-pointer transition-all ${selectedRoleFilter === "HR_MANAGER" ? (isDark ? "ring-2 ring-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)]" : "ring-2 ring-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.3)]") : ""}`}
+            className={`${cardBg} ${isDark ? "border-cyan-500/30 hover:border-cyan-400" : "border-slate-200 hover:border-slate-300"} cursor-pointer transition-all ${selectedRoleFilter === "HR_MANAGER" ? (isDark ? "ring-2 ring-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)]" : "ring-2 ring-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.3)]") : ""}`}
           >
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className={`text-sm font-bold ${isDark ? "text-cyan-400" : "text-slate-600"}`}>HR Managers</p>
-                <h3 className={`text-2xl font-bold mt-1 ${isDark ? "text-cyan-400" : "text-purple-300"}`}>{privacyMaskedCounts.hr}</h3>
+                <h3 className={`text-2xl font-bold mt-1 ${isDark ? "text-cyan-400" : "text-slate-600"}`}>{privacyMaskedCounts.hr}</h3>
               </div>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-cyan-900/40 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "bg-purple-900/60 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.3)]"}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-cyan-900/40 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "bg-slate-100 text-slate-600"}`}>
                 <UserCheck className="w-5 h-5" />
               </div>
             </CardContent>
           </Card>
           <Card 
             onClick={() => setSelectedRoleFilter("TEAM_LEAD")}
-            className={`${cardBg} ${isDark ? "border-cyan-500/30 hover:border-cyan-400" : "border-purple-500/20 hover:border-purple-500/50"} cursor-pointer transition-all ${selectedRoleFilter === "TEAM_LEAD" ? (isDark ? "ring-2 ring-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)]" : "ring-2 ring-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.3)]") : ""}`}
+            className={`${cardBg} ${isDark ? "border-cyan-500/30 hover:border-cyan-400" : "border-slate-200 hover:border-slate-300"} cursor-pointer transition-all ${selectedRoleFilter === "TEAM_LEAD" ? (isDark ? "ring-2 ring-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)]" : "ring-2 ring-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.3)]") : ""}`}
           >
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className={`text-sm font-bold ${isDark ? "text-cyan-400" : "text-slate-600"}`}>Team Leads</p>
-                <h3 className={`text-2xl font-bold mt-1 ${isDark ? "text-cyan-400" : "text-purple-300"}`}>{privacyMaskedCounts.tl}</h3>
+                <h3 className={`text-2xl font-bold mt-1 ${isDark ? "text-cyan-400" : "text-slate-600"}`}>{privacyMaskedCounts.tl}</h3>
               </div>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-cyan-900/40 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "bg-purple-900/60 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.3)]"}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-cyan-900/40 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "bg-slate-100 text-slate-600"}`}>
                 <ShieldCheck className="w-5 h-5" />
               </div>
             </CardContent>
           </Card>
           <Card 
             onClick={() => setSelectedRoleFilter("EMPLOYEE")}
-            className={`${cardBg} ${isDark ? "border-cyan-500/30 hover:border-cyan-400" : "border-purple-500/20 hover:border-purple-500/50"} cursor-pointer transition-all ${selectedRoleFilter === "EMPLOYEE" ? (isDark ? "ring-2 ring-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)]" : "ring-2 ring-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.3)]") : ""}`}
+            className={`${cardBg} ${isDark ? "border-cyan-500/30 hover:border-cyan-400" : "border-slate-200 hover:border-slate-300"} cursor-pointer transition-all ${selectedRoleFilter === "EMPLOYEE" ? (isDark ? "ring-2 ring-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)]" : "ring-2 ring-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.3)]") : ""}`}
           >
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className={`text-sm font-bold ${isDark ? "text-cyan-400" : "text-slate-600"}`}>Employees</p>
-                <h3 className={`text-2xl font-bold mt-1 ${isDark ? "text-cyan-400" : "text-purple-300"}`}>{privacyMaskedCounts.emp}</h3>
+                <h3 className={`text-2xl font-bold mt-1 ${isDark ? "text-cyan-400" : "text-slate-600"}`}>{privacyMaskedCounts.emp}</h3>
               </div>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-cyan-900/40 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "bg-purple-900/60 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.3)]"}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-cyan-900/40 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "bg-slate-100 text-slate-600"}`}>
                 <Users className="w-5 h-5" />
               </div>
             </CardContent>
@@ -736,9 +736,9 @@ export function TechAdminUsers() {
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className={`text-sm font-bold ${isDark ? "text-cyan-400" : "text-slate-600"}`}>Company Admins</p>
-                <h3 className={`text-2xl font-bold mt-1 ${isDark ? "text-cyan-400" : "text-purple-300"}`}>{privacyMaskedCounts.admin}</h3>
+                <h3 className={`text-2xl font-bold mt-1 ${isDark ? "text-cyan-400" : "text-slate-600"}`}>{privacyMaskedCounts.admin}</h3>
               </div>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-cyan-900/40 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "bg-purple-900/60 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.3)]"}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-cyan-900/40 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "bg-slate-100 text-slate-600"}`}>
                 <ShieldCheck className="w-5 h-5" />
               </div>
             </CardContent>
@@ -748,10 +748,10 @@ export function TechAdminUsers() {
 
       {/* Users Directory Table */}
       <Card className={cardBg}>
-        <CardHeader className={`pb-3 flex flex-row items-center justify-between border-b ${isDark ? "border-cyan-500/20" : "border-purple-500/20"}`}>
+        <CardHeader className={`pb-3 flex flex-row items-center justify-between border-b ${isDark ? "border-cyan-500/20" : "border-slate-200"}`}>
           <div>
             <CardTitle className="text-md">User Accounts ({filteredUsers.length})</CardTitle>
-            <CardDescription className={`text-xs ${isDark ? 'text-slate-400' : 'text-purple-300/70'}`}>
+            <CardDescription className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
               {/* Says why the tiles above can show more people than the table
                   below lists — otherwise the two look like they disagree. */}
               {!isPixous
@@ -784,7 +784,7 @@ export function TechAdminUsers() {
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className={`uppercase font-semibold border-b ${isDark ? "bg-cyan-950/40 text-cyan-400 border-cyan-500/20" : "bg-[#1a0b2e]/60 text-purple-300 border-purple-500/20"}`}>
+            <thead className={`uppercase font-semibold border-b ${isDark ? "bg-cyan-950/40 text-cyan-400 border-cyan-500/20" : "bg-slate-100 text-slate-600 border-slate-200"}`}>
               <tr>
                 <th className="p-4">User</th>
                 <th className="p-4">Login Email</th>
@@ -819,17 +819,17 @@ export function TechAdminUsers() {
                 </tr>
               )}
               {filteredUsers.map((u) => (
-                <tr key={u.id} className={`transition-colors ${isDark ? "hover:bg-cyan-900/20" : "hover:bg-purple-900/20"}`}>
+                <tr key={u.id} className={`transition-colors ${isDark ? "hover:bg-cyan-900/20" : "hover:bg-slate-50"}`}>
                   <td className="p-4 font-semibold text-slate-200 flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full font-bold flex items-center justify-center ${isDark ? "bg-cyan-900/40 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "bg-purple-900/60 text-purple-300 shadow-[0_0_8px_rgba(168,85,247,0.3)]"}`}>
+                    <div className={`w-8 h-8 rounded-full font-bold flex items-center justify-center ${isDark ? "bg-cyan-900/40 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]" : "bg-slate-100 text-slate-600"}`}>
                       {u.name.charAt(0)}
                     </div>
                     <div>
                       <span className={`block font-medium ${isDark ? "text-slate-200" : "text-slate-800"}`}>{u.name}</span>
-                      <span className={`text-[11px] ${isDark ? 'text-slate-500' : 'text-purple-400/80'}`}>@{u.username}</span>
+                      <span className={`text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>@{u.username}</span>
                     </div>
                   </td>
-                  <td className={`p-4 font-mono ${isDark ? 'text-slate-400' : 'text-purple-300/80'}`}>{u.email}</td>
+                  <td className={`p-4 font-mono ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{u.email}</td>
 
                   <td className="p-4 font-mono text-slate-500 relative group">
                     {(() => {
@@ -840,11 +840,11 @@ export function TechAdminUsers() {
                       // helpers now.
                       const isNonAdminNonPixous = !isPixous && !rolesOf(u).some((r) => isAdminRole(r));
                       if (isNonAdminNonPixous) {
-                        return <span className={`italic text-[10px] font-medium ${isDark ? "text-cyan-400" : "text-purple-300"}`}>Hidden for Privacy</span>;
+                        return <span className={`italic text-[10px] font-medium ${isDark ? "text-cyan-400" : "text-slate-600"}`}>Hidden for Privacy</span>;
                       }
                       return (
                         <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded text-xs font-semibold ${isDark ? "bg-slate-900/50 border border-cyan-500/30 text-slate-200" : "bg-purple-900/40 border border-purple-500/20 text-slate-600"}`}>
+                          <span className={`px-2 py-0.5 rounded text-xs font-semibold ${isDark ? "bg-slate-900/50 border border-cyan-500/30 text-slate-200" : "bg-slate-100 border border-slate-200 text-slate-600"}`}>
                              {visiblePasswords[u.id] ? (u.password || "admin123") : "••••••••"}
                           </span>
                           <button onClick={() => togglePasswordVisibility(u.id)} className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -856,14 +856,14 @@ export function TechAdminUsers() {
                   </td>
                   <td className="p-4">
                     <span className={`font-semibold block ${isDark ? "text-slate-200" : "text-slate-800"}`}>{u.companyName}</span>
-                    <span className={`font-mono text-[11px] font-bold ${isDark ? "text-cyan-400" : "text-purple-400"}`}>{u.companyId}</span>
+                    <span className={`font-mono text-[11px] font-bold ${isDark ? "text-cyan-400" : "text-slate-500"}`}>{u.companyId}</span>
                   </td>
                   <td className="p-4">
                     <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${
-                      (u.role === 'COMPANY_ADMIN' || (u.roles && u.roles.includes('COMPANY_ADMIN'))) ? (isDark ? 'bg-cyan-900/40 text-cyan-400 border-cyan-500/30 shadow-[0_0_8px_rgba(6,182,212,0.3)]' : 'bg-purple-600/30 text-slate-600 border-purple-500/50 shadow-[0_0_8px_rgba(168,85,247,0.3)]') :
-                      (u.role === 'HR_MANAGER' || (u.roles && u.roles.includes('HR_MANAGER'))) ? (isDark ? 'bg-indigo-900/40 text-indigo-400 border-indigo-500/30 shadow-[0_0_8px_rgba(99,102,241,0.3)]' : 'bg-indigo-900/50 text-indigo-300 border-indigo-500/40 shadow-[0_0_8px_rgba(99,102,241,0.3)]') :
-                      (u.role === 'TEAM_LEAD' || (u.roles && u.roles.includes('TEAM_LEAD'))) ? (isDark ? 'bg-teal-900/40 text-teal-400 border-teal-500/30 shadow-[0_0_8px_rgba(20,184,166,0.3)]' : 'bg-teal-900/50 text-teal-300 border-teal-500/40 shadow-[0_0_8px_rgba(20,184,166,0.3)]') :
-                      (isDark ? 'bg-emerald-900/40 text-emerald-400 border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-emerald-900/50 text-emerald-300 border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.3)]')
+                      (u.role === 'COMPANY_ADMIN' || (u.roles && u.roles.includes('COMPANY_ADMIN'))) ? (isDark ? 'bg-cyan-900/40 text-cyan-400 border-cyan-500/30 shadow-[0_0_8px_rgba(6,182,212,0.3)]' : 'bg-indigo-50 text-indigo-700 border-indigo-200 ') :
+                      (u.role === 'HR_MANAGER' || (u.roles && u.roles.includes('HR_MANAGER'))) ? (isDark ? 'bg-indigo-900/40 text-indigo-400 border-indigo-500/30 shadow-[0_0_8px_rgba(99,102,241,0.3)]' : 'bg-indigo-50 text-indigo-700 border-indigo-200 shadow-[0_0_8px_rgba(99,102,241,0.3)]') :
+                      (u.role === 'TEAM_LEAD' || (u.roles && u.roles.includes('TEAM_LEAD'))) ? (isDark ? 'bg-teal-900/40 text-teal-400 border-teal-500/30 shadow-[0_0_8px_rgba(20,184,166,0.3)]' : 'bg-teal-50 text-teal-700 border-teal-200 shadow-[0_0_8px_rgba(20,184,166,0.3)]') :
+                      (isDark ? 'bg-emerald-900/40 text-emerald-400 border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-[0_0_8px_rgba(16,185,129,0.3)]')
                     }`}>
                       {/* "No role" rather than "EMPLOYEE". An account whose role
                           did not save is a broken account, and labelling it as
@@ -876,7 +876,7 @@ export function TechAdminUsers() {
                     </span>
                   </td>
                   <td className="p-4">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${isDark ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)]" : "bg-purple-600/30 text-slate-600 border-purple-500/50 shadow-[0_0_8px_rgba(168,85,247,0.3)]"}`}>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${isDark ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)]" : "bg-indigo-50 text-indigo-700 border-indigo-200"}`}>
                       {/* profileStatus is the field the server sends; `status`
                           does not exist on the row, so this column was blank. */}
                       {u.profileStatus || u.status || "ACTIVE"}
@@ -900,7 +900,7 @@ export function TechAdminUsers() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleOpenEditModal(u)}
-                      className={`h-7 text-xs ${isDark ? 'text-indigo-400 hover:bg-indigo-400/10' : 'text-purple-300 hover:bg-purple-400/20'}`}
+                      className={`h-7 text-xs ${isDark ? 'text-indigo-400 hover:bg-indigo-400/10' : 'text-slate-600 hover:bg-slate-100'}`}
                     >
                       Edit
                     </Button>
@@ -908,7 +908,7 @@ export function TechAdminUsers() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleOpenResetModal(u)}
-                      className={`h-7 text-xs ${isDark ? 'text-blue-400 hover:bg-blue-400/10' : 'text-indigo-300 hover:bg-indigo-400/20'}`}
+                      className={`h-7 text-xs ${isDark ? 'text-blue-400 hover:bg-blue-400/10' : 'text-indigo-300 hover:bg-slate-100'}`}
                     >
                       Reset Password
                     </Button>
@@ -916,7 +916,7 @@ export function TechAdminUsers() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteUser(u)}
-                      className={`h-7 text-xs ${isDark ? 'text-red-400 hover:bg-red-400/10' : 'text-red-400 hover:bg-red-400/20'}`}
+                      className={`h-7 text-xs ${isDark ? 'text-red-400 hover:bg-red-400/10' : 'text-red-400 hover:bg-red-50'}`}
                     >
                       Delete
                     </Button>
@@ -931,10 +931,10 @@ export function TechAdminUsers() {
       {/* Reset Password Modal */}
       {isResetModalOpen && selectedUserForReset && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className={`w-full max-w-md rounded-2xl p-6 shadow-[0_0_20px_rgba(0,0,0,0.5)] border ${isDark ? "bg-slate-900/80 backdrop-blur-xl border-cyan-500/30 text-white shadow-[0_0_15px_rgba(6,182,212,0.15)]" : "bg-[#13002b]/95 backdrop-blur-xl border-purple-500/30 text-purple-50"}`}>
-            <div className={`flex items-center justify-between pb-4 border-b ${isDark ? "border-cyan-500/20" : "border-purple-500/30"}`}>
+          <div className={`w-full max-w-md rounded-2xl p-6 shadow-[0_0_20px_rgba(0,0,0,0.5)] border ${isDark ? "bg-slate-900/80 backdrop-blur-xl border-cyan-500/30 text-white shadow-[0_0_15px_rgba(6,182,212,0.15)]" : "bg-[#13002b]/95 backdrop-blur-xl border-slate-300 text-purple-50"}`}>
+            <div className={`flex items-center justify-between pb-4 border-b ${isDark ? "border-cyan-500/20" : "border-slate-300"}`}>
               <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Key className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-purple-400"}`} /> Reset User Password
+                <Key className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-slate-500"}`} /> Reset User Password
               </h3>
               <button onClick={() => setIsResetModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
                 <X className="w-5 h-5" />
@@ -942,14 +942,14 @@ export function TechAdminUsers() {
             </div>
 
             <form onSubmit={handlePerformPasswordReset} className="space-y-4 pt-4">
-              <div className={`p-3 rounded-lg border text-xs ${isDark ? "bg-slate-900/50 border-cyan-500/30" : "bg-purple-950/50 border-purple-500/30"}`}>
+              <div className={`p-3 rounded-lg border text-xs ${isDark ? "bg-slate-900/50 border-cyan-500/30" : "bg-white border-slate-300"}`}>
                 <p className="font-semibold">{selectedUserForReset.name}</p>
                 <p className={`font-mono text-[11px] font-medium ${isDark ? "text-cyan-400" : "text-slate-300"}`}>{selectedUserForReset.email}</p>
-                <p className={`font-mono text-[11px] mt-1 ${isDark ? "text-cyan-400" : "text-purple-400"}`}>{selectedUserForReset.companyName} ({selectedUserForReset.companyId})</p>
+                <p className={`font-mono text-[11px] mt-1 ${isDark ? "text-cyan-400" : "text-slate-500"}`}>{selectedUserForReset.companyName} ({selectedUserForReset.companyId})</p>
               </div>
 
               <div>
-                <Label className={isDark ? "text-slate-300" : "text-purple-300"}>New Password</Label>
+                <Label className={isDark ? "text-slate-300" : "text-slate-600"}>New Password</Label>
                 <Input
                   type="text"
                   required
@@ -960,11 +960,11 @@ export function TechAdminUsers() {
                 />
               </div>
 
-              <div className={`pt-4 flex justify-end gap-3 border-t ${isDark ? "border-cyan-500/20" : "border-purple-500/30"}`}>
-                <Button type="button" variant="outline" onClick={() => setIsResetModalOpen(false)} className={isDark ? "text-slate-300 border-cyan-500/30 hover:bg-cyan-900/30" : "text-purple-300 border-purple-500/30 hover:bg-purple-900/40 hover:text-slate-800"}>
+              <div className={`pt-4 flex justify-end gap-3 border-t ${isDark ? "border-cyan-500/20" : "border-slate-300"}`}>
+                <Button type="button" variant="outline" onClick={() => setIsResetModalOpen(false)} className={isDark ? "text-slate-300 border-cyan-500/30 hover:bg-cyan-900/30" : "text-slate-600 border-slate-300 hover:bg-slate-100 hover:text-slate-800"}>
                   Cancel
                 </Button>
-                <Button type="submit" className={isDark ? "bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold border border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.4)]" : "bg-purple-600 hover:bg-purple-500 text-white border border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.5)]"}>
+                <Button type="submit" className={isDark ? "bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold border border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.4)]" : "bg-purple-600 hover:bg-purple-500 text-white border border-purple-400 "}>
                   Update Password
                 </Button>
               </div>
@@ -976,10 +976,10 @@ export function TechAdminUsers() {
       {/* Add User Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className={`w-full max-w-lg rounded-2xl p-6 shadow-[0_0_20px_rgba(0,0,0,0.5)] border ${isDark ? "bg-slate-900/80 backdrop-blur-xl border-cyan-500/30 text-white shadow-[0_0_15px_rgba(6,182,212,0.15)]" : "bg-[#13002b]/95 backdrop-blur-xl border-purple-500/30 text-purple-50"}`}>
-            <div className={`flex items-center justify-between pb-4 border-b ${isDark ? "border-cyan-500/20" : "border-purple-500/30"}`}>
+          <div className={`w-full max-w-lg rounded-2xl p-6 shadow-[0_0_20px_rgba(0,0,0,0.5)] border ${isDark ? "bg-slate-900/80 backdrop-blur-xl border-cyan-500/30 text-white shadow-[0_0_15px_rgba(6,182,212,0.15)]" : "bg-[#13002b]/95 backdrop-blur-xl border-slate-300 text-purple-50"}`}>
+            <div className={`flex items-center justify-between pb-4 border-b ${isDark ? "border-cyan-500/20" : "border-slate-300"}`}>
               <h3 className="text-lg font-semibold flex items-center gap-2">
-                <UserCheck className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-purple-400"}`} /> Provision Company User Account
+                <UserCheck className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-slate-500"}`} /> Provision Company User Account
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
                 <X className="w-5 h-5" />
@@ -988,7 +988,7 @@ export function TechAdminUsers() {
 
             <form onSubmit={handleCreateUser} className="space-y-4 pt-4">
               <div>
-                <Label className={isDark ? "text-slate-300" : "text-purple-300"}>Full Name</Label>
+                <Label className={isDark ? "text-slate-300" : "text-slate-600"}>Full Name</Label>
                 <Input
                   required
                   placeholder="e.g. Rahul Sharma"
@@ -1000,7 +1000,7 @@ export function TechAdminUsers() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className={isDark ? "text-slate-300" : "text-purple-300"}>Email (Login Username)</Label>
+                  <Label className={isDark ? "text-slate-300" : "text-slate-600"}>Email (Login Username)</Label>
                   <Input
                     type="email"
                     required
@@ -1011,7 +1011,7 @@ export function TechAdminUsers() {
                   />
                 </div>
                 <div>
-                  <Label className={isDark ? "text-slate-300" : "text-purple-300"}>Username</Label>
+                  <Label className={isDark ? "text-slate-300" : "text-slate-600"}>Username</Label>
                   <Input
                     required
                     placeholder="rahul_s"
@@ -1035,14 +1035,14 @@ export function TechAdminUsers() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className={isDark ? "text-slate-300" : "text-purple-300"}>Target Company Tenant</Label>
+                  <Label className={isDark ? "text-slate-300" : "text-slate-600"}>Target Company Tenant</Label>
                   <div className={`w-full mt-1 p-2 rounded border text-sm font-semibold opacity-70 cursor-not-allowed ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white" : "bg-slate-100 border-slate-300 text-slate-600"}`}>
                     {currentCompany?.companyName} ({currentCompany?.id})
                   </div>
                 </div>
 
                 <div>
-                  <Label className={isDark ? "text-slate-300" : "text-purple-300"}>User Role</Label>
+                  <Label className={isDark ? "text-slate-300" : "text-slate-600"}>User Role</Label>
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
@@ -1056,7 +1056,7 @@ export function TechAdminUsers() {
               </div>
 
               <div>
-                <Label className={isDark ? "text-slate-300" : "text-purple-300"}>Initial Password</Label>
+                <Label className={isDark ? "text-slate-300" : "text-slate-600"}>Initial Password</Label>
                 <Input
                   type="password"
                   value={password}
@@ -1073,11 +1073,11 @@ export function TechAdminUsers() {
                 </p>
               </div>
 
-              <div className={`pt-4 flex justify-end gap-3 border-t ${isDark ? "border-cyan-500/20" : "border-purple-500/30"}`}>
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className={isDark ? "text-slate-300 border-cyan-500/30 hover:bg-cyan-900/30" : "text-purple-300 border-purple-500/30 hover:bg-purple-900/40 hover:text-slate-800"}>
+              <div className={`pt-4 flex justify-end gap-3 border-t ${isDark ? "border-cyan-500/20" : "border-slate-300"}`}>
+                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className={isDark ? "text-slate-300 border-cyan-500/30 hover:bg-cyan-900/30" : "text-slate-600 border-slate-300 hover:bg-slate-100 hover:text-slate-800"}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting} className={isDark ? "bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold border border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.4)]" : "bg-purple-600 hover:bg-purple-500 text-white border border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.5)]"}>
+                <Button type="submit" disabled={isSubmitting} className={isDark ? "bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold border border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.4)]" : "bg-purple-600 hover:bg-purple-500 text-white border border-purple-400 "}>
                   {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />} Create User Account
                 </Button>
               </div>
@@ -1089,10 +1089,10 @@ export function TechAdminUsers() {
       {/* Edit User Modal */}
       {isEditModalOpen && selectedUserForEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className={`w-full max-w-lg rounded-2xl p-6 shadow-[0_0_20px_rgba(0,0,0,0.5)] border ${isDark ? "bg-slate-900/80 backdrop-blur-xl border-cyan-500/30 text-white shadow-[0_0_15px_rgba(6,182,212,0.15)]" : "bg-[#13002b]/95 backdrop-blur-xl border-purple-500/30 text-purple-50"}`}>
-            <div className={`flex items-center justify-between pb-4 border-b ${isDark ? "border-cyan-500/20" : "border-purple-500/30"}`}>
+          <div className={`w-full max-w-lg rounded-2xl p-6 shadow-[0_0_20px_rgba(0,0,0,0.5)] border ${isDark ? "bg-slate-900/80 backdrop-blur-xl border-cyan-500/30 text-white shadow-[0_0_15px_rgba(6,182,212,0.15)]" : "bg-[#13002b]/95 backdrop-blur-xl border-slate-300 text-purple-50"}`}>
+            <div className={`flex items-center justify-between pb-4 border-b ${isDark ? "border-cyan-500/20" : "border-slate-300"}`}>
               <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Edit2 className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-purple-400"}`} /> Edit User Account
+                <Edit2 className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-slate-500"}`} /> Edit User Account
               </h3>
               <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
                 <X className="w-5 h-5" />
@@ -1101,7 +1101,7 @@ export function TechAdminUsers() {
 
             <form onSubmit={handlePerformEdit} className="space-y-4 pt-4">
               <div>
-                <Label className={isDark ? "text-slate-300" : "text-purple-300"}>Full Name</Label>
+                <Label className={isDark ? "text-slate-300" : "text-slate-600"}>Full Name</Label>
                 <Input
                   required
                   placeholder="e.g. Rahul Sharma"
@@ -1113,7 +1113,7 @@ export function TechAdminUsers() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className={isDark ? "text-slate-300" : "text-purple-300"}>Email (Login Username)</Label>
+                  <Label className={isDark ? "text-slate-300" : "text-slate-600"}>Email (Login Username)</Label>
                   <Input
                     type="email"
                     required
@@ -1124,7 +1124,7 @@ export function TechAdminUsers() {
                   />
                 </div>
                 <div>
-                  <Label className={isDark ? "text-slate-300" : "text-purple-300"}>Username</Label>
+                  <Label className={isDark ? "text-slate-300" : "text-slate-600"}>Username</Label>
                   <Input
                     required
                     placeholder="rahul_s"
@@ -1148,14 +1148,14 @@ export function TechAdminUsers() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className={isDark ? "text-slate-300" : "text-purple-300"}>Target Company Tenant</Label>
+                  <Label className={isDark ? "text-slate-300" : "text-slate-600"}>Target Company Tenant</Label>
                   <div className={`w-full mt-1 p-2 rounded border text-sm font-semibold opacity-70 cursor-not-allowed ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white" : "bg-slate-100 border-slate-300 text-slate-600"}`}>
                     {selectedUserForEdit.companyName}
                   </div>
                 </div>
 
                 <div>
-                  <Label className={isDark ? "text-slate-300" : "text-purple-300"}>User Role</Label>
+                  <Label className={isDark ? "text-slate-300" : "text-slate-600"}>User Role</Label>
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
@@ -1168,11 +1168,11 @@ export function TechAdminUsers() {
                 </div>
               </div>
 
-              <div className={`pt-4 flex justify-end gap-3 border-t ${isDark ? "border-cyan-500/20" : "border-purple-500/30"}`}>
-                <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className={isDark ? "text-slate-300 border-cyan-500/30 hover:bg-cyan-900/30" : "text-purple-300 border-purple-500/30 hover:bg-purple-900/40 hover:text-slate-800"}>
+              <div className={`pt-4 flex justify-end gap-3 border-t ${isDark ? "border-cyan-500/20" : "border-slate-300"}`}>
+                <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className={isDark ? "text-slate-300 border-cyan-500/30 hover:bg-cyan-900/30" : "text-slate-600 border-slate-300 hover:bg-slate-100 hover:text-slate-800"}>
                   Cancel
                 </Button>
-                <Button type="submit" className={isDark ? "bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold border border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.4)]" : "bg-purple-600 hover:bg-purple-500 text-white border border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.5)]"}>
+                <Button type="submit" className={isDark ? "bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold border border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.4)]" : "bg-purple-600 hover:bg-purple-500 text-white border border-purple-400 "}>
                   Update Account
                 </Button>
               </div>

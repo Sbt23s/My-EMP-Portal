@@ -153,10 +153,10 @@ export function TechAdminAuditLogs() {
 
   const getRoleBadgeColor = (role: string) => {
     switch(role) {
-      case 'COMPANY_ADMIN': return isDark ? 'bg-cyan-900/40 text-cyan-400 border-cyan-500/30 shadow-[0_0_8px_rgba(6,182,212,0.3)]' : 'bg-purple-600/30 text-purple-200 border-purple-500/50 shadow-[0_0_8px_rgba(168,85,247,0.3)]';
-      case 'HR_MANAGER': return isDark ? 'bg-indigo-900/40 text-indigo-400 border-indigo-500/30 shadow-[0_0_8px_rgba(99,102,241,0.3)]' : 'bg-indigo-900/50 text-indigo-300 border-indigo-500/40 shadow-[0_0_8px_rgba(99,102,241,0.3)]';
-      case 'TEAM_LEAD': return isDark ? 'bg-teal-900/40 text-teal-400 border-teal-500/30 shadow-[0_0_8px_rgba(20,184,166,0.3)]' : 'bg-teal-900/50 text-teal-300 border-teal-500/40 shadow-[0_0_8px_rgba(20,184,166,0.3)]';
-      default: return isDark ? 'bg-emerald-900/40 text-emerald-400 border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-emerald-900/50 text-emerald-300 border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.3)]';
+      case 'COMPANY_ADMIN': return isDark ? 'bg-cyan-900/40 text-cyan-400 border-cyan-500/30 shadow-[0_0_8px_rgba(6,182,212,0.3)]' : 'bg-indigo-50 text-indigo-700 border-indigo-200 ';
+      case 'HR_MANAGER': return isDark ? 'bg-indigo-900/40 text-indigo-400 border-indigo-500/30 shadow-[0_0_8px_rgba(99,102,241,0.3)]' : 'bg-indigo-50 text-indigo-700 border-indigo-200 shadow-[0_0_8px_rgba(99,102,241,0.3)]';
+      case 'TEAM_LEAD': return isDark ? 'bg-teal-900/40 text-teal-400 border-teal-500/30 shadow-[0_0_8px_rgba(20,184,166,0.3)]' : 'bg-teal-50 text-teal-700 border-teal-200 shadow-[0_0_8px_rgba(20,184,166,0.3)]';
+      default: return isDark ? 'bg-emerald-900/40 text-emerald-400 border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-[0_0_8px_rgba(16,185,129,0.3)]';
     }
   };
 
@@ -176,22 +176,22 @@ export function TechAdminAuditLogs() {
     : "bg-white/90 backdrop-blur-md border border-white text-slate-800 shadow-xl shadow-slate-200/50";
 
   return (
-    <div className={`min-h-screen pb-10 ${isDark ? 'text-slate-100' : 'text-purple-100'}`}>
+    <div className={`min-h-screen pb-10 ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>
       <div className="max-w-[1600px] mx-auto px-6 py-6 space-y-6">
         
         {/* Header */}
         <div className="flex justify-between items-start">
           <div>
-            <h2 className={`text-2xl font-bold flex items-center gap-2 ${isDark ? "text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" : "text-purple-300 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]"}`}>
-              <History className={`w-6 h-6 ${isDark ? "text-cyan-400" : "text-purple-400"}`} />
+            <h2 className={`text-2xl font-bold flex items-center gap-2 ${isDark ? "text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" : "text-slate-600"}`}>
+              <History className={`w-6 h-6 ${isDark ? "text-cyan-400" : "text-slate-500"}`} />
               Tenant Module Usage Logs
             </h2>
-            <p className={`text-sm mt-1 max-w-2xl font-medium ${isDark ? "text-cyan-400" : "text-purple-200"}`}>
-              How employees, HRs and Team Leads use platform modules within <span className={`font-semibold ${isDark ? "text-cyan-400" : "text-purple-400"}`}>{currentCompany?.companyName || "the selected company"}</span>, over the last 30 days.
+            <p className={`text-sm mt-1 max-w-2xl font-medium ${isDark ? "text-cyan-400" : "text-slate-600"}`}>
+              How employees, HRs and Team Leads use platform modules within <span className={`font-semibold ${isDark ? "text-cyan-400" : "text-slate-500"}`}>{currentCompany?.companyName || "the selected company"}</span>, over the last 30 days.
             </p>
           </div>
           
-          <div className={`px-4 py-2 rounded-xl border flex items-center gap-3 ${isDark ? "bg-cyan-900/40 border-cyan-500/30 text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.3)]" : "bg-purple-900/40 border-purple-500/30 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.3)]"}`}>
+          <div className={`px-4 py-2 rounded-xl border flex items-center gap-3 ${isDark ? "bg-cyan-900/40 border-cyan-500/30 text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.3)]" : "bg-slate-100 border-slate-300 text-slate-600"}`}>
             <Activity className="w-5 h-5" />
             <div>
               <div className="text-xs font-semibold uppercase tracking-wider">Live Monitoring</div>
@@ -221,7 +221,7 @@ export function TechAdminAuditLogs() {
               </p>
             ) : (
               <table className="w-full text-left text-xs">
-                <thead className={`uppercase font-semibold border-b ${isDark ? "bg-cyan-950/40 text-cyan-400 border-cyan-500/20" : "bg-[#1a0b2e]/60 text-purple-300 border-purple-500/20"}`}>
+                <thead className={`uppercase font-semibold border-b ${isDark ? "bg-cyan-950/40 text-cyan-400 border-cyan-500/20" : "bg-slate-100 text-slate-600 border-slate-200"}`}>
                   <tr>
                     <th className="p-4">Person</th>
                     <th className="p-4">Modules used</th>
@@ -282,7 +282,7 @@ export function TechAdminAuditLogs() {
                 placeholder="Search user, module, or action..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className={`pl-9 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-purple-950/50 border-purple-500/30 text-purple-100 placeholder:text-purple-400/50 focus:border-purple-400"}`}
+                className={`pl-9 ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-white border-slate-300 text-slate-800 placeholder:text-slate-400 focus:border-indigo-500"}`}
               />
             </div>
 
@@ -291,7 +291,7 @@ export function TechAdminAuditLogs() {
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className={`p-2.5 rounded-lg text-sm font-semibold outline-none transition-all ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:ring-2 focus:ring-cyan-400" : "bg-purple-950/50 border-purple-500/30 text-purple-100 focus:ring-2 focus:ring-purple-500"}`}
+                className={`p-2.5 rounded-lg text-sm font-semibold outline-none transition-all ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:ring-2 focus:ring-cyan-400" : "bg-white border-slate-300 text-slate-800 focus:ring-2 focus:ring-purple-500"}`}
               >
                 <option value="ALL">All Roles</option>
                 <option value="COMPANY_ADMIN">System Admin</option>
@@ -307,7 +307,7 @@ export function TechAdminAuditLogs() {
         <Card className={`${cardBg} overflow-hidden`}>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className={`text-xs uppercase font-medium border-b ${isDark ? 'bg-cyan-950/40 text-cyan-400 border-cyan-500/20' : 'bg-[#1a0b2e]/60 text-purple-300 border-purple-500/20'}`}>
+              <thead className={`text-xs uppercase font-medium border-b ${isDark ? 'bg-cyan-950/40 text-cyan-400 border-cyan-500/20' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
                 <tr>
                   <th className="px-6 py-4">User & Role</th>
                   <th className="px-6 py-4">Module Used</th>
@@ -335,14 +335,14 @@ export function TechAdminAuditLogs() {
                   </tr>
                 ) : (
                   filteredLogs.map((log) => (
-                    <tr key={log.id} className={`transition-colors ${isDark ? 'hover:bg-cyan-900/20' : 'hover:bg-purple-900/20'}`}>
+                    <tr key={log.id} className={`transition-colors ${isDark ? 'hover:bg-cyan-900/20' : 'hover:bg-slate-50'}`}>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${isDark ? 'bg-cyan-900/40 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]' : 'bg-purple-900/60 text-purple-300 shadow-[0_0_8px_rgba(168,85,247,0.3)]'}`}>
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${isDark ? 'bg-cyan-900/40 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]' : 'bg-slate-100 text-slate-600 '}`}>
                             {log.name.charAt(0)}
                           </div>
                           <div>
-                            <div className={`font-semibold ${isDark ? 'text-slate-200' : 'text-purple-100'}`}>{log.name}</div>
+                            <div className={`font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{log.name}</div>
                             <div className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded inline-block mt-1 border border-transparent ${getRoleBadgeColor(log.role)}`}>
                               {log.role.replace("_", " ")}
                             </div>
@@ -350,20 +350,20 @@ export function TechAdminAuditLogs() {
                         </div>
                       </td>
                       <td className="px-6 py-4 font-medium">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${isDark ? 'bg-slate-900/50 border-cyan-500/30 text-cyan-300' : 'bg-purple-900/50 border-purple-500/30 text-purple-200'}`}>
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${isDark ? 'bg-slate-900/50 border-cyan-500/30 text-cyan-300' : 'bg-slate-100 border-slate-300 text-slate-600'}`}>
                           {log.module}
                         </span>
                       </td>
-                      <td className={`px-6 py-4 ${isDark ? 'text-slate-400' : 'text-purple-300/80'}`}>
+                      <td className={`px-6 py-4 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                         {log.action}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1.5 font-mono text-xs">
-                          <Clock className={`w-3.5 h-3.5 ${isDark ? 'text-cyan-400' : 'text-purple-400'}`} />
-                          <span className={isDark ? 'text-cyan-400' : 'text-purple-400'}>{log.duration}</span>
+                          <Clock className={`w-3.5 h-3.5 ${isDark ? 'text-cyan-400' : 'text-slate-500'}`} />
+                          <span className={isDark ? 'text-cyan-400' : 'text-slate-500'}>{log.duration}</span>
                         </div>
                       </td>
-                      <td className={`px-6 py-4 text-xs font-mono ${isDark ? 'text-slate-500' : 'text-purple-300/70'}`}>
+                      <td className={`px-6 py-4 text-xs font-mono ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
                         {log.timestamp}
                       </td>
                     </tr>

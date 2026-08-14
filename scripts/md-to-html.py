@@ -55,7 +55,7 @@ pre { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px;
 blockquote { border-left: 3px solid #cbd5e1; margin: 8px 0; padding: 4px 12px;
              color: #64748b; font-style: italic; }
 hr { border: 0; border-top: 1px solid #e2e8f0; margin: 16px 0; }
-.cover { text-align: center; padding-top: 160px; }
+.cover { text-align: center; padding-top: 120px; }
 .cover h1 { border: 0; font-size: 30pt; }
 .cover .sub { font-size: 14pt; color: #64748b; margin-top: 10px; }
 .cover .brand { font-size: 11pt; color: #4f46e5; letter-spacing: 3px;

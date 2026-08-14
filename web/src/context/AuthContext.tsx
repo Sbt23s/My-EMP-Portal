@@ -87,6 +87,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function bootstrap() {
       dropLegacyUserCache();
 
+      /*
+       * Stay out of the technical-admin section.
+       *
+       * This provider wraps the whole application, so on /tech-admin it ran too
+       * — taking the technical admin's token to /auth/me, which is an employee
+       * endpoint that quite correctly refused it. The 401 was then read as "this
+       * session is finished" and the token was cleared, which is why pressing
+       * reload there signed people straight out: the employee context was
+       * throwing away the technical admin's session on their behalf.
+       *
+       * The two sessions share one token slot, so neither may judge the other's
+       * token. TechAdminAuthContext owns this area.
+       */
+      if (window.location.pathname.startsWith("/tech-admin")) {
+        setLoading(false);
+        return;
+      }
+
       if (!tokenStore.access) {
         // No token: whatever a previous build left behind is not a session.
         clearSession();

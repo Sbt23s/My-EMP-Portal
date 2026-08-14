@@ -486,8 +486,20 @@ export function TechAdminUsers() {
     // disagree again.
     hr: countWithAnyRole(ROLE_GROUPS.HR_MANAGER),
     tl: countWithAnyRole(ROLE_GROUPS.TEAM_LEAD),
-    emp: countWithAnyRole(ROLE_GROUPS.EMPLOYEE),
-    admin: countWithAnyRole(ROLE_GROUPS.COMPANY_ADMIN),
+    // Administrators are excluded here rather than left to fall through. An
+    // account whose role matched no group was landing in this tile, which is
+    // how a newly created administrator turned up as an employee.
+    emp: users.filter(
+      (u: any) =>
+        inSelectedCompany(u) &&
+        checkStatus(u) &&
+        !rolesOf(u).some((r) => isAdminRole(r)) &&
+        !rolesOf(u).some((r) => ROLE_GROUPS.HR_MANAGER.includes(r)) &&
+        !rolesOf(u).some((r) => ROLE_GROUPS.TEAM_LEAD.includes(r))
+    ).length,
+    admin: users.filter(
+      (u: any) => inSelectedCompany(u) && checkStatus(u) && rolesOf(u).some((r) => isAdminRole(r))
+    ).length,
     total: users.filter((u: any) => inSelectedCompany(u) && checkStatus(u)).length,
   };
 

@@ -594,7 +594,7 @@ export default function CalendarPage() {
                     const ds = d.format(FMT);
                     const inMonth = d.month() === cursor.month();
                     const isToday = ds === todayStr;
-                    const isWeekend = d.day() === 0; // Sunday only — Saturday is a working day
+                    const isWeekend = d.day() === 0 || d.day() === 6; // Saturday and Sunday
                     const hs = holidaysByDate[ds] ?? [];
                     const ls = leavesByDate[ds] ?? [];
                     const ts = tasksByDate[ds] ?? [];

@@ -472,7 +472,9 @@ export default function TeamAttendancePage() {
 
     const out: DisplayRow[] = [];
     for (const d of rangeDates) {
-      const weekend = dayjs(d).day() === 0; // Sun=0 only — Saturday is a working day
+      // Sat=6, Sun=0. Counting Saturday as worked put an absence against
+      // everybody on every Saturday of the range.
+      const weekend = dayjs(d).day() === 0 || dayjs(d).day() === 6;
       for (const m of members) {
         const rec = byKey.get(`${d}-${m.id}`);
         if (rec) {
@@ -555,7 +557,7 @@ export default function TeamAttendancePage() {
         let absentDays = 0;
         const punchedOn = new Set(mine.map((r) => r._date));
         rangeDates.forEach((d) => {
-          if (dayjs(d).day() === 0 || punchedOn.has(d)) return;
+          if (dayjs(d).day() === 0 || dayjs(d).day() === 6 || punchedOn.has(d)) return;
           const lv = leaveByKey.get(`${d}-${m.id}`);
           if (lv && (lv.status || "").toUpperCase() === "APPROVED") leaveDays++;
           else absentDays++;

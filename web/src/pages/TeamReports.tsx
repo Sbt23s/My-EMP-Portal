@@ -228,8 +228,10 @@ export default function TeamReportsPage({ orgWide = false }: { orgWide?: boolean
       let guard = 0;
       while ((d.isBefore(end) || d.isSame(end, "day")) && guard < 400) {
         const key = d.format("YYYY-MM-DD");
-        // Sunday is the only non-working day; Saturday is worked.
-        const isSunday = d.day() === 0;
+        // Saturday and Sunday are both non-working, matching attendance and
+        // payroll. Reported as worked, every Saturday produced a page of
+        // absences for a day nobody was rostered.
+        const isSunday = d.day() === 0 || d.day() === 6;
         const holiday = holidayByDate.get(key);
         if (!isSunday && !holiday && !d.isAfter(dayjs(), "day")) {
           roster.forEach((m: any) => {

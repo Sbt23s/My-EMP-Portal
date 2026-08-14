@@ -135,8 +135,19 @@ public class PermissionService {
                 }).toList();
     }
 
+    /**
+     * Whether this person holds the role, treating COMPANY_ADMIN as SUPER_ADMIN.
+     *
+     * <p>Same reason as in LeaveService: a company's top administrator is
+     * COMPANY_ADMIN, and asked by its literal name this said no — so the person
+     * meant to decide short-permission requests could not.
+     */
     private static boolean hasRole(User u, String code) {
-        return u.getRoles().stream().anyMatch(r -> code.equals(r.getCode()));
+        return u.getRoles().stream().anyMatch(r -> {
+            String held = r.getCode();
+            if (code.equals(held)) return true;
+            return "SUPER_ADMIN".equals(code) && "COMPANY_ADMIN".equals(held);
+        });
     }
 
     @Transactional

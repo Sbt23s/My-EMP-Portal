@@ -12,6 +12,12 @@ import java.util.Map;
 /**
  * Clearing the day-to-day records for a fresh start. Restricted to the Super
  * Admin: HR runs the portal, but emptying it is not part of running it.
+ *
+ * <p>Deliberately NOT extended to COMPANY_ADMIN, which is otherwise treated as
+ * the same role everywhere else. Those two hold identical permissions and pass
+ * the same checks by design — but "the same access" is not a reason to hand a
+ * delete-everything button to more accounts. Widening this should be a decision
+ * somebody makes on purpose, not one inherited from an alias.
  */
 @RestController
 @RequestMapping("/api/admin/reset")

@@ -290,7 +290,11 @@ public class CommunityService {
     }
 
     private static boolean isAnnouncementRole(String code) {
-        return "SUPER_ADMIN".equals(code) || "IT_HR".equals(code) || "IT_MGR".equals(code);
+        // COMPANY_ADMIN is the same job as SUPER_ADMIN under the name a tenant
+        // company's own administrator carries. Left out, the one person meant to
+        // speak for the company could not post an announcement to it.
+        return "SUPER_ADMIN".equals(code) || "COMPANY_ADMIN".equals(code)
+                || "IT_HR".equals(code) || "IT_MGR".equals(code);
     }
 
     /** Employee code of the one person who speaks for the company by name. */

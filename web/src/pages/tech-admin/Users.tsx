@@ -54,7 +54,22 @@ export function TechAdminUsers() {
   const [password, setPassword] = useState("admin123");
   const [companyId, setCompanyId] = useState("PIX-MASTER");
   const [companyName, setCompanyName] = useState("Pixous Technologies");
-  const [role, setRole] = useState("EMPLOYEE");
+  /*
+   * The roles this screen can create.
+   *
+   * Kept as a list, and the state below starts from it, because the two had
+   * drifted: the dropdown offered Company Admin and nothing else while the
+   * state it is bound to started at "EMPLOYEE". A controlled select whose value
+   * matches no option still displays the first one, so the form read "Company
+   * Admin", nobody touched it, no change event fired — and the account was
+   * created as an employee. It then landed in the Employees tile and never in
+   * the administrator table, which is exactly what was reported.
+   *
+   * Adding a role here now adds the option and cannot leave the default behind.
+   */
+  const CREATABLE_ROLES = [{ code: "COMPANY_ADMIN", label: "Company Admin" }];
+
+  const [role, setRole] = useState(CREATABLE_ROLES[0].code);
 
   useEffect(() => {
     if (currentCompany?.companyName) {
@@ -347,7 +362,7 @@ export function TechAdminUsers() {
     setEmail("");
     setUsername("");
     setPassword("admin123");
-    setRole("EMPLOYEE");
+    setRole(CREATABLE_ROLES[0].code);
   };
 
   const getRoleCode = (u: any) => u.role || (u.roles && u.roles.length > 0 ? u.roles[0] : "EMPLOYEE");

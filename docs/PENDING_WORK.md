@@ -278,6 +278,57 @@ and per-module colour and font overrides that can be added and removed. Build
 the company-wide default first; per-module overrides sit on top of it, in the
 `company_modules.featureFlags` JSON that custom modules already use.
 
+## Still pending — Branding, the half that is not built (14 Aug)
+
+`/tech-admin/branding` now exists and works as a chooser: twenty colour themes,
+twenty font pairings, a company default, and per-role and per-module overrides
+that layer over it. It saves to `company_modules.featureFlags` under the
+BRANDING code as `{ base, roles, modules }`.
+
+**The portal does not read any of it yet.** That is the remaining work, and it
+is the larger half:
+
+1. **Resolve and apply.** At `AppLayout`, read the saved document, resolve
+   module override → role override → company default for the current page and
+   user, and write the result to CSS custom properties on the layout root.
+   Components then follow by using those variables instead of fixed classes —
+   which is the part that touches many files, and should be done a screen at a
+   time rather than in one sweep.
+2. **Preview the real screen.** The preview pane shows one generic dashboard
+   card whatever module is selected. It should show that module's actual
+   layout. Practical approach: render the real component inside a scaled,
+   non-interactive container with the resolved variables applied, rather than
+   maintaining a second set of mock screens that will drift.
+3. **Company switcher on the page.** Scope currently follows the company chosen
+   in the header. A list on the page itself was asked for; the header switcher
+   already does this, so decide whether a second control earns its place before
+   adding it.
+
+Order matters: (1) first. Until the portal reads the settings, the preview is
+the only place branding exists, and improving the preview would make it look
+finished when nothing downstream has changed.
+
+## Still pending — per-company roles (14 Aug)
+
+Asked for: an "Add Role" button creating roles for one company.
+
+Two things block it, and the second is the serious one:
+
+- No create endpoint exists. `TechnicalAdminRoleController` is `@GetMapping`
+  only, and nothing anywhere POSTs a Role.
+- **`Role` has no `companyId`.** Roles are platform-wide, shared by every
+  tenant. Per-company roles are not something the schema supports today.
+
+So this needs a `company_id` column on `roles`, a migration, and every role
+lookup made tenant-aware. That last part is tenant scoping — the same area V94
+broke, hiding every holiday and leave type from all 62 users. Whoever picks
+this up should verify by listing roles as two different companies and
+confirming each sees only its own, before trusting any of it.
+
+The roles page meanwhile shows the five roles a company staffs, with the
+thirteen industry variants behind a "Show all" toggle and still reachable by
+search.
+
 ## Still pending — mobile
 
 Working today: login with refresh, dashboard, attendance, leave, approvals,

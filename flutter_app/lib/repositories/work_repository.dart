@@ -6,6 +6,7 @@ import '../models/attendance.dart';
 import '../models/dashboard.dart';
 import '../models/leave.dart';
 import '../models/work_items.dart';
+import '../models/work_report.dart';
 
 /// Everything an employee does about their own working day: attendance, leave
 /// and the dashboard that summarises both.
@@ -316,4 +317,49 @@ class WorkRepository {
 
   Future<void> markAllNotificationsRead() =>
       _api.post('/notifications/mark-all-read');
+
+  // ---- work reports ------------------------------------------------------
+
+  /// GET /work-reports/me
+  Future<List<WorkReport>> myWorkReports() async {
+    final data = await _api.get('/work-reports/me');
+    return ApiEnvelope.listOf(data).map(WorkReport.fromJson).toList();
+  }
+
+  /// GET /work-reports/team — what the people reporting to you filed.
+  ///
+  /// Team leads and HR only; the server decides that, and a refusal surfaces as
+  /// a ForbiddenFailure rather than an empty list, so the screen can say "not
+  /// yours to see" instead of "nobody filed anything".
+  Future<List<WorkReport>> teamWorkReports() async {
+    final data = await _api.get('/work-reports/team');
+    return ApiEnvelope.listOf(data).map(WorkReport.fromJson).toList();
+  }
+
+  /// POST /work-reports
+  Future<WorkReport> submitWorkReport({
+    required DateTime workDate,
+    required String projectName,
+    required double workHours,
+    String? taskDescription,
+  }) async {
+    final data = await _api.post(
+      '/work-reports',
+      body: {
+        'workDate': _apiDate.format(workDate),
+        'projectName': projectName.trim(),
+        // Sent as a number, not a string: the server binds it to a BigDecimal
+        // and a quoted value is rejected as a validation error whose message
+        // does not mention quoting.
+        'workHours': workHours,
+        if (taskDescription != null && taskDescription.trim().isNotEmpty)
+          'taskDescription': taskDescription.trim(),
+      },
+    );
+    if (data is! Map<String, dynamic>) throw const ParseFailure();
+    return WorkReport.fromJson(data);
+  }
+
+  /// DELETE /work-reports/{id}
+  Future<void> deleteWorkReport(int id) => _api.delete('/work-reports/$id');
 }

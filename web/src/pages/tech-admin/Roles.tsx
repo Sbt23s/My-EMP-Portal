@@ -139,6 +139,25 @@ export function TechAdminRoles() {
         />
       </div>
 
+      {/* Says what is not on screen and offers it, rather than quietly
+          shortening the list. Hidden and absent look identical otherwise. */}
+      {!term && hiddenCount > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <span>
+            Showing the {CORE_ROLES.length} roles a company staffs.
+            {" "}
+            {hiddenCount} industry variant{hiddenCount === 1 ? "" : "s"} hidden.
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowAll((v) => !v)}
+            className="font-semibold text-primary underline-offset-2 hover:underline"
+          >
+            {showAll ? "Show fewer" : "Show all"}
+          </button>
+        </div>
+      )}
+
       {failed ? (
         <Card className="border-red-500/20 bg-red-500/5">
           <CardContent className="p-10 text-center">

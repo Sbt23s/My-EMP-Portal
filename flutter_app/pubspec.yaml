@@ -37,6 +37,15 @@ dependencies:
   # Loading states that show the shape of what is coming.
   shimmer: ^3.0.0
 
+  # Motion.
+  #
+  # framer-motion was asked for. It is a React library — it renders DOM nodes
+  # through React's reconciler and cannot run in Flutter at all. flutter_animate
+  # is the direct equivalent and the closest thing to it in feel: the same
+  # declarative chaining, `.animate().fadeIn().slideY()`, composed on a widget
+  # instead of a JSX element.
+  flutter_animate: ^4.5.0
+
   cupertino_icons: ^1.0.8
 
 dev_dependencies:

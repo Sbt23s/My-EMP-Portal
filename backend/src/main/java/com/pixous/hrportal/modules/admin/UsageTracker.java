@@ -6,8 +6,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.Map;
@@ -123,12 +121,21 @@ public class UsageTracker implements HandlerInterceptor {
     }
 
     /**
-     * Its own transaction, so a row is kept even if the request that produced it
-     * goes on to roll back — and so a failure here cannot mark the caller's
-     * transaction for rollback.
+     * No {@code @Transactional} here, deliberately.
+     *
+     * <p>It carried {@code REQUIRES_NEW}, which did nothing: this is called from
+     * {@link #record} on the same instance, and self-invocation goes straight to
+     * the method rather than through the Spring proxy that would apply it. An
+     * annotation that reads as a guarantee and provides none is worse than none
+     * at all — the next person to touch this would trust it.
+     *
+     * <p>The isolation it was reaching for is already there. This runs in
+     * {@code preHandle}, before the controller and before any transaction of the
+     * request exists, and {@code save} opens and commits its own. So a row is
+     * kept even if the request it came from later fails, which is the behaviour
+     * that was wanted.
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    protected void write(Long companyId, Long userId, String username, String module, String ip) {
+    void write(Long companyId, Long userId, String username, String module, String ip) {
         try {
             TechnicalAuditLog row = new TechnicalAuditLog();
             row.setCompanyId(companyId);

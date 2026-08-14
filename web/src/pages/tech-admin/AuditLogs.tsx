@@ -63,6 +63,9 @@ export function TechAdminAuditLogs() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
+  /** Per-person usage: which modules, how many touches, how long. */
+  const [usage, setUsage] = useState<any[]>([]);
+  const [usageNote, setUsageNote] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -91,7 +94,12 @@ export function TechAdminAuditLogs() {
         if (!mounted) return;
 
         setLogs(
-          rows.map((r) => ({
+          rows
+            // Ordinary use is recorded in the same table and reported in the
+            // usage panel above. Left in, every row here would read as a
+            // technical admin changing something, which is not what happened.
+            .filter((r) => r.action !== "MODULE_USE")
+            .map((r) => ({
             id: r.id,
             name: r.adminUsername || "Unknown",
             role: "TECHNICAL_ADMIN",

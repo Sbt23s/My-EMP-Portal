@@ -371,3 +371,71 @@ than one tenant is present.
 The lesson is not about SQL. I had reported those three fixes as working before
 testing them, then wrote a confident and wrong explanation of the failure into
 the docs. The diagnostic that found the truth took ten minutes. Run it first.
+
+## Done — Branding now reaches the portal (14 Aug)
+
+All three items from the previous section are built.
+
+**1. The portal reads the settings.** `GET /api/my-modules` returns the company's
+branding document alongside its module list — same request, because both are
+needed before the first screen can be drawn and a second request would show the
+colour arriving late, as a flash. `AuthContext` parses it and exposes
+`branding`; `useBranding`, mounted once in `AppLayout`, resolves
+`module → role → company` and writes the result to the document.
+
+Resolution is per property, not per object: an override that sets only a colour
+keeps the company's font rather than falling back to the platform default for
+everything it did not mention.
+
+Two mechanisms, deliberately:
+
+- **Colour** goes on the root element as an inline custom property, which
+  outranks both `:root` and `.dark` without either having to know branding
+  exists. Written as an HSL triple (`243 75% 59%`), not a hex — Tailwind
+  composes these tokens with an alpha channel, and a hex in one of those
+  variables produces no colour at all, silently.
+- **Type** needs real rules, so a single `<style id="hrp-branding">` element is
+  rewritten in place. No `!important`: it is appended after the compiled
+  stylesheet, so at equal specificity it already wins.
+
+**The page background is deliberately left alone.** Each person chooses light or
+dark for themselves in the top bar, and a company theme overruling that would
+take away a setting somebody made on purpose. The accent — the part that reads
+as "our colour" — carries into both. The dark themes in the list (Midnight,
+Carbon, Obsidian, Deep Ink) therefore contribute their accent, not their
+surface.
+
+**Timing.** Branding refreshes with the module list: on sign-in, and whenever the
+tab is returned to. Someone with the portal already open sees the new colour when
+they come back to it, not mid-keystroke.
+
+**2. Per-module previews.** `BrandingPreview` renders the shape of the module in
+view — table, request list, board, calendar, chat, dashboard. Not the real
+component: those pages fetch as the signed-in employee, and a technical admin has
+no company of their own, so every one of them would render as a spinner or an
+error panel — a preview of the colour of nothing. They also expect a router and a
+query client this area does not have. Shapes answer the actual question (does
+this accent work on this kind of page) without a pixel copy that quietly stops
+matching the day someone edits the real screen.
+
+**3. Company list.** On the page, above the scope chips. Switching is blocked
+while there are unsaved changes — a colour saved against the wrong tenant is not
+something you find out about here, you find out when someone else's portal
+changes.
+
+### One trap worth remembering
+
+Saving branding writes a `company_modules` row. `configured` in `/my-modules` had
+to start excluding it, or choosing a theme for a company that had never opened
+the module screen would answer "configured, nothing enabled" and empty that
+company's portal for all of its people. Picking a colour must not be able to
+switch off a company.
+
+### Not carried over
+
+- The **mobile app** does not read branding. It has its own theme; nothing there
+  changed.
+- The **sign-in page** is unbranded on purpose — nobody has said who they are
+  yet, so there is no company whose colours apply.
+- `THEMES` and `FONTS` now live in `web/src/lib/branding.ts` and are imported by
+  both sides. Add a colour there, never in the page.

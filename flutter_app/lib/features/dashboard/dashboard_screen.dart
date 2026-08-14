@@ -123,19 +123,78 @@ class _NotificationBell extends ConsumerWidget {
   }
 }
 
-class _Content extends StatelessWidget {
+class _Content extends ConsumerWidget {
   const _Content({required this.data});
 
   final EmployeeDashboard data;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    final modules = ref.watch(modulesProvider);
+    final brand = ref.watch(brandingProvider);
+
+    /*
+     * Tiles belonging to a switched-off module do not appear.
+     *
+     * The web dashboard gates all thirteen of its widgets this way, and the
+     * reason is the same here: a company with Assets switched off has nobody who
+     * can be issued an asset, so "Assets with me: 0" is not a fact about them,
+     * it is a feature leaking through a setting that was supposed to hide it.
+     *
+     * Built as a list because the heading above depends on it — "My overview"
+     * over nothing is worse than no heading.
+     */
+    final tiles = <Widget>[
+      if (modules.has('LEAVE'))
+        StatCard(
+          label: 'Pending leave requests',
+          value: '${data.pendingLeaveRequests}',
+          icon: Icons.event_note_rounded,
+          tint: AppTheme.warning(context),
+        ),
+      if (modules.has('HELPDESK'))
+        StatCard(
+          label: 'Open tickets',
+          value: '${data.myOpenTickets}',
+          icon: Icons.support_agent_rounded,
+          tint: scheme.tertiary,
+        ),
+      if (modules.has('ASSETS'))
+        StatCard(
+          label: 'Assets with me',
+          value: '${data.myAssets}',
+          icon: Icons.inventory_2_outlined,
+          tint: scheme.primary,
+        ),
+      if (modules.has('ATTENDANCE'))
+        StatCard(
+          label: 'Worked today',
+          value: data.workedLabel,
+          icon: Icons.timer_outlined,
+          tint: AppTheme.success(context),
+        ),
+    ];
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: [
+        // The company's own welcome line, where it has written one. Set in the
+        // branding screen; absent for everyone who has not.
+        if (brand.welcomeText != null) ...[
+          Text(
+            brand.welcomeText!,
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 14),
+        ],
+        // Nagging someone to punch in when they have no way to punch is the
+        // module leaking through the greeting.
+        if (modules.has('ATTENDANCE'))
         Card(
           child: Padding(
             padding: const EdgeInsets.all(18),
@@ -188,16 +247,34 @@ class _Content extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 20),
-        Text(
-          'My overview',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.3,
+        if (tiles.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          Text(
+            'My overview',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
-        GridView.count(
+          const SizedBox(height: 12),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.35,
+            children: [
+              for (var i = 0; i < tiles.length; i++)
+                tiles[i]
+                    .animate()
+                    .fadeIn(delay: (i * 60).ms, duration: 240.ms)
+                    .slideY(begin: 0.10, end: 0, curve: Curves.easeOutCubic),
+            ],
+          ),
+        ],
+        if (false) ...[
+          GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -231,7 +308,8 @@ class _Content extends StatelessWidget {
             ),
           ],
         ),
-        if (data.leaveBalances.isNotEmpty) ...[
+        ],
+        if (modules.has('LEAVE') && data.leaveBalances.isNotEmpty) ...[
           const SizedBox(height: 24),
           Text(
             'Leave balance',

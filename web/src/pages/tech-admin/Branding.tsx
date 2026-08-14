@@ -53,7 +53,7 @@ const ROLES = [
 type Scope = { kind: "base" } | { kind: "role"; key: string } | { kind: "module"; key: string };
 
 export function TechAdminBranding() {
-  const { theme, currentCompany } = useTechAdminAuth();
+  const { theme, currentCompany, companies, setCurrentCompany } = useTechAdminAuth();
   const isDark = theme === "dark";
 
   const [draft, setDraft] = useState<BrandingDoc>(EMPTY);
@@ -233,6 +233,41 @@ export function TechAdminBranding() {
           </Button>
         </div>
       </div>
+
+      {/* ---- company ----
+          Branding is per company, and every control below writes to whichever
+          one is selected. The switcher belongs on the page for that reason: a
+          colour saved against the wrong tenant is not something the person
+          finds out about here, they find out when someone else's portal
+          changes. Unsaved work blocks the switch rather than being discarded. */}
+      {companies.length > 1 && (
+        <section className={`rounded-xl p-5 ${card}`}>
+          <h2 className="text-sm font-bold uppercase tracking-wide">Company</h2>
+          <p className={`mt-1 text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+            {dirty
+              ? "Save or discard your changes before switching company."
+              : "Everything on this page applies to the company selected here."}
+          </p>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {companies.map((c) => {
+              const on = String(c.id) === String(tenantId);
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  disabled={dirty && !on}
+                  onClick={() => setCurrentCompany(c)}
+                  className={`${chip(on, false)} disabled:cursor-not-allowed disabled:opacity-40`}
+                  style={on ? { background: activeTheme.accent } : undefined}
+                >
+                  {c.companyName}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ---- scope ---- */}
       <section className={`rounded-xl p-5 ${card}`}>

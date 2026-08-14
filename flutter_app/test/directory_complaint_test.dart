@@ -120,20 +120,34 @@ void main() {
   group('RaiseComplaintSheet', () {
     Future<FormState> pump(WidgetTester tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: Scaffold(body: RaiseComplaintSheet())),
+        ProviderScope(
+          /*
+           * The recipients list is stubbed, not fetched.
+           *
+           * Left alone, building this sheet calls the real endpoint: the test
+           * then fails at teardown with a pending timer, and — worse — a unit
+           * test run on a laptop with no network would fail for a reason that
+           * has nothing to do with the form it is testing.
+           *
+           * Empty is also the case worth pinning: the "address to" dropdown is
+           * hidden when nobody is returned, and the form must still be
+           * submittable without it.
+           */
+          overrides: [
+            complaintRecipientsProvider
+                .overrideWith((ref) async => <ComplaintRecipient>[]),
+          ],
+          child: const MaterialApp(home: Scaffold(body: RaiseComplaintSheet())),
         ),
       );
-      // pump, not pumpAndSettle: the recipients provider is a live request that
-      // never resolves in a test, and settling would wait for it forever.
-      await tester.pump();
+      await tester.pumpAndSettle();
       return tester.state<FormState>(find.byType(Form));
     }
 
     testWidgets('will not submit empty', (tester) async {
       final form = await pump(tester);
       expect(form.validate(), isFalse);
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.text('A short subject, please'), findsOneWidget);
       expect(find.text('Please describe it'), findsOneWidget);
     });
@@ -142,7 +156,7 @@ void main() {
       final form = await pump(tester);
       await tester.enterText(find.widgetWithText(TextFormField, 'Subject'), 'Broken chair');
       expect(form.validate(), isFalse);
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.text('Please describe it'), findsOneWidget);
     });
 

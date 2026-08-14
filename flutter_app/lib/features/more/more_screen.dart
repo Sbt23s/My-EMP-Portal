@@ -12,6 +12,7 @@ import '../approvals/approvals_screen.dart';
 import 'calendar_screen.dart';
 import 'raise_ticket_sheet.dart';
 import 'submit_claim_sheet.dart';
+import 'work_reports_screen.dart';
 
 final payslipsProvider = FutureProvider.autoDispose<List<Payslip>>(
   (ref) => ref.watch(workRepositoryProvider).myPayslips(),
@@ -64,6 +65,13 @@ class MoreScreen extends ConsumerWidget {
           title: 'Payslips',
           subtitle: 'Your monthly pay',
           onTap: () => _open(context, const PayslipsScreen()),
+        ),
+      if (modules.has('REPORTS'))
+        _Entry(
+          icon: Icons.description_outlined,
+          title: 'Work reports',
+          subtitle: 'What you did, day by day',
+          onTap: () => _open(context, const WorkReportsScreen()),
         ),
       if (modules.has('TASKS'))
         _Entry(

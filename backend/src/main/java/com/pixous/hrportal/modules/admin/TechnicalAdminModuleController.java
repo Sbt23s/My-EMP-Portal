@@ -16,11 +16,14 @@ public class TechnicalAdminModuleController {
 
     private final CompanyModuleRepository moduleRepository;
     private final CompanyRepository companyRepository;
+    private final TechnicalAuditService auditService;
 
     public TechnicalAdminModuleController(CompanyModuleRepository moduleRepository,
-                                          CompanyRepository companyRepository) {
+                                          CompanyRepository companyRepository,
+                                          TechnicalAuditService auditService) {
         this.moduleRepository = moduleRepository;
         this.companyRepository = companyRepository;
+        this.auditService = auditService;
     }
 
     /**
@@ -75,13 +78,27 @@ public class TechnicalAdminModuleController {
                     return newModule;
                 });
 
+        // Read before the change so the audit row can say what it was.
+        boolean wasEnabled = module.getId() != null && module.isEnabled();
+        boolean isNew = module.getId() == null;
+
         module.setEnabled(payload.isEnabled());
         module.setFeatureFlags(payload.getFeatureFlags());
 
         // Same flat shape as the GET. This one happened to serialise because the
         // company had just been loaded in this transaction, which made the
         // failure look intermittent rather than certain.
-        return ResponseEntity.ok(ApiResponse.ok(ModuleView.of(moduleRepository.save(module))));
+        CompanyModule saved = moduleRepository.save(module);
+
+        auditService.record(
+                companyId,
+                isNew ? "MODULE_CREATED" : (saved.isEnabled() ? "MODULE_ENABLED" : "MODULE_DISABLED"),
+                "CompanyModule",
+                saved.getId(),
+                isNew ? null : (wasEnabled ? "enabled" : "disabled"),
+                saved.isEnabled() ? "enabled" : "disabled");
+
+        return ResponseEntity.ok(ApiResponse.ok(ModuleView.of(saved)));
     }
 
     @PostMapping("/simulate-access")

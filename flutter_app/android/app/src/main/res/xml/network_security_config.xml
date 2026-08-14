@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Plain HTTP, for one host only.
+
+  Android 9 and later refuse cleartext by default, which is the right default:
+  without this the app throws "CLEARTEXT communication to 16.192.105.61 not
+  permitted" on the very first request and reads as a broken build rather than a
+  blocked connection.
+
+  The exception is deliberately narrow. `cleartextTrafficPermitted="true"` on the
+  base config would allow plain HTTP to anywhere, including a hostile network's
+  redirect; this permits exactly the server the app is built to talk to and
+  nothing else.
+
+  TEMPORARY. It exists because the portal has no certificate yet — HTTPS is
+  waiting on a DNS A record pointing at this address. Once that is in place,
+  change AppConfig.apiBaseUrl to https:// and delete this file along with the
+  android:networkSecurityConfig line in the manifest. Until then, sign-in
+  credentials cross the network in the clear on any Wi-Fi the phone is on, and
+  that is worth knowing rather than discovering.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">16.192.105.61</domain>
+    </domain-config>
+</network-security-config>

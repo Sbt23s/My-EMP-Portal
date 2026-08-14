@@ -1,3 +1,4 @@
+import '../core/auth/mobile_access.dart';
 import '../core/error/failures.dart';
 import '../core/network/api_client.dart';
 import '../core/storage/token_store.dart';
@@ -43,8 +44,26 @@ class AuthRepository {
 
     final userJson = data['user'];
     if (userJson is! Map<String, dynamic>) throw const ParseFailure();
+
+    final user = AuthUser.fromJson(userJson);
+
+    /*
+     * Administrators sign in on the web.
+     *
+     * Checked after the password, never before: refusing on the username alone
+     * would tell an unauthenticated stranger which accounts are administrators.
+     *
+     * The tokens are thrown away rather than kept. Saving them first and
+     * refusing afterwards would leave a valid session on the phone that the next
+     * launch would restore straight past this check.
+     */
+    if (!MobileAccess.allows(user)) {
+      await _tokens.clear();
+      throw const AuthFailure(MobileAccess.refusal);
+    }
+
     await _tokens.saveUser(userJson);
-    return AuthUser.fromJson(userJson);
+    return user;
   }
 
   /// Who the token belongs to, asked fresh.
@@ -63,8 +82,16 @@ class AuthRepository {
     try {
       final data = await _api.get('/users/me');
       if (data is Map<String, dynamic>) {
+        final user = AuthUser.fromJson(data);
+        // Same gate as sign-in. Someone promoted to administrator while signed
+        // in on their phone, or holding a token from a build that predates this
+        // rule, would otherwise be restored straight past it.
+        if (!MobileAccess.allows(user)) {
+          await _tokens.clear();
+          return null;
+        }
         await _tokens.saveUser(data);
-        return AuthUser.fromJson(data);
+        return user;
       }
     } on AuthFailure {
       await _tokens.clear();
@@ -77,7 +104,13 @@ class AuthRepository {
     }
 
     final cached = _tokens.cachedUser;
-    return cached == null ? null : AuthUser.fromJson(cached);
+    if (cached == null) return null;
+    final user = AuthUser.fromJson(cached);
+    if (!MobileAccess.allows(user)) {
+      await _tokens.clear();
+      return null;
+    }
+    return user;
   }
 
   /// Tell the server, then forget locally. The local clear happens either way —

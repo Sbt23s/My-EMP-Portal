@@ -216,6 +216,22 @@ public class UserService {
         if (req.employeeCode() != null) user.setEmployeeCode(req.employeeCode());
         if (req.roles() != null) {
             Set<Role> roles = roleRepository.findByCodeIn(new java.util.HashSet<>(req.roles()));
+            /*
+             * A code that matches nothing must not quietly empty the set.
+             *
+             * findByCodeIn returns what it found, so a request naming roles that
+             * do not exist — a typo, or a code from a build that has moved on —
+             * produced an empty set, and setRoles stripped every role the person
+             * had. The account survives, can still sign in, and can then reach
+             * nothing: no sidebar, no permissions. Nothing on screen says why,
+             * because as far as the request was concerned it succeeded.
+             *
+             * Refusing is the only safe answer. Clearing every role stays
+             * possible by sending an empty list, which says so deliberately.
+             */
+            if (!req.roles().isEmpty() && roles.isEmpty()) {
+                throw ApiException.business("Unknown role: " + String.join(", ", req.roles()));
+            }
             user.setRoles(roles);
         }
         userRepository.save(user);

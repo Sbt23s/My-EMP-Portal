@@ -331,7 +331,9 @@ public class DashboardService {
             long present = 0;
             long workingDays = 0;
             for (LocalDate d = monthStart; !d.isAfter(monthEnd); d = d.plusDays(1)) {
-                if (d.getDayOfWeek() == java.time.DayOfWeek.SUNDAY) continue;
+                // Saturday is a weekend. Counting it inflated the expected
+                // attendance and made every month's rate look worse than it was.
+                if (com.pixous.hrportal.common.WorkCalendar.isWeekend(d)) continue;
                 workingDays++;
                 present += attendanceRepository.findByWorkDate(d).stream()
                         .filter(a -> a.getPunchInAt() != null)

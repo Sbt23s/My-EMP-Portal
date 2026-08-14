@@ -315,12 +315,16 @@ export default function CalendarPage() {
   const selTasks = tasksByDate[selected] ?? [];
   const selEvents = eventsByDate[selected] ?? [];
 
-  // A date is non-working when it falls on Sunday or an existing holiday —
-  // events can only be added on working days. Saturday is a working day.
+  // A date is non-working when it falls on a weekend or an existing holiday —
+  // events can only be added on working days.
+  //
+  // Saturday counts as a weekend now, matching how attendance and payroll measure
+  // a month. Left as a working day here, somebody could still declare a holiday
+  // on a Saturday that payroll had already treated as one.
   const isNonWorkingDay = (ds: string) => {
     const d = dayjs(ds);
     if (!d.isValid()) return false;
-    return d.day() === 0 || (holidaysByDate[ds] ?? []).length > 0;
+    return d.day() === 0 || d.day() === 6 || (holidaysByDate[ds] ?? []).length > 0;
   };
 
   const upcomingHolidays = (holidaysQ.data ?? [])

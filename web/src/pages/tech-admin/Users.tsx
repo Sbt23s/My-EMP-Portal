@@ -261,7 +261,17 @@ export function TechAdminUsers() {
     setFullName(user.name);
     setEmail(user.email);
     setUsername(user.username);
-    setRole(user.role);
+    /*
+     * Read from `roles`, which is what the server sends.
+     *
+     * `user.role` does not exist on the directory row — it is a list, `roles` —
+     * so this set the state to undefined every time, and the select fell back to
+     * displaying its first option while holding nothing. Saving from that state
+     * would have written whatever the form guessed rather than what was on
+     * screen.
+     */
+    const held: string[] = Array.isArray(user.roles) ? user.roles.map(String) : [];
+    setRole(held.find((r) => CREATABLE_ROLES.some((c) => c.code === r)) ?? CREATABLE_ROLES[0].code);
     setIsEditModalOpen(true);
   };
 
@@ -926,7 +936,9 @@ export function TechAdminUsers() {
                     onChange={(e) => setRole(e.target.value)}
                     className={`w-full mt-1 p-2 rounded border text-sm ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-white border-slate-300 text-slate-800 focus:border-purple-500"}`}
                   >
-                    <option value="COMPANY_ADMIN">Company Admin</option>
+                    {CREATABLE_ROLES.map((r) => (
+                      <option key={r.code} value={r.code}>{r.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -1037,7 +1049,9 @@ export function TechAdminUsers() {
                     onChange={(e) => setRole(e.target.value)}
                     className={`w-full mt-1 p-2 rounded border text-sm ${isDark ? "bg-slate-900/50 border-cyan-500/30 text-white focus:border-cyan-400" : "bg-white border-slate-300 text-slate-800 focus:border-purple-500"}`}
                   >
-                    <option value="COMPANY_ADMIN">Company Admin</option>
+                    {CREATABLE_ROLES.map((r) => (
+                      <option key={r.code} value={r.code}>{r.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>

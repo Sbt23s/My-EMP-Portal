@@ -235,6 +235,49 @@ Each requirement has an ID, description, actor, and acceptance criteria (AC).
 | FR-20.3 | Filenames are never used in filesystem paths (traversal-proof) | All |
 | FR-20.4 | Downloads served with `nosniff`; no directory listing | All |
 
+### FR-21 AI Chatbot & Knowledge Base
+| ID | Requirement | Actor |
+|---|---|---|
+| FR-21.1 | Employees can ask the assistant questions (leave policy, payroll, attendance) in the UI | All |
+| FR-21.2 | Answers are grounded in the company knowledge base and org context (`ChatbotKnowledge`, `ChatbotOrgContext`) | All |
+| FR-21.3 | Unanswerable queries return a graceful fallback message, never an exception | All |
+
+### FR-22 Community, Calls & Presence
+| ID | Requirement | Actor |
+|---|---|---|
+| FR-22.1 | Employees can post to the community feed and interact with posts | All |
+| FR-22.2 | Voice/video call initiation between employees with presence awareness | All |
+| FR-22.3 | Presence (online/away/offline) is broadcast in real time via event listeners and shown across the UI | All |
+| FR-22.4 | Chat events are produced/consumed asynchronously (Kafka-style event bus) without blocking the UI | All |
+
+### FR-23 Performance Management
+| ID | Requirement | Actor |
+|---|---|---|
+| FR-23.1 | HR/TL can define performance goals for employees (`PerformanceGoal`) | HR, TL |
+| FR-23.2 | HR can create performance reviews with ratings and comments (`PerformanceReview`) | HR |
+| FR-23.3 | Employees can view their goals and review history | EMP |
+
+### FR-24 Tasks & Task Chat
+| ID | Requirement | Actor |
+|---|---|---|
+| FR-24.1 | TL/HR can assign tasks to employees with status tracking (`Task`) | TL, HR |
+| FR-24.2 | Each task has a threaded chat for collaboration (`TaskMessage`) | All |
+| FR-24.3 | Task chat messages are persisted and real-time via the event bus | All |
+
+### FR-25 Work Reports & Reminders
+| ID | Requirement | Actor |
+|---|---|---|
+| FR-25.1 | Employees submit daily work reports with text and optional files | EMP |
+| FR-25.2 | TL/HR can review submitted reports (`WorkReport`) | TL, HR |
+| FR-25.3 | The reminder service nudges employees who have not submitted by the deadline | EMP |
+
+### FR-26 Module Management & Cache (Technical Admin)
+| ID | Requirement | Actor |
+|---|---|---|
+| FR-26.1 | SA can enable/disable application modules per company (`MyModules`, `TechnicalAdminModule`) | SA |
+| FR-26.2 | SA can clear application caches (`Cache` endpoints) for troubleshooting | SA |
+| FR-26.3 | Module toggles are persisted and respected by the UI and backend guards | SA |
+
 ---
 
 ## 4. User Stories (by Role)
@@ -303,27 +346,45 @@ Each requirement has an ID, description, actor, and acceptance criteria (AC).
 
 ## 7. Requirements Traceability
 
-| Module | FR IDs | Primary roles |
-|---|---|---|
-| Auth | FR-01 | All |
-| Dashboard | FR-02 | All |
-| Users/Employees | FR-03 | HR, CA, SA |
-| Leave | FR-04 | All |
-| Attendance | FR-05 | All |
-| Payroll | FR-06 | HR, CA |
-| Assets | FR-07 | All |
-| Claims | FR-08 | All |
-| Complaints | FR-09 | EMP, HR |
-| Helpdesk | FR-10 | All |
-| Safety | FR-11 | All |
-| Chat/Notifications | FR-12 | All |
-| Calendar/Onboarding | FR-13 | All |
-| Reports | FR-14 | HR, CA |
-| Audit | FR-15 | CA, SA |
-| Roles/Permissions | FR-16 | CA, SA |
-| Settings/Branding | FR-17 | All |
-| Tenancy | FR-18 | SA |
-| Data Reset | FR-19 | SA |
-| Files | FR-20 | All |
+### 7.1 Module → FR → Controllers
+
+| Module | FR IDs | Backend controllers | Primary roles |
+|---|---|---|---|
+| Auth & Sessions | FR-01 | Auth, TechnicalAdminAuth | All |
+| Dashboard | FR-02 | Dashboard | All |
+| Users & Employees | FR-03 | User | HR, CA, SA |
+| Leave | FR-04 | Leave | All |
+| Attendance | FR-05 | Attendance | All |
+| Payroll & Payslips | FR-06 | Payroll | HR, CA |
+| Assets | FR-07 | Asset | All |
+| Claims & Expenses | FR-08 | TaExpense | All |
+| Complaints | FR-09 | Complaint | EMP, HR |
+| Helpdesk | FR-10 | Helpdesk | All |
+| Safety | FR-11 | SafetyIncident | All |
+| Chat & Notifications | FR-12 | Notification | All |
+| Calendar & Onboarding | FR-13 | Calendar, Onboarding | All |
+| Reports & Exports | FR-14 | Report | HR, CA |
+| Audit Log | FR-15 | Audit, TechnicalAdminAudit | CA, SA |
+| Roles & Permissions | FR-16 | Permission, TechnicalAdminRole | CA, SA |
+| Settings & Branding | FR-17 | Org, Settings | All |
+| Multi-Tenancy | FR-18 | TechnicalAdminCompany | SA |
+| Data Reset | FR-19 | DataReset | SA |
+| Files & Storage | FR-20 | File | All |
+| AI Chatbot | FR-21 | Chatbot | All |
+| Community, Calls & Presence | FR-22 | Community, Call, Presence | All |
+| Performance | FR-23 | Performance | HR, TL, EMP |
+| Tasks & Task Chat | FR-24 | Task | TL, HR, EMP |
+| Work Reports | FR-25 | WorkReport | EMP, TL, HR |
+| Module Mgmt & Cache | FR-26 | MyModules, TechnicalAdminModule, Cache | SA |
+
+### 7.2 Role → Modules
+
+| Role | Modules accessible |
+|---|---|
+| SUPER_ADMIN | All 26 modules incl. technical admin (FR-18, FR-19, FR-26) + all tenants |
+| COMPANY_ADMIN | All business modules FR-01–FR-25 for own tenant + roles/permissions (FR-16) + audit (FR-15) |
+| HR_MANAGER | FR-01–FR-14, FR-17, FR-20–FR-25 (people operations; no technical admin) |
+| TEAM_LEAD | FR-01–FR-05, FR-07–FR-14, FR-20–FR-25 (team scope, approvals) |
+| EMPLOYEE | FR-01–FR-05, FR-07–FR-14, FR-20–FR-25 (self-service only) |
 
 *This document is version-controlled in the repository (`docs/REQUIREMENTS.md`). Any functional change must update this document and the corresponding unit tests.*

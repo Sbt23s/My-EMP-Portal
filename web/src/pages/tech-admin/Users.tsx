@@ -795,7 +795,7 @@ export function TechAdminUsers() {
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className={`divide-y ${isDark ? "divide-cyan-500/10" : "divide-purple-500/20"}`}>
+            <tbody className={`divide-y ${isDark ? "divide-cyan-500/10" : "divide-slate-200"}`}>
               {/* An empty table after a failed load would read as "these accounts
                   are gone". Say which of the two it is. */}
               {loadFailed && (

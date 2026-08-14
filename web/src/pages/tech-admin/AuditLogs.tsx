@@ -231,7 +231,7 @@ export function TechAdminAuditLogs() {
                     <th className="p-4">Last seen</th>
                   </tr>
                 </thead>
-                <tbody className={`divide-y ${isDark ? "divide-cyan-500/10" : "divide-purple-500/20"}`}>
+                <tbody className={`divide-y ${isDark ? "divide-cyan-500/10" : "divide-slate-200"}`}>
                   {usage.map((p) => {
                     const mods: [string, number][] = Object.entries(p.modules || {}) as any;
                     // Busiest module first, so the row reads as what they do.
@@ -316,7 +316,7 @@ export function TechAdminAuditLogs() {
                   <th className="px-6 py-4">Timestamp</th>
                 </tr>
               </thead>
-              <tbody className={`divide-y ${isDark ? 'divide-cyan-500/10' : 'divide-purple-500/20'}`}>
+              <tbody className={`divide-y ${isDark ? 'divide-cyan-500/10' : 'divide-slate-200'}`}>
                 {filteredLogs.length === 0 ? (
                   <tr>
                     {/* "None for the selected filters" implied that clearing

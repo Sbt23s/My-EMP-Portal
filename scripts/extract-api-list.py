@@ -24,8 +24,10 @@ import datetime
 BACKEND = os.path.join(os.path.dirname(__file__), "..", "backend", "src", "main", "java")
 OUT = os.path.join(os.path.dirname(__file__), "..", "docs", "api-list.json")
 
-VERBS = ("Get", "Post", "Put", "Delete", "Patch")
-MAPPING_RE = re.compile(r"@(Get|Post|Put|Delete|Patch|Request)Mapping\b")
+# Only method-level verbs count as endpoints. @RequestMapping at class level
+# is the prefix and is handled separately; matching it here too would invent
+# phantom endpoints like "/api/foo/api/foo".
+MAPPING_RE = re.compile(r"@(Get|Post|Put|Delete|Patch)Mapping\b")
 
 
 def class_prefix(head):
@@ -84,12 +86,16 @@ def main():
                     annot += "\n" + lines[j]
                     depth += lines[j].count("(") - lines[j].count(")")
                 verb = m.group(1).upper()
-                if verb == "REQUEST":
-                    verb = "ANY"
                 rel = first_quoted(annot).lstrip("/")
+                full = f"{prefix}/{rel}" if rel else prefix
+                if not full:
+                    # No path anywhere (e.g. @GetMapping() on an abstract base)
+                    # — not a callable endpoint.
+                    i = j
+                    continue
                 endpoints.append({
                     "method": verb,
-                    "path": f"{prefix}/{rel}" if rel else prefix,
+                    "path": full,
                     "controller": os.path.basename(path),
                     "handler": find_handler(lines, i),
                     "authorization": find_preauthorize(lines, i),

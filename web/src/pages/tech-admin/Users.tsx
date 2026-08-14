@@ -389,9 +389,25 @@ export function TechAdminUsers() {
     COMPANY_ADMIN: ["COMPANY_ADMIN", "SUPER_ADMIN", "BOARD_ADMIN", "CV_ADM", "IT_ADM"]
   };
 
-  /** The roles that run a company, in both the generic and industry namings. */
-  const isAdminRole = (roleCode: string) =>
-    ROLE_GROUPS.COMPANY_ADMIN.includes(roleCode);
+  /**
+   * The roles that run a company.
+   *
+   * Matched by name as well as by the known list. An administrator created
+   * here was landing outside every group and being counted as an ordinary
+   * employee — the Employees tile read 1 while the administrator table sat
+   * empty, and the account that had just been created was nowhere. Rather than
+   * guess which spelling the server used, anything whose code says ADMIN or
+   * ends in _ADM is treated as one.
+   */
+  const isAdminRole = (roleCode: string) => {
+    if (!roleCode) return false;
+    const code = roleCode.toUpperCase();
+    return (
+      ROLE_GROUPS.COMPANY_ADMIN.includes(code) ||
+      code.includes("ADMIN") ||
+      code.endsWith("_ADM")
+    );
+  };
 
   const filteredUsers = users.filter((u: any) => {
     const matchesCompany = !selectedCompanyFilter || u.companyName === selectedCompanyFilter;

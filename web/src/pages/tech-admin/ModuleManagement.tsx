@@ -42,7 +42,9 @@ export function TechAdminModuleManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6; // Show 6 modules per page to enable pagination
 
-  const [selectedModuleId, setSelectedModuleId] = useState<number | null>(1);
+  // A string as well as a number: custom modules are keyed by their code, since
+  // they have no place in the numbered catalogue.
+  const [selectedModuleId, setSelectedModuleId] = useState<number | string | null>(1);
 
   // The modules the portal actually has. Every entry here must correspond to a
   // route in routes/router.tsx -- a module that can be switched on but leads

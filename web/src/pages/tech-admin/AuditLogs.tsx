@@ -364,7 +364,10 @@ export function TechAdminAuditLogs() {
                         </div>
                       </td>
                       <td className={`px-6 py-4 text-xs font-mono ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
-                        {log.timestamp}
+                        {/* The server sends ISO-8601. Printed straight into the
+                            cell it read "2026-08-14T15:43:02.141", which is a
+                            timestamp nobody can scan down a column. */}
+                        {log.timestamp ? new Date(log.timestamp).toLocaleString() : "—"}
                       </td>
                     </tr>
                   ))

@@ -63,6 +63,23 @@ export function TechAdminRoles() {
     load();
   }, [load]);
 
+  /**
+   * The four roles a company actually staffs.
+   *
+   * The platform carries eighteen, most of them industry variants of these four
+   * — IT_MGR and CV_SUP are both team leads, IT_HR and CV_HR are both HR. Listed
+   * flat they read as eighteen separate things to configure when there are four,
+   * and the variants are assigned by the industry a company is in rather than
+   * chosen here.
+   *
+   * Searching still reaches all eighteen: the variants are real and someone
+   * chasing a specific permission needs to find them. This narrows the resting
+   * view, it does not hide anything.
+   */
+  const CORE_ROLES = ["COMPANY_ADMIN", "SUPER_ADMIN", "HR_MANAGER", "TEAM_LEAD", "EMPLOYEE"];
+
+  const [showAll, setShowAll] = useState(false);
+
   const term = query.trim().toLowerCase();
   const visible = term
     ? roles.filter(
@@ -71,7 +88,11 @@ export function TechAdminRoles() {
           r.name.toLowerCase().includes(term) ||
           r.permissions.some((p) => p.code.toLowerCase().includes(term)),
       )
-    : roles;
+    : showAll
+      ? roles
+      : roles.filter((r) => CORE_ROLES.includes(r.code.toUpperCase()));
+
+  const hiddenCount = roles.length - roles.filter((r) => CORE_ROLES.includes(r.code.toUpperCase())).length;
 
   const granting = roles.filter((r) => r.permissionCount > 0).length;
   const empty = roles.filter((r) => r.permissionCount === 0).length;

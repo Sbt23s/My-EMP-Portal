@@ -90,8 +90,8 @@ def main():
                 full = f"{prefix}/{rel}" if rel else prefix
                 if not full:
                     # No path anywhere (e.g. @GetMapping() on an abstract base)
-                    # — not a callable endpoint.
-                    i = j
+                    # — not a callable endpoint. Move past it.
+                    i = j + 1
                     continue
                 endpoints.append({
                     "method": verb,

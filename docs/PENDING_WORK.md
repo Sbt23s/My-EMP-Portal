@@ -439,3 +439,80 @@ switch off a company.
   yet, so there is no company whose colours apply.
 - `THEMES` and `FONTS` now live in `web/src/lib/branding.ts` and are imported by
   both sides. Add a colour there, never in the page.
+
+## Done — company admin = system admin, and usage tracking (14 Aug)
+
+**The role bug that started it.** The tech-admin create form offered one option,
+Company Admin, but the state it was bound to started at `"EMPLOYEE"`. A controlled
+`<select>` whose value matches no option still displays the first one, so the form
+read "Company Admin", nobody touched it, no change event fired, and the account
+was created as an employee. Both catalogue and default now come from
+`CREATABLE_ROLES`, so they cannot drift again.
+
+Also fixed on that screen: the edit modal read `user.role` (the server sends
+`roles`, a list) so it always held undefined; the Status column read `u.status`
+which does not exist; the password column compared a hard-coded company name
+against `roles[0]`; and the role badge printed "EMPLOYEE" for an account with no
+role at all — a guess presented as a fact, and the reason a broken account looked
+like ordinary staff.
+
+**The deadlock.** Restricting the table to administrators meant an account created
+with the wrong role could not be seen here, so the screen that made the mistake
+was the only screen that could not fix it. There is now a count of what is being
+left out, a "Show them" toggle, and a one-click **Make Company Admin** on
+non-admin rows. Passwords stay hidden for non-administrators either way.
+
+**COMPANY_ADMIN and SUPER_ADMIN are now one role.** They already held an identical
+permission set (V96), but a dozen places asked `hasRole("SUPER_ADMIN")` by name and
+against those the company's own administrator was silently an ordinary employee.
+Aliased in one place per side rather than by editing each check:
+
+- web: `AuthContext.hasRole` treats COMPANY_ADMIN as satisfying SUPER_ADMIN.
+- backend: `LeaveService.leaveHasRole`, `PermissionService.hasRole`,
+  `CommunityService.isAnnouncementRole`.
+
+Consequences worth knowing: leave routing now escalates to the company admin as
+"Admin" (before, a company whose admin was its only admin had leave nobody could
+approve), and they can post company announcements.
+
+**Deliberately NOT aliased:** `/admin/reset` (Fresh Start) stays SUPER_ADMIN only,
+enforced by a new `hasRoleExact` used by `RoleGuard`'s `role` prop. Same access is
+not a reason to hand a delete-everything button to more accounts.
+
+**No cross-tenant risk from any of this.** `TenantFilterAspect` scopes every query
+by the `company_id` on the signed-in principal, and `User` carries the filter, so
+which company somebody can see is decided by their account and never by their
+role. Two companies' administrators stay as separate as they were.
+
+**Usage tracking — who used what, for how long.** `UsageTracker`, a
+`HandlerInterceptor` (not a filter: interceptors run after the security chain, so
+the signed-in person is already known), maps request path to module code and
+records a row. Read at `GET /api/technical-admin/audit-logs/usage`, shown on the
+Audit Logs page.
+
+Three constraints, all about not becoming the problem:
+
+- **No migration.** Rows reuse `technical_audit_logs`, which already has company,
+  person, action and timestamp. The hosting account allows twenty connections
+  total; a migration against a live database with sixty-two people in it is worth
+  it only when there is no alternative.
+- **Throttled to one row per person per module per ten minutes**, decided in
+  memory before any database work. A single dashboard fires a dozen requests.
+- **Never fails the request.** Recording that somebody opened the leave page must
+  not stop them opening it.
+
+Time is inferred, not measured: first touch to last touch per day, summed. The
+field is `activeMinutes` and the UI says so in as many words — a duration shown
+without that reads as a stopwatch, and somebody will make a decision on it.
+Measuring properly needs a heartbeat from every open tab.
+
+`POST /technical-admin/companies/{id}/admins` used to answer `200 "Company admin
+created successfully"` while creating nothing — it never read the payload. It now
+answers 410 naming the endpoint that works.
+
+### Still open
+
+- Usage rows only exist from deployment onwards. Earlier activity was never
+  stored, and the empty state says so rather than implying nobody works there.
+- Module mapping in `UsageTracker.moduleFor` is a prefix list. A new API path
+  needs a line there or its module reports nothing — silently.

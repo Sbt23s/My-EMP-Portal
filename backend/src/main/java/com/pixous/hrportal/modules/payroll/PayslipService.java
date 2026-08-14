@@ -449,7 +449,10 @@ public class PayslipService {
 
         long lop = 0;
         for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
-            if (d.getDayOfWeek() == DayOfWeek.SUNDAY) continue;
+            // Saturday is a weekend. Counted as a working day, every Saturday
+            // nobody punched became a day of Loss of Pay — real money deducted
+            // for a day nobody was asked to work.
+            if (com.pixous.hrportal.common.WorkCalendar.isWeekend(d)) continue;
             if (holidays.contains(d)) continue;
             if (presentDays.contains(d)) continue;
             lop++;

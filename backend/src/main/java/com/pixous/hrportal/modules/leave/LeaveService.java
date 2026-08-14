@@ -496,8 +496,24 @@ public class LeaveService {
         return "IT_EMP";
     }
 
+    /**
+     * Whether this person holds the role, treating COMPANY_ADMIN as SUPER_ADMIN.
+     *
+     * <p>A tenant company has no SUPER_ADMIN of its own — its top administrator is
+     * COMPANY_ADMIN, the same job under the name the platform grew up with. Asked
+     * literally, this returned false for that person, so leave routing put them
+     * nowhere: they were not the "Admin" the approval chain escalates to, and the
+     * approvals list they opened was an employee's own rather than the company's.
+     * A company whose administrator was its only administrator had leave requests
+     * with no one able to decide them.
+     */
     private static boolean leaveHasRole(User u, String code) {
-        return u != null && u.getRoles().stream().anyMatch(r -> code.equals(r.getCode()));
+        if (u == null) return false;
+        return u.getRoles().stream().anyMatch(r -> {
+            String held = r.getCode();
+            if (code.equals(held)) return true;
+            return "SUPER_ADMIN".equals(code) && "COMPANY_ADMIN".equals(held);
+        });
     }
 
     /**

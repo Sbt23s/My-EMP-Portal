@@ -782,14 +782,25 @@ public class LeaveService {
 
     // ---------- Helpers ----------
 
-    /** Counts weekdays in [from, to] excluding Sunday and configured holidays. Saturday is a working day. [AC9] */
+    /**
+     * Counts working days in [from, to], excluding weekends and holidays. [AC9]
+     *
+     * <p>This is how many days a leave request costs someone. Saturday now counts
+     * as a weekend here as well, and it has to: with a Saturday deducted from a
+     * leave balance but not counted as a working day by attendance or payroll,
+     * somebody applying from Friday to Monday would spend three days of leave to
+     * cover two days of work.
+     *
+     * <p>Only new requests are affected. Requests already approved keep the day
+     * count stored on them; nothing is recalculated behind anybody's back.
+     */
     private long countWorkingDays(LocalDate from, LocalDate to) {
         Set<LocalDate> holidays = holidayRepository
                 .findByHolidayDateBetweenOrderByHolidayDateAsc(from, to).stream()
                 .map(Holiday::getHolidayDate).collect(Collectors.toSet());
         long days = 0;
         for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
-            if (d.getDayOfWeek() == DayOfWeek.SUNDAY) continue;
+            if (com.pixous.hrportal.common.WorkCalendar.isWeekend(d)) continue;
             if (holidays.contains(d)) continue;
             days++;
         }

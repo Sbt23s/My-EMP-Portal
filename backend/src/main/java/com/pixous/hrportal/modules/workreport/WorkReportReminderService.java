@@ -183,9 +183,11 @@ public class WorkReportReminderService {
         }
     }
 
-    /** Sundays and company holidays are not chased. */
+    /** Weekends and company holidays are not chased. */
     private boolean isWorkingDay(LocalDate day) {
-        if (day.getDayOfWeek() == java.time.DayOfWeek.SUNDAY) return false;
+        // Saturday included. Otherwise people were reminded to file a work report
+        // for a day the rest of the application treats as time off.
+        if (com.pixous.hrportal.common.WorkCalendar.isWeekend(day)) return false;
         return holidayRepository.findByHolidayDateBetweenOrderByHolidayDateAsc(day, day).stream()
                 .map(Holiday::getHolidayDate)
                 .noneMatch(day::equals);

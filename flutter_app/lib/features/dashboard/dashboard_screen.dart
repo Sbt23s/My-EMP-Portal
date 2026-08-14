@@ -273,42 +273,6 @@ class _Content extends ConsumerWidget {
             ],
           ),
         ],
-        if (false) ...[
-          GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.35,
-          children: [
-            StatCard(
-              label: 'Pending leave requests',
-              value: '${data.pendingLeaveRequests}',
-              icon: Icons.event_note_rounded,
-              tint: AppTheme.warning(context),
-            ),
-            StatCard(
-              label: 'Open tickets',
-              value: '${data.myOpenTickets}',
-              icon: Icons.support_agent_rounded,
-              tint: scheme.tertiary,
-            ),
-            StatCard(
-              label: 'Assets with me',
-              value: '${data.myAssets}',
-              icon: Icons.inventory_2_outlined,
-              tint: scheme.primary,
-            ),
-            StatCard(
-              label: 'Worked today',
-              value: data.workedLabel,
-              icon: Icons.timer_outlined,
-              tint: AppTheme.success(context),
-            ),
-          ],
-        ),
-        ],
         if (modules.has('LEAVE') && data.leaveBalances.isNotEmpty) ...[
           const SizedBox(height: 24),
           Text(

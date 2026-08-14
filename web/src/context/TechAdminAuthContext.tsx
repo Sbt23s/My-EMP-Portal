@@ -191,8 +191,10 @@ function toTenant(c: any): CompanyTenant {
     employeeCount: c.employeeCount ?? 0,
     industry: c.industry ?? "",
     adminEmail: c.email ?? "",
-    // Not columns on `companies`; an admin is a separate account created through
-    // POST /companies/{id}/admins. Blank rather than invented.
+    // Not columns on `companies`; an admin is a separate account, created on the
+    // Users screen through POST /auth/employees with roleCode COMPANY_ADMIN.
+    // (The old /companies/{id}/admins endpoint created nothing and is gone.)
+    // Blank rather than invented.
     adminUsername: "",
     adminPassword: "",
     domain: c.website ?? undefined,

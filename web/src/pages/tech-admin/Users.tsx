@@ -621,8 +621,10 @@ export function TechAdminUsers() {
           <div>
             <CardTitle className="text-md">User Accounts ({filteredUsers.length})</CardTitle>
             <CardDescription className={`text-xs ${isDark ? 'text-slate-400' : 'text-purple-300/70'}`}>
-              {selectedCompanyFilter !== "Pixous Technologies" 
-                ? "Showing only Company Admin accounts for privacy." 
+              {/* Says why the tiles above can show more people than the table
+                  below lists — otherwise the two look like they disagree. */}
+              {!isPixous
+                ? "Company administrators only. The counts above cover everyone; staff logins are that company's own business."
                 : "User accounts isolated by tenant scope ID."}
             </CardDescription>
           </div>

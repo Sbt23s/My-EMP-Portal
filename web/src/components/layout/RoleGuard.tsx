@@ -19,13 +19,18 @@ export function RoleGuard({
   role?: string;
   children: React.ReactNode;
 }) {
-  const { hasPermission, hasRole } = useAuth();
+  const { hasPermission, hasRole, hasRoleExact } = useAuth();
   const perms = (permission ?? "").split(",").map((p) => p.trim()).filter(Boolean);
 
-  // SUPER_ADMIN and COMPANY_ADMIN bypass all permission gates
+  // SUPER_ADMIN and COMPANY_ADMIN bypass all permission gates.
+  //
+  // The `role` prop takes the exact check on purpose. It is used for doors meant
+  // for one named role and nothing else — Fresh Start, which empties a portal —
+  // and the aliasing that makes a company administrator equal to a super admin
+  // everywhere else must not quietly hand that button to more people.
   const allowed = role
-    ? hasRole(role)
-    : hasRole("SUPER_ADMIN") || hasRole("COMPANY_ADMIN") || hasPermission(...perms);
+    ? hasRoleExact(role)
+    : hasRole("SUPER_ADMIN") || hasPermission(...perms);
 
   if (!allowed) {
     return (

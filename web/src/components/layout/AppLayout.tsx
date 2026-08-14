@@ -107,6 +107,33 @@ const NAV: NavEntry[] = [
   // { to: "/admin/reset", label: "Fresh Start", icon: Eraser, onlyRole: ["SUPER_ADMIN"] }
 ];
 
+/**
+ * Which module a path belongs to, for the per-module branding.
+ *
+ * Read off NAV rather than kept as a second list beside it. A separate map would
+ * be right the day it was written and wrong the first time a route moved, and
+ * the symptom — one page quietly not taking its module's colour — is the kind
+ * nobody reports.
+ *
+ * Longest match wins, so /leave/approvals is not answered by /leave.
+ */
+const MODULE_ROUTES: { path: string; moduleCode: string }[] = NAV.flatMap((entry) => {
+  if ("type" in entry && entry.type === "group") {
+    return entry.children
+      .map((c) => ({ path: c.to, moduleCode: c.moduleCode ?? entry.moduleCode ?? "" }))
+      .filter((r) => r.moduleCode);
+  }
+  const item = entry as NavItem;
+  return item.moduleCode ? [{ path: item.to, moduleCode: item.moduleCode }] : [];
+}).sort((a, b) => b.path.length - a.path.length);
+
+function moduleForPath(pathname: string): string | null {
+  const match = MODULE_ROUTES.find(
+    (r) => pathname === r.path || pathname.startsWith(`${r.path}/`)
+  );
+  return match?.moduleCode ?? null;
+}
+
 function getRoleDisplayName(roles: string[] = []): string {
   if (roles.includes("BOARD_ADMIN")) return "Board Admin";
   if (roles.includes("SUPER_ADMIN")) return "Super Admin";

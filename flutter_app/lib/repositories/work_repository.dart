@@ -7,6 +7,8 @@ import '../models/attendance.dart';
 import '../models/dashboard.dart';
 import '../models/leave.dart';
 import '../models/work_items.dart';
+import '../models/complaint.dart';
+import '../models/directory_person.dart';
 import '../models/work_report.dart';
 
 /// Everything an employee does about their own working day: attendance, leave
@@ -363,4 +365,76 @@ class WorkRepository {
 
   /// DELETE /work-reports/{id}
   Future<void> deleteWorkReport(int id) => _api.delete('/work-reports/$id');
+
+  // ---- directory ---------------------------------------------------------
+
+  /// GET /users — colleagues, for the directory and the team screens.
+  ///
+  /// A page size, not everything: the web asks for a thousand because a desktop
+  /// table can hold them, but a phone scrolling two hundred rows it will never
+  /// read costs a slow request on a connection that is often the worst part of
+  /// somebody's day. Search narrows on the server.
+  Future<List<DirectoryPerson>> directory({String? query, int size = 200}) async {
+    final data = await _api.get('/users', query: {
+      'size': size,
+      'status': 'ACTIVE',
+      if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+    });
+    return ApiEnvelope.listOf(data).map(DirectoryPerson.fromJson).toList();
+  }
+
+  /// GET /attendance/team?date= — who was in on a given day.
+  ///
+  /// Team leads and HR. The server decides whose rows come back; this does not
+  /// filter, so a lead sees their team and HR sees the company, exactly as on
+  /// the web.
+  Future<List<TeamAttendanceRow>> teamAttendance(DateTime date) async {
+    final data = await _api.get(
+      '/attendance/team',
+      query: {'date': _apiDate.format(date)},
+    );
+    return ApiEnvelope.listOf(data).map(TeamAttendanceRow.fromJson).toList();
+  }
+
+  // ---- complaints --------------------------------------------------------
+
+  /// GET /complaints/mine
+  Future<List<Complaint>> myComplaints() async {
+    final data = await _api.get('/complaints/mine');
+    return ApiEnvelope.listOf(data).map(Complaint.fromJson).toList();
+  }
+
+  /// GET /complaints/recipients — the HR people this can be addressed to.
+  Future<List<ComplaintRecipient>> complaintRecipients() async {
+    final data = await _api.get('/complaints/recipients');
+    return ApiEnvelope.listOf(data).map(ComplaintRecipient.fromJson).toList();
+  }
+
+  /// POST /complaints
+  Future<Complaint> raiseComplaint({
+    required String subject,
+    required String description,
+    String kind = 'COMPLAINT',
+    String priority = 'MEDIUM',
+    String? category,
+    int? requestedTo,
+  }) async {
+    final data = await _api.post(
+      '/complaints',
+      body: {
+        'kind': kind,
+        'subject': subject.trim(),
+        'description': description.trim(),
+        'priority': priority,
+        if (category != null && category.trim().isNotEmpty)
+          'category': category.trim(),
+        // Omitted rather than sent as null: absent means "any HR can pick this
+        // up", which is the server's own default and the right one when nobody
+        // was chosen.
+        if (requestedTo != null) 'requestedTo': requestedTo,
+      },
+    );
+    if (data is! Map<String, dynamic>) throw const ParseFailure();
+    return Complaint.fromJson(data);
+  }
 }

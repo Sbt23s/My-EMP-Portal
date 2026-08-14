@@ -121,7 +121,24 @@ export function TechAdminAuditLogs() {
       }
     };
 
+    /** Who used which modules, and for how long. */
+    const loadUsage = async () => {
+      try {
+        const companyDbId = currentCompany?.id;
+        const res = await api.get(
+          "/technical-admin/audit-logs/usage" + (companyDbId ? `?companyId=${companyDbId}` : "")
+        );
+        const data = res.data?.data;
+        if (!mounted) return;
+        setUsage(Array.isArray(data?.people) ? data.people : []);
+        setUsageNote(data?.note || "");
+      } catch {
+        if (mounted) setUsage([]);
+      }
+    };
+
     loadAuditLog();
+    loadUsage();
 
     return () => { mounted = false; };
   }, [currentCompany]);
@@ -170,11 +187,7 @@ export function TechAdminAuditLogs() {
               Tenant Module Usage Logs
             </h2>
             <p className={`text-sm mt-1 max-w-2xl font-medium ${isDark ? "text-cyan-400" : "text-purple-200"}`}>
-              {/* Was "Real-time monitoring of…", which promised something the
-                  application does not do yet. Nothing records usage, so the
-                  heading was writing a cheque the empty table below could not
-                  cash. */}
-              How employees, HRs and Team Leads use platform modules within <span className={`font-semibold ${isDark ? "text-cyan-400" : "text-purple-400"}`}>{currentCompany?.companyName || "the selected company"}</span>, once usage tracking is switched on.
+              How employees, HRs and Team Leads use platform modules within <span className={`font-semibold ${isDark ? "text-cyan-400" : "text-purple-400"}`}>{currentCompany?.companyName || "the selected company"}</span>, over the last 30 days.
             </p>
           </div>
           

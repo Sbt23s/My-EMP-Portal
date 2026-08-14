@@ -146,12 +146,18 @@ public class LeaveService {
             }
         }
         // Working days in the month = weekdays minus holidays.
+        //
+        // Saturday counts as a weekend now, so a month is roughly twenty-two days
+        // rather than twenty-six. This is the divisor the payslip's per-day rate
+        // is built from, and it is also what "absent" is measured against — a
+        // Saturday nobody punched used to be an absence, and each of those
+        // deducted a day's pay for a day nobody was asked to work.
         Set<LocalDate> holidays = holidayRepository.findAll().stream()
                 .map(Holiday::getHolidayDate).filter(java.util.Objects::nonNull).collect(Collectors.toSet());
         int workingDays = 0;
         for (int d = 1; d <= ym.lengthOfMonth(); d++) {
             LocalDate day = ym.atDay(d);
-            if (day.getDayOfWeek() == DayOfWeek.SUNDAY) continue;
+            if (com.pixous.hrportal.common.WorkCalendar.isWeekend(day)) continue;
             if (holidays.contains(day)) continue;
             workingDays++;
         }

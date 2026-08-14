@@ -262,7 +262,9 @@ public class AttendanceService {
                     .stream().map(com.pixous.hrportal.modules.org.Holiday::getHolidayDate)
                     .collect(Collectors.toSet());
             for (LocalDate d = from; !d.isAfter(countTo); d = d.plusDays(1)) {
-                if (d.getDayOfWeek() == java.time.DayOfWeek.SUNDAY) continue;
+                // Saturday is a weekend too. Counting it left every Saturday
+                // somebody did not punch showing as an absence.
+                if (com.pixous.hrportal.common.WorkCalendar.isWeekend(d)) continue;
                 if (holidays.contains(d)) continue;
                 workingDays++;
             }

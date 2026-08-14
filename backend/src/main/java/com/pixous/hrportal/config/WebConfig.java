@@ -10,12 +10,26 @@ import java.util.List;
 
 /** CORS driven by {@code app.cors.allowed-origins} so the web/mobile dev servers work. */
 @Configuration
-public class WebConfig {
+public class WebConfig implements org.springframework.web.servlet.config.annotation.WebMvcConfigurer {
 
     private final AppProperties props;
+    private final com.pixous.hrportal.modules.admin.UsageTracker usageTracker;
 
-    public WebConfig(AppProperties props) {
+    public WebConfig(AppProperties props, com.pixous.hrportal.modules.admin.UsageTracker usageTracker) {
         this.props = props;
+        this.usageTracker = usageTracker;
+    }
+
+    /**
+     * An interceptor rather than a servlet filter, deliberately.
+     *
+     * Interceptors run after the security chain, so the signed-in person is
+     * already known. A filter would have to be ordered by hand relative to
+     * authentication, and getting that wrong records nothing — silently.
+     */
+    @Override
+    public void addInterceptors(org.springframework.web.servlet.config.annotation.InterceptorRegistry registry) {
+        registry.addInterceptor(usageTracker).addPathPatterns("/api/**");
     }
 
     @Bean

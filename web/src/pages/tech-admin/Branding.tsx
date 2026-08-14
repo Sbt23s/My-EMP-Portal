@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { api } from "@/lib/api";
-import { useTechAdminAuth } from "@/context/TechAdminAuthContext";
+import { useTechAdminAuth, defaultModulesTemplate } from "@/context/TechAdminAuthContext";
 import { Button } from "@/components/ui/button";
-import { Palette, Check, Loader2, RotateCcw, Type } from "lucide-react";
+import { Palette, Check, Loader2, RotateCcw, Type, Layers, Users, Building2, X } from "lucide-react";
 
 /**
  * Branding & Appearance.
@@ -12,8 +12,17 @@ import { Palette, Check, Loader2, RotateCcw, Type } from "lucide-react";
  * technical-admin profile and the MFA switch — nothing to do with branding.
  * This is the page it was supposed to open.
  *
- * Stored in the company's own settings rather than a new table: a theme is a
- * preference, and preferences already have a home.
+ * Three levels, each falling back to the one beneath it:
+ *
+ *   module override  →  role override  →  company default
+ *
+ * A level with nothing set is not a level set to the default; it is absent, and
+ * absent is what lets a company change its base colour once and have every
+ * screen follow. Overriding everything by default would make that impossible,
+ * which is why a scope starts empty and says so.
+ *
+ * Stored in the company's own settings — no new table. A theme is a preference,
+ * and preferences already have somewhere to live.
  */
 
 interface Theme {
@@ -26,11 +35,9 @@ interface Theme {
 }
 
 /**
- * Twenty looks, grouped so the list can be read rather than scrolled.
- *
- * Kept to twenty deliberately. A hundred swatches is not twenty times more
- * useful — it is a decision nobody can make, and every one of them still has to
- * stay legible against both the light and dark surfaces below.
+ * Twenty looks. Kept to twenty deliberately: a hundred swatches is not twenty
+ * times more useful, it is a decision nobody can make — and each one still has
+ * to stay legible on the surface beside it.
  */
 const THEMES: Theme[] = [
   { id: "indigo", name: "Indigo", accent: "#4F46E5", surface: "#FFFFFF", ink: "#0F172A" },
@@ -58,7 +65,6 @@ const THEMES: Theme[] = [
 interface FontPair {
   id: string;
   name: string;
-  /** What headings are set in. */
   heading: string;
   body: string;
 }
@@ -66,9 +72,9 @@ interface FontPair {
 /**
  * Twenty pairings, all from families a browser already has.
  *
- * Nothing here is downloaded. A webfont that fails to arrive falls back to
- * something the designer never saw, and on a portal people open every morning
- * that trade is not worth making for a heading.
+ * Nothing is downloaded. A webfont that fails to arrive falls back to something
+ * nobody chose, and on a portal people open every morning that is not a trade
+ * worth making for a heading.
  */
 const FONTS: FontPair[] = [
   { id: "system", name: "System", heading: "system-ui, sans-serif", body: "system-ui, sans-serif" },
@@ -93,43 +99,84 @@ const FONTS: FontPair[] = [
   { id: "mono", name: "Monospace", heading: "ui-monospace, 'Courier New', monospace", body: "ui-monospace, 'Courier New', monospace" }
 ];
 
-interface Branding {
-  themeId: string;
-  fontId: string;
-  productName: string;
-  welcomeText: string;
+const ROLES = [
+  { code: "COMPANY_ADMIN", label: "Company Admin" },
+  { code: "HR_MANAGER", label: "HR" },
+  { code: "TEAM_LEAD", label: "Team Lead" },
+  { code: "EMPLOYEE", label: "Employee" }
+];
+
+/** What one scope can set. Both optional — an override may change only colour. */
+interface Look {
+  themeId?: string;
+  fontId?: string;
 }
 
-const DEFAULTS: Branding = {
-  themeId: "indigo",
-  fontId: "system",
-  productName: "",
-  welcomeText: ""
+interface BrandingDoc {
+  /** The company default. Everything else layers on top. */
+  base: Look & { productName?: string; welcomeText?: string };
+  roles: Record<string, Look>;
+  modules: Record<string, Look>;
+}
+
+const EMPTY: BrandingDoc = {
+  base: { themeId: "indigo", fontId: "system", productName: "", welcomeText: "" },
+  roles: {},
+  modules: {}
 };
+
+type Scope = { kind: "base" } | { kind: "role"; key: string } | { kind: "module"; key: string };
 
 export function TechAdminBranding() {
   const { theme, currentCompany } = useTechAdminAuth();
   const isDark = theme === "dark";
 
-  const [draft, setDraft] = useState<Branding>(DEFAULTS);
-  const [saved, setSaved] = useState<Branding>(DEFAULTS);
+  const [draft, setDraft] = useState<BrandingDoc>(EMPTY);
+  const [saved, setSaved] = useState<BrandingDoc>(EMPTY);
+  const [scope, setScope] = useState<Scope>({ kind: "base" });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const tenantId = currentCompany?.id;
   const tenantName = currentCompany?.companyName || "this company";
 
+  /** The override for the scope being edited, or nothing if it has none. */
+  const current: Look | undefined =
+    scope.kind === "base"
+      ? draft.base
+      : scope.kind === "role"
+        ? draft.roles[scope.key]
+        : draft.modules[scope.key];
+
+  /*
+   * What the scope actually resolves to, which is what the preview must show.
+   *
+   * An override that sets only a colour still renders with the company's font,
+   * so previewing the override alone would show something nobody will ever see.
+   */
+  const effective = {
+    themeId: current?.themeId ?? draft.base.themeId ?? "indigo",
+    fontId: current?.fontId ?? draft.base.fontId ?? "system"
+  };
+
   const activeTheme = useMemo(
-    () => THEMES.find((t) => t.id === draft.themeId) ?? THEMES[0],
-    [draft.themeId]
+    () => THEMES.find((t) => t.id === effective.themeId) ?? THEMES[0],
+    [effective.themeId]
   );
   const activeFont = useMemo(
-    () => FONTS.find((f) => f.id === draft.fontId) ?? FONTS[0],
-    [draft.fontId]
+    () => FONTS.find((f) => f.id === effective.fontId) ?? FONTS[0],
+    [effective.fontId]
   );
 
-  // Only offer Save when there is something to save.
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+  const overridden = scope.kind !== "base" && current !== undefined;
+
+  const scopeLabel =
+    scope.kind === "base"
+      ? "Company default"
+      : scope.kind === "role"
+        ? ROLES.find((r) => r.code === scope.key)?.label ?? scope.key
+        : defaultModulesTemplate.find((m) => m.code === scope.key)?.name ?? scope.key;
 
   useEffect(() => {
     if (!tenantId) return;
@@ -142,11 +189,15 @@ export function TechAdminBranding() {
         const rows: any[] = Array.isArray(res.data?.data) ? res.data.data : [];
         const row = rows.find((r) => r.moduleCode === "BRANDING");
 
-        let next = DEFAULTS;
+        let next = EMPTY;
         if (row?.featureFlags) {
           try {
             const parsed = JSON.parse(row.featureFlags);
-            next = { ...DEFAULTS, ...parsed };
+            next = {
+              base: { ...EMPTY.base, ...(parsed.base ?? parsed) },
+              roles: parsed.roles ?? {},
+              modules: parsed.modules ?? {}
+            };
           } catch {
             // Unreadable settings fall back to the defaults rather than
             // blanking the page.
@@ -167,18 +218,45 @@ export function TechAdminBranding() {
     };
   }, [tenantId]);
 
+  /** Apply a change to whichever scope is being edited. */
+  const patch = (change: Look) => {
+    setDraft((d) => {
+      if (scope.kind === "base") return { ...d, base: { ...d.base, ...change } };
+      if (scope.kind === "role") {
+        return { ...d, roles: { ...d.roles, [scope.key]: { ...d.roles[scope.key], ...change } } };
+      }
+      return { ...d, modules: { ...d.modules, [scope.key]: { ...d.modules[scope.key], ...change } } };
+    });
+  };
+
+  /** Remove this scope's override so it follows the company again. */
+  const clearOverride = () => {
+    setDraft((d) => {
+      if (scope.kind === "role") {
+        const roles = { ...d.roles };
+        delete roles[scope.key];
+        return { ...d, roles };
+      }
+      if (scope.kind === "module") {
+        const modules = { ...d.modules };
+        delete modules[scope.key];
+        return { ...d, modules };
+      }
+      return d;
+    });
+  };
+
   const save = async () => {
     if (!tenantId || saving) return;
     setSaving(true);
     try {
       /*
-       * Stored as a company_modules row — the same shape custom modules use.
+       * Stored as a company_modules row — the shape custom modules already use.
        *
-       * No new table and no migration: the row already has a free-text JSON
-       * column, and branding is exactly the kind of per-company setting it was
-       * there for. Kept disabled because BRANDING is not a module anyone
-       * navigates to; the row is a place to keep the settings, not a feature to
-       * switch on.
+       * No new table and no migration: the row has a free-text JSON column, and
+       * branding is exactly the per-company setting it was there for. Kept
+       * disabled because BRANDING is not something anyone navigates to; the row
+       * is a place to keep settings, not a feature to switch on.
        */
       await api.post(`/technical-admin/companies/${tenantId}/modules`, {
         moduleCode: "BRANDING",
@@ -198,6 +276,15 @@ export function TechAdminBranding() {
     ? "bg-slate-900/60 border border-cyan-500/25 text-slate-100"
     : "bg-white/90 border border-slate-200 text-slate-800 shadow-sm";
 
+  const chip = (active: boolean, dot: boolean) =>
+    `relative rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+      active
+        ? "border-transparent text-white"
+        : isDark
+          ? "border-slate-700 text-slate-300 hover:border-slate-500"
+          : "border-slate-300 text-slate-600 hover:border-slate-400"
+    } ${dot ? "pr-6" : ""}`;
+
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -215,17 +302,13 @@ export function TechAdminBranding() {
             Branding &amp; Appearance
           </h1>
           <p className={`mt-1 text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-            How the portal looks for <strong>{tenantName}</strong>. Each company keeps its own.
+            How the portal looks for <strong>{tenantName}</strong>. Set a company default, then
+            override it per role or per module where it needs to differ.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!dirty || saving}
-            onClick={() => setDraft(saved)}
-          >
+          <Button type="button" variant="outline" disabled={!dirty || saving} onClick={() => setDraft(saved)}>
             <RotateCcw className="mr-2 h-4 w-4" />
             Discard
           </Button>
@@ -236,8 +319,105 @@ export function TechAdminBranding() {
         </div>
       </div>
 
+      {/* ---- scope ---- */}
+      <section className={`rounded-xl p-5 ${card}`}>
+        <h2 className="text-sm font-bold uppercase tracking-wide">Editing</h2>
+        <p className={`mt-1 text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+          A dot marks a scope that has its own look. Everything else follows the company default.
+        </p>
+
+        <div className="mt-4 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`flex items-center gap-1.5 text-[11px] font-bold uppercase ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+              <Building2 className="h-3.5 w-3.5" /> Company
+            </span>
+            <button
+              type="button"
+              onClick={() => setScope({ kind: "base" })}
+              className={chip(scope.kind === "base", false)}
+              style={scope.kind === "base" ? { background: activeTheme.accent } : undefined}
+            >
+              Default
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`flex items-center gap-1.5 text-[11px] font-bold uppercase ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+              <Users className="h-3.5 w-3.5" /> Role
+            </span>
+            {ROLES.map((r) => {
+              const on = scope.kind === "role" && scope.key === r.code;
+              const has = draft.roles[r.code] !== undefined;
+              return (
+                <button
+                  key={r.code}
+                  type="button"
+                  onClick={() => setScope({ kind: "role", key: r.code })}
+                  className={chip(on, has)}
+                  style={on ? { background: activeTheme.accent } : undefined}
+                >
+                  {r.label}
+                  {has && <span className="absolute right-2 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-current opacity-70" />}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-wrap items-start gap-2">
+            <span className={`mt-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+              <Layers className="h-3.5 w-3.5" /> Module
+            </span>
+            <div className="flex flex-1 flex-wrap gap-2">
+              {defaultModulesTemplate.map((m) => {
+                const on = scope.kind === "module" && scope.key === m.code;
+                const has = draft.modules[m.code] !== undefined;
+                return (
+                  <button
+                    key={m.code}
+                    type="button"
+                    onClick={() => setScope({ kind: "module", key: m.code })}
+                    className={chip(on, has)}
+                    style={on ? { background: activeTheme.accent } : undefined}
+                  >
+                    {m.name}
+                    {has && <span className="absolute right-2 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-current opacity-70" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="space-y-6">
+          {/* Says what is being edited and whether it is inheriting, so a change
+              never lands somewhere the person did not intend. */}
+          <div
+            className={`flex flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm ${
+              isDark ? "bg-slate-800/60" : "bg-slate-100"
+            }`}
+          >
+            <span>
+              Editing <strong>{scopeLabel}</strong>
+              {scope.kind !== "base" && !overridden && (
+                <span className={isDark ? "text-slate-400" : "text-slate-500"}>
+                  {" "}— following the company default. Pick a colour or a font to override it.
+                </span>
+              )}
+            </span>
+            {overridden && (
+              <button
+                type="button"
+                onClick={clearOverride}
+                className="flex items-center gap-1 rounded-md border border-current px-2 py-1 text-xs font-semibold opacity-80 hover:opacity-100"
+              >
+                <X className="h-3 w-3" />
+                Follow company default
+              </button>
+            )}
+          </div>
+
           {/* ---- colour ---- */}
           <section className={`rounded-xl p-5 ${card}`}>
             <h2 className="text-sm font-bold uppercase tracking-wide">Colour</h2>
@@ -247,24 +427,20 @@ export function TechAdminBranding() {
 
             <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
               {THEMES.map((t) => {
-                const picked = t.id === draft.themeId;
+                const picked = current?.themeId === t.id;
                 return (
                   <button
                     key={t.id}
                     type="button"
-                    onClick={() => setDraft((d) => ({ ...d, themeId: t.id }))}
+                    onClick={() => patch({ themeId: t.id })}
                     aria-pressed={picked}
                     className={`rounded-lg border p-2 text-left transition ${
-                      picked
-                        ? "ring-2 ring-offset-1"
-                        : isDark
-                          ? "border-slate-700 hover:border-slate-500"
-                          : "border-slate-200 hover:border-slate-400"
+                      picked ? "" : isDark ? "border-slate-700 hover:border-slate-500" : "border-slate-200 hover:border-slate-400"
                     }`}
                     style={picked ? { borderColor: t.accent, boxShadow: `0 0 0 2px ${t.accent}33` } : undefined}
                   >
-                    {/* The swatch shows the accent on its own surface, which is
-                        the pairing that has to work — not the accent alone. */}
+                    {/* The accent shown on its own surface, which is the pairing
+                        that has to work — not the accent alone. */}
                     <span
                       className="flex h-9 items-center justify-center rounded-md text-[11px] font-bold"
                       style={{ background: t.surface, color: t.accent, border: `1px solid ${t.accent}44` }}
@@ -290,24 +466,20 @@ export function TechAdminBranding() {
 
             <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {FONTS.map((f) => {
-                const picked = f.id === draft.fontId;
+                const picked = current?.fontId === f.id;
                 return (
                   <button
                     key={f.id}
                     type="button"
-                    onClick={() => setDraft((d) => ({ ...d, fontId: f.id }))}
+                    onClick={() => patch({ fontId: f.id })}
                     aria-pressed={picked}
                     className={`rounded-lg border px-3 py-2 text-left transition ${
-                      picked
-                        ? "ring-2 ring-offset-1"
-                        : isDark
-                          ? "border-slate-700 hover:border-slate-500"
-                          : "border-slate-200 hover:border-slate-400"
+                      picked ? "" : isDark ? "border-slate-700 hover:border-slate-500" : "border-slate-200 hover:border-slate-400"
                     }`}
                     style={picked ? { borderColor: activeTheme.accent, boxShadow: `0 0 0 2px ${activeTheme.accent}33` } : undefined}
                   >
-                    {/* Set in the face it is offering, so the choice is visible
-                        rather than a name to be imagined. */}
+                    {/* Set in the face it offers, so the choice is visible rather
+                        than a name to be imagined. */}
                     <span className="block text-base font-semibold" style={{ fontFamily: f.heading }}>
                       {f.name}
                     </span>
@@ -320,41 +492,43 @@ export function TechAdminBranding() {
             </div>
           </section>
 
-          {/* ---- words ---- */}
-          <section className={`rounded-xl p-5 ${card}`}>
-            <h2 className="text-sm font-bold uppercase tracking-wide">Words</h2>
-            <p className={`mt-1 text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-              Left empty, each falls back to the standard wording.
-            </p>
+          {/* ---- words: company-wide only ---- */}
+          {scope.kind === "base" && (
+            <section className={`rounded-xl p-5 ${card}`}>
+              <h2 className="text-sm font-bold uppercase tracking-wide">Words</h2>
+              <p className={`mt-1 text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                Company-wide. Left empty, each falls back to the standard wording.
+              </p>
 
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <label className="block">
-                <span className="text-xs font-semibold">Product name</span>
-                <input
-                  value={draft.productName}
-                  onChange={(e) => setDraft((d) => ({ ...d, productName: e.target.value }))}
-                  maxLength={40}
-                  placeholder="Employee Management"
-                  className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${
-                    isDark ? "border-slate-700 bg-slate-900 text-white" : "border-slate-300 bg-white text-slate-800"
-                  }`}
-                />
-              </label>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="text-xs font-semibold">Product name</span>
+                  <input
+                    value={draft.base.productName ?? ""}
+                    onChange={(e) => setDraft((d) => ({ ...d, base: { ...d.base, productName: e.target.value } }))}
+                    maxLength={40}
+                    placeholder="Employee Management"
+                    className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${
+                      isDark ? "border-slate-700 bg-slate-900 text-white" : "border-slate-300 bg-white text-slate-800"
+                    }`}
+                  />
+                </label>
 
-              <label className="block">
-                <span className="text-xs font-semibold">Welcome line</span>
-                <input
-                  value={draft.welcomeText}
-                  onChange={(e) => setDraft((d) => ({ ...d, welcomeText: e.target.value }))}
-                  maxLength={90}
-                  placeholder="Here's what's happening today."
-                  className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${
-                    isDark ? "border-slate-700 bg-slate-900 text-white" : "border-slate-300 bg-white text-slate-800"
-                  }`}
-                />
-              </label>
-            </div>
-          </section>
+                <label className="block">
+                  <span className="text-xs font-semibold">Welcome line</span>
+                  <input
+                    value={draft.base.welcomeText ?? ""}
+                    onChange={(e) => setDraft((d) => ({ ...d, base: { ...d.base, welcomeText: e.target.value } }))}
+                    maxLength={90}
+                    placeholder="Here's what's happening today."
+                    className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${
+                      isDark ? "border-slate-700 bg-slate-900 text-white" : "border-slate-300 bg-white text-slate-800"
+                    }`}
+                  />
+                </label>
+              </div>
+            </section>
+          )}
         </div>
 
         {/* ---- preview ---- */}
@@ -362,18 +536,19 @@ export function TechAdminBranding() {
           <section className={`rounded-xl p-5 ${card}`}>
             <h2 className="text-sm font-bold uppercase tracking-wide">Preview</h2>
             <p className={`mt-1 text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-              What an employee sees on opening the portal.
+              {scopeLabel}, as it will actually resolve.
             </p>
 
-            {/* Rendered with the chosen values rather than described, so the
-                choice can be judged before it reaches anyone. */}
+            {/* Rendered with the resolved values, not the override in isolation:
+                an override that sets only a colour still uses the company font,
+                and previewing otherwise would show something nobody will see. */}
             <div
               className="mt-4 overflow-hidden rounded-xl border"
               style={{ background: activeTheme.surface, borderColor: `${activeTheme.accent}33` }}
             >
               <div className="px-4 py-3" style={{ background: activeTheme.accent }}>
                 <p className="text-sm font-bold text-white" style={{ fontFamily: activeFont.heading }}>
-                  {draft.productName || "Employee Management"}
+                  {draft.base.productName || "Employee Management"}
                 </p>
               </div>
 
@@ -382,7 +557,7 @@ export function TechAdminBranding() {
                   Welcome, Priya
                 </p>
                 <p className="mt-1 text-xs" style={{ color: `${activeTheme.ink}99`, fontFamily: activeFont.body }}>
-                  {draft.welcomeText || "Here's what's happening today."}
+                  {draft.base.welcomeText || "Here's what's happening today."}
                 </p>
 
                 <div className="mt-4 grid grid-cols-2 gap-2">

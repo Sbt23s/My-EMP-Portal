@@ -472,8 +472,20 @@ export function TechAdminUsers() {
 
   const filteredUsers = users.filter((u: any) => {
     const matchesCompany = !selectedCompanyFilter || u.companyName === selectedCompanyFilter;
-    const matchesSearch = u.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          u.email?.toLowerCase().includes(searchQuery.toLowerCase());
+    /*
+     * An empty box matches everything, explicitly.
+     *
+     * This read `u.name?.…  || u.email?.…`, and for a row with neither the whole
+     * expression was undefined — so an account with no name was hidden even when
+     * nobody had typed anything. A missing name is the mark of an account worth
+     * looking at, and this was the one thing guaranteed to keep it off screen.
+     */
+    const q = searchQuery.trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      (u.name || "").toLowerCase().includes(q) ||
+      (u.email || "").toLowerCase().includes(q) ||
+      (u.username || "").toLowerCase().includes(q);
     const roleCode = getRoleCode(u);
 
     /*

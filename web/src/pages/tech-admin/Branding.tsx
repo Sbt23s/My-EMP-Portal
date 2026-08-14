@@ -4,6 +4,22 @@ import { api } from "@/lib/api";
 import { useTechAdminAuth, defaultModulesTemplate } from "@/context/TechAdminAuthContext";
 import { Button } from "@/components/ui/button";
 import { Palette, Check, Loader2, RotateCcw, Type, Layers, Users, Building2, X } from "lucide-react";
+/*
+ * The catalogue lives in lib/branding, not here.
+ *
+ * The portal has to know every theme this page can offer, and when the two held
+ * their own copies a colour added to one was simply unknown to the other — which
+ * shows up as picking a theme and watching nothing change, with nothing in the
+ * console to say why.
+ */
+import {
+  THEMES,
+  FONTS,
+  EMPTY_BRANDING as EMPTY,
+  parseBranding,
+  type Look,
+  type BrandingDoc
+} from "@/lib/branding";
 
 /**
  * Branding & Appearance.
@@ -25,65 +41,6 @@ import { Palette, Check, Loader2, RotateCcw, Type, Layers, Users, Building2, X }
  * and preferences already have somewhere to live.
  */
 
-const REMOVED_THEMES = [
-  { id: "indigo", name: "Indigo", accent: "#4F46E5", surface: "#FFFFFF", ink: "#0F172A" },
-  { id: "royal", name: "Royal Blue", accent: "#2563EB", surface: "#FFFFFF", ink: "#0F172A" },
-  { id: "sky", name: "Sky", accent: "#0284C7", surface: "#F8FAFC", ink: "#0F172A" },
-  { id: "teal", name: "Teal", accent: "#0D9488", surface: "#FFFFFF", ink: "#0F172A" },
-  { id: "emerald", name: "Emerald", accent: "#059669", surface: "#FFFFFF", ink: "#0F172A" },
-  { id: "forest", name: "Forest", accent: "#15803D", surface: "#F7FAF7", ink: "#14261A" },
-  { id: "lime", name: "Lime", accent: "#65A30D", surface: "#FCFDF7", ink: "#1A2010" },
-  { id: "amber", name: "Amber", accent: "#D97706", surface: "#FFFDF7", ink: "#231607" },
-  { id: "orange", name: "Orange", accent: "#EA580C", surface: "#FFFCF9", ink: "#25130A" },
-  { id: "rose", name: "Rose", accent: "#E11D48", surface: "#FFFAFB", ink: "#25101A" },
-  { id: "crimson", name: "Crimson", accent: "#BE123C", surface: "#FFFFFF", ink: "#1F0A12" },
-  { id: "plum", name: "Plum", accent: "#9333EA", surface: "#FDFAFF", ink: "#1C1024" },
-  { id: "violet", name: "Violet", accent: "#7C3AED", surface: "#FFFFFF", ink: "#160E23" },
-  { id: "fuchsia", name: "Fuchsia", accent: "#C026D3", surface: "#FFFAFE", ink: "#230A26" },
-  { id: "slate", name: "Slate", accent: "#475569", surface: "#F8FAFC", ink: "#0F172A" },
-  { id: "graphite", name: "Graphite", accent: "#374151", surface: "#FFFFFF", ink: "#111827" },
-  { id: "midnight", name: "Midnight", accent: "#6366F1", surface: "#0F172A", ink: "#E2E8F0" },
-  { id: "carbon", name: "Carbon", accent: "#22D3EE", surface: "#111827", ink: "#E5E7EB" },
-  { id: "obsidian", name: "Obsidian", accent: "#A78BFA", surface: "#18181B", ink: "#E4E4E7" },
-  { id: "ink", name: "Deep Ink", accent: "#38BDF8", surface: "#0B1120", ink: "#DBEAFE" }
-];
-
-interface FontPair {
-  id: string;
-  name: string;
-  heading: string;
-  body: string;
-}
-
-/**
- * Twenty pairings, all from families a browser already has.
- *
- * Nothing is downloaded. A webfont that fails to arrive falls back to something
- * nobody chose, and on a portal people open every morning that is not a trade
- * worth making for a heading.
- */
-const FONTS: FontPair[] = [
-  { id: "system", name: "System", heading: "system-ui, sans-serif", body: "system-ui, sans-serif" },
-  { id: "grotesk", name: "Grotesk", heading: "'Segoe UI', system-ui, sans-serif", body: "'Segoe UI', system-ui, sans-serif" },
-  { id: "helvetica", name: "Helvetica", heading: "Helvetica, Arial, sans-serif", body: "Helvetica, Arial, sans-serif" },
-  { id: "arial", name: "Arial", heading: "Arial, sans-serif", body: "Arial, sans-serif" },
-  { id: "verdana", name: "Verdana", heading: "Verdana, Geneva, sans-serif", body: "Verdana, Geneva, sans-serif" },
-  { id: "tahoma", name: "Tahoma", heading: "Tahoma, Verdana, sans-serif", body: "Tahoma, Verdana, sans-serif" },
-  { id: "trebuchet", name: "Trebuchet", heading: "'Trebuchet MS', sans-serif", body: "'Trebuchet MS', sans-serif" },
-  { id: "calibri", name: "Calibri", heading: "Calibri, system-ui, sans-serif", body: "Calibri, system-ui, sans-serif" },
-  { id: "optima", name: "Optima", heading: "Optima, Candara, sans-serif", body: "Candara, system-ui, sans-serif" },
-  { id: "georgia", name: "Georgia", heading: "Georgia, serif", body: "Georgia, serif" },
-  { id: "garamond", name: "Garamond", heading: "Garamond, Georgia, serif", body: "Garamond, Georgia, serif" },
-  { id: "cambria", name: "Cambria", heading: "Cambria, Georgia, serif", body: "Cambria, Georgia, serif" },
-  { id: "book", name: "Bookman", heading: "'Bookman Old Style', Georgia, serif", body: "Georgia, serif" },
-  { id: "palatino", name: "Palatino", heading: "Palatino, 'Book Antiqua', serif", body: "Palatino, serif" },
-  { id: "times", name: "Times", heading: "'Times New Roman', Times, serif", body: "'Times New Roman', serif" },
-  { id: "serif-sans", name: "Serif + Sans", heading: "Georgia, serif", body: "system-ui, sans-serif" },
-  { id: "sans-serif", name: "Sans + Serif", heading: "'Segoe UI', system-ui, sans-serif", body: "Georgia, serif" },
-  { id: "condensed", name: "Condensed", heading: "'Arial Narrow', Arial, sans-serif", body: "Arial, sans-serif" },
-  { id: "mono-head", name: "Mono Headings", heading: "'Consolas', ui-monospace, monospace", body: "system-ui, sans-serif" },
-  { id: "mono", name: "Monospace", heading: "ui-monospace, 'Courier New', monospace", body: "ui-monospace, 'Courier New', monospace" }
-];
 
 const ROLES = [
   { code: "COMPANY_ADMIN", label: "Company Admin" },
@@ -92,24 +49,6 @@ const ROLES = [
   { code: "EMPLOYEE", label: "Employee" }
 ];
 
-/** What one scope can set. Both optional — an override may change only colour. */
-interface Look {
-  themeId?: string;
-  fontId?: string;
-}
-
-interface BrandingDoc {
-  /** The company default. Everything else layers on top. */
-  base: Look & { productName?: string; welcomeText?: string };
-  roles: Record<string, Look>;
-  modules: Record<string, Look>;
-}
-
-const EMPTY: BrandingDoc = {
-  base: { themeId: "indigo", fontId: "system", productName: "", welcomeText: "" },
-  roles: {},
-  modules: {}
-};
 
 type Scope = { kind: "base" } | { kind: "role"; key: string } | { kind: "module"; key: string };
 

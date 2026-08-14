@@ -84,9 +84,21 @@ public class MyModulesController {
                 .sorted()
                 .toList();
 
+        /*
+         * Counted without the branding row.
+         *
+         * Saving a colour writes a company_modules row, and if that row counted
+         * as configuration then choosing a theme for a company that had never
+         * opened the module screen would answer "configured, nothing enabled" —
+         * and empty its portal for all of its people. Picking a colour must not
+         * be able to switch off a company.
+         */
+        boolean configured = rows.stream()
+                .anyMatch(r -> !"BRANDING".equalsIgnoreCase(r.getModuleCode()));
+
         return ApiResponse.ok(Map.of(
                 "enabled", enabled,
-                "configured", !rows.isEmpty(),
+                "configured", configured,
                 "branding", branding));
     }
 }

@@ -8,6 +8,7 @@ import {
   type ReactNode
 } from "react";
 import { api, tokenStore, tokenExpired } from "@/lib/api";
+import { parseBranding, type BrandingDoc } from "@/lib/branding";
 import type { AuthUser, ApiEnvelope, LoginResponse } from "@/types";
 
 const USER_KEY = "hrp.user";
@@ -23,6 +24,14 @@ interface AuthContextValue {
   hasModule: (moduleCode: string) => boolean;
   /** Dashboard visibility. Unknown counts as on — see the implementation. */
   hasDashboard: () => boolean;
+  /**
+   * This company's appearance settings, or null if it has none.
+   *
+   * Null is the ordinary case, not a failure: most companies have never opened
+   * the branding screen, and the portal's own stylesheet is the right answer
+   * for them.
+   */
+  branding: BrandingDoc | null;
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);

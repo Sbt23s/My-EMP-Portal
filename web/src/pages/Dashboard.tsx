@@ -2062,7 +2062,7 @@ function ExecutiveDashboardView({
 }
 
 export default function DashboardPage() {
-  const { user, hasPermission, hasRole, hasModule } = useAuth();
+  const { user, hasPermission, hasRole, hasModule, branding } = useAuth();
   const isExec = hasPermission("DASHBOARD_EXEC") || hasRole("SUPER_ADMIN") || hasRole("COMPANY_ADMIN");
   // HR gets the same organisation dashboard without any permission change: the
   // only figures that view takes from /dashboard/executive are the headcount, the

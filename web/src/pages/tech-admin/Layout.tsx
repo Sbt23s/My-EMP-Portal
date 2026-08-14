@@ -5,7 +5,6 @@ import {
   LayoutDashboard, 
   Building2, 
   Settings2, 
-  ShieldCheck, 
   LogOut,
   History,
   Sun,

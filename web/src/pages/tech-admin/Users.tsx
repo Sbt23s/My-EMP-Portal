@@ -856,6 +856,19 @@ export function TechAdminUsers() {
                     </span>
                   </td>
                   <td className="p-4 text-right space-x-2">
+                    {/* One click, for the accounts this screen created with the
+                        wrong role. Only offered where it would change something —
+                        an administrator has no "make administrator" button. */}
+                    {!rolesOf(u).some((r) => isAdminRole(r)) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleMakeAdmin(u)}
+                        className={`h-7 text-xs font-semibold ${isDark ? "text-emerald-400 hover:bg-emerald-400/10" : "text-emerald-600 hover:bg-emerald-400/20"}`}
+                      >
+                        Make Company Admin
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"

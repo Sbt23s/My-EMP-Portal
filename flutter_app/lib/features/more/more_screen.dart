@@ -11,7 +11,11 @@ import '../../widgets/states.dart';
 import '../approvals/approvals_screen.dart';
 import 'calendar_screen.dart';
 import 'raise_ticket_sheet.dart';
+import 'complaints_screen.dart';
+import 'directory_screen.dart';
 import 'submit_claim_sheet.dart';
+import 'team_attendance_screen.dart';
+import 'teams_screen.dart';
 import 'work_reports_screen.dart';
 
 final payslipsProvider = FutureProvider.autoDispose<List<Payslip>>(
@@ -48,6 +52,12 @@ class MoreScreen extends ConsumerWidget {
      * simply has not been filtered yet — a hub with nothing in it needs to say
      * why, and it cannot do that from inside a children: [] literal.
      */
+    final user = ref.watch(currentUserProvider);
+    // Who may look at other people's attendance. The same permission the web
+    // sidebar uses for its Employee Attendance link — and the server checks it
+    // again, so a hidden row is a courtesy, never the control.
+    final canSeeTeam = user?.can('ATTENDANCE_TEAM') ?? false;
+
     final entries = <Widget>[
       // Only for someone who may actually decide. The server checks this as
       // well — hiding the row is a courtesy, not the control.
@@ -101,6 +111,35 @@ class MoreScreen extends ConsumerWidget {
           subtitle: 'Travel and expenses',
           onTap: () => _open(context, const ClaimsScreen()),
         ),
+      if (modules.has('ATTENDANCE') && canSeeTeam)
+        _Entry(
+          icon: Icons.groups_outlined,
+          title: 'Team attendance',
+          subtitle: 'Who was in, day by day',
+          onTap: () => _open(context, const TeamAttendanceScreen()),
+        ),
+      if (modules.has('HELPDESK'))
+        _Entry(
+          icon: Icons.forum_outlined,
+          title: 'Complaints',
+          subtitle: 'Raise something with HR',
+          onTap: () => _open(context, const ComplaintsScreen()),
+        ),
+      if (modules.has('TEAMS'))
+        _Entry(
+          icon: Icons.groups_2_outlined,
+          title: 'Teams',
+          subtitle: 'Who is on which team',
+          onTap: () => _open(context, const TeamsScreen()),
+        ),
+      // Not gated on a module: the web has no DIRECTORY module either, and
+      // knowing a colleague's extension is not a feature a company switches off.
+      _Entry(
+        icon: Icons.contacts_outlined,
+        title: 'Directory',
+        subtitle: 'Find a colleague',
+        onTap: () => _open(context, const DirectoryScreen()),
+      ),
       if (modules.has('CALENDAR'))
         _Entry(
           icon: Icons.event_outlined,

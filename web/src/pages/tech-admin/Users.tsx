@@ -309,6 +309,33 @@ export function TechAdminUsers() {
     }
   };
 
+  /**
+   * Give an existing account the company administrator role.
+   *
+   * For the accounts this screen created before the role dropdown was fixed —
+   * they were written as employees, which is why they showed up under Employees
+   * and could not sign in to anything. Editing each one through the modal would
+   * work; this is the same call without making somebody re-type a name and an
+   * email to change one field.
+   *
+   * Replaces the roles rather than adding to them. This tenant's administrator
+   * is an administrator, not an employee who is also an administrator, and
+   * leaving the old role on would keep them in the employee count.
+   */
+  const handleMakeAdmin = async (u: any) => {
+    if (!window.confirm(`Make ${u.name} the company administrator of ${u.companyName}?`)) return;
+    try {
+      await api.put(`/users/${u.id}`, { roles: ["COMPANY_ADMIN"] });
+      toast.success(`${u.name} is now a company administrator`);
+      // Read back rather than adjusting the row here, so what is on screen is
+      // what the server actually stored.
+      await fetchUsers();
+      window.dispatchEvent(new Event("hrp_users_updated"));
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Could not change the role");
+    }
+  };
+
   const handleDeleteUser = async (u: any) => {
     // This button used to remove the row from localStorage, which is to say it
     // removed nothing: the account stayed exactly where it was. Now it deletes

@@ -15,7 +15,20 @@ export function TechAdminUsers() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRoleFilter, setSelectedRoleFilter] = useState("All");
+  const [selectedRoleFilter, setSelectedRoleFilterRaw] = useState("All");
+
+  /**
+   * Set the role filter, ignoring choices this view cannot show.
+   *
+   * Outside Pixous the list is company administrators only, so asking it for
+   * employees or team leads could only ever return nothing — and it did: the
+   * Employees tile read 1 while the table below said "No accounts match these
+   * filters", because the tile counts everyone and the table is restricted. A
+   * filter that cannot match is not a filter, it is a dead end.
+   */
+  const setSelectedRoleFilter = (value: string) => {
+    setSelectedRoleFilterRaw(isPixous ? value : "All");
+  };
   const [selectedCompanyFilter, setSelectedCompanyFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"ACTIVE" | "OFFBOARDED" | "ALL">("ACTIVE");
   const [visiblePasswords, setVisiblePasswords] = useState<{ [key: number]: boolean }>({});

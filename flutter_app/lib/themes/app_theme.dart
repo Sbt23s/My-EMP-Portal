@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/branding/branding.dart';
+
 /// Material 3, in the portal's colours, for both themes.
 ///
 /// The indigo is taken from the web client's primary so the two products look
@@ -18,15 +20,38 @@ class AppTheme {
   static Color warning(BuildContext c) => _warning;
   static Color danger(BuildContext c) => _danger;
 
-  static ThemeData get light => _build(Brightness.light);
-  static ThemeData get dark => _build(Brightness.dark);
+  static ThemeData get light => _build(Brightness.light, null);
+  static ThemeData get dark => _build(Brightness.dark, null);
 
-  static ThemeData _build(Brightness brightness) {
+  /// The same theme in the company's chosen colour and typeface.
+  ///
+  /// [brand] null means nothing has been chosen — most companies — and the
+  /// portal's own indigo applies, which is why the two getters above exist
+  /// unchanged for the sign-in screen: nobody has said who they are yet, so
+  /// there is no company whose colours could apply.
+  static ThemeData branded(Brightness brightness, ResolvedBranding brand) =>
+      _build(brightness, brand);
+
+  static ThemeData _build(Brightness brightness, ResolvedBranding? brand) {
     final scheme = ColorScheme.fromSeed(
-      seedColor: _brand,
+      // The accent seeds the whole scheme rather than being painted on top of
+      // it. Overriding only `primary` leaves the container and on-container
+      // colours derived from indigo, and a teal button on a faint indigo card is
+      // the sort of mismatch that reads as a bug rather than a theme.
+      seedColor: brand?.theme.accent ?? _brand,
       brightness: brightness,
     );
     final isDark = brightness == Brightness.dark;
+
+    /*
+     * The page background is deliberately not taken from the theme's `surface`.
+     *
+     * Four of the twenty themes are dark ones, and a person choosing "Midnight"
+     * for their company must not override the light/dark setting somebody made
+     * on their own phone. The accent — the part that reads as "our colour" —
+     * carries into both. This matches what the web client does, and for the same
+     * reason.
+     */
 
     return ThemeData(
       useMaterial3: true,
@@ -126,6 +151,35 @@ class AppTheme {
         thickness: 1,
         space: 1,
       ),
+
+      // Body text carries the body family; headings are applied below, so a
+      // pairing like "Serif + Sans" reads as two faces rather than one.
+      fontFamily: brand?.font.bodyFamily,
+    ).copyWith(
+      textTheme: _withHeadingFace(
+        ThemeData(brightness: brightness).textTheme,
+        brand,
+      ),
+    );
+  }
+
+  /// Headings in the heading face, everything else left alone.
+  ///
+  /// Returns the text theme untouched when the pairing uses one family for both
+  /// — rebuilding every style to set the same value it already has would be
+  /// work for no visible difference.
+  static TextTheme _withHeadingFace(TextTheme base, ResolvedBranding? brand) {
+    final heading = brand?.font.headingFamily;
+    if (heading == null || heading == brand?.font.bodyFamily) return base;
+    return base.copyWith(
+      displayLarge: base.displayLarge?.copyWith(fontFamily: heading),
+      displayMedium: base.displayMedium?.copyWith(fontFamily: heading),
+      displaySmall: base.displaySmall?.copyWith(fontFamily: heading),
+      headlineLarge: base.headlineLarge?.copyWith(fontFamily: heading),
+      headlineMedium: base.headlineMedium?.copyWith(fontFamily: heading),
+      headlineSmall: base.headlineSmall?.copyWith(fontFamily: heading),
+      titleLarge: base.titleLarge?.copyWith(fontFamily: heading),
+      titleMedium: base.titleMedium?.copyWith(fontFamily: heading),
     );
   }
 }

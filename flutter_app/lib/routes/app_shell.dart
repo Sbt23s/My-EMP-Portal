@@ -31,6 +31,12 @@ class _Tab {
 
   /// Mirrors the web sidebar's `excludeRole`. An administrator does not punch in
   /// or apply for their own leave; they approve other people's.
+  ///
+  /// Belt and braces. Administrators cannot sign in to this app at all — see
+  /// MobileAccess — so nothing currently reaches this. Kept because the two
+  /// rules answer different questions: that one decides who gets in, this one
+  /// decides what they would see, and relaxing the first should not silently
+  /// hand somebody a punch-in button.
   final bool hiddenForAdmin;
 }
 

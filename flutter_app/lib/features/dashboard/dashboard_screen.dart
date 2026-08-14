@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/dashboard.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/modules_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/states.dart';
 import '../notifications/notifications_screen.dart';

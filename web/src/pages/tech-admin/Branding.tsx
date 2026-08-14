@@ -25,21 +25,7 @@ import { Palette, Check, Loader2, RotateCcw, Type, Layers, Users, Building2, X }
  * and preferences already have somewhere to live.
  */
 
-interface Theme {
-  id: string;
-  name: string;
-  /** The one colour everything else is built around. */
-  accent: string;
-  surface: string;
-  ink: string;
-}
-
-/**
- * Twenty looks. Kept to twenty deliberately: a hundred swatches is not twenty
- * times more useful, it is a decision nobody can make — and each one still has
- * to stay legible on the surface beside it.
- */
-const THEMES: Theme[] = [
+const REMOVED_THEMES = [
   { id: "indigo", name: "Indigo", accent: "#4F46E5", surface: "#FFFFFF", ink: "#0F172A" },
   { id: "royal", name: "Royal Blue", accent: "#2563EB", surface: "#FFFFFF", ink: "#0F172A" },
   { id: "sky", name: "Sky", accent: "#0284C7", surface: "#F8FAFC", ink: "#0F172A" },

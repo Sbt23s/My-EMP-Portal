@@ -14,11 +14,18 @@ Outputs (docs/downloads/):
 import os
 import re
 import json
+import base64
 import html as html_mod
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 DOCS = os.path.join(ROOT, "docs")
 OUT = os.path.join(DOCS, "downloads")
+
+LOGO = os.path.join(ROOT, "web", "public", "pixous-favicon.png")
+LOGO_B64 = None
+if os.path.exists(LOGO):
+    with open(LOGO, "rb") as f:
+        LOGO_B64 = base64.b64encode(f.read()).decode()
 
 CSS = """
 @page { size: A4; margin: 18mm 14mm; }
@@ -138,8 +145,16 @@ def md_to_html(md_path):
 def wrap(title, body, cover=False):
     cover_html = ""
     if cover:
+        logo_img = ""
+        if LOGO_B64:
+            logo_img = (
+                '<img src="data:image/png;base64,' + LOGO_B64 +
+                '" alt="Pixous Technologies" '
+                'style="width:150px; max-width:45%; height:auto;"/>'
+            )
         cover_html = f"""
 <div class="cover">
+  {logo_img}
   <div class="brand">Pixous Technologies</div>
   <h1>{title}</h1>
   <div class="sub">HR Management Portal — Client Submission</div>
@@ -181,6 +196,8 @@ def main():
          "Requirements Specification", True),
         ("UNIT-TESTING.md", "Pixous_HR_Unit_Testing_v1.0.html",
          "Unit Testing Specification", True),
+        ("ROLE-WISE-TESTING.md", "Pixous_HR_RoleWise_Testing_v1.0.html",
+         "Role-Wise Unit Testing Specification", True),
     ]
     for src, dst, title, cover in jobs:
         body = md_to_html(os.path.join(DOCS, src))

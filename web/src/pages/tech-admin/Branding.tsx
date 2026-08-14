@@ -114,20 +114,10 @@ export function TechAdminBranding() {
         const rows: any[] = Array.isArray(res.data?.data) ? res.data.data : [];
         const row = rows.find((r) => r.moduleCode === "BRANDING");
 
-        let next = EMPTY;
-        if (row?.featureFlags) {
-          try {
-            const parsed = JSON.parse(row.featureFlags);
-            next = {
-              base: { ...EMPTY.base, ...(parsed.base ?? parsed) },
-              roles: parsed.roles ?? {},
-              modules: parsed.modules ?? {}
-            };
-          } catch {
-            // Unreadable settings fall back to the defaults rather than
-            // blanking the page.
-          }
-        }
+        // Read with the same parser the portal uses, so what this page shows is
+        // what the portal will make of it. Unreadable settings come back null
+        // and fall to the defaults rather than blanking the page.
+        const next = parseBranding(row?.featureFlags) ?? EMPTY;
         if (!active) return;
         setDraft(next);
         setSaved(next);

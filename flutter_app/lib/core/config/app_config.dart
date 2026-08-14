@@ -11,15 +11,26 @@
 class AppConfig {
   const AppConfig._();
 
+  /// The live server.
+  ///
+  /// This pointed at a Render address that the portal has not run on since the
+  /// EC2 rebuild. A release build carrying it installs cleanly, opens, and then
+  /// fails every request — which reads as a broken app rather than as an app
+  /// aimed at a server that is no longer there.
+  ///
+  /// Plain http because the portal has no certificate yet; HTTPS is waiting on a
+  /// DNS A record for this address. Android refuses cleartext by default, so
+  /// `android/app/src/main/res/xml/network_security_config.xml` permits it for
+  /// this one host — see that file for what to undo once the certificate exists.
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://pixous-ems-backend.onrender.com/api',
+    defaultValue: 'http://16.192.105.61/api',
   );
 
   /// The websocket the portal uses for notifications, chat and presence.
   static const String wsUrl = String.fromEnvironment(
     'WS_URL',
-    defaultValue: 'https://pixous-ems-backend.onrender.com/ws',
+    defaultValue: 'http://16.192.105.61/ws',
   );
 
   /// Generous, because the hosted database is on shared infrastructure and a

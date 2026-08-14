@@ -20,6 +20,7 @@ import {
   type Look,
   type BrandingDoc
 } from "@/lib/branding";
+import { BrandingPreview } from "./BrandingPreview";
 
 /**
  * Branding & Appearance.
@@ -492,53 +493,16 @@ export function TechAdminBranding() {
             {/* Rendered with the resolved values, not the override in isolation:
                 an override that sets only a colour still uses the company font,
                 and previewing otherwise would show something nobody will see. */}
-            <div
-              className="mt-4 overflow-hidden rounded-xl border"
-              style={{ background: activeTheme.surface, borderColor: `${activeTheme.accent}33` }}
-            >
-              <div className="px-4 py-3" style={{ background: activeTheme.accent }}>
-                <p className="text-sm font-bold text-white" style={{ fontFamily: activeFont.heading }}>
-                  {draft.base.productName || "Employee Management"}
-                </p>
-              </div>
-
-              <div className="p-4">
-                <p className="text-lg font-bold" style={{ color: activeTheme.ink, fontFamily: activeFont.heading }}>
-                  Welcome, Priya
-                </p>
-                <p className="mt-1 text-xs" style={{ color: `${activeTheme.ink}99`, fontFamily: activeFont.body }}>
-                  {draft.base.welcomeText || "Here's what's happening today."}
-                </p>
-
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  {[
-                    ["Present", "18"],
-                    ["On leave", "2"]
-                  ].map(([label, value]) => (
-                    <div
-                      key={label}
-                      className="rounded-lg p-3"
-                      style={{ background: `${activeTheme.accent}12`, border: `1px solid ${activeTheme.accent}22` }}
-                    >
-                      <p className="text-xl font-extrabold" style={{ color: activeTheme.accent, fontFamily: activeFont.heading }}>
-                        {value}
-                      </p>
-                      <p className="text-[11px]" style={{ color: `${activeTheme.ink}99`, fontFamily: activeFont.body }}>
-                        {label}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className="mt-4 w-full rounded-lg py-2 text-xs font-bold text-white"
-                  style={{ background: activeTheme.accent, fontFamily: activeFont.body }}
-                >
-                  Punch in
-                </button>
-              </div>
+            <div className="mt-4">
+              <BrandingPreview
+                theme={activeTheme}
+                font={activeFont}
+                title={scope.kind === "module" ? scopeLabel : "Welcome, Priya"}
+                moduleCode={scope.kind === "module" ? scope.key : null}
+                productName={draft.base.productName || "Employee Management"}
+                welcomeText={draft.base.welcomeText || "Here'''s what'''s happening today."}
+              />
+            </div>
             </div>
 
             {dirty && (

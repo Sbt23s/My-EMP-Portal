@@ -5,5 +5,13 @@
  * still runs against the code stored on the account.
  */
 export function roleCodeLabel(code: string): string {
-  return code === "IT_MGR" ? "IT_HR" : code;
+  if (code === "IT_MGR") return "IT_HR";
+  /*
+   * COMPANY_ADMIN and SUPER_ADMIN are one job under two names — a company's own
+   * top administrator. They hold the same permissions and pass the same checks,
+   * so showing two different labels only raised the question of which one an
+   * account was. Shown under one name; the codes on the accounts are untouched.
+   */
+  if (code === "COMPANY_ADMIN" || code === "SUPER_ADMIN") return "SYSTEM_ADMIN";
+  return code;
 }

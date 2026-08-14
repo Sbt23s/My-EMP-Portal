@@ -136,7 +136,11 @@ function moduleForPath(pathname: string): string | null {
 
 function getRoleDisplayName(roles: string[] = []): string {
   if (roles.includes("BOARD_ADMIN")) return "Board Admin";
-  if (roles.includes("SUPER_ADMIN")) return "Super Admin";
+  if (roles.includes("SUPER_ADMIN")) return "System Admin";
+  // The same job, so the same words. Reading "Company Admin" beside a portal
+  // that behaves like the system administrator's invited the question of which
+  // of the two this account was.
+  if (roles.includes("COMPANY_ADMIN")) return "System Admin";
   if (roles.includes("IT_HR")) return "HR Head";
   if (roles.includes("IT_MGR")) return "HR";
   if (roles.includes("IT_TL")) return "Team Leader";

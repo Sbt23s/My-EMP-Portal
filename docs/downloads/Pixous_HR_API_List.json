@@ -1,0 +1,1864 @@
+{
+  "project": "Pixous HR Portal",
+  "description": "Complete REST API inventory extracted from the Spring Boot controllers.",
+  "generated": "2026-08-14",
+  "baseUrl": "http://16.192.105.61",
+  "count": 265,
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/admin/reset",
+      "controller": "DataResetController.java",
+      "handler": "preview",
+      "authorization": "hasRole('SUPER_ADMIN')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/reset",
+      "controller": "DataResetController.java",
+      "handler": "reset",
+      "authorization": "hasRole('SUPER_ADMIN')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/assets",
+      "controller": "AssetController.java",
+      "handler": "list",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/assets",
+      "controller": "AssetController.java",
+      "handler": "create",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/assets/lookup",
+      "controller": "AssetController.java",
+      "handler": "getByCode",
+      "authorization": "hasAuthority('ASSET_MANAGE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/assets/my-assets",
+      "controller": "AssetController.java",
+      "handler": "myAssets",
+      "authorization": "hasAuthority('ASSET_MANAGE')"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/assets/{id}",
+      "controller": "AssetController.java",
+      "handler": "delete",
+      "authorization": "hasAuthority('ASSET_MANAGE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/assets/{id}",
+      "controller": "AssetController.java",
+      "handler": "get",
+      "authorization": "hasAuthority('ASSET_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/assets/{id}/acknowledge",
+      "controller": "AssetController.java",
+      "handler": "acknowledge",
+      "authorization": "hasAuthority('ASSET_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/assets/{id}/allocate",
+      "controller": "AssetController.java",
+      "handler": "allocate",
+      "authorization": "hasAuthority('ASSET_MANAGE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/assets/{id}/qr",
+      "controller": "AssetController.java",
+      "handler": "qr",
+      "authorization": "hasAuthority('ASSET_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/assets/{id}/return",
+      "controller": "AssetController.java",
+      "handler": "returnAsset",
+      "authorization": "hasAuthority('ASSET_MANAGE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/attendance/absent-today",
+      "controller": "AttendanceController.java",
+      "handler": "absentToday",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/attendance/day",
+      "controller": "AttendanceController.java",
+      "handler": "dayDetail",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/attendance/face-punch",
+      "controller": "AttendanceController.java",
+      "handler": "facePunch",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/attendance/insights",
+      "controller": "AttendanceController.java",
+      "handler": "insights",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/attendance/me",
+      "controller": "AttendanceController.java",
+      "handler": "myCalendar",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/attendance/me/summary",
+      "controller": "AttendanceController.java",
+      "handler": "summary",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/attendance/my-team-today",
+      "controller": "AttendanceController.java",
+      "handler": "myTeamToday",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/attendance/punch-in",
+      "controller": "AttendanceController.java",
+      "handler": "punchIn",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/attendance/punch-out",
+      "controller": "AttendanceController.java",
+      "handler": "punchOut",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/attendance/team",
+      "controller": "AttendanceController.java",
+      "handler": "team",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/attendance/team-range",
+      "controller": "AttendanceController.java",
+      "handler": "teamRange",
+      "authorization": "hasAnyAuthority('ATTENDANCE_TEAM','USER_MANAGE','DASHBOARD_EXEC')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/attendance/today",
+      "controller": "AttendanceController.java",
+      "handler": "today",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/audit",
+      "controller": "AuditController.java",
+      "handler": "list",
+      "authorization": "hasAnyAuthority('USER_MANAGE', 'EMPLOYEE_MANAGE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/audit/entity",
+      "controller": "AuditController.java",
+      "handler": "forEntity",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/audit/logins",
+      "controller": "AuditController.java",
+      "handler": "logins",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/audit/summary",
+      "controller": "AuditController.java",
+      "handler": "summary",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/change-password",
+      "controller": "AuthController.java",
+      "handler": "changePassword",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/check-username",
+      "controller": "AuthController.java",
+      "handler": "checkUsername",
+      "authorization": "hasAnyAuthority('USER_MANAGE','EMPLOYEE_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/employees",
+      "controller": "AuthController.java",
+      "handler": "createEmployee",
+      "authorization": "hasAnyAuthority('USER_MANAGE','EMPLOYEE_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/employees/bulk",
+      "controller": "AuthController.java",
+      "handler": "createEmployeesBulk",
+      "authorization": "hasAnyAuthority('USER_MANAGE','EMPLOYEE_MANAGE') or hasRole('TECHNICAL_ADMIN')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/employees/imports",
+      "controller": "AuthController.java",
+      "handler": "listImports",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/employees/imports/adopt",
+      "controller": "AuthController.java",
+      "handler": "adoptImport",
+      "authorization": "hasAnyAuthority('USER_MANAGE','EMPLOYEE_MANAGE')"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/auth/employees/imports/{id}",
+      "controller": "AuthController.java",
+      "handler": "revertImport",
+      "authorization": "hasAnyAuthority('USER_MANAGE','EMPLOYEE_MANAGE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/employees/imports/{id}/preview",
+      "controller": "AuthController.java",
+      "handler": "previewImport",
+      "authorization": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/auth/employees/imports/{id}/record",
+      "controller": "AuthController.java",
+      "handler": "forgetImport",
+      "authorization": "hasAnyAuthority('USER_MANAGE','EMPLOYEE_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "controller": "AuthController.java",
+      "handler": "login",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "controller": "AuthController.java",
+      "handler": "logout",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "controller": "AuthController.java",
+      "handler": "me",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh",
+      "controller": "AuthController.java",
+      "handler": "refresh",
+      "authorization": "hasAnyAuthority('USER_MANAGE','EMPLOYEE_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/signup",
+      "controller": "AuthController.java",
+      "handler": "signup",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/validate-phone",
+      "controller": "AuthController.java",
+      "handler": "validatePhone",
+      "authorization": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/cache",
+      "controller": "CacheController.java",
+      "handler": "clear",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/cache/status",
+      "controller": "CacheController.java",
+      "handler": "status",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/calendar/events",
+      "controller": "CalendarController.java",
+      "handler": "events",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/calendar/events",
+      "controller": "CalendarController.java",
+      "handler": "create",
+      "authorization": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/calendar/events/{id}",
+      "controller": "CalendarController.java",
+      "handler": "delete",
+      "authorization": "hasAnyAuthority('ORG_MANAGE','USER_MANAGE')"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/calendar/events/{id}",
+      "controller": "CalendarController.java",
+      "handler": "update",
+      "authorization": "hasAnyAuthority('ORG_MANAGE','USER_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/calls/log",
+      "controller": "CallController.java",
+      "handler": "logCall",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/calls/signal",
+      "controller": "CallController.java",
+      "handler": "sendSignal",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/chatbot/admin/ingest",
+      "controller": "ChatbotController.java",
+      "handler": "ingest",
+      "authorization": "hasAuthority('USER_MANAGE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/chatbot/admin/knowledge",
+      "controller": "ChatbotController.java",
+      "handler": "knowledge",
+      "authorization": "hasAuthority('USER_MANAGE')"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/chatbot/admin/knowledge/{id}",
+      "controller": "ChatbotController.java",
+      "handler": "deleteKnowledge",
+      "authorization": "hasAuthority('USER_MANAGE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/chatbot/admin/settings",
+      "controller": "ChatbotController.java",
+      "handler": "adminSettings",
+      "authorization": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/chatbot/admin/settings",
+      "controller": "ChatbotController.java",
+      "handler": "updateSettings",
+      "authorization": "hasAuthority('USER_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/chatbot/chat",
+      "controller": "ChatbotController.java",
+      "handler": "chat",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/chatbot/config",
+      "controller": "ChatbotController.java",
+      "handler": "config",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/chatbot/stt",
+      "controller": "ChatbotController.java",
+      "handler": "stt",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/chatbot/translate",
+      "controller": "ChatbotController.java",
+      "handler": "translate",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/chatbot/tts",
+      "controller": "ChatbotController.java",
+      "handler": "tts",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/communities",
+      "controller": "CommunityController.java",
+      "handler": "getAllCommunities",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/communities",
+      "controller": "CommunityController.java",
+      "handler": "createGroup",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/communities/contacts",
+      "controller": "CommunityController.java",
+      "handler": "getContacts",
+      "authorization": "hasRole('SUPER_ADMIN') or hasAuthority('USER_MANAGE') or hasAuthority('COMMUNITY_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/communities/direct/{userId}",
+      "controller": "CommunityController.java",
+      "handler": "openDirect",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/communities/me",
+      "controller": "CommunityController.java",
+      "handler": "getMyCommunities",
+      "authorization": "hasRole('SUPER_ADMIN') or hasAuthority('USER_MANAGE') or hasAuthority('COMMUNITY_MANAGE')"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/communities/messages/{messageId}",
+      "controller": "CommunityController.java",
+      "handler": "deleteMessage",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/communities/messages/{messageId}/acknowledge",
+      "controller": "CommunityController.java",
+      "handler": "acknowledge",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/communities/messages/{messageId}/pin",
+      "controller": "CommunityController.java",
+      "handler": "setPinned",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/communities/messages/{messageId}/reactions",
+      "controller": "CommunityController.java",
+      "handler": "react",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/communities/messages/{messageId}/read",
+      "controller": "CommunityController.java",
+      "handler": "markRead",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/communities/messages/{messageId}/receipts",
+      "controller": "CommunityController.java",
+      "handler": "receipts",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/communities/messages/{messageId}/vote",
+      "controller": "CommunityController.java",
+      "handler": "vote",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/communities/retention",
+      "controller": "CommunityController.java",
+      "handler": "retention",
+      "authorization": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/communities/retention",
+      "controller": "CommunityController.java",
+      "handler": "setRetention",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/communities/team",
+      "controller": "CommunityController.java",
+      "handler": "openTeamRoom",
+      "authorization": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/communities/{id}",
+      "controller": "CommunityController.java",
+      "handler": "deleteGroup",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/communities/{id}/attachments",
+      "controller": "CommunityController.java",
+      "handler": "sendAttachments",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/communities/{id}/members",
+      "controller": "CommunityController.java",
+      "handler": "getMembers",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/communities/{id}/members",
+      "controller": "CommunityController.java",
+      "handler": "addMember",
+      "authorization": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/communities/{id}/members/{userId}",
+      "controller": "CommunityController.java",
+      "handler": "removeMember",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/communities/{id}/messages",
+      "controller": "CommunityController.java",
+      "handler": "getMessages",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/communities/{id}/messages",
+      "controller": "CommunityController.java",
+      "handler": "sendMessage",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/communities/{id}/messages/pinned",
+      "controller": "CommunityController.java",
+      "handler": "pinnedMessages",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/communities/{id}/messages/search",
+      "controller": "CommunityController.java",
+      "handler": "searchMessages",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/communities/{id}/voice",
+      "controller": "CommunityController.java",
+      "handler": "sendVoice",
+      "authorization": "hasRole('SUPER_ADMIN') or hasAuthority('USER_MANAGE') or hasAuthority('COMMUNITY_MANAGE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/complaints",
+      "controller": "ComplaintController.java",
+      "handler": "all",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/complaints",
+      "controller": "ComplaintController.java",
+      "handler": "submit",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/complaints/mine",
+      "controller": "ComplaintController.java",
+      "handler": "mine",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/complaints/recipients",
+      "controller": "ComplaintController.java",
+      "handler": "recipients",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/complaints/{id}",
+      "controller": "ComplaintController.java",
+      "handler": "get",
+      "authorization": "hasAnyAuthority('USER_MANAGE','COMPLAINT_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/complaints/{id}/respond",
+      "controller": "ComplaintController.java",
+      "handler": "respond",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/celebrations",
+      "controller": "DashboardController.java",
+      "handler": "celebrations",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/executive",
+      "controller": "DashboardController.java",
+      "handler": "executive",
+      "authorization": "hasAnyAuthority('USER_MANAGE','DASHBOARD_EXEC','ATTENDANCE_TEAM')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/me",
+      "controller": "DashboardController.java",
+      "handler": "me",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/org-insights",
+      "controller": "DashboardController.java",
+      "handler": "orgInsights",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/files/**",
+      "controller": "FileController.java",
+      "handler": "serve",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/leave/allocations/apply-defaults",
+      "controller": "LeaveController.java",
+      "handler": "allocateDefaults",
+      "authorization": "hasAuthority('PAYROLL_RUN')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/leave/apply",
+      "controller": "LeaveController.java",
+      "handler": "apply",
+      "authorization": "hasAuthority('USER_MANAGE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/leave/approvers",
+      "controller": "LeaveController.java",
+      "handler": "leaveApprovers",
+      "authorization": "hasAuthority('ORG_MANAGE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/leave/balances",
+      "controller": "LeaveController.java",
+      "handler": "balances",
+      "authorization": "hasAuthority('ORG_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/leave/bulk-decision",
+      "controller": "LeaveController.java",
+      "handler": "bulkDecide",
+      "authorization": "hasAnyAuthority('LEAVE_APPROVE','USER_MANAGE','DASHBOARD_EXEC')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/leave/calendar",
+      "controller": "LeaveController.java",
+      "handler": "calendar",
+      "authorization": "hasAuthority('LEAVE_APPROVE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/leave/lop-preview",
+      "controller": "LeaveController.java",
+      "handler": "lopPreview",
+      "authorization": "hasAuthority('ORG_MANAGE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/leave/me",
+      "controller": "LeaveController.java",
+      "handler": "myRequests",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/leave/on-leave",
+      "controller": "LeaveController.java",
+      "handler": "onLeave",
+      "authorization": "hasAuthority('LEAVE_APPROVE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/leave/pending",
+      "controller": "LeaveController.java",
+      "handler": "pending",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/leave/permissions",
+      "controller": "PermissionController.java",
+      "handler": "apply",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/leave/permissions/all",
+      "controller": "PermissionController.java",
+      "handler": "all",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/leave/permissions/approvers",
+      "controller": "PermissionController.java",
+      "handler": "approvers",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/leave/permissions/for-me",
+      "controller": "PermissionController.java",
+      "handler": "forMe",
+      "authorization": "hasAuthority('USER_MANAGE') or hasRole('IT_MGR') or hasRole('IT_HR')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/leave/permissions/me",
+      "controller": "PermissionController.java",
+      "handler": "mine",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/leave/permissions/pending",
+      "controller": "PermissionController.java",
+      "handler": "pending",
+      "authorization": "hasAuthority('USER_MANAGE') or hasRole('IT_MGR') or hasRole('IT_HR')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/leave/permissions/{id}/cancel",
+      "controller": "PermissionController.java",
+      "handler": "cancel",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/leave/permissions/{id}/decision",
+      "controller": "PermissionController.java",
+      "handler": "decide",
+      "authorization": "hasAuthority('LEAVE_APPROVE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/leave/requests-for-me",
+      "controller": "LeaveController.java",
+      "handler": "requestsForMe",
+      "authorization": "hasAuthority('LEAVE_APPROVE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/leave/reset/{userId}",
+      "controller": "LeaveController.java",
+      "handler": "resetUserLeave",
+      "authorization": "hasAuthority('ORG_MANAGE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/leave/types",
+      "controller": "LeaveController.java",
+      "handler": "types",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/leave/types",
+      "controller": "LeaveController.java",
+      "handler": "createType",
+      "authorization": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/leave/types/{id}",
+      "controller": "LeaveController.java",
+      "handler": "deleteType",
+      "authorization": "hasAuthority('ORG_MANAGE')"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/leave/types/{id}",
+      "controller": "LeaveController.java",
+      "handler": "updateType",
+      "authorization": "hasAuthority('ORG_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/leave/{id}/cancel",
+      "controller": "LeaveController.java",
+      "handler": "cancel",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/leave/{id}/decision",
+      "controller": "LeaveController.java",
+      "handler": "decide",
+      "authorization": "hasAnyAuthority('LEAVE_APPROVE','USER_MANAGE','DASHBOARD_EXEC')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/my-modules",
+      "controller": "MyModulesController.java",
+      "handler": "myModules",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications",
+      "controller": "NotificationController.java",
+      "handler": "feed",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/mark-all-read",
+      "controller": "NotificationController.java",
+      "handler": "markAllRead",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/unread-count",
+      "controller": "NotificationController.java",
+      "handler": "unreadCount",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/{id}/read",
+      "controller": "NotificationController.java",
+      "handler": "markRead",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/onboarding/employees",
+      "controller": "OnboardingController.java",
+      "handler": "onboardingEmployees",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/onboarding/{userId}",
+      "controller": "OnboardingController.java",
+      "handler": "getOnboarding",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/onboarding/{userId}/start",
+      "controller": "OnboardingController.java",
+      "handler": "startOnboarding",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/onboarding/{userId}/tasks/{taskId}/complete",
+      "controller": "OnboardingController.java",
+      "handler": "completeTask",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/org/designations",
+      "controller": "OrgController.java",
+      "handler": "createDesignation",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/org/dropdown",
+      "controller": "OrgController.java",
+      "handler": "dropdownByQuery",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/org/dropdown/{type}",
+      "controller": "OrgController.java",
+      "handler": "dropdownByPath",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/org/dropdowns",
+      "controller": "OrgController.java",
+      "handler": "dropdowns",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/org/holidays",
+      "controller": "OrgController.java",
+      "handler": "holidays",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/org/holidays",
+      "controller": "OrgController.java",
+      "handler": "createHoliday",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/org/office-locations",
+      "controller": "OrgController.java",
+      "handler": "officeLocations",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/org/office-locations",
+      "controller": "OrgController.java",
+      "handler": "saveOfficeLocation",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/org/sites",
+      "controller": "OrgController.java",
+      "handler": "sites",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/payroll/payslip/generate",
+      "controller": "PayrollController.java",
+      "handler": "generate",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/payroll/payslip/list",
+      "controller": "PayrollController.java",
+      "handler": "myPayslips",
+      "authorization": "hasAuthority('PAYROLL_VIEW')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payroll/payslip/list/{userId}",
+      "controller": "PayrollController.java",
+      "handler": "payslipsFor",
+      "authorization": "hasAuthority('PAYROLL_VIEW')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payroll/payslip/{id}",
+      "controller": "PayrollController.java",
+      "handler": "get",
+      "authorization": "hasAuthority('PAYROLL_VIEW')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payroll/payslip/{id}/pdf",
+      "controller": "PayrollController.java",
+      "handler": "downloadPdf",
+      "authorization": "hasAuthority('PAYROLL_VIEW')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payroll/payslips/month",
+      "controller": "PayrollController.java",
+      "handler": "payslipsByMonth",
+      "authorization": "hasAuthority('PAYROLL_RUN')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payroll/requests",
+      "controller": "PayrollController.java",
+      "handler": "inbox",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/payroll/requests",
+      "controller": "PayrollController.java",
+      "handler": "raiseRequest",
+      "authorization": "hasAnyAuthority('PAYROLL_RUN', 'PAYROLL_APPROVE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payroll/requests/logo",
+      "controller": "PayrollController.java",
+      "handler": "uploadLogo",
+      "authorization": "hasAuthority('PAYROLL_RUN')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payroll/requests/me",
+      "controller": "PayrollController.java",
+      "handler": "myRequests",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/payroll/requests/{id}/approve",
+      "controller": "PayrollController.java",
+      "handler": "approveRequest",
+      "authorization": "hasAuthority('PAYROLL_RUN')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payroll/requests/{id}/reject",
+      "controller": "PayrollController.java",
+      "handler": "rejectRequest",
+      "authorization": "hasAuthority('PAYROLL_RUN')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payroll/runs",
+      "controller": "PayrollController.java",
+      "handler": "listRuns",
+      "authorization": "hasAuthority('PAYROLL_RUN')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payroll/runs",
+      "controller": "PayrollController.java",
+      "handler": "startBatch",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/payroll/runs/{id}",
+      "controller": "PayrollController.java",
+      "handler": "getRun",
+      "authorization": "hasAuthority('PAYROLL_APPROVE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payroll/runs/{id}/confirm",
+      "controller": "PayrollController.java",
+      "handler": "confirmRun",
+      "authorization": "hasAuthority('PAYROLL_RUN')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payroll/runs/{id}/finance-approve",
+      "controller": "PayrollController.java",
+      "handler": "financeApproveRun",
+      "authorization": "hasAuthority('PAYROLL_RUN')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payroll/salaries",
+      "controller": "PayrollController.java",
+      "handler": "listSalaries",
+      "authorization": "hasAuthority('PAYROLL_VIEW')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payroll/salary",
+      "controller": "PayrollController.java",
+      "handler": "setSalary",
+      "authorization": "hasAuthority('PAYROLL_RUN')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payroll/salary-months",
+      "controller": "PayrollController.java",
+      "handler": "salaryMonths",
+      "authorization": "hasAuthority('PAYROLL_VIEW')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payroll/salary-months",
+      "controller": "PayrollController.java",
+      "handler": "setSalaryMonth",
+      "authorization": "hasAuthority('PAYROLL_VIEW')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payroll/salary-months/me",
+      "controller": "PayrollController.java",
+      "handler": "mySalaryMonths",
+      "authorization": "hasAuthority('PAYROLL_VIEW')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payroll/salary/{userId}",
+      "controller": "PayrollController.java",
+      "handler": "getSalary",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/performance/goals",
+      "controller": "PerformanceController.java",
+      "handler": "createGoal",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/performance/goals/me",
+      "controller": "PerformanceController.java",
+      "handler": "myGoals",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/performance/reviews",
+      "controller": "PerformanceController.java",
+      "handler": "createReview",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/performance/reviews/me",
+      "controller": "PerformanceController.java",
+      "handler": "myReviews",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/performance/reviews/team",
+      "controller": "PerformanceController.java",
+      "handler": "teamReviews",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/presence",
+      "controller": "PresenceController.java",
+      "handler": "snapshot",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/attendance",
+      "controller": "ReportController.java",
+      "handler": "attendanceReport",
+      "authorization": "hasAuthority('REPORT_VIEW')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/leave",
+      "controller": "ReportController.java",
+      "handler": "leaveReport",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/payroll",
+      "controller": "ReportController.java",
+      "handler": "payrollReport",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/safety-incidents",
+      "controller": "SafetyIncidentController.java",
+      "handler": "all",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/safety-incidents",
+      "controller": "SafetyIncidentController.java",
+      "handler": "report",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/safety-incidents/mine",
+      "controller": "SafetyIncidentController.java",
+      "handler": "mine",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/safety-incidents/{id}",
+      "controller": "SafetyIncidentController.java",
+      "handler": "get",
+      "authorization": "hasAuthority('REPORT_VIEW')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/safety-incidents/{id}/resolve",
+      "controller": "SafetyIncidentController.java",
+      "handler": "resolve",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings",
+      "controller": "SettingsController.java",
+      "handler": "getAllSettings",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/settings",
+      "controller": "SettingsController.java",
+      "handler": "updateSettings",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/ta-expenses",
+      "controller": "TaExpenseController.java",
+      "handler": "create",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/ta-expenses/all",
+      "controller": "TaExpenseController.java",
+      "handler": "getAllExpenses",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/ta-expenses/me",
+      "controller": "TaExpenseController.java",
+      "handler": "getMyExpenses",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/ta-expenses/team",
+      "controller": "TaExpenseController.java",
+      "handler": "getTeamExpenses",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/ta-expenses/upload",
+      "controller": "TaExpenseController.java",
+      "handler": "uploadAttachment",
+      "authorization": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/ta-expenses/{id}",
+      "controller": "TaExpenseController.java",
+      "handler": "delete",
+      "authorization": "hasAnyAuthority('USER_MANAGE','DASHBOARD_EXEC','CLAIM_APPROVE')"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/ta-expenses/{id}",
+      "controller": "TaExpenseController.java",
+      "handler": "update",
+      "authorization": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/ta-expenses/{id}/status",
+      "controller": "TaExpenseController.java",
+      "handler": "updateStatus",
+      "authorization": "hasAnyAuthority('USER_MANAGE','DASHBOARD_EXEC','CLAIM_APPROVE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/tasks",
+      "controller": "TaskController.java",
+      "handler": "assign",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/tasks/all",
+      "controller": "TaskController.java",
+      "handler": "everyone",
+      "authorization": "hasAuthority('USER_MANAGE') or hasAuthority('TASK_ASSIGN')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/tasks/export",
+      "controller": "TaskController.java",
+      "handler": "export",
+      "authorization": "hasAuthority('USER_MANAGE') or hasAuthority('TASK_ASSIGN') or hasAuthority('TASK_VIEW_ALL')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/tasks/me",
+      "controller": "TaskController.java",
+      "handler": "mine",
+      "authorization": "hasAnyAuthority('USER_MANAGE','TASK_VIEW_ALL')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/tasks/messages/counts",
+      "controller": "TaskController.java",
+      "handler": "taskMessageCounts",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/tasks/reminder/send",
+      "controller": "TaskController.java",
+      "handler": "sendTaskReminders",
+      "authorization": "hasAnyAuthority('USER_MANAGE','TASK_VIEW_ALL')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/tasks/reminder/settings",
+      "controller": "TaskController.java",
+      "handler": "taskReminderSettings",
+      "authorization": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/tasks/reminder/settings",
+      "controller": "TaskController.java",
+      "handler": "saveTaskReminderSettings",
+      "authorization": "hasAnyAuthority('USER_MANAGE','TASK_VIEW_ALL','TASK_ASSIGN')"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/tasks/team/{batchId}",
+      "controller": "TaskController.java",
+      "handler": "deleteTeamBatch",
+      "authorization": "hasAuthority('USER_MANAGE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/tasks/workload",
+      "controller": "TaskController.java",
+      "handler": "workload",
+      "authorization": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/tasks/{id}",
+      "controller": "TaskController.java",
+      "handler": "delete",
+      "authorization": "hasAuthority('USER_MANAGE') or hasAuthority('TASK_VIEW_ALL')"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/tasks/{id}",
+      "controller": "TaskController.java",
+      "handler": "update",
+      "authorization": "hasAuthority('USER_MANAGE') or hasAuthority('TASK_ASSIGN')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/tasks/{id}/complete",
+      "controller": "TaskController.java",
+      "handler": "complete",
+      "authorization": "hasAnyAuthority('USER_MANAGE','TASK_VIEW_ALL')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/tasks/{id}/messages",
+      "controller": "TaskController.java",
+      "handler": "taskMessages",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/tasks/{id}/messages",
+      "controller": "TaskController.java",
+      "handler": "sendTaskMessage",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/tasks/{id}/progress",
+      "controller": "TaskController.java",
+      "handler": "progress",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/technical-admin/audit-logs",
+      "controller": "TechnicalAdminAuditController.java",
+      "handler": "getAllAuditLogs",
+      "authorization": "hasRole('TECHNICAL_ADMIN')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/technical-admin/audit-logs/company/{companyId}",
+      "controller": "TechnicalAdminAuditController.java",
+      "handler": "getCompanyAuditLogs",
+      "authorization": "hasRole('TECHNICAL_ADMIN')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/technical-admin/auth/login",
+      "controller": "TechnicalAdminAuthController.java",
+      "handler": "login",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/technical-admin/companies",
+      "controller": "TechnicalAdminCompanyController.java",
+      "handler": "getAllCompanies",
+      "authorization": "hasRole('TECHNICAL_ADMIN')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/technical-admin/companies",
+      "controller": "TechnicalAdminCompanyController.java",
+      "handler": "createCompany",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/technical-admin/companies/{companyId}/admins",
+      "controller": "TechnicalAdminCompanyController.java",
+      "handler": "createCompanyAdmin",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/technical-admin/companies/{companyId}/modules",
+      "controller": "TechnicalAdminModuleController.java",
+      "handler": "getCompanyModules",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/technical-admin/companies/{companyId}/modules",
+      "controller": "TechnicalAdminModuleController.java",
+      "handler": "configureModule",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/technical-admin/companies/{companyId}/modules/simulate-access",
+      "controller": "TechnicalAdminModuleController.java",
+      "handler": "simulateAccess",
+      "authorization": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/technical-admin/companies/{id}",
+      "controller": "TechnicalAdminCompanyController.java",
+      "handler": "deleteCompany",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/technical-admin/companies/{id}",
+      "controller": "TechnicalAdminCompanyController.java",
+      "handler": "getCompany",
+      "authorization": "hasRole('TECHNICAL_ADMIN')"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/technical-admin/companies/{id}",
+      "controller": "TechnicalAdminCompanyController.java",
+      "handler": "updateCompany",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/technical-admin/companies/{id}/suspend",
+      "controller": "TechnicalAdminCompanyController.java",
+      "handler": "suspendCompany",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/technical-admin/roles",
+      "controller": "TechnicalAdminRoleController.java",
+      "handler": "roles",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/tickets",
+      "controller": "HelpdeskController.java",
+      "handler": "myTickets",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/tickets",
+      "controller": "HelpdeskController.java",
+      "handler": "create",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/tickets/agents",
+      "controller": "HelpdeskController.java",
+      "handler": "agents",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/tickets/all",
+      "controller": "HelpdeskController.java",
+      "handler": "allTickets",
+      "authorization": "hasAuthority('HELPDESK_AGENT')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/tickets/assigned-to-me",
+      "controller": "HelpdeskController.java",
+      "handler": "agentQueue",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/tickets/upload",
+      "controller": "HelpdeskController.java",
+      "handler": "upload",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/tickets/{id}",
+      "controller": "HelpdeskController.java",
+      "handler": "get",
+      "authorization": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/tickets/{id}",
+      "controller": "HelpdeskController.java",
+      "handler": "update",
+      "authorization": "hasAnyAuthority('HELPDESK_AGENT','USER_MANAGE','DASHBOARD_EXEC')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/tickets/{id}/comments",
+      "controller": "HelpdeskController.java",
+      "handler": "comment",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/tickets/{id}/rating",
+      "controller": "HelpdeskController.java",
+      "handler": "rate",
+      "authorization": "hasAuthority('HELPDESK_AGENT')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/tickets/{id}/status",
+      "controller": "HelpdeskController.java",
+      "handler": "status",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/users",
+      "controller": "UserController.java",
+      "handler": "directory",
+      "authorization": "hasAnyAuthority('USER_MANAGE','EMPLOYEE_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/users/documents",
+      "controller": "UserController.java",
+      "handler": "uploadDocument",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/me",
+      "controller": "UserController.java",
+      "handler": "me",
+      "authorization": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/users/me",
+      "controller": "UserController.java",
+      "handler": "updateMe",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/me/bank",
+      "controller": "UserController.java",
+      "handler": "listBanks",
+      "authorization": "hasAuthority('USER_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/users/me/bank",
+      "controller": "UserController.java",
+      "handler": "addBank",
+      "authorization": "hasAnyAuthority('PAYROLL_RUN', 'PAYROLL_VIEW', 'USER_MANAGE', 'EMPLOYEE_MANAGE')"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/users/me/bank/{bankId}",
+      "controller": "UserController.java",
+      "handler": "deleteBank",
+      "authorization": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/users/me/bank/{bankId}",
+      "controller": "UserController.java",
+      "handler": "updateBank",
+      "authorization": "hasAnyAuthority('USER_MANAGE', 'EMPLOYEE_MANAGE')"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/users/me/photo",
+      "controller": "UserController.java",
+      "handler": "removePhoto",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/users/me/photo",
+      "controller": "UserController.java",
+      "handler": "uploadPhoto",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/my-team",
+      "controller": "UserController.java",
+      "handler": "myTeam",
+      "authorization": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/users/{id}",
+      "controller": "UserController.java",
+      "handler": "deleteUser",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/{id}",
+      "controller": "UserController.java",
+      "handler": "getById",
+      "authorization": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/users/{id}",
+      "controller": "UserController.java",
+      "handler": "updateById",
+      "authorization": "hasAnyAuthority('USER_MANAGE','ATTENDANCE_TEAM','DASHBOARD_EXEC')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/{id}/bank",
+      "controller": "UserController.java",
+      "handler": "listBanksForUser",
+      "authorization": "hasAuthority('USER_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/users/{id}/bank",
+      "controller": "UserController.java",
+      "handler": "addBankForUser",
+      "authorization": "hasAnyAuthority('PAYROLL_RUN', 'PAYROLL_VIEW', 'USER_MANAGE', 'EMPLOYEE_MANAGE')"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/users/{id}/bank/{bankId}",
+      "controller": "UserController.java",
+      "handler": "updateBankForUser",
+      "authorization": "hasAnyAuthority('USER_MANAGE', 'EMPLOYEE_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/users/{id}/credentials",
+      "controller": "UserController.java",
+      "handler": "setCredentials",
+      "authorization": "hasAnyAuthority('USER_MANAGE','EMPLOYEE_MANAGE') or hasRole('TECHNICAL_ADMIN')"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/users/{id}/designation",
+      "controller": "UserController.java",
+      "handler": "removeFromTeam",
+      "authorization": "hasAnyAuthority('USER_MANAGE','EMPLOYEE_MANAGE') or hasRole('TECHNICAL_ADMIN')"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/users/{id}/face-photo",
+      "controller": "UserController.java",
+      "handler": "clearFacePhoto",
+      "authorization": "hasAnyAuthority('USER_MANAGE', 'EMPLOYEE_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/users/{id}/face-photo",
+      "controller": "UserController.java",
+      "handler": "saveFacePhoto",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/users/{id}/offboarding",
+      "controller": "UserController.java",
+      "handler": "offboardUser",
+      "authorization": "hasAuthority('USER_MANAGE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/{id}/password",
+      "controller": "UserController.java",
+      "handler": "currentPassword",
+      "authorization": "hasAnyAuthority('USER_MANAGE', 'EMPLOYEE_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/work-reports",
+      "controller": "WorkReportController.java",
+      "handler": "create",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/work-reports/all",
+      "controller": "WorkReportController.java",
+      "handler": "everyone",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/work-reports/export",
+      "controller": "WorkReportController.java",
+      "handler": "export",
+      "authorization": "hasAnyAuthority('REPORT_VIEW','USER_MANAGE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/work-reports/me",
+      "controller": "WorkReportController.java",
+      "handler": "mine",
+      "authorization": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/work-reports/reminder/pending",
+      "controller": "WorkReportController.java",
+      "handler": "reminderPending",
+      "authorization": "hasAnyAuthority('REPORT_VIEW','USER_MANAGE')"
+    },
+    {
+      "method": "POST",
+      "path": "/api/work-reports/reminder/send",
+      "controller": "WorkReportController.java",
+      "handler": "sendReminders",
+      "authorization": "hasAnyAuthority('REPORT_VIEW','USER_MANAGE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/work-reports/reminder/settings",
+      "controller": "WorkReportController.java",
+      "handler": "reminderSettings",
+      "authorization": "hasAnyAuthority('REPORT_VIEW','USER_MANAGE')"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/work-reports/reminder/settings",
+      "controller": "WorkReportController.java",
+      "handler": "saveReminderSettings",
+      "authorization": "hasAnyAuthority('REPORT_VIEW','USER_MANAGE')"
+    },
+    {
+      "method": "GET",
+      "path": "/api/work-reports/team",
+      "controller": "WorkReportController.java",
+      "handler": "myTeam",
+      "authorization": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/work-reports/{id}",
+      "controller": "WorkReportController.java",
+      "handler": "delete",
+      "authorization": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/work-reports/{id}",
+      "controller": "WorkReportController.java",
+      "handler": "update",
+      "authorization": ""
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/work-reports/{id}/attachments",
+      "controller": "WorkReportController.java",
+      "handler": "removeAttachment",
+      "authorization": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/work-reports/{id}/attachments",
+      "controller": "WorkReportController.java",
+      "handler": "addAttachments",
+      "authorization": ""
+    }
+  ]
+}

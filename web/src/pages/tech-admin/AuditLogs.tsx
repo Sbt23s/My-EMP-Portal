@@ -68,54 +68,52 @@ export function TechAdminAuditLogs() {
     let mounted = true;
     setLoading(true);
 
-    const fetchRealUsersAndGenerateLogs = async () => {
+    /*
+     * Read the audit trail from the server.
+     *
+     * This used to build its rows in the browser: it fetched the user list and
+     * handed it to generateLogsForRealUsers(), which invented a module, an
+     * action and a timestamp for each person. For companies other than Pixous
+     * it did not even do that — it hard-coded "Bala Admin" and "Master Admin"
+     * and read the rest out of localStorage. Every line on this page was made
+     * up, and a page of invented audit records is worse than an empty one:
+     * an audit log is only worth having if it is the truth.
+     */
+    const loadAuditLog = async () => {
       try {
-        const companyName = currentCompany?.companyName || "Unknown Company";
-        const companyId = currentCompany?.companyId;
-        
-        let allUsers: any[] = [];
-        
-        if (companyName === "Pixous Technologies") {
-          // Fetch from API for Pixous
-          const res = await api.get("/users?size=300");
-          const payload = res.data?.data;
-          if (payload?.content && Array.isArray(payload.content)) {
-            allUsers = payload.content;
-          } else if (Array.isArray(payload)) {
-            allUsers = payload;
-          }
-        } else if (companyId) {
-          // Load other companies' users from localStorage
-          // 1. Default seeded admins
-          if (companyId === "BALA-3P91QX") {
-            allUsers.push(
-              { id: "b1", name: "Bala Admin", role: "COMPANY_ADMIN" },
-              { id: "b2", name: "Bala HR", role: "HR_MANAGER" }
-            );
-          } else if (companyId === "MASTER-7H21LP") {
-            allUsers.push({ id: "m1", name: "Master Admin", role: "COMPANY_ADMIN" });
-          }
-          // 2. Extra users created by the tech admin
-          const storageKey = `hrp.company_users_${companyId}`;
-          const storedUsersStr = localStorage.getItem(storageKey);
-          if (storedUsersStr) {
-            const storedUsers = JSON.parse(storedUsersStr);
-            allUsers = [...allUsers, ...storedUsers];
-          }
-        }
-        
+        const companyDbId = currentCompany?.id;
+        const url = companyDbId
+          ? 
+          : ;
+
+        const res = await api.get(url);
+        const rows: any[] = Array.isArray(res.data?.data) ? res.data.data : [];
         if (!mounted) return;
-        setLogs(generateLogsForRealUsers(companyName, allUsers));
+
+        setLogs(
+          rows.map((r) => ({
+            id: r.id,
+            name: r.adminUsername || "Unknown",
+            role: "TECHNICAL_ADMIN",
+            module: r.entityType || "-",
+            action: r.action || "-",
+            // Recorded actions are instantaneous; there is no session to time.
+            duration: "-",
+            timestamp: r.createdAt,
+            detail: [r.oldValue, r.newValue].filter(Boolean).join(" → "),
+            ip: r.ipAddress
+          }))
+        );
       } catch (err) {
-        console.error(err);
         if (!mounted) return;
-        setLogs([]); // On error, show no logs
+        // Nothing invented in place of an answer.
+        setLogs([]);
       } finally {
         if (mounted) setLoading(false);
       }
     };
 
-    fetchRealUsersAndGenerateLogs();
+    loadAuditLog();
 
     return () => { mounted = false; };
   }, [currentCompany]);

@@ -500,9 +500,8 @@ export function TechAdminBranding() {
                 title={scope.kind === "module" ? scopeLabel : "Welcome, Priya"}
                 moduleCode={scope.kind === "module" ? scope.key : null}
                 productName={draft.base.productName || "Employee Management"}
-                welcomeText={draft.base.welcomeText || "Here'''s what'''s happening today."}
+                welcomeText={draft.base.welcomeText || "Here's what's happening today."}
               />
-            </div>
             </div>
 
             {dirty && (

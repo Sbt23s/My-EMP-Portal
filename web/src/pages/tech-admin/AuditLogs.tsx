@@ -200,6 +200,79 @@ export function TechAdminAuditLogs() {
           </div>
         </div>
 
+        {/* ---- who used what, and for how long ---- */}
+        <Card className={cardBg}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-md flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Who used what ({usage.length})
+            </CardTitle>
+            <CardDescription className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+              {/* Says how the time is arrived at. A duration presented without
+                  that reads as measured, and someone will make a decision on it. */}
+              Time is the span from a person's first activity to their last, added
+              up per day — an upper bound on time spent, not a stopwatch.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0 overflow-x-auto">
+            {usage.length === 0 ? (
+              <p className={`p-8 text-center text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                {usageNote || "Nothing recorded yet for this company."}
+              </p>
+            ) : (
+              <table className="w-full text-left text-xs">
+                <thead className={`uppercase font-semibold border-b ${isDark ? "bg-cyan-950/40 text-cyan-400 border-cyan-500/20" : "bg-[#1a0b2e]/60 text-purple-300 border-purple-500/20"}`}>
+                  <tr>
+                    <th className="p-4">Person</th>
+                    <th className="p-4">Modules used</th>
+                    <th className="p-4 text-right">Opens</th>
+                    <th className="p-4 text-right">Days</th>
+                    <th className="p-4 text-right">Time</th>
+                    <th className="p-4">Last seen</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${isDark ? "divide-cyan-500/10" : "divide-purple-500/20"}`}>
+                  {usage.map((p) => {
+                    const mods: [string, number][] = Object.entries(p.modules || {}) as any;
+                    // Busiest module first, so the row reads as what they do.
+                    mods.sort((a, b) => b[1] - a[1]);
+                    const mins = Number(p.activeMinutes) || 0;
+                    return (
+                      <tr key={p.userId}>
+                        <td className={`p-4 font-semibold ${isDark ? "text-slate-200" : "text-slate-800"}`}>
+                          @{p.username}
+                        </td>
+                        <td className="p-4">
+                          <div className="flex flex-wrap gap-1">
+                            {mods.map(([code, count]) => (
+                              <span
+                                key={code}
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${isDark ? "bg-slate-800/60 border-cyan-500/25 text-slate-300" : "bg-slate-100 border-slate-300 text-slate-600"}`}
+                              >
+                                {code.replace(/_/g, " ")} · {count}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="p-4 text-right tabular-nums">{p.touches}</td>
+                        <td className="p-4 text-right tabular-nums">{p.daysActive}</td>
+                        <td className="p-4 text-right tabular-nums">
+                          {/* Minutes below an hour, hours above it. "127
+                              minutes" makes the reader do the division. */}
+                          {mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`}
+                        </td>
+                        <td className={`p-4 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                          {p.lastSeen ? new Date(p.lastSeen).toLocaleString() : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Filters */}
         <Card className={cardBg}>
           <CardContent className="p-4 flex flex-col md:flex-row gap-4 justify-between items-center">

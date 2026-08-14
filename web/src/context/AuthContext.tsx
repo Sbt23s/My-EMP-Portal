@@ -19,7 +19,10 @@ interface AuthContextValue {
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  /** COMPANY_ADMIN answers a SUPER_ADMIN check — see the implementation. */
   hasRole: (...roles: string[]) => boolean;
+  /** The role exactly as written, with no aliasing. */
+  hasRoleExact: (...roles: string[]) => boolean;
   hasPermission: (...perms: string[]) => boolean;
   hasModule: (moduleCode: string) => boolean;
   /** Dashboard visibility. Unknown counts as on — see the implementation. */
@@ -228,7 +231,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  /**
+   * Roles that mean the same thing, so one check answers for both.
+   *
+   * A company's own top administrator is COMPANY_ADMIN; SUPER_ADMIN is the same
+   * job under the name the platform grew up with. They already hold an identical
+   * permission set, but a dozen screens ask `hasRole("SUPER_ADMIN")` by name, and
+   * against those the company's administrator was silently an ordinary employee —
+   * the organisation dashboard, the leave approval view and the admin layout all
+   * turned themselves off for the person meant to run the company.
+   *
+   * Aliased here, once, rather than by adding COMPANY_ADMIN to each of those
+   * checks: the next screen someone writes will ask the same question the same
+   * way, and this makes the right answer the default.
+   *
+   * Nothing about this crosses a company boundary. Which company someone can see
+   * is decided by the company on their account, never by their role — the
+   * server's tenant filter reads `company_id` from the signed-in principal — so
+   * two administrators of two companies remain as separate as they were.
+   */
+  const ROLE_ALIASES: Record<string, string[]> = {
+    SUPER_ADMIN: ["SUPER_ADMIN", "COMPANY_ADMIN"]
+  };
+
   const hasRole = useCallback(
+    (...roles: string[]) =>
+      !!user &&
+      roles.some((r) => (ROLE_ALIASES[r] ?? [r]).some((code) => user.roles?.includes(code))),
+    [user]
+  );
+
+  /**
+   * The role as written, with no aliasing.
+   *
+   * For the one door that is genuinely SUPER_ADMIN's alone — Fresh Start, which
+   * empties a portal. Equivalence of access is not a reason to hand a delete-
+   * everything button to more people, and that decision should have to be made
+   * on purpose rather than inherited from an alias.
+   */
+  const hasRoleExact = useCallback(
     (...roles: string[]) => !!user && roles.some((r) => user.roles?.includes(r)),
     [user]
   );

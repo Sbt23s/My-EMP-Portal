@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
@@ -9,6 +9,7 @@ import {
   PartyPopper, MessageSquare, Building2, FolderGit2, History, ShieldAlert
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useBranding } from "@/hooks/useBranding";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";

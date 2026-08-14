@@ -3,15 +3,8 @@
   "description": "Complete REST API inventory extracted from the Spring Boot controllers.",
   "generated": "2026-08-14",
   "baseUrl": "http://16.192.105.61",
-  "count": 301,
+  "count": 265,
   "endpoints": [
-    {
-      "method": "GET",
-      "path": "",
-      "controller": "HomeController.java",
-      "handler": "home",
-      "authorization": ""
-    },
     {
       "method": "GET",
       "path": "/api/admin/reset",
@@ -27,13 +20,6 @@
       "authorization": "hasRole('SUPER_ADMIN')"
     },
     {
-      "method": "ANY",
-      "path": "/api/admin/reset/api/admin/reset",
-      "controller": "DataResetController.java",
-      "handler": "",
-      "authorization": ""
-    },
-    {
       "method": "GET",
       "path": "/api/assets",
       "controller": "AssetController.java",
@@ -45,13 +31,6 @@
       "path": "/api/assets",
       "controller": "AssetController.java",
       "handler": "create",
-      "authorization": ""
-    },
-    {
-      "method": "ANY",
-      "path": "/api/assets/api/assets",
-      "controller": "AssetController.java",
-      "handler": "",
       "authorization": ""
     },
     {
@@ -115,13 +94,6 @@
       "path": "/api/attendance/absent-today",
       "controller": "AttendanceController.java",
       "handler": "absentToday",
-      "authorization": ""
-    },
-    {
-      "method": "ANY",
-      "path": "/api/attendance/api/attendance",
-      "controller": "AttendanceController.java",
-      "handler": "AttendanceController",
       "authorization": ""
     },
     {
@@ -209,13 +181,6 @@
       "authorization": "hasAnyAuthority('USER_MANAGE', 'EMPLOYEE_MANAGE')"
     },
     {
-      "method": "ANY",
-      "path": "/api/audit/api/audit",
-      "controller": "AuditController.java",
-      "handler": "",
-      "authorization": ""
-    },
-    {
       "method": "GET",
       "path": "/api/audit/entity",
       "controller": "AuditController.java",
@@ -234,13 +199,6 @@
       "path": "/api/audit/summary",
       "controller": "AuditController.java",
       "handler": "summary",
-      "authorization": ""
-    },
-    {
-      "method": "ANY",
-      "path": "/api/auth/api/auth",
-      "controller": "AuthController.java",
-      "handler": "",
       "authorization": ""
     },
     {
@@ -356,24 +314,10 @@
       "authorization": ""
     },
     {
-      "method": "ANY",
-      "path": "/api/cache/api/cache",
-      "controller": "CacheController.java",
-      "handler": "CacheController",
-      "authorization": ""
-    },
-    {
       "method": "GET",
       "path": "/api/cache/status",
       "controller": "CacheController.java",
       "handler": "status",
-      "authorization": ""
-    },
-    {
-      "method": "ANY",
-      "path": "/api/calendar/api/calendar",
-      "controller": "CalendarController.java",
-      "handler": "",
       "authorization": ""
     },
     {
@@ -403,13 +347,6 @@
       "controller": "CalendarController.java",
       "handler": "update",
       "authorization": "hasAnyAuthority('ORG_MANAGE','USER_MANAGE')"
-    },
-    {
-      "method": "ANY",
-      "path": "/api/calls/api/calls",
-      "controller": "CallController.java",
-      "handler": "",
-      "authorization": ""
     },
     {
       "method": "POST",
@@ -461,13 +398,6 @@
       "authorization": "hasAuthority('USER_MANAGE')"
     },
     {
-      "method": "ANY",
-      "path": "/api/chatbot/api/chatbot",
-      "controller": "ChatbotController.java",
-      "handler": "ChatbotController",
-      "authorization": ""
-    },
-    {
       "method": "POST",
       "path": "/api/chatbot/chat",
       "controller": "ChatbotController.java",
@@ -514,13 +444,6 @@
       "path": "/api/communities",
       "controller": "CommunityController.java",
       "handler": "createGroup",
-      "authorization": ""
-    },
-    {
-      "method": "ANY",
-      "path": "/api/communities/api/communities",
-      "controller": "CommunityController.java",
-      "handler": "",
       "authorization": ""
     },
     {
@@ -699,13 +622,6 @@
       "authorization": ""
     },
     {
-      "method": "ANY",
-      "path": "/api/complaints/api/complaints",
-      "controller": "ComplaintController.java",
-      "handler": "",
-      "authorization": ""
-    },
-    {
       "method": "GET",
       "path": "/api/complaints/mine",
       "controller": "ComplaintController.java",
@@ -731,13 +647,6 @@
       "path": "/api/complaints/{id}/respond",
       "controller": "ComplaintController.java",
       "handler": "respond",
-      "authorization": ""
-    },
-    {
-      "method": "ANY",
-      "path": "/api/dashboard/api/dashboard",
-      "controller": "DashboardController.java",
-      "handler": "",
       "authorization": ""
     },
     {
@@ -776,25 +685,11 @@
       "authorization": ""
     },
     {
-      "method": "ANY",
-      "path": "/api/files/api/files",
-      "controller": "FileController.java",
-      "handler": "FileController",
-      "authorization": ""
-    },
-    {
       "method": "POST",
       "path": "/api/leave/allocations/apply-defaults",
       "controller": "LeaveController.java",
       "handler": "allocateDefaults",
       "authorization": "hasAuthority('PAYROLL_RUN')"
-    },
-    {
-      "method": "ANY",
-      "path": "/api/leave/api/leave",
-      "controller": "LeaveController.java",
-      "handler": "types",
-      "authorization": ""
     },
     {
       "method": "POST",
@@ -871,13 +766,6 @@
       "path": "/api/leave/permissions/all",
       "controller": "PermissionController.java",
       "handler": "all",
-      "authorization": ""
-    },
-    {
-      "method": "ANY",
-      "path": "/api/leave/permissions/api/leave/permissions",
-      "controller": "PermissionController.java",
-      "handler": "apply",
       "authorization": ""
     },
     {
@@ -986,22 +874,8 @@
       "authorization": ""
     },
     {
-      "method": "ANY",
-      "path": "/api/my-modules/api/my-modules",
-      "controller": "MyModulesController.java",
-      "handler": "MyModulesController",
-      "authorization": ""
-    },
-    {
       "method": "GET",
       "path": "/api/notifications",
-      "controller": "NotificationController.java",
-      "handler": "feed",
-      "authorization": ""
-    },
-    {
-      "method": "ANY",
-      "path": "/api/notifications/api/notifications",
       "controller": "NotificationController.java",
       "handler": "feed",
       "authorization": ""
@@ -1025,13 +899,6 @@
       "path": "/api/notifications/{id}/read",
       "controller": "NotificationController.java",
       "handler": "markRead",
-      "authorization": ""
-    },
-    {
-      "method": "ANY",
-      "path": "/api/onboarding/api/onboarding",
-      "controller": "OnboardingController.java",
-      "handler": "OnboardingController",
       "authorization": ""
     },
     {
@@ -1060,13 +927,6 @@
       "path": "/api/onboarding/{userId}/tasks/{taskId}/complete",
       "controller": "OnboardingController.java",
       "handler": "completeTask",
-      "authorization": ""
-    },
-    {
-      "method": "ANY",
-      "path": "/api/org/api/org",
-      "controller": "OrgController.java",
-      "handler": "OrgController",
       "authorization": ""
     },
     {
@@ -1130,13 +990,6 @@
       "path": "/api/org/sites",
       "controller": "OrgController.java",
       "handler": "sites",
-      "authorization": ""
-    },
-    {
-      "method": "ANY",
-      "path": "/api/payroll/api/payroll",
-      "controller": "PayrollController.java",
-      "handler": "",
       "authorization": ""
     },
     {
@@ -1301,13 +1154,6 @@
       "authorization": ""
     },
     {
-      "method": "ANY",
-      "path": "/api/performance/api/performance",
-      "controller": "PerformanceController.java",
-      "handler": "PerformanceController",
-      "authorization": ""
-    },
-    {
       "method": "POST",
       "path": "/api/performance/goals",
       "controller": "PerformanceController.java",
@@ -1350,20 +1196,6 @@
       "authorization": ""
     },
     {
-      "method": "ANY",
-      "path": "/api/presence/api/presence",
-      "controller": "PresenceController.java",
-      "handler": "",
-      "authorization": ""
-    },
-    {
-      "method": "ANY",
-      "path": "/api/reports/api/reports",
-      "controller": "ReportController.java",
-      "handler": "ReportController",
-      "authorization": ""
-    },
-    {
       "method": "GET",
       "path": "/api/reports/attendance",
       "controller": "ReportController.java",
@@ -1396,13 +1228,6 @@
       "path": "/api/safety-incidents",
       "controller": "SafetyIncidentController.java",
       "handler": "report",
-      "authorization": ""
-    },
-    {
-      "method": "ANY",
-      "path": "/api/safety-incidents/api/safety-incidents",
-      "controller": "SafetyIncidentController.java",
-      "handler": "",
       "authorization": ""
     },
     {
@@ -1441,13 +1266,6 @@
       "authorization": ""
     },
     {
-      "method": "ANY",
-      "path": "/api/settings/api/settings",
-      "controller": "SettingsController.java",
-      "handler": "SettingsController",
-      "authorization": ""
-    },
-    {
       "method": "POST",
       "path": "/api/ta-expenses",
       "controller": "TaExpenseController.java",
@@ -1459,13 +1277,6 @@
       "path": "/api/ta-expenses/all",
       "controller": "TaExpenseController.java",
       "handler": "getAllExpenses",
-      "authorization": ""
-    },
-    {
-      "method": "ANY",
-      "path": "/api/ta-expenses/api/ta-expenses",
-      "controller": "TaExpenseController.java",
-      "handler": "TaExpenseController",
       "authorization": ""
     },
     {
@@ -1523,13 +1334,6 @@
       "controller": "TaskController.java",
       "handler": "everyone",
       "authorization": "hasAuthority('USER_MANAGE') or hasAuthority('TASK_ASSIGN')"
-    },
-    {
-      "method": "ANY",
-      "path": "/api/tasks/api/tasks",
-      "controller": "TaskController.java",
-      "handler": "",
-      "authorization": ""
     },
     {
       "method": "GET",
@@ -1637,25 +1441,11 @@
       "authorization": "hasRole('TECHNICAL_ADMIN')"
     },
     {
-      "method": "ANY",
-      "path": "/api/technical-admin/audit-logs/api/technical-admin/audit-logs",
-      "controller": "TechnicalAdminAuditController.java",
-      "handler": "TechnicalAdminAuditController",
-      "authorization": ""
-    },
-    {
       "method": "GET",
       "path": "/api/technical-admin/audit-logs/company/{companyId}",
       "controller": "TechnicalAdminAuditController.java",
       "handler": "getCompanyAuditLogs",
       "authorization": "hasRole('TECHNICAL_ADMIN')"
-    },
-    {
-      "method": "ANY",
-      "path": "/api/technical-admin/auth/api/technical-admin/auth",
-      "controller": "TechnicalAdminAuthController.java",
-      "handler": "TechnicalAdminAuthController",
-      "authorization": ""
     },
     {
       "method": "POST",
@@ -1679,13 +1469,6 @@
       "authorization": ""
     },
     {
-      "method": "ANY",
-      "path": "/api/technical-admin/companies/api/technical-admin/companies",
-      "controller": "TechnicalAdminCompanyController.java",
-      "handler": "TechnicalAdminCompanyController",
-      "authorization": ""
-    },
-    {
       "method": "POST",
       "path": "/api/technical-admin/companies/{companyId}/admins",
       "controller": "TechnicalAdminCompanyController.java",
@@ -1704,13 +1487,6 @@
       "path": "/api/technical-admin/companies/{companyId}/modules",
       "controller": "TechnicalAdminModuleController.java",
       "handler": "configureModule",
-      "authorization": ""
-    },
-    {
-      "method": "ANY",
-      "path": "/api/technical-admin/companies/{companyId}/modules/api/technical-admin/companies/{companyId}/modules",
-      "controller": "TechnicalAdminModuleController.java",
-      "handler": "",
       "authorization": ""
     },
     {
@@ -1756,13 +1532,6 @@
       "authorization": ""
     },
     {
-      "method": "ANY",
-      "path": "/api/technical-admin/roles/api/technical-admin/roles",
-      "controller": "TechnicalAdminRoleController.java",
-      "handler": "TechnicalAdminRoleController",
-      "authorization": ""
-    },
-    {
       "method": "GET",
       "path": "/api/tickets",
       "controller": "HelpdeskController.java",
@@ -1789,13 +1558,6 @@
       "controller": "HelpdeskController.java",
       "handler": "allTickets",
       "authorization": "hasAuthority('HELPDESK_AGENT')"
-    },
-    {
-      "method": "ANY",
-      "path": "/api/tickets/api/tickets",
-      "controller": "HelpdeskController.java",
-      "handler": "",
-      "authorization": ""
     },
     {
       "method": "GET",
@@ -1852,13 +1614,6 @@
       "controller": "UserController.java",
       "handler": "directory",
       "authorization": "hasAnyAuthority('USER_MANAGE','EMPLOYEE_MANAGE')"
-    },
-    {
-      "method": "ANY",
-      "path": "/api/users/api/users",
-      "controller": "UserController.java",
-      "handler": "UserController",
-      "authorization": ""
     },
     {
       "method": "POST",
@@ -2026,13 +1781,6 @@
       "path": "/api/work-reports/all",
       "controller": "WorkReportController.java",
       "handler": "everyone",
-      "authorization": ""
-    },
-    {
-      "method": "ANY",
-      "path": "/api/work-reports/api/work-reports",
-      "controller": "WorkReportController.java",
-      "handler": "",
       "authorization": ""
     },
     {

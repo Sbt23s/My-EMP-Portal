@@ -146,8 +146,18 @@ export function TechAdminLayout() {
         {/* Logo Area */}
         <div className={`flex items-center justify-between h-16 px-6 border-b ${isDark ? "border-cyan-500/20" : "border-white/60"}`}>
           <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? "bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" : "bg-cyan-500 shadow-md shadow-cyan-500/30"}`}>
-              <Command className={`w-5 h-5 ${isDark ? "text-slate-950" : "text-white"}`} />
+            {/* The real mark, the same one the portal and the sign-in page use.
+                The generic keyboard glyph that was here belonged to no product.
+                A white plate behind it because the logo is dark artwork and the
+                sidebar is not; onError hides a broken image rather than leaving
+                the browser's placeholder next to the name. */}
+            <div className="w-8 h-8 rounded-lg bg-white shadow-md shadow-cyan-500/20 flex items-center justify-center overflow-hidden p-0.5">
+              <img
+                src="https://pixoustech.com/public/assets/images/common/pixous-logo1.png"
+                alt="Pixous"
+                className="w-full h-full object-contain"
+                onError={(e) => { (e.currentTarget as HTMLElement).style.display = "none"; }}
+              />
             </div>
             <span className={`font-bold text-xl tracking-tight ${isDark ? "text-white" : "text-slate-800"}`}>PIXOUS</span>
           </div>

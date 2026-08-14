@@ -548,6 +548,15 @@ export function TechAdminUsers() {
     total: users.filter((u: any) => inSelectedCompany(u) && checkStatus(u)).length,
   };
 
+  /**
+   * Accounts in this tenant that the administrator-only table leaves out.
+   *
+   * Stated on screen rather than left implicit: a table that quietly shows a
+   * subset is indistinguishable from a table showing everything, and that is how
+   * a mis-created account went missing.
+   */
+  const otherAccounts = privacyMaskedCounts.total - privacyMaskedCounts.admin;
+
   /*
    * Matched to the Dashboard and Companies pages.
    *
@@ -817,7 +826,14 @@ export function TechAdminUsers() {
                       (u.role === 'TEAM_LEAD' || (u.roles && u.roles.includes('TEAM_LEAD'))) ? (isDark ? 'bg-teal-900/40 text-teal-400 border-teal-500/30 shadow-[0_0_8px_rgba(20,184,166,0.3)]' : 'bg-teal-900/50 text-teal-300 border-teal-500/40 shadow-[0_0_8px_rgba(20,184,166,0.3)]') :
                       (isDark ? 'bg-emerald-900/40 text-emerald-400 border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-emerald-900/50 text-emerald-300 border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.3)]')
                     }`}>
-                      {u.role ? u.role.replace("_", " ") : (u.roles && u.roles.length > 0 ? u.roles[0].replace("_", " ") : "EMPLOYEE")}
+                      {/* "No role" rather than "EMPLOYEE". An account whose role
+                          did not save is a broken account, and labelling it as
+                          an employee hid the very thing worth noticing. */}
+                      {u.role
+                        ? u.role.replace(/_/g, " ")
+                        : u.roles && u.roles.length > 0
+                          ? u.roles.join(", ").replace(/_/g, " ")
+                          : "No role"}
                     </span>
                   </td>
                   <td className="p-4">

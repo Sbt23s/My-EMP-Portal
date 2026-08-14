@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 
+import '../core/error/failures.dart';
 import '../core/network/api_client.dart';
 import '../core/network/api_envelope.dart';
 import '../models/attendance.dart';

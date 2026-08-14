@@ -377,7 +377,14 @@ export function TechAdminUsers() {
     setRole(CREATABLE_ROLES[0].code);
   };
 
-  const getRoleCode = (u: any) => u.role || (u.roles && u.roles.length > 0 ? u.roles[0] : "EMPLOYEE");
+  /**
+   * The person's first role, or "" when they hold none.
+   *
+   * It used to answer "EMPLOYEE" for an account with no roles at all. That is a
+   * guess presented as a fact, and it is how an account whose role failed to
+   * save was filed as ordinary staff instead of showing up as broken.
+   */
+  const getRoleCode = (u: any) => u.role || (u.roles && u.roles.length > 0 ? u.roles[0] : "");
 
   /**
    * Pixous sees its own staff in full; every other tenant is shown only its
@@ -799,7 +806,12 @@ export function TechAdminUsers() {
 
                   <td className="p-4 font-mono text-slate-500 relative group">
                     {(() => {
-                      const isNonAdminNonPixous = u.companyName !== "Pixous Technologies" && getRoleCode(u) !== "COMPANY_ADMIN";
+                      // Was a hard-coded company name compared against roles[0],
+                      // so an administrator holding a second role had their
+                      // password shown, and a tenant whose name differed by a
+                      // word was treated as Pixous. Both read from the shared
+                      // helpers now.
+                      const isNonAdminNonPixous = !isPixous && !rolesOf(u).some((r) => isAdminRole(r));
                       if (isNonAdminNonPixous) {
                         return <span className={`italic text-[10px] font-medium ${isDark ? "text-cyan-400" : "text-purple-300"}`}>Hidden for Privacy</span>;
                       }
@@ -838,7 +850,9 @@ export function TechAdminUsers() {
                   </td>
                   <td className="p-4">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${isDark ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)]" : "bg-purple-600/30 text-slate-600 border-purple-500/50 shadow-[0_0_8px_rgba(168,85,247,0.3)]"}`}>
-                      {u.status}
+                      {/* profileStatus is the field the server sends; `status`
+                          does not exist on the row, so this column was blank. */}
+                      {u.profileStatus || u.status || "ACTIVE"}
                     </span>
                   </td>
                   <td className="p-4 text-right space-x-2">

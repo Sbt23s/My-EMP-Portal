@@ -2294,6 +2294,11 @@ export default function DashboardPage() {
             <h1 className="font-display text-3xl font-bold tracking-tight">
               {greeting}, {user?.name?.split(" ")[0] ?? ""} 👋
             </h1>
+            {/* The company's own welcome line, where it has written one. Set in
+                the branding screen; absent for everyone who has not. */}
+            {branding?.base?.welcomeText?.trim() && (
+              <p className="mt-1 text-sm text-white/85">{branding.base.welcomeText}</p>
+            )}
             {/* Nagging someone to mark attendance they have no way to mark
                 is the module leaking through the greeting. */}
             {hasModule("ATTENDANCE") && (

@@ -47,6 +47,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     if (!ok) {
       final error = ref.read(authProvider).error ?? 'Could not sign in.';
+
+      /*
+       * A refusal that is not about the password gets a dialog, not a snack bar.
+       *
+       * "This app is for employees, team leads and HR" is three lines and has to
+       * be read to the end. In a snack bar it is clipped and gone in four
+       * seconds, and an administrator who catches only the first half concludes
+       * they mistyped — so they retype a correct password, and are refused
+       * again. A box they have to dismiss is the difference between
+       * understanding and a loop.
+       */
+      if (error == MobileAccess.refusal) {
+        await showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            icon: const Icon(Icons.desktop_windows_outlined),
+            title: const Text('Use the web portal'),
+            content: Text(error),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Got it'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(

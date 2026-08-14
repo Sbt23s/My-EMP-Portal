@@ -42,9 +42,15 @@ class AppConfig {
   /// behave the same against the same endpoints.
   static const int pageSize = 20;
 
-  /// Only enforced for release builds; a debug build often points at a local
-  /// backend over plain http.
-  static bool get requireHttps =>
-      const bool.fromEnvironment('dart.vm.product') &&
-      !apiBaseUrl.startsWith('https://');
+  /// Whether this build is talking to its server in the clear.
+  ///
+  /// Renamed from `requireHttps`, which promised something it never delivered:
+  /// nothing read it. A getter whose name says a rule is enforced, sitting in a
+  /// config file with no caller, is worse than no getter — the next person
+  /// reading this file would take the guarantee at face value.
+  ///
+  /// What actually decides it is the Android network security config, which
+  /// permits cleartext to one host and refuses it everywhere else. This is left
+  /// as a plain statement of fact, for a banner or a log line to use.
+  static bool get isCleartext => apiBaseUrl.startsWith('http://');
 }

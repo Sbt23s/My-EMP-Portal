@@ -62,8 +62,24 @@ class AuthUser {
   /// Authorisation is decided by the server; these only decide what to draw. A
   /// hidden button is a courtesy, never the control itself.
   bool can(String permission) => permissions.contains(permission);
-  bool hasRole(String role) => roles.contains(role);
   bool canAny(List<String> any) => any.any(permissions.contains);
+
+  /// Whether this person holds the role, treating COMPANY_ADMIN as SUPER_ADMIN.
+  ///
+  /// A tenant company has no SUPER_ADMIN of its own — its top administrator is
+  /// COMPANY_ADMIN, the same job under the name the platform grew up with. They
+  /// hold an identical permission set, and the web client aliases the two in one
+  /// place for exactly this reason. Asked literally here, a company's own
+  /// administrator would be treated as an ordinary employee by every screen that
+  /// checks the role by name.
+  bool hasRole(String role) {
+    if (roles.contains(role)) return true;
+    return role == 'SUPER_ADMIN' && roles.contains('COMPANY_ADMIN');
+  }
+
+  /// The person who runs this company, whichever of the two names they hold.
+  bool get isCompanyAdmin =>
+      hasRole('SUPER_ADMIN') || roles.contains('BOARD_ADMIN');
 
   /// One or two letters for the avatar, from the first and last name.
   String get initials {

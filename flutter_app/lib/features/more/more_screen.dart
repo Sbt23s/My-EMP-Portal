@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/work_items.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/modules_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/states.dart';
 import '../approvals/approvals_screen.dart';
@@ -36,63 +38,133 @@ class MoreScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final modules = ref.watch(modulesProvider);
+
+    /*
+     * Gated on the same module codes the web sidebar uses.
+     *
+     * Built as a list first so the empty case can be told apart from a list that
+     * simply has not been filtered yet — a hub with nothing in it needs to say
+     * why, and it cannot do that from inside a children: [] literal.
+     */
+    final entries = <Widget>[
+      // Only for someone who may actually decide. The server checks this as
+      // well — hiding the row is a courtesy, not the control.
+      if ((ref.watch(currentUserProvider)?.can('LEAVE_APPROVE') ?? false) &&
+          modules.has('LEAVE'))
+        _Entry(
+          icon: Icons.fact_check_outlined,
+          title: 'Approvals',
+          subtitle: 'Leave requests and who is in today',
+          onTap: () => _open(context, const ApprovalsScreen()),
+        ),
+      if (modules.has('PAYROLL'))
+        _Entry(
+          icon: Icons.receipt_long_rounded,
+          title: 'Payslips',
+          subtitle: 'Your monthly pay',
+          onTap: () => _open(context, const PayslipsScreen()),
+        ),
+      if (modules.has('TASKS'))
+        _Entry(
+          icon: Icons.checklist_rounded,
+          title: 'Tasks',
+          subtitle: 'What is assigned to you',
+          onTap: () => _open(context, const TasksScreen()),
+        ),
+      if (modules.has('HELPDESK'))
+        _Entry(
+          icon: Icons.support_agent_rounded,
+          title: 'Support tickets',
+          subtitle: 'Raise and track requests',
+          onTap: () => _open(context, const TicketsScreen()),
+        ),
+      if (modules.has('ASSETS'))
+        _Entry(
+          icon: Icons.inventory_2_outlined,
+          title: 'My assets',
+          subtitle: 'Equipment issued to you',
+          onTap: () => _open(context, const AssetsScreen()),
+        ),
+      if (modules.has('EXPENSES'))
+        _Entry(
+          icon: Icons.receipt_rounded,
+          title: 'Claims',
+          subtitle: 'Travel and expenses',
+          onTap: () => _open(context, const ClaimsScreen()),
+        ),
+      if (modules.has('CALENDAR'))
+        _Entry(
+          icon: Icons.event_outlined,
+          title: 'Calendar',
+          subtitle: 'Holidays, birthdays and meetings',
+          onTap: () => _open(context, const CalendarScreen()),
+        ),
+    ];
+
     return Scaffold(
       appBar: AppBar(title: const Text('More')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Only for someone who may actually decide. The server checks this as
-          // well — hiding the row is a courtesy, not the control.
-          if (ref.watch(currentUserProvider)?.can('LEAVE_APPROVE') ?? false)
-            _Entry(
-              icon: Icons.fact_check_outlined,
-              title: 'Approvals',
-              subtitle: 'Leave requests and who is in today',
-              onTap: () => _open(context, const ApprovalsScreen()),
+      body: entries.isEmpty
+          ? const _NothingHere()
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                // Staggered, so the hub assembles rather than appearing all at
+                // once. Fast enough not to be waited on: the last row is in
+                // place inside a third of a second.
+                for (var i = 0; i < entries.length; i++)
+                  entries[i]
+                      .animate()
+                      .fadeIn(delay: (i * 40).ms, duration: 220.ms)
+                      .slideY(begin: 0.08, end: 0, curve: Curves.easeOutCubic),
+              ],
             ),
-          _Entry(
-            icon: Icons.receipt_long_rounded,
-            title: 'Payslips',
-            subtitle: 'Your monthly pay',
-            onTap: () => _open(context, const PayslipsScreen()),
-          ),
-          _Entry(
-            icon: Icons.checklist_rounded,
-            title: 'Tasks',
-            subtitle: 'What is assigned to you',
-            onTap: () => _open(context, const TasksScreen()),
-          ),
-          _Entry(
-            icon: Icons.support_agent_rounded,
-            title: 'Support tickets',
-            subtitle: 'Raise and track requests',
-            onTap: () => _open(context, const TicketsScreen()),
-          ),
-          _Entry(
-            icon: Icons.inventory_2_outlined,
-            title: 'My assets',
-            subtitle: 'Equipment issued to you',
-            onTap: () => _open(context, const AssetsScreen()),
-          ),
-          _Entry(
-            icon: Icons.receipt_rounded,
-            title: 'Claims',
-            subtitle: 'Travel and expenses',
-            onTap: () => _open(context, const ClaimsScreen()),
-          ),
-          _Entry(
-            icon: Icons.event_outlined,
-            title: 'Calendar',
-            subtitle: 'Holidays, birthdays and meetings',
-            onTap: () => _open(context, const CalendarScreen()),
-          ),
-        ],
-      ),
     );
   }
 
   void _open(BuildContext context, Widget screen) {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
+  }
+}
+
+/// The hub with every module switched off.
+///
+/// Reachable, and worth saying out loud: an empty scroll view is the same shape
+/// as a list that failed to load.
+class _NothingHere extends StatelessWidget {
+  const _NothingHere();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.grid_view_rounded, size: 40, color: scheme.outline),
+            const SizedBox(height: 14),
+            Text(
+              'Nothing here yet',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'None of these modules is switched on for your company.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

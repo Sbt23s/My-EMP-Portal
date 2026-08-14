@@ -1,68 +1,188 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/attendance/attendance_screen.dart';
 import '../features/dashboard/dashboard_screen.dart';
 import '../features/leave/leave_screen.dart';
 import '../features/more/more_screen.dart';
 import '../features/profile/profile_screen.dart';
+import '../providers/app_providers.dart';
+import '../providers/modules_provider.dart';
 
-/// The four tabs, kept alive so switching back does not re-fetch everything.
-class AppShell extends StatefulWidget {
+/// One destination in the bottom bar, and what has to be true for it to appear.
+class _Tab {
+  const _Tab({
+    required this.label,
+    required this.icon,
+    required this.selectedIcon,
+    required this.screen,
+    this.moduleCode,
+    this.hiddenForAdmin = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final IconData selectedIcon;
+  final Widget screen;
+
+  /// Null for a destination that is not a module — Profile, More.
+  final String? moduleCode;
+
+  /// Mirrors the web sidebar's `excludeRole`. An administrator does not punch in
+  /// or apply for their own leave; they approve other people's.
+  final bool hiddenForAdmin;
+}
+
+/// The tabs, gated exactly as the web client gates its sidebar.
+///
+/// A module switched off has to disappear here too. It did not: the app read no
+/// settings at all, so switching Chat off hid it in the browser and left it on
+/// every phone — which is worse than not having the setting, because somebody
+/// believes a module is off when it is still in a colleague's pocket.
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
 
   @override
-  State<AppShell> createState() => _AppShellState();
+  ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _AppShellState extends ConsumerState<AppShell> {
   int _index = 0;
 
-  // IndexedStack rather than swapping children: each tab keeps its scroll
-  // position and its loaded data, which is what a person expects when they come
-  // back to a tab they were just on.
-  static const _screens = [
-    DashboardScreen(),
-    AttendanceScreen(),
-    LeaveScreen(),
-    MoreScreen(),
-    ProfileScreen(),
+  static const List<_Tab> _all = [
+    _Tab(
+      label: 'Home',
+      icon: Icons.dashboard_outlined,
+      selectedIcon: Icons.dashboard_rounded,
+      screen: DashboardScreen(),
+      moduleCode: 'DASHBOARD',
+    ),
+    _Tab(
+      label: 'Attendance',
+      icon: Icons.access_time_outlined,
+      selectedIcon: Icons.access_time_filled_rounded,
+      screen: AttendanceScreen(),
+      moduleCode: 'ATTENDANCE',
+      hiddenForAdmin: true,
+    ),
+    _Tab(
+      label: 'Leave',
+      icon: Icons.event_note_outlined,
+      selectedIcon: Icons.event_note_rounded,
+      screen: LeaveScreen(),
+      moduleCode: 'LEAVE',
+      hiddenForAdmin: true,
+    ),
+    _Tab(
+      label: 'More',
+      icon: Icons.grid_view_outlined,
+      selectedIcon: Icons.grid_view_rounded,
+      screen: MoreScreen(),
+    ),
+    _Tab(
+      label: 'Profile',
+      icon: Icons.person_outline_rounded,
+      selectedIcon: Icons.person_rounded,
+      screen: ProfileScreen(),
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final modules = ref.watch(modulesProvider);
+    final user = ref.watch(currentUserProvider);
+    final isAdmin = user?.isCompanyAdmin ?? false;
+
+    final visible = _all.where((tab) {
+      if (tab.hiddenForAdmin && isAdmin) return false;
+      if (tab.moduleCode != null && !modules.has(tab.moduleCode!)) return false;
+      return true;
+    }).toList();
+
+    // Profile is not a module and cannot be switched off, so this is only
+    // reachable if the list itself were emptied — but an index past the end
+    // throws, and the list shrinks whenever a module is switched off while
+    // somebody is standing on that tab.
+    if (visible.isEmpty) {
+      return const Scaffold(body: SafeArea(child: _NothingEnabled()));
+    }
+    final index = _index.clamp(0, visible.length - 1);
+
     return Scaffold(
-      body: IndexedStack(index: _index, children: _screens),
+      body: IndexedStack(
+        index: index,
+        // Kept alive rather than rebuilt: each tab holds its scroll position and
+        // its loaded data, which is what a person expects coming back to a tab
+        // they were just on.
+        children: [for (final tab in visible) tab.screen],
+      ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
+        selectedIndex: index,
         onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard_rounded),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.access_time_outlined),
-            selectedIcon: Icon(Icons.access_time_filled_rounded),
-            label: 'Attendance',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.event_note_outlined),
-            selectedIcon: Icon(Icons.event_note_rounded),
-            label: 'Leave',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.grid_view_outlined),
-            selectedIcon: Icon(Icons.grid_view_rounded),
-            label: 'More',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Profile',
-          ),
+        destinations: [
+          for (final tab in visible)
+            NavigationDestination(
+              icon: Icon(tab.icon),
+              selectedIcon: Icon(tab.selectedIcon),
+              label: tab.label,
+            ),
         ],
       ),
+    );
+  }
+}
+
+/// Shown when this company has no module the person in this role may open.
+///
+/// Without it they would sign in to an app with an empty bar and a blank panel,
+/// indistinguishable from the application being broken. It is not broken;
+/// nothing has been switched on for them yet, and that is worth saying in those
+/// words. The same notice, in the same words, as the web client shows.
+class _NothingEnabled extends StatelessWidget {
+  const _NothingEnabled();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 56,
+              width: 56,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.16),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.shield_outlined, color: Colors.amber, size: 28),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Nothing is switched on for you yet',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Your account is fine and you are signed in correctly. No modules '
+              'have been enabled for your company yet, so there are no pages to '
+              'show.\n\nAsk your administrator to enable the modules your team needs.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: scheme.onSurfaceVariant, height: 1.5),
+            ),
+          ],
+        ),
+      ).animate().fadeIn(duration: 260.ms).slideY(begin: 0.04, end: 0),
     );
   }
 }

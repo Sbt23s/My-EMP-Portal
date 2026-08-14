@@ -184,6 +184,17 @@ function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { notifications, unreadCount, markAllRead, markRead } = useNotifications(user?.id);
 
+  /*
+   * The company's look, resolved for this person on this page.
+   *
+   * Mounted here, at the one component every signed-in screen sits inside, so
+   * moving between pages re-resolves rather than re-mounts — which is what lets
+   * a module with its own colour take it on navigation, with no flash of the
+   * company default in between.
+   */
+  const activeModule = useMemo(() => moduleForPath(location.pathname), [location.pathname]);
+  const brand = useBranding(activeModule);
+
   const isSupAdmin = hasRole("SUPER_ADMIN") || hasRole("COMPANY_ADMIN");
 
   // Track open/closed state for each group by key
@@ -263,7 +274,11 @@ function AppShell() {
                 return "PIXOUS TECHNOLOGIES";
               })()}
             </div>
-            <div className="text-[10px] text-white/50 uppercase tracking-widest font-semibold truncate">EMPLOYEE MANAGEMENT SYSTEM</div>
+            {/* The company's own wording where it has set some. Left empty in
+                the branding screen, this stays as it has always read. */}
+            <div className="text-[10px] text-white/50 uppercase tracking-widest font-semibold truncate">
+              {brand?.productName || "EMPLOYEE MANAGEMENT SYSTEM"}
+            </div>
           </div>
         </div>
 

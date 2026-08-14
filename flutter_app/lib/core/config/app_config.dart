@@ -27,7 +27,13 @@ class AppConfig {
     defaultValue: 'http://16.192.105.61/api',
   );
 
-  /// The websocket the portal uses for notifications, chat and presence.
+  /// The websocket the *web* portal uses for notifications, chat and presence.
+  ///
+  /// Nothing in this app connects to it yet — no socket client exists, so the
+  /// constant is tree-shaken straight out of the release binary. Kept because it
+  /// is the right address when one is written, but read the sentence above
+  /// before assuming the phone receives anything pushed: notifications here are
+  /// whatever the screens fetch when they open.
   static const String wsUrl = String.fromEnvironment(
     'WS_URL',
     defaultValue: 'http://16.192.105.61/ws',

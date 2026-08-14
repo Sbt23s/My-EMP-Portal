@@ -83,8 +83,8 @@ export function TechAdminAuditLogs() {
       try {
         const companyDbId = currentCompany?.id;
         const url = companyDbId
-          ? 
-          : ;
+          ? "/technical-admin/audit-logs/company/" + companyDbId
+          : "/technical-admin/audit-logs";
 
         const res = await api.get(url);
         const rows: any[] = Array.isArray(res.data?.data) ? res.data.data : [];

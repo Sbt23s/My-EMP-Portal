@@ -32,6 +32,8 @@ export function TechAdminUsers() {
   const [selectedCompanyFilter, setSelectedCompanyFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"ACTIVE" | "OFFBOARDED" | "ALL">("ACTIVE");
   const [visiblePasswords, setVisiblePasswords] = useState<{ [key: number]: boolean }>({});
+  /** Whether to list a tenant's non-administrator accounts as well. */
+  const [showNonAdmins, setShowNonAdmins] = useState(false);
   
   // Provision User Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -471,7 +473,17 @@ export function TechAdminUsers() {
      * look as though it were. The administrator is the account a technical
      * admin genuinely needs — it is who they hand a tenant over to.
      */
-    const adminOnly = !isPixous && !isAdminRole(roleCode);
+    /*
+     * The one way out of a deadlock.
+     *
+     * Restricting this table to administrators is right, but it also meant an
+     * account created with the wrong role could not be seen here, and therefore
+     * could not be corrected — the screen that made the mistake was the one
+     * screen that could not fix it. The toggle opens the rest of the tenant's
+     * accounts for exactly that. The password column stays hidden for them; being
+     * able to repair a role is not a reason to read somebody's login.
+     */
+    const adminOnly = !isPixous && !showNonAdmins && !isAdminRole(roleCode);
 
     return matchesCompany && matchesSearch && matchesRole && matchesStatus && !adminOnly;
   });

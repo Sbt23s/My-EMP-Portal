@@ -104,8 +104,35 @@ export function TechAdminModuleManagement() {
   // Current company modules state
   const activeTenantModules = companyModules[tenantId] || [];
 
+  /**
+   * Modules this tenant has that the built-in catalogue does not know about.
+   *
+   * Custom modules are created against a company, so they exist only in that
+   * company's own rows. Listing the catalogue alone meant a module somebody had
+   * just created did not appear on the screen that manages modules, and could
+   * not be switched on or off — the count said seventeen no matter how many were
+   * added.
+   *
+   * BRANDING is excluded on purpose: that row is where the appearance settings
+   * are kept, not a feature anyone navigates to. It is stored as a module row
+   * because the column it needs already exists there.
+   */
+  const customTenantModules = activeTenantModules
+    .filter((tm) => tm.code && tm.code.toUpperCase() !== "BRANDING")
+    .filter((tm) => !defaultModulesTemplate.some((m) => m.code === tm.code))
+    .map((tm) => ({
+      id: `custom-${tm.code}`,
+      code: tm.code,
+      name: (tm as any).name || tm.code.replace(/_/g, " "),
+      icon: MODULE_ICONS[tm.code] ?? <Box className="w-5 h-5 text-slate-400" />,
+      description: (tm as any).description || "Created for this company.",
+      category: "Custom",
+      categoryColor: CATEGORY_COLOURS.Custom,
+      dependencies: '-'
+    }));
+
   // Merge master static properties with real-time tenant enabled states
-  const allMergedModules = masterModulesList.map(master => {
+  const allMergedModules = [...masterModulesList, ...customTenantModules].map(master => {
     const tenantMatch = activeTenantModules.find(tm => tm.code === master.code);
     return {
       ...master,

@@ -566,8 +566,19 @@ class WorkRepository {
   }
 
   /// GET /payroll/salary-months — the months payroll has been run for.
-  Future<List<Map<String, dynamic>>> salaryMonths() async {
-    final data = await _api.get('/payroll/salary-months');
+  ///
+  /// The server requires the month and year to return, so both are passed.
+  /// (Earlier versions of this method sent neither, which the server answered
+  /// with 400 — the screen never called it, but the method was a trap for
+  /// whoever wired it up later.)
+  Future<List<Map<String, dynamic>>> salaryMonths({
+    required int month,
+    required int year,
+  }) async {
+    final data = await _api.get('/payroll/salary-months', query: {
+      'month': '$month',
+      'year': '$year',
+    });
     return ApiEnvelope.listOf(data).toList();
   }
 

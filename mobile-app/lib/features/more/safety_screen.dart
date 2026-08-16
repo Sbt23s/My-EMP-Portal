@@ -181,6 +181,7 @@ class _IncidentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final status = (incident.status ?? 'OPEN').toUpperCase();
     final (label, color) = switch (status) {
       'RESOLVED' || 'CLOSED' => (incident.status!, AppTheme.success(context)),

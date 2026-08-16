@@ -9,8 +9,10 @@ import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import type { ApiEnvelope, LeaveRequest, EmployeeTaskGroup } from "@/types";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
 import { useAuth } from "@/hooks/useAuth";
@@ -408,19 +410,16 @@ export default function LeaveApprovalsPage() {
 
       {/* Leave Details Modal */}
       {viewModalData && (
-        <Dialog open={!!viewModalData} onOpenChange={(open) => !open && setViewModalData(null)}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-3">
-                <Avatar name={viewModalData.employeeName} className="h-10 w-10 bg-primary/10 text-primary" />
-                <div>
-                  <div className="text-base font-bold">{viewModalData.employeeName}</div>
-                  <div className="text-xs font-normal text-muted-foreground">{viewModalData.team || viewModalData.employeeCode || "Employee"}</div>
-                </div>
-              </DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4 text-sm">
-              <div className="grid grid-cols-2 gap-2">
+        <Dialog open={!!viewModalData} onClose={() => setViewModalData(null)} className="sm:max-w-md">
+          <div className="flex items-center gap-3 mb-6">
+            <Avatar name={viewModalData.employeeName} className="h-10 w-10 bg-primary/10 text-primary" />
+            <div>
+              <div className="text-base font-bold">{viewModalData.employeeName}</div>
+              <div className="text-xs font-normal text-muted-foreground">{viewModalData.team || viewModalData.employeeCode || "Employee"}</div>
+            </div>
+          </div>
+          <div className="grid gap-4 py-4 text-sm">
+            <div className="grid grid-cols-2 gap-2">
                 <div className="font-medium text-muted-foreground">Leave Type</div>
                 <div className="font-semibold">{viewModalData.leaveTypeName}</div>
                 
@@ -476,7 +475,7 @@ export default function LeaveApprovalsPage() {
                 </div>
               )}
             </div>
-          </DialogContent>
+          </div>
         </Dialog>
       )}
     </div>

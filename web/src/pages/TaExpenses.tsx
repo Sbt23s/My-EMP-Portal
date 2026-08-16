@@ -288,9 +288,8 @@ export default function TaExpensesPage() {
                             Review
                           </Button>
                         )}
-                        {/* HR may correct any claim; everyone else only their
-                            own, and only until it has been reviewed. */}
-                        {(canEditAnyClaim || (!canApprove && scope === "MINE" && row.status === "PENDING")) && (
+                        {/* Claims can only be edited while PENDING, by HR or the creator */}
+                        {(row.status === "PENDING" && (canEditAnyClaim || (!canApprove && scope === "MINE"))) && (
                           <Button
                             size="sm"
                             variant="outline"

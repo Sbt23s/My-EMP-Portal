@@ -2088,13 +2088,11 @@ function EmployeeWorkListSection({ fromDate, toDate, teamById }: { fromDate: str
                 ))}
               </tbody>
             </table>
-            {totalPages > 1 && (
-              <Pagination
-                  page={pageSafe} totalPages={totalPages} onChange={setPage}
-                  pageSize={paged.pageSize} onPageSizeChange={paged.setPageSize}
-                  total={paged.total}
-                />
-            )}
+            <Pagination
+                page={pageSafe} totalPages={totalPages} onChange={setPage}
+                pageSize={paged.pageSize} onPageSizeChange={paged.setPageSize}
+                total={paged.total}
+              />
           </div>
         )}
       </CardContent>

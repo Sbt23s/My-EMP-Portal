@@ -276,6 +276,7 @@ class CallService {
     final from = _peer;
     if (from == null) return;
 
+    _ringTimer?.cancel();
     _state = CallState.connecting;
     _emit();
 
@@ -398,14 +399,14 @@ class CallService {
   void _startRingTimer() {
     _ringTimer?.cancel();
     _ringTimer = Timer(_noAnswer, () async {
-      if (_state == CallState.outgoing) {
-        // Nobody picked up. Log it as missed and clear the screen.
-        final to = _peer?.id;
-        if (to != null) {
-          await _logCall(to, outcome: 'MISSED', seconds: 0);
-        }
-        await hangUp(notify: false);
+      if (_state != CallState.outgoing && _state != CallState.incoming) return;
+      // Nobody picked up. The caller logs it as missed; the callee simply stops
+      // ringing. Either way the screen clears.
+      final to = _peer?.id;
+      if (_state == CallState.outgoing && to != null) {
+        await _logCall(to, outcome: 'MISSED', seconds: 0);
       }
+      await hangUp(notify: false);
     });
   }
 
@@ -441,6 +442,8 @@ class CallService {
         // Saying "ringing" is also what tells the caller to send the offer, so
         // it must only be said once this side is genuinely listening.
         await _send(fromId, 'ringing', null);
+        // A call that is never answered stops ringing — on this side too.
+        _startRingTimer();
 
       case 'ringing':
         // The other side is listening — send the offer now.

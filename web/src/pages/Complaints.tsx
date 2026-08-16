@@ -53,7 +53,7 @@ const STATUS_FLOW = [
 ];
 
 const NEXT_STATUS: Record<string, string[]> = {
-  OPEN: ["OPEN", "IN_REVIEW", "RESOLVED", "REJECTED"],
+  OPEN: ["OPEN", "IN_REVIEW"],
   IN_REVIEW: ["IN_REVIEW", "RESOLVED", "REJECTED"],
   RESOLVED: ["RESOLVED"],
   REJECTED: ["REJECTED"]

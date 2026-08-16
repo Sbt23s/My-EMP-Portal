@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Users2, Search, MessageSquare, Send, Volume2, Square, Sparkles, Rocket
+  Users2, Search, MessageSquare, Send, Volume2, Square, Sparkles, Rocket,
+  Paperclip, FileText, Trash2, SmilePlus, X, Loader2
 } from "lucide-react";
 import dayjs from "dayjs";
 import { api } from "@/lib/api";
@@ -15,10 +16,97 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Avatar } from "@/components/ui/avatar";
+import { Avatar, resolvePhotoUrl } from "@/components/ui/avatar";
+import { PhotoLightbox } from "@/components/PhotoLightbox";
+import toast from "react-hot-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { ApiEnvelope, UserSummary, LeaveRequest } from "@/types";
+
+const MAX_ATTACHMENT_MB = 2048;
+const MAX_BATCH_MB = 5120;
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "🎉", "🙏", "✅"];
+
+const IMAGE_RE = /\.(png|jpe?g|gif|webp|bmp|avif)$/i;
+const VIDEO_RE = /\.(mp4|webm|mov|m4v|ogv)$/i;
+const PDF_RE = /\.pdf$/i;
+const fileName = (path: string) => decodeURIComponent(path.split("/").pop() || "file");
+
+function MessageAttachments({
+  paths, isMe, onOpenImage
+}: {
+  paths?: string;
+  isMe: boolean;
+  onOpenImage: (url: string) => void;
+}) {
+  const list = String(paths || "").split(",").map((p) => p.trim()).filter(Boolean);
+  if (list.length === 0) return null;
+
+  return (
+    <div className={cn("mb-1.5 grid gap-1.5", list.length > 1 && "grid-cols-2")}>
+      {list.map((p) => {
+        const url = resolvePhotoUrl(p) ?? "";
+        if (IMAGE_RE.test(p)) {
+          return (
+            <button
+              key={p}
+              type="button"
+              onClick={() => onOpenImage(url)}
+              title="Open full size"
+              className="overflow-hidden rounded-xl"
+            >
+              <img
+                src={url}
+                alt={fileName(p)}
+                className={cn(
+                  "cursor-zoom-in object-cover",
+                  list.length > 1 ? "h-28 w-full" : "max-h-64 w-full"
+                )}
+              />
+            </button>
+          );
+        }
+        if (VIDEO_RE.test(p)) {
+          return (
+            <video
+              key={p}
+              src={url}
+              controls
+              preload="metadata"
+              className={cn("rounded-xl", list.length > 1 ? "h-28 w-full" : "max-h-64 w-full")}
+            />
+          );
+        }
+        return (
+          <a
+            key={p}
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className={cn(
+              "flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-medium underline-offset-2 hover:underline",
+              isMe ? "bg-white/15" : "bg-muted/60"
+            )}
+          >
+            {PDF_RE.test(p) ? <FileText className="h-4 w-4 shrink-0" /> : <Paperclip className="h-4 w-4 shrink-0" />}
+            <span className="truncate">{fileName(p)}</span>
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
+function StagedThumb({ file }: { file: File }) {
+  const [url, setUrl] = useState<string>();
+  useEffect(() => {
+    const next = URL.createObjectURL(file);
+    setUrl(next);
+    return () => URL.revokeObjectURL(next);
+  }, [file]);
+  if (!url) return <FileText className="h-4 w-4 text-muted-foreground" />;
+  return <img src={url} alt="" className="h-7 w-7 rounded object-cover" />;
+}
 
 interface MyTeam {
   teamName: string;
@@ -485,7 +573,12 @@ function TeamChatRail({
   const { user } = useAuth();
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
-  const { messages, isLoading, sendMessage } = useChat(group?.id ?? null);
+  const { messages, isLoading, sendMessage, sendAttachments, deleteMessage, react } = useChat(group?.id ?? null);
+
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [sendingFiles, setSendingFiles] = useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   const recent = messages.slice(-50);
 
@@ -494,11 +587,46 @@ function TeamChatRail({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [recent.length]);
 
-  const send = () => {
+  const send = async () => {
     const text = draft.trim();
-    if (!text || !group) return;
-    sendMessage(text);
-    setDraft("");
+    if (!text && pendingFiles.length === 0) return;
+    if (!group) return;
+
+    if (pendingFiles.length > 0) {
+      setSendingFiles(true);
+      const batch = pendingFiles;
+      setPendingFiles([]);
+      try {
+        await sendAttachments(batch, text);
+        setDraft("");
+      } catch (err: any) {
+        toast.error("Failed to upload attachments");
+        setPendingFiles(batch);
+      } finally {
+        setSendingFiles(false);
+      }
+    } else {
+      sendMessage(text);
+      setDraft("");
+    }
+  };
+
+  const handleFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const added = Array.from(files);
+    const sz = (sum: number, f: File) => sum + f.size;
+    const batchTotal = pendingFiles.reduce(sz, 0) + added.reduce(sz, 0);
+
+    if (added.some((f) => f.size > MAX_ATTACHMENT_MB * 1024 * 1024)) {
+      toast.error(`No single file can be larger than ${MAX_ATTACHMENT_MB}MB.`);
+      return;
+    }
+    if (batchTotal > MAX_BATCH_MB * 1024 * 1024) {
+      toast.error(`The total size cannot exceed ${MAX_BATCH_MB}MB at once.`);
+      return;
+    }
+    setPendingFiles((p) => [...p, ...added]);
+    if (fileInput.current) fileInput.current.value = "";
   };
 
   return (
@@ -531,19 +659,89 @@ function TeamChatRail({
               ) : recent.map((m) => {
                 const mine = m.senderId === user?.id;
                 return (
-                  <div key={m.messageId} className={cn("flex gap-2", mine && "flex-row-reverse")}>
+                  <div key={m.messageId} className={cn("group flex gap-2", mine && "flex-row-reverse")}>
                     <Avatar name={m.senderName} className="h-7 w-7 shrink-0 text-[10px]" />
-                    <div className={cn(
-                      "max-w-[78%] rounded-xl px-3 py-2",
-                      mine ? "bg-primary text-primary-foreground" : "bg-muted"
-                    )}>
-                      {!mine && <div className="text-[11px] font-semibold text-primary">{m.senderName}</div>}
-                      <p className="text-[12.5px] leading-snug">
-                        {m.audioPath ? "🎤 Voice message" : m.content}
-                      </p>
-                      <div className={cn("mt-0.5 text-[10px]", mine ? "text-primary-foreground/75" : "text-muted-foreground")}>
-                        {dayjs(m.sentAt).format("h:mm A")}
+                    <div className="flex max-w-[78%] flex-col gap-1">
+                      <div className={cn(
+                        "rounded-xl px-3 py-2 relative",
+                        mine ? "bg-primary text-primary-foreground" : "bg-muted"
+                      )}>
+                        {!mine && <div className="text-[11px] font-semibold text-primary">{m.senderName}</div>}
+                        
+                        <MessageAttachments paths={m.attachments} isMe={mine} onOpenImage={setLightbox} />
+                        
+                        {m.deleted ? (
+                          <p className={cn("text-[12.5px] italic opacity-50", mine ? "text-primary-foreground" : "text-muted-foreground")}>
+                            Message deleted
+                          </p>
+                        ) : (
+                          <p className="text-[12.5px] leading-snug whitespace-pre-wrap break-words">
+                            {m.audioPath ? "🎤 Voice message" : m.content}
+                          </p>
+                        )}
+                        <div className={cn("mt-0.5 text-[10px]", mine ? "text-primary-foreground/75" : "text-muted-foreground")}>
+                          {dayjs(m.sentAt).format("h:mm A")}
+                        </div>
+
+                        {/* Quick actions (hover) */}
+                        {!m.deleted && (
+                          <div className={cn(
+                            "absolute top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-1",
+                            mine ? "right-[105%]" : "left-[105%]"
+                          )}>
+                            <div className="relative group/react">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full bg-background shadow-sm border text-muted-foreground hover:text-foreground">
+                                <SmilePlus className="h-3.5 w-3.5" />
+                              </Button>
+                              <div className="absolute top-1/2 -translate-y-1/2 hidden group-hover/react:flex items-center gap-1 rounded-full bg-background border shadow-md p-1 z-10" style={{ [mine ? "right" : "left"]: "100%", margin: "0 4px" }}>
+                                {QUICK_REACTIONS.map((emoji) => (
+                                  <button
+                                    key={emoji}
+                                    onClick={() => react(m.messageId, emoji)}
+                                    className={cn(
+                                      "h-7 w-7 rounded-full text-sm flex items-center justify-center hover:bg-muted transition-transform hover:scale-110",
+                                      (m.myReactions || []).includes(emoji) && "bg-primary/10"
+                                    )}
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            {mine && (
+                              <Button
+                                variant="ghost" size="icon"
+                                onClick={() => { if (confirm("Delete this message?")) deleteMessage(m.messageId); }}
+                                className="h-7 w-7 rounded-full bg-background shadow-sm border text-muted-foreground hover:text-destructive"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        )}
                       </div>
+
+                      {/* Reactions display */}
+                      {m.reactions && Object.keys(m.reactions).length > 0 && (
+                        <div className={cn("flex flex-wrap gap-1 mt-0.5", mine && "justify-end")}>
+                          {Object.entries(m.reactions).map(([emoji, count]) => {
+                            const iReacted = (m.myReactions || []).includes(emoji);
+                            return (
+                              <button
+                                key={emoji}
+                                onClick={() => react(m.messageId, emoji)}
+                                className={cn(
+                                  "flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] hover:bg-muted/50",
+                                  iReacted ? "border-primary/50 bg-primary/10" : "bg-card"
+                                )}
+                              >
+                                <span>{emoji}</span>
+                                {count > 1 && <span className="font-medium text-muted-foreground">{count}</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -551,17 +749,54 @@ function TeamChatRail({
               <div ref={bottomRef} />
             </div>
 
+            {pendingFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2 border-t bg-muted/20 p-3 pb-0">
+                {pendingFiles.map((file, i) => (
+                  <div key={i} className="group relative flex items-center gap-2 rounded-md border bg-card p-1 pr-2 shadow-sm">
+                    <StagedThumb file={file} />
+                    <div className="max-w-[120px] truncate text-[11px] font-medium">{file.name}</div>
+                    <button
+                      type="button"
+                      onClick={() => setPendingFiles((p) => p.filter((_, idx) => idx !== i))}
+                      className="absolute -right-1.5 -top-1.5 hidden rounded-full border bg-background p-0.5 text-muted-foreground hover:text-destructive group-hover:block"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="flex items-center gap-2 border-t p-3">
+              <input
+                type="file"
+                multiple
+                className="hidden"
+                ref={fileInput}
+                onChange={(e) => handleFiles(e.target.files)}
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0 text-muted-foreground hover:text-foreground"
+                onClick={() => fileInput.current?.click()}
+                disabled={sendingFiles}
+              >
+                <Paperclip className="h-5 w-5" />
+              </Button>
               <Input
                 placeholder={`Message ${teamName}…`}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") send(); }}
+                disabled={sendingFiles}
               />
-              <Button size="sm" onClick={send} disabled={!draft.trim()}>
-                <Send className="h-4 w-4" />
+              <Button size="sm" onClick={send} disabled={(!draft.trim() && pendingFiles.length === 0) || sendingFiles}>
+                {sendingFiles ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
             </div>
+            
+            {lightbox && <PhotoLightbox url={lightbox} onClose={() => setLightbox(null)} />}
           </>
         )}
       </CardContent>

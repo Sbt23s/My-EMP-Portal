@@ -56,20 +56,36 @@ public class HelpdeskService {
      * Nobody ever appears in their own list: a request you would handle yourself
      * is not a request.
      */
+    private static boolean isSystemAdminRole(User u) {
+        if (u == null) return false;
+        boolean hasRole = u.getRoles().stream()
+                .map(com.pixous.hrportal.modules.user.Role::getCode)
+                .anyMatch(c -> "SUPER_ADMIN".equals(c) || "COMPANY_ADMIN".equals(c));
+        boolean hasDesig = u.getDesignationTitle() != null && u.getDesignationTitle().toLowerCase().contains("admin");
+        return hasRole || hasDesig || "PIX-E001".equals(u.getEmployeeCode());
+    }
+
     @Transactional(readOnly = true)
     public java.util.List<java.util.Map<String, Object>> agents(Long requesterId) {
         User me = requesterId == null ? null : userRepository.findById(requesterId).orElse(null);
         boolean iAmHr = isHrRole(me);
 
-        java.util.stream.Stream<User> candidates = iAmHr
-                // Looked up by code, not by permission: whether he holds the
-                // helpdesk permission is not the question, he is the person.
-                ? userRepository.findByEmployeeCode(HR_TICKET_APPROVER_CODE).stream()
-                : userRepository.findByPermission("HELPDESK_AGENT").stream().filter(HelpdeskService::isHrRole);
+        java.util.stream.Stream<User> candidates;
+        if (iAmHr) {
+            candidates = java.util.stream.Stream.concat(
+                    userRepository.findByEmployeeCode(HR_TICKET_APPROVER_CODE).stream(),
+                    userRepository.findByPermission("HELPDESK_AGENT").stream().filter(HelpdeskService::isSystemAdminRole)
+            );
+        } else {
+            candidates = userRepository.findByPermission("HELPDESK_AGENT").stream()
+                    .filter(u -> isHrRole(u) || isSystemAdminRole(u))
+                    .filter(u -> !HR_TICKET_APPROVER_CODE.equals(u.getEmployeeCode()));
+        }
 
         return candidates
                 .filter(User::isEnabled)
                 .filter(u -> !u.getId().equals(requesterId))
+                .distinct() // In case of overlap
                 .map(u -> {
                     java.util.Map<String, Object> m = new java.util.HashMap<>();
                     m.put("id", u.getId());

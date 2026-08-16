@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -94,6 +94,12 @@ export default function LeavePage() {
       (await api.get<ApiEnvelope<{ id: number; name: string; code: string }[]>>(
         `/leave/approvers?days=${dayCount}`)).data.data
   });
+
+  useEffect(() => {
+    if (approvers.data && approvers.data.length === 1 && !watch("requestedTo")) {
+      reset({ ...watch(), requestedTo: String(approvers.data[0].id) });
+    }
+  }, [approvers.data, reset, watch]);
 
   const apply = useMutation({
     mutationFn: async (values: FormValues) =>

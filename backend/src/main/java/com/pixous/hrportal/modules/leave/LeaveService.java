@@ -469,9 +469,10 @@ public class LeaveService {
         for (LeaveRequest r : all) {
             User applicant = applicants.get(r.getUserId());
             boolean canAct = canApproveLeave(approver, applicant, r);
-            // Admins see the whole queue (view-only where not permitted); other
+            boolean isTeamMember = leaveHasRole(approver, "IT_TL") && sameTeam(approver, applicant);
+            // Admins see the whole queue; TLs see their team members; other
             // approvers only see rows they can act on.
-            if (!canAct && !adminView) continue;
+            if (!canAct && !adminView && !isTeamMember) continue;
             out.add(LeaveRequestResponse.from(r,
                     applicant != null ? applicant.getName() : "?",
                     typeNames.getOrDefault(r.getLeaveTypeId(), "?"),
@@ -530,8 +531,8 @@ public class LeaveService {
      *  - Manager's leave     : Admin (SUPER_ADMIN) only
      * Never your own request.
      */
-    /** Employee code of the one person who approves HR's own leave. */
-    private static final String HR_LEAVE_APPROVER_CODE = "PIX-E100";
+    /** Employee code of the one person who approves HR's own leave and acts as main HR. */
+    private static final String HR_LEAVE_APPROVER_CODE = "HR0001";
 
     private static boolean sameTeam(User a, User b) {
         String at = a.getDesignationTitle();
@@ -557,14 +558,14 @@ public class LeaveService {
             // Not "any admin": one named person, so HR cannot pick a second route.
             return HR_LEAVE_APPROVER_CODE.equalsIgnoreCase(approver.getEmployeeCode());
         }
-        if ("IT_TL".equals(who)) return leaveHasRole(approver, "IT_MGR");
+        if ("IT_TL".equals(who)) return HR_LEAVE_APPROVER_CODE.equalsIgnoreCase(approver.getEmployeeCode());
 
         // Plain employee: short leave stays inside the team, longer leave goes to
         // HR. Only one of the two can act, never both.
         if (days <= 3) {
             return leaveHasRole(approver, "IT_TL") && sameTeam(approver, applicant);
         }
-        return leaveHasRole(approver, "IT_MGR");
+        return HR_LEAVE_APPROVER_CODE.equalsIgnoreCase(approver.getEmployeeCode());
     }
 
     /** Who may act on this specific leave: the chosen approver if routed, else the day/role rule. */
@@ -617,7 +618,8 @@ public class LeaveService {
         for (LeaveRequest r : all) {
             User applicant = users.get(r.getUserId());
             boolean inScope = canApproveLeave(approver, applicant, r);
-            if (!inScope && !adminView) continue;
+            boolean isTeamMember = leaveHasRole(approver, "IT_TL") && sameTeam(approver, applicant);
+            if (!inScope && !adminView && !isTeamMember) continue;
             boolean canAct = inScope && "PENDING".equals(r.getStatus());
             String toName = r.getRequestedTo() != null && users.get(r.getRequestedTo()) != null
                     ? users.get(r.getRequestedTo()).getName() : null;

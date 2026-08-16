@@ -6,6 +6,12 @@ import 'package:intl/intl.dart';
 import '../../models/work_items.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/modules_provider.dart';
+import 'ai_assistant_screen.dart';
+import 'audit_screen.dart';
+import 'communities_screen.dart';
+import 'employees_screen.dart';
+import 'my_team_screen.dart';
+import 'safety_screen.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/states.dart';
 import '../approvals/approvals_screen.dart';
@@ -149,6 +155,54 @@ class MoreScreen extends ConsumerWidget {
           title: 'Chat',
           subtitle: 'Channels and direct messages',
           onTap: () => _open(context, const ChatScreen()),
+        ),
+      if (modules.has('CHAT'))
+        _Entry(
+          icon: Icons.auto_awesome_rounded,
+          title: 'AI assistant',
+          subtitle: 'Ask about leave, payroll and policies',
+          onTap: () => _open(context, const AiAssistantScreen()),
+        ),
+      // Safety sits outside the module list: reporting an incident must never
+      // depend on a module switch — the web page is always reachable for the
+      // same reason.
+      _Entry(
+        icon: Icons.shield_outlined,
+        title: 'Safety',
+        subtitle: 'Report an incident, or review the team’s',
+        onTap: () => _open(context, const SafetyScreen()),
+      ),
+      // My team: the people around you, who is celebrating, who is off.
+      if (modules.has('TEAMS'))
+        _Entry(
+          icon: Icons.groups_2_outlined,
+          title: 'My team',
+          subtitle: 'Celebrations, on-leave and the team chat',
+          onTap: () => _open(context, const MyTeamScreen()),
+        ),
+      // The directory: who works here, and how to reach them.
+      if (user?.canAny(const ['USER_MANAGE', 'ATTENDANCE_TEAM', 'REPORT_VIEW']) ?? false)
+        _Entry(
+          icon: Icons.badge_outlined,
+          title: 'Employees',
+          subtitle: 'The company directory',
+          onTap: () => _open(context, const EmployeesScreen()),
+        ),
+      // Community groups: create them, put people in them.
+      if (user?.canAny(const ['ORG_MANAGE', 'COMMUNITY_MANAGE']) ?? false)
+        _Entry(
+          icon: Icons.groups_outlined,
+          title: 'Communities',
+          subtitle: 'Groups, members and announcements',
+          onTap: () => _open(context, const CommunitiesScreen()),
+        ),
+      // The security trail — who did what, and from where.
+      if (user?.canAny(const ['USER_MANAGE', 'EMPLOYEE_MANAGE']) ?? false)
+        _Entry(
+          icon: Icons.history_rounded,
+          title: 'Audit log',
+          subtitle: 'The portal’s security trail',
+          onTap: () => _open(context, const AuditScreen()),
         ),
       // Gated on the same permissions the web router uses, so a phone shows
       // exactly what that person can already reach in a browser — no more. The

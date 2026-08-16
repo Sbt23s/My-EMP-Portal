@@ -282,7 +282,7 @@ export default function PermissionsPage() {
     ...(isApprover
       ? [["TO_ME", `Pending my approval (${(pending.data ?? []).filter((r) => r.status === "PENDING").length})`] as const]
       : []),
-    [["MINE", `My requests (${(mine.data ?? []).length})`] as const]
+    ["MINE", `My requests (${(mine.data ?? []).length})`] as const
   ];
 
   const myList = (mine.data ?? []).filter((r) => tab === "ALL" || r.status === tab);

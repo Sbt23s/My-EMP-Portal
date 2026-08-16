@@ -522,7 +522,10 @@ class CallService {
 
   /// The web sends the SDP as the whole description (`{sdp, type}`) under
   /// `data.sdp`; older mobile builds sent the flat strings. Accept both.
-  static RTCSessionDescription? _sessionDescription(Map<String, dynamic> data) {
+  ///
+  /// Public (static, pure) because a phone and a browser disagreeing here is
+  /// exactly the bug this file fixed, and a unit test should be able to pin it.
+  static RTCSessionDescription? sessionDescription(Map<String, dynamic> data) {
     final raw = data['sdp'];
     if (raw is Map) {
       return RTCSessionDescription(
@@ -539,7 +542,9 @@ class CallService {
   /// The web names the flag `isVideo`; older mobile builds called it `video`.
   /// Accept both so a phone and a browser always agree on what kind of call it
   /// is — a video call arriving as voice was the symptom of the disagreement.
-  static bool _readVideo(Map<String, dynamic> data) {
+  ///
+  /// Public (static, pure) for the same reason as [sessionDescription].
+  static bool readVideo(Map<String, dynamic> data) {
     final v = data['isVideo'] ?? data['video'];
     return v == true || v == 'true';
   }

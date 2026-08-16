@@ -80,6 +80,12 @@ services:
       FAST2SMS_API_KEY: ${FAST2SMS_API_KEY:-}
       FAST2SMS_ROUTE: ${FAST2SMS_ROUTE:-q}
       FAST2SMS_SENDER_ID: ${FAST2SMS_SENDER_ID:-}
+      # WebRTC calls: STUN always, TURN when this secret is set (see
+      # setup-turn.sh on the server — it writes /etc/turn-secret). The backend
+      # mints short-lived TURN credentials from it, so no password ships in the
+      # APK. TURN_DOMAIN defaults to the portal domain.
+      TURN_SECRET: ${TURN_SECRET:-}
+      TURN_DOMAIN: ${TURN_DOMAIN:-pixoushrportal.pixous.info}
       JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx768m -Duser.timezone=Asia/Kolkata}
     volumes:
       - backend_storage:/app/storage   # payslip PDFs, QR codes, uploads survive restarts

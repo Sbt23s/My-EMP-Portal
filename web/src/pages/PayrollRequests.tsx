@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Wallet, FileText, Download, Loader2, IndianRupee, Eye, Users, Clock } from "lucide-react";
-import { StatTile, TILE_FILLS } from "@/components/ui/stat-tile";
+import { Wallet, FileText, Download, Loader2, IndianRupee, Eye, Users, Clock, Banknote, WalletCards, ReceiptText, CheckCircle2 } from "lucide-react";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
@@ -168,27 +167,36 @@ export default function PayrollPage() {
 
   const loading = employees.isLoading || salaries.isLoading;
 
-  /**
-   * Where the chosen month stands, over the rows on screen. Pending covers both
-   * kinds of not-done: no salary configured yet, and a salary set but the payslip
-   * not run — so the number is everything still to be dealt with.
-   */
-  // Paged with the numbers and rows-per-page, like every other table.
   const rowsPaged = usePagedRows(rows, 15, [search, category, month, year, employees.data]);
 
   const payrollCounts = useMemo(() => {
     const configured = rows.filter((e) => salaryMap.has(e.id)).length;
     const generated = rows.filter((e) => !!monthPayslips.data?.[String(e.id)]).length;
+    
+    let totalNet = 0;
+    let totalGross = 0;
+    
+    if (monthPayslips.data) {
+      Object.values(monthPayslips.data).forEach(p => {
+        totalNet += (p.netPay || 0);
+        totalGross += (p.grossSalary || 0);
+      });
+    }
+
     return {
       total: rows.length,
       configured,
       missing: rows.length - configured,
       generated,
-      pending: rows.length - generated
+      pending: rows.length - generated,
+      totalNet,
+      totalGross,
+      totalDeductions: totalGross - totalNet
     };
   }, [rows, salaryMap, monthPayslips.data]);
 
-  /** The Salary details table as it stands, for the chosen month. */
+  const loading = employees.isLoading || salaries.isLoading || monthPayslips.isLoading;
+
   async function exportSalaryDetails() {
     const XLSX = await import("xlsx");
     const headers = ["#", "Employee ID", "Employee", "Category", "Team",
@@ -227,32 +235,13 @@ export default function PayrollPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
-        title="Payroll"
-        subtitle="Set each employee's salary, then generate a payslip they can view and download."
+        title="Payroll Runs"
+        subtitle="Process employee payroll, configure salaries, and generate payslips."
       />
 
-      {/* Two views over the same people: the payslip run, and the month-by-month
-          basic pay the run is built on. */}
-      <div className="mb-4 flex gap-2 border-b pb-2">
-        {([["payslips", "Payslips"], ["salary", "Salary details"]] as const).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setTab(key)}
-            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-              tab === key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            {label === "Payslips"
-              ? <><FileText className="mr-2 inline h-4 w-4" />{label}</>
-              : <><IndianRupee className="mr-2 inline h-4 w-4" />{label}</>}
-          </button>
-        ))}
-      </div>
-
-      <div className="mb-4 flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col">
           <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">Search</label>
           <Input
@@ -263,9 +252,9 @@ export default function PayrollPage() {
           />
         </div>
         <div className="flex flex-col">
-          <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">Category</label>
+          <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">Department</label>
           <div className="flex h-[38px] items-center gap-1.5 rounded-full border bg-muted/60 p-1">
-          {([["all", "All"], ["IT", "Digital"], ["CIVIL", "Infra"]] as const).map(([val, label]) => (
+          {([["all", "All Departments"], ["IT", "Digital"], ["CIVIL", "Infra"]] as const).map(([val, label]) => (
             <button
               key={val}
               type="button"
@@ -281,150 +270,220 @@ export default function PayrollPage() {
         </div>
         <div className="flex flex-col">
           <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">Month</label>
-          <select className="h-[38px] w-[6.5rem] rounded-md border bg-background px-3 text-sm" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
-            {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+          <select className="h-[38px] w-[8rem] rounded-md border bg-background px-3 text-sm" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+            {MONTHS.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
           </select>
         </div>
         <div className="flex flex-col">
           <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">Year</label>
-          <select className="h-[38px] w-[6.5rem] rounded-md border bg-background px-3 text-sm" value={year} onChange={(e) => setYear(Number(e.target.value))}>
+          <select className="h-[38px] w-[7rem] rounded-md border bg-background px-3 text-sm" value={year} onChange={(e) => setYear(Number(e.target.value))}>
             {[dayjs().year(), dayjs().year() - 1, dayjs().year() - 2].map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
-        {tab === "salary" && (
-          <div className="flex flex-col">
-            <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">&nbsp;</label>
-            <Button
-              className="h-[38px] bg-green-600 text-white hover:bg-green-700"
-              onClick={exportSalaryDetails}
-              disabled={rows.length === 0}
-            >
-              <Download className="mr-1.5 h-4 w-4" /> Export Excel
-            </Button>
-          </div>
-        )}
+        <div className="flex flex-col ml-auto flex-row gap-2">
+          <Button
+            className="h-[38px] bg-violet-600 text-white hover:bg-violet-700"
+            disabled={true}
+            title="Bulk Run is coming soon"
+          >
+            Run Payroll
+          </Button>
+          <Button
+            variant="outline"
+            className="h-[38px]"
+            onClick={() => exportSalaryDetails()}
+            disabled={rows.length === 0}
+          >
+            <Download className="mr-1.5 h-4 w-4" /> Export
+          </Button>
+        </div>
       </div>
 
-      {/* Where the month stands: who is in scope, who has a salary on file, whose
-          payslip is done, and what is left. The counts follow the category and
-          search above, so they describe the list actually on screen. */}
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile
-          label="Total employees" value={payrollCounts.total} icon={Users}
-          fill={TILE_FILLS.violet} hint={`In payroll for ${MONTHS[month - 1]} ${year}`}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+        <StatCard
+          title="Total Employees"
+          value={payrollCounts.total.toString()}
+          subtitle="Active Employees"
+          icon={Users}
+          color="text-violet-600"
+          bg="bg-violet-100"
+          titleColor="text-violet-600"
         />
-        <StatTile
-          label="Salary configured" value={payrollCounts.configured} icon={IndianRupee}
-          fill={TILE_FILLS.green}
-          hint={payrollCounts.missing > 0
-            ? `${payrollCounts.missing} still missing`
-            : "Every employee has one"}
+        <StatCard
+          title="This Month Payroll"
+          value={inr(payrollCounts.totalNet)}
+          subtitle={`${MONTHS[month - 1]} ${year}`}
+          icon={Banknote}
+          color="text-green-600"
+          bg="bg-green-100"
+          titleColor="text-foreground"
         />
-        <StatTile
-          label="Payslips generated" value={payrollCounts.generated} icon={FileText}
-          fill={TILE_FILLS.blue} hint={`For ${MONTHS[month - 1]} ${year}`}
+        <StatCard
+          title="Total Gross Pay"
+          value={inr(payrollCounts.totalGross)}
+          subtitle={`${MONTHS[month - 1]} ${year}`}
+          icon={WalletCards}
+          color="text-blue-600"
+          bg="bg-blue-100"
+          titleColor="text-blue-600"
         />
-        <StatTile
-          label="Pending payroll" value={payrollCounts.pending} icon={Clock}
-          fill={TILE_FILLS.amber}
-          hint={payrollCounts.pending > 0
-            ? `${payrollCounts.missing} without salary, ${payrollCounts.pending - payrollCounts.missing} to generate`
-            : "Nothing outstanding"}
+        <StatCard
+          title="Total Deductions"
+          value={inr(payrollCounts.totalDeductions)}
+          subtitle={`${MONTHS[month - 1]} ${year}`}
+          icon={ReceiptText}
+          color="text-rose-600"
+          bg="bg-rose-100"
+          titleColor="text-rose-600"
+        />
+        <StatCard
+          title="Processed"
+          value={payrollCounts.generated.toString()}
+          subtitle="Paid Employees"
+          icon={CheckCircle2}
+          color="text-emerald-600"
+          bg="bg-emerald-100"
+          titleColor="text-emerald-600"
+        />
+        <StatCard
+          title="Pending"
+          value={payrollCounts.pending.toString()}
+          subtitle="Not Processed"
+          icon={Clock}
+          color="text-orange-600"
+          bg="bg-orange-100"
+          titleColor="text-orange-600"
         />
       </div>
 
-      {tab === "salary" ? (
-        <SalaryDetailsTable
-          rows={rows}
-          month={month}
-          year={year}
-          salaryMap={salaryMap}
-          monthBasic={monthBasicMap}
-          canEdit={canRun}
-          loading={loading || monthSalaries.isLoading}
-        />
-      ) : loading ? (
-        <Skeleton className="h-64 w-full rounded-lg" />
+      {loading ? (
+        <Skeleton className="h-64 w-full rounded-xl" />
       ) : rows.length === 0 ? (
         <EmptyState icon={Wallet} title="No employees" description="Active employees will appear here to set salary and generate payslips." />
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full min-w-[860px] text-sm">
-            <thead>
-              <tr className="border-b bg-muted/30 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground [&>th]:whitespace-nowrap">
-                <th className="px-4 py-3">Employee</th>
-                <th className="px-4 py-3">Category</th>
-                <th className="px-4 py-3 text-right">Monthly salary</th>
-                <th className="px-4 py-3 text-right">Payslip {MONTHS[month - 1]} {year}</th>
-                <th className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rowsPaged.pageRows.map((e) => {
-                const s = salaryMap.get(e.id);
-                return (
-                  <tr key={e.id} className="border-b last:border-0 hover:bg-muted/20">
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <div className="font-medium">{e.name}</div>
-                      <div className="code-chip text-xs text-muted-foreground">{e.employeeCode}</div>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <Badge variant="secondary">{industryLabel(e.industry)}</Badge>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums">
-                      {s ? inr(s.grossSalary) : (
-                        <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-rose-300 bg-rose-50 px-2.5 py-0.5 text-[11px] font-bold text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
-                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500" /> Salary not configured
-                        </span>
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
-                      {monthPayslips.data?.[String(e.id)] ? (
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="font-medium text-emerald-600">{inr(monthPayslips.data[String(e.id)].netPay)}</span>
-                          <PayrollStatus state="GENERATED" />
-                        </div>
-                      ) : (
-                        // A salary on file and no payslip means it is simply still
-                        // to be run; no salary means it cannot be run yet.
-                        <PayrollStatus state={s ? "PENDING" : "NOT_GENERATED"} />
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2 whitespace-nowrap">
-                        {canRun && (
-                          <>
-                            <Button variant="outline" size="sm" onClick={() => setSalaryFor(e)}>
-                              <IndianRupee className="h-4 w-4" /> {s ? "Edit Salary" : "Set Salary"}
-                            </Button>
-                            <Button size="sm" disabled={!s} onClick={() => setGenFor(e)} title={s ? "" : "Set salary first"}>
-                              <FileText className="h-4 w-4" /> Generate
-                            </Button>
-                          </>
+        <div className="rounded-xl border bg-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/20 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground [&>th]:whitespace-nowrap">
+                  <th className="px-5 py-3">#</th>
+                  <th className="px-5 py-3">Employee</th>
+                  <th className="px-5 py-3">Employee ID</th>
+                  <th className="px-5 py-3">Department</th>
+                  <th className="px-5 py-3">Gross Pay</th>
+                  <th className="px-5 py-3">Deductions</th>
+                  <th className="px-5 py-3">Net Pay</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3">Pay Date</th>
+                  <th className="px-5 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rowsPaged.pageRows.map((e, idx) => {
+                  const s = salaryMap.get(e.id);
+                  const payslip = monthPayslips.data?.[String(e.id)];
+                  const isPaid = !!payslip;
+                  
+                  let gross = s?.grossSalary || 0;
+                  let net = 0;
+                  let deds = 0;
+                  
+                  if (isPaid) {
+                    gross = payslip.grossSalary || 0;
+                    net = payslip.netPay || 0;
+                    deds = gross - net;
+                  }
+                  
+                  const payDate = dayjs(`${year}-${month}-01`).endOf('month').format("DD MMM YYYY");
+
+                  return (
+                    <tr key={e.id} className="border-b align-middle last:border-0 hover:bg-muted/30 transition-colors [&>td]:px-5 [&>td]:py-4">
+                      <td className="font-medium text-muted-foreground">
+                        {(rowsPaged.page - 1) * rowsPaged.pageSize + idx + 1}
+                      </td>
+                      <td className="font-medium whitespace-nowrap">
+                        {e.name}
+                      </td>
+                      <td className="text-muted-foreground">
+                        {e.employeeCode || "—"}
+                      </td>
+                      <td className="whitespace-nowrap">
+                        {e.designationTitle || industryLabel(e.industry)}
+                      </td>
+                      <td className="font-bold tabular-nums">
+                        {inr(gross)}
+                      </td>
+                      <td className="font-bold tabular-nums text-muted-foreground">
+                        {isPaid ? inr(deds) : "—"}
+                      </td>
+                      <td className="font-bold tabular-nums">
+                        {isPaid ? inr(net) : "—"}
+                      </td>
+                      <td>
+                        {isPaid ? (
+                          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
+                            Paid
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-[11px] font-bold text-orange-700">
+                            Pending
+                          </span>
                         )}
-                        {/* A colour of its own, so it reads as an action rather
-                            than as text that happens to be clickable. */}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-sky-300 bg-sky-50 text-sky-700 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-300"
-                          onClick={() => setPayslipsFor(e)}
-                        >
-                          <FileText className="h-4 w-4" /> Payslips
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          <TablePagination
-            page={rowsPaged.page} totalPages={rowsPaged.totalPages} onChange={rowsPaged.setPage}
-            pageSize={rowsPaged.pageSize} onPageSizeChange={rowsPaged.setPageSize}
-            total={rowsPaged.total}
-            always
-          />
+                      </td>
+                      <td className="text-muted-foreground font-medium whitespace-nowrap">
+                        {isPaid ? payDate : "—"}
+                      </td>
+                      <td className="text-right">
+                        <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                          {isPaid ? (
+                            <>
+                              <button
+                                type="button"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border text-muted-foreground hover:bg-muted/50 transition-colors"
+                                onClick={() => viewPayslipPdf(payslip.id)}
+                                title="View Payslip"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border text-violet-600 hover:bg-violet-50 transition-colors"
+                                onClick={() => downloadPayslipPdf(payslip.id, e.name)}
+                                title="Download PDF"
+                              >
+                                <Download className="h-4 w-4" />
+                              </button>
+                            </>
+                          ) : (
+                            canRun && (
+                              <>
+                                <Button variant="outline" size="sm" onClick={() => setSalaryFor(e)} title={s ? "Edit Salary" : "Set Salary"}>
+                                  <IndianRupee className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button size="sm" disabled={!s} onClick={() => setGenFor(e)} title={s ? "Generate Payslip" : "Set salary first"}>
+                                  Generate
+                                </Button>
+                              </>
+                            )
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-4 border-t px-5 py-3 text-sm text-muted-foreground bg-muted/10">
+            <div>
+              Showing {(rowsPaged.page - 1) * rowsPaged.pageSize + 1} to {Math.min(rowsPaged.page * rowsPaged.pageSize, rows.length)} of {rows.length} entries
+            </div>
+            <TablePagination
+              page={rowsPaged.page} totalPages={rowsPaged.totalPages} onChange={rowsPaged.setPage}
+              pageSize={rowsPaged.pageSize} onPageSizeChange={rowsPaged.setPageSize}
+              total={rowsPaged.total}
+            />
+          </div>
         </div>
       )}
 
@@ -453,151 +512,31 @@ export default function PayrollPage() {
   );
 }
 
-/**
- * Basic pay for the chosen month, one row per employee. Typing a figure and
- * pressing Save records it against that month only — earlier months keep what
- * they were paid on, and generating a payslip for the month picks this up.
- */
-function SalaryDetailsTable({
-  rows, month, year, salaryMap, monthBasic, canEdit, loading
+function StatCard({
+  title, value, subtitle, icon: Icon, color, bg, titleColor
 }: {
-  rows: UserSummary[];
-  month: number;
-  year: number;
-  salaryMap: Map<number, Salary>;
-  monthBasic: Map<number, number>;
-  canEdit: boolean;
-  loading: boolean;
+  title: string;
+  value: string;
+  subtitle: string;
+  icon: any;
+  color: string;
+  bg: string;
+  titleColor: string;
 }) {
-  const qc = useQueryClient();
-  // What has been typed but not yet saved, per employee.
-  const [drafts, setDrafts] = useState<Record<number, string>>({});
-  const [savingId, setSavingId] = useState<number | null>(null);
-
-  // A new month is a fresh sheet: drop anything half-typed for the old one.
-  useEffect(() => setDrafts({}), [month, year]);
-
-  const save = useMutation({
-    mutationFn: async ({ userId, basicSalary }: { userId: number; basicSalary: number }) =>
-      api.post("/payroll/salary-months", { userId, month, year, basicSalary }),
-    onSuccess: (_res, v) => {
-      toast.success("Basic salary saved");
-      setDrafts((d) => { const next = { ...d }; delete next[v.userId]; return next; });
-      qc.invalidateQueries({ queryKey: ["payroll-salary-months"] });
-    },
-    onError: (e) => toast.error(apiMessage(e, "Could not save basic salary")),
-    onSettled: () => setSavingId(null)
-  });
-
-  if (loading) return <Skeleton className="h-64 w-full rounded-lg" />;
-  if (rows.length === 0) {
-    return (
-      <EmptyState
-        icon={IndianRupee}
-        title="No employees"
-        description="Active employees appear here to record their basic pay for the month."
-      />
-    );
-  }
-
-  const recorded = rows.filter((e) => monthBasic.get(e.id) != null).length;
-
   return (
-    <div className="rounded-lg border">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/20 px-4 py-2.5">
-        <span className="text-sm font-semibold">
-          Basic salary — {MONTHS[month - 1]} {year}
-        </span>
-        <span className="text-xs text-muted-foreground">
-          {recorded} of {rows.length} recorded
-        </span>
+    <div className="rounded-xl border bg-card p-5 shadow-sm flex flex-col justify-center gap-3 transition-all hover:shadow-md">
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-1.5">
+          <h4 className={cn("text-[11px] font-bold uppercase tracking-wider", titleColor)}>{title}</h4>
+          <div className="text-xl font-bold tabular-nums tracking-tight">{value}</div>
+        </div>
+        <div className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-full", bg)}>
+          <Icon className={cn("h-4 w-4", color)} />
+        </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px] text-sm">
-          <thead>
-            <tr className="border-b bg-muted/30 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground [&>th]:whitespace-nowrap [&>th]:px-4 [&>th]:py-3">
-              <th>Employee</th>
-              <th>Category</th>
-              <th>Team</th>
-              <th className="text-right">Standing basic</th>
-              <th className="text-right">Basic for {MONTHS[month - 1]} {year}</th>
-              <th className="text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((e) => {
-              const s = salaryMap.get(e.id);
-              const saved = monthBasic.get(e.id);
-              const draft = drafts[e.id];
-              // What the box shows: what is being typed, else what is recorded,
-              // else the standing basic as a starting point.
-              const shown = draft !== undefined
-                ? draft
-                : saved != null ? String(saved)
-                  : s ? String(Number(s.basicSalary)) : "";
-              const dirty = draft !== undefined && draft.trim() !== String(saved ?? "");
-              return (
-                <tr key={e.id} className="border-b last:border-0 hover:bg-muted/20">
-                  <td className="whitespace-nowrap px-4 py-2.5">
-                    <div className="font-medium">{e.name}</div>
-                    <div className="code-chip text-xs text-muted-foreground">{e.employeeCode}</div>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2.5">
-                    <Badge variant="secondary">{industryLabel(e.industry)}</Badge>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-muted-foreground">
-                    {e.designationTitle || "—"}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums text-muted-foreground">
-                    {s ? inr(Number(s.basicSalary)) : <span className="text-xs">Not set</span>}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-right">
-                    {canEdit ? (
-                      <Input
-                        value={shown}
-                        inputMode="numeric"
-                        className={`ml-auto h-9 w-36 text-right tabular-nums ${
-                          dirty ? "border-primary ring-1 ring-primary" : ""}`}
-                        placeholder="0"
-                        onChange={(ev) => setDrafts((d) => ({
-                          ...d, [e.id]: ev.target.value.replace(/[^\d.]/g, "")
-                        }))}
-                      />
-                    ) : (
-                      <span className="font-semibold tabular-nums">
-                        {saved != null ? inr(saved) : <span className="text-xs font-normal text-muted-foreground">Not recorded</span>}
-                      </span>
-                    )}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-right">
-                    {canEdit ? (
-                      <Button
-                        size="sm"
-                        variant={dirty ? "default" : "outline"}
-                        disabled={!shown.trim() || savingId === e.id}
-                        onClick={() => {
-                          setSavingId(e.id);
-                          save.mutate({ userId: e.id, basicSalary: Number(shown) || 0 });
-                        }}
-                      >
-                        {savingId === e.id
-                          ? <Loader2 className="h-4 w-4 animate-spin" />
-                          : saved != null ? "Update" : "Save"}
-                      </Button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">View only</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className={cn("text-[11px] font-semibold", titleColor.includes('text-foreground') ? 'text-muted-foreground' : titleColor)}>
+        {subtitle}
       </div>
-      <p className="border-t px-4 py-2 text-xs text-muted-foreground">
-        A figure here applies to {MONTHS[month - 1]} {year} only. Generating a payslip for this
-        month uses it; months with nothing recorded fall back to the standing basic.
-      </p>
     </div>
   );
 }

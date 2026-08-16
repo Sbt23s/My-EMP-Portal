@@ -305,7 +305,7 @@ class CallService {
     final from = _peer;
     if (from == null || _pc == null) return;
 
-    final desc = _sessionDescription(offer);
+    final desc = sessionDescription(offer);
     if (desc == null) {
       await hangUp(notify: false);
       return;
@@ -434,7 +434,7 @@ class CallService {
         _isCaller = false;
         _offerSent = false;
         _peer = CallPeer(id: fromId, name: fromName);
-        _isVideo = _readVideo(data);
+        _isVideo = readVideo(data);
         _pendingOffer = null;
         _earlyCandidates.clear();
         _state = CallState.incoming;
@@ -461,7 +461,7 @@ class CallService {
           break;
         }
         _peer = CallPeer(id: fromId, name: fromName);
-        _isVideo = _readVideo(data) || _isVideo;
+        _isVideo = readVideo(data) || _isVideo;
         _pendingOffer = data;
         if (_state == CallState.idle) {
           _state = CallState.incoming;
@@ -471,7 +471,7 @@ class CallService {
 
       case 'answer':
         if (_pc == null) return;
-        final desc = _sessionDescription(data);
+        final desc = sessionDescription(data);
         if (desc == null) return;
         await _pc!.setRemoteDescription(desc);
         for (final c in _earlyCandidates) {

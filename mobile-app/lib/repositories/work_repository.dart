@@ -684,6 +684,12 @@ class WorkRepository {
 
   // ---- communities management (ORG_MANAGE / COMMUNITY_MANAGE) -------------
 
+  /// GET /communities — every group (management view; direct chats filtered out).
+  Future<List<ChatChannel>> communityGroups() async {
+    final data = await _api.get('/communities');
+    return ApiEnvelope.listOf(data).map(ChatChannel.fromJson).toList();
+  }
+
   /// POST /communities — create a community group.
   Future<ChatChannel> createCommunityGroup({
     required String name,

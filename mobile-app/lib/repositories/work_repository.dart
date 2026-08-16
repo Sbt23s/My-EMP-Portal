@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 
 import '../core/error/failures.dart';
@@ -473,12 +476,91 @@ class WorkRepository {
   ///
   /// Answers nothing — the endpoint returns 200 with an empty body, so the
   /// caller reloads rather than appending a message it invented.
-  Future<void> sendMessage(int channelId, String content) =>
-      _api.post('/communities/$channelId/messages', body: {'content': content});
+  ///
+  /// The extras mirror the web composer: [parentId] makes this a reply,
+  /// [pollOptions] (two or more labels) turns it into a poll, and
+  /// [requiresAck] asks readers of an announcement to confirm they have seen it.
+  Future<void> sendMessage(
+    int channelId,
+    String content, {
+    int? parentId,
+    List<String>? pollOptions,
+    bool requiresAck = false,
+  }) =>
+      _api.post('/communities/$channelId/messages', body: {
+        'content': content,
+        if (parentId != null) 'parentId': parentId,
+        if (pollOptions != null && pollOptions.isNotEmpty)
+          'pollOptions': pollOptions,
+        if (requiresAck) 'requiresAck': true,
+      });
+
+  /// POST /communities/{id}/attachments — files, with an optional caption.
+  ///
+  /// One request carries every file; the saved message (with the paths attached)
+  /// arrives back through the room's live channel, which is why the caller
+  /// simply reloads after this completes.
+  Future<void> sendChatAttachments(
+    int channelId,
+    List<File> files, {
+    String? caption,
+  }) async {
+    final form = FormData();
+    for (final f in files) {
+      form.files.add(MapEntry(
+        'files',
+        await MultipartFile.fromFile(f.path, filename: f.uri.pathSegments.last),
+      ));
+    }
+    if (caption != null && caption.trim().isNotEmpty) {
+      form.fields.add(MapEntry('caption', caption.trim()));
+    }
+    await _api.upload('/communities/$channelId/attachments', form);
+  }
+
+  /// POST /communities/{id}/voice — a voice note.
+  Future<void> sendChatVoice(int channelId, File audio) async {
+    final form = FormData();
+    form.files.add(MapEntry(
+      'file',
+      await MultipartFile.fromFile(audio.path, filename: 'voice.m4a'),
+    ));
+    await _api.upload('/communities/$channelId/voice', form);
+  }
 
   /// POST /communities/messages/{id}/read
   Future<void> markMessageRead(int messageId) =>
       _api.post('/communities/messages/$messageId/read');
+
+  /// DELETE /communities/messages/{id} — soft-delete; the room keeps a tombstone.
+  Future<void> deleteMessage(int messageId) =>
+      _api.delete('/communities/messages/$messageId');
+
+  /// POST /communities/messages/{id}/vote — a poll answer.
+  Future<void> votePoll(int messageId, int optionIndex) =>
+      _api.post('/communities/messages/$messageId/vote',
+          body: {'optionIndex': optionIndex});
+
+  /// POST /communities/messages/{id}/acknowledge — "I have read this" on an
+  /// announcement that asks for it.
+  Future<void> acknowledgeMessage(int messageId) =>
+      _api.post('/communities/messages/$messageId/acknowledge');
+
+  /// GET /communities/{id}/messages/search?q= — the room's messages containing
+  /// the query.
+  Future<List<ChatMessage>> searchMessages(int channelId, String query) async {
+    final data = await _api.get(
+      '/communities/$channelId/messages/search',
+      query: {'q': query.trim()},
+    );
+    return ApiEnvelope.listOf(data).map(ChatMessage.fromJson).toList();
+  }
+
+  /// GET /communities/{id}/messages/pinned — the room's pinned messages.
+  Future<List<ChatMessage>> pinnedMessages(int channelId) async {
+    final data = await _api.get('/communities/$channelId/messages/pinned');
+    return ApiEnvelope.listOf(data).map(ChatMessage.fromJson).toList();
+  }
 
   // ---- short permissions --------------------------------------------------
 

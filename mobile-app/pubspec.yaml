@@ -34,6 +34,13 @@ dependencies:
   # Images fetched once and kept: profile photos appear in long lists.
   cached_network_image: ^3.4.1
 
+  # Chat attachments: images from gallery/camera and documents from the phone.
+  file_picker: ^10.0.0
+
+  # Voice messages: record in-app and play the notes people send.
+  record: ^6.0.0
+  just_audio: ^0.10.0
+
   # Loading states that show the shape of what is coming.
   shimmer: ^3.0.0
 

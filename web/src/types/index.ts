@@ -134,6 +134,8 @@ export interface UserSummary {
   phone?: string;
   industry?: string;
   departmentId?: number;
+  departmentTitle?: string;
+  departmentName?: string;
   profileStatus?: string;
   photoPath?: string;
   dob?: string;
@@ -141,6 +143,11 @@ export interface UserSummary {
   designationId?: number;
   designationTitle?: string;
   techStack?: string;
+  employmentType?: string;
+  companyName?: string;
+  companyId?: string;
+  joiningDate?: string;
+  createdAt?: string;
 }
 
 export interface AttendanceRecord {

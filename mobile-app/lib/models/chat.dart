@@ -34,7 +34,10 @@ class ChatChannel {
             ? json['name'].toString()
             : 'Conversation',
         description: _blank(json['description']),
-        isAnnouncement: json['isAnnouncement'] == true,
+        // The payload names it `announcement` (group responses) and
+        // `isAnnouncement` (create responses); either spelling is read.
+        isAnnouncement: json['announcement'] == true ||
+            json['isAnnouncement'] == true,
         direct: json['direct'] == true,
         partnerId: (json['partnerId'] as num?)?.toInt(),
         partnerPhotoPath: _blank(json['partnerPhotoPath']),
@@ -62,6 +65,14 @@ class ChatMessage {
     this.audioPath,
     this.reactions = const {},
     this.myReactions = const [],
+    this.parentId,
+    this.requiresAck = false,
+    this.ackCount = 0,
+    this.acknowledgedByMe = false,
+    this.pollOptions = const [],
+    this.pollVotes = const [],
+    this.myVote,
+    this.senderPhotoPath,
   });
 
   final int id;
@@ -76,6 +87,21 @@ class ChatMessage {
   final String? attachments;
   final String? audioPath;
 
+  /// The message this one answers, when it is a reply.
+  final int? parentId;
+
+  /// An announcement that asks readers to confirm they have seen it.
+  final bool requiresAck;
+  final int ackCount;
+  final bool acknowledgedByMe;
+
+  /// A poll: the labels, the tally per label, and this reader's choice.
+  final List<String> pollOptions;
+  final List<int> pollVotes;
+  final int? myVote;
+
+  final String? senderPhotoPath;
+
   /// Emoji to how many people used it.
   final Map<String, int> reactions;
 
@@ -85,6 +111,27 @@ class ChatMessage {
 
   bool get hasAttachment =>
       (attachments != null && attachments!.trim().isNotEmpty) || audioPath != null;
+
+  bool get isPoll => pollOptions.isNotEmpty;
+
+  int get totalVotes => pollVotes.fold(0, (a, b) => a + b);
+
+  /// The stored paths, one per attachment. The payload carries them as one
+  /// comma-separated string; each is served from `/api/files/<path>`.
+  List<String> get attachmentPaths {
+    if (attachments == null || attachments!.trim().isEmpty) return const [];
+    return attachments!
+        .split(',')
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+  }
+
+  double pollShare(int index) {
+    if (totalVotes == 0) return 0;
+    final v = index >= 0 && index < pollVotes.length ? pollVotes[index] : 0;
+    return v / totalVotes;
+  }
 
   static ChatMessage fromJson(Map<String, dynamic> json) => ChatMessage(
         // messageId, not id — the payload names it differently from every other
@@ -103,6 +150,14 @@ class ChatMessage {
         audioPath: ChatChannel._blank(json['audioPath']),
         reactions: _counts(json['reactions']),
         myReactions: _strings(json['myReactions']),
+        parentId: (json['parentId'] as num?)?.toInt(),
+        requiresAck: json['requiresAck'] == true,
+        ackCount: (json['ackCount'] as num?)?.toInt() ?? 0,
+        acknowledgedByMe: json['acknowledgedByMe'] == true,
+        pollOptions: _strings(json['pollOptions']),
+        pollVotes: _ints(json['pollVotes']),
+        myVote: (json['myVote'] as num?)?.toInt(),
+        senderPhotoPath: ChatChannel._blank(json['senderPhotoPath']),
       );
 
   static Map<String, int> _counts(dynamic raw) {
@@ -120,5 +175,13 @@ class ChatMessage {
   static List<String> _strings(dynamic raw) {
     if (raw is! List) return const [];
     return raw.map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
+  }
+
+  static List<int> _ints(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .map((e) => e is num ? e.toInt() : int.tryParse(e?.toString() ?? ''))
+        .whereType<int>()
+        .toList();
   }
 }

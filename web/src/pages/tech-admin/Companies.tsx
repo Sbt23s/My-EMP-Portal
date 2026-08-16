@@ -251,7 +251,7 @@ export function TechAdminCompanies() {
                           <div className={`font-bold text-base ${isDark ? "text-slate-200" : "text-slate-800"}`}>
                             {company.companyName}
                           </div>
-                          <div className={`text-xs font-medium ${isDark ? "text-cyan-400" : "text-slate-500"}`}>Created: 01 Jan 2026</div>
+                          <div className={`text-xs font-medium ${isDark ? "text-cyan-400" : "text-slate-500"}`}>Created: {company.createdOn || "01 Jan 2026"}</div>
                         </div>
                       </div>
                     </td>

@@ -87,6 +87,73 @@ void main() {
     });
   });
 
+  group('chat parity features', () {
+    test('read count drives the delivery ticks', () {
+      final unread = ChatMessage.fromJson({'messageId': 1, 'readCount': 0});
+      final seen = ChatMessage.fromJson({'messageId': 2, 'readCount': 3});
+      expect(unread.readCount, 0);
+      expect(seen.readCount, 3);
+    });
+
+    test('a reply records its parent', () {
+      final m = ChatMessage.fromJson({'messageId': 5, 'parentId': 2});
+      expect(m.parentId, 2);
+      expect(ChatMessage.fromJson({'messageId': 6}).parentId, isNull);
+    });
+
+    test('an announcement that asks for confirmation is read', () {
+      final m = ChatMessage.fromJson({
+        'messageId': 1,
+        'requiresAck': true,
+        'ackCount': 4,
+        'acknowledgedByMe': true,
+      });
+      expect(m.requiresAck, isTrue);
+      expect(m.ackCount, 4);
+      expect(m.acknowledgedByMe, isTrue);
+    });
+
+    test('attachments split on commas and drop blanks', () {
+      final m = ChatMessage.fromJson({
+        'messageId': 1,
+        'attachments': 'chat/1a.png, chat/2b.pdf,  ',
+      });
+      expect(m.attachmentPaths, ['chat/1a.png', 'chat/2b.pdf']);
+      expect(ChatMessage.fromJson({'messageId': 2}).attachmentPaths, isEmpty);
+    });
+
+    test('a poll parses options, votes and the reader answer', () {
+      final m = ChatMessage.fromJson({
+        'messageId': 1,
+        'pollOptions': ['Tea', 'Coffee', 'Neither'],
+        'pollVotes': [3, 2, 1],
+        'myVote': 1,
+      });
+      expect(m.isPoll, isTrue);
+      expect(m.totalVotes, 6);
+      expect(m.myVote, 1);
+      expect(m.pollShare(0), closeTo(0.5, 0.001));
+      expect(m.pollShare(2), closeTo(1 / 6, 0.001));
+    });
+
+    test('a poll with no votes has no share, not a division by zero', () {
+      final m = ChatMessage.fromJson({
+        'messageId': 1,
+        'pollOptions': ['A', 'B'],
+        'pollVotes': [0, 0],
+      });
+      expect(m.isPoll, isTrue);
+      expect(m.totalVotes, 0);
+      expect(m.pollShare(0), 0);
+    });
+
+    test('an attachment message without content is still a poll-safe empty', () {
+      final m = ChatMessage.fromJson({'messageId': 1, 'content': ''});
+      expect(m.isPoll, isFalse);
+      expect(m.content, '');
+    });
+  });
+
   group('ChatChannel.fromJson', () {
     test('reads a direct conversation', () {
       final c = ChatChannel.fromJson({

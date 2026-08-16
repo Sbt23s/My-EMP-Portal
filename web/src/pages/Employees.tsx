@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tansta
 import {
   useReactTable, getCoreRowModel, flexRender, createColumnHelper
 } from "@tanstack/react-table";
-import { Search, Users, ChevronLeft, ChevronRight, UserPlus, Loader2, Camera, RefreshCw, Download, FileSpreadsheet, UploadCloud, CheckCircle2, AlertCircle, Upload, Paperclip, KeyRound, Eye, EyeOff, Trash2, X, History as HistoryIcon, ScanFace, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Search, Users, ChevronLeft, ChevronRight, UserPlus, Loader2, Camera, RefreshCw, Download, FileSpreadsheet, UploadCloud, CheckCircle2, AlertCircle, Upload, Paperclip, KeyRound, Eye, EyeOff, Trash2, X, History as HistoryIcon, ScanFace, ShieldCheck, ShieldAlert, Pencil, Filter, FilterX } from "lucide-react";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
@@ -58,7 +58,7 @@ export default function EmployeesPage() {
 
   /** The narrowing filters, kept together so clearing them is one action. */
   const [filters, setFilters] = useState({
-    designationTitle: "", roleCode: "", departmentId: "", joinedFrom: "", joinedTo: ""
+    designationTitle: "", roleCode: "", departmentId: "", employmentType: "", profileStatus: "", companyId: "", joinedFrom: "", joinedTo: ""
   });
   const setFilter = (key: keyof typeof filters, value: string) => {
     setFilters((f) => ({ ...f, [key]: value }));
@@ -66,7 +66,7 @@ export default function EmployeesPage() {
   };
   const filtersOn = Object.values(filters).some((v) => v.trim() !== "");
   const clearFilters = () => {
-    setFilters({ designationTitle: "", roleCode: "", departmentId: "", joinedFrom: "", joinedTo: "" });
+    setFilters({ designationTitle: "", roleCode: "", departmentId: "", employmentType: "", profileStatus: "", companyId: "", joinedFrom: "", joinedTo: "" });
     setPage(0);
   };
 
@@ -327,11 +327,11 @@ export default function EmployeesPage() {
         header: "Employee",
         cell: (info) => (
           <div className="flex items-center gap-3">
-            <Avatar name={info.getValue()} src={info.row.original.photoPath} />
+            <Avatar name={info.getValue()} src={info.row.original.photoPath} className="h-9 w-9 border shadow-sm" />
             <div>
-              <div className="font-medium">{info.getValue()}</div>
-              <div className="code-chip text-xs text-muted-foreground">
-                {info.row.original.employeeCode}
+              <div className="font-semibold text-foreground leading-tight">{info.getValue()}</div>
+              <div className="mt-0.5 inline-block code-chip text-[11px] font-mono text-muted-foreground">
+                {info.row.original.employeeCode || `PIX-E${String(info.row.original.id).padStart(3, '0')}`}
               </div>
             </div>
           </div>
@@ -340,45 +340,22 @@ export default function EmployeesPage() {
       column.accessor("email", {
         header: "Contact",
         cell: (info) => (
-          <div className="text-sm">
-            <div>{info.getValue() || "—"}</div>
-            <div className="text-muted-foreground">{info.row.original.phone || ""}</div>
+          <div className="text-xs">
+            <div className="font-medium text-foreground truncate max-w-[190px]" title={info.getValue() || "—"}>
+              {info.getValue() || "—"}
+            </div>
+            <div className="text-muted-foreground font-mono mt-0.5">{info.row.original.phone || "—"}</div>
           </div>
         )
       }),
-      column.accessor("industry", {
-        header: "Industry",
+      column.display({
+        id: "department",
+        header: "Department",
         cell: (info) => {
-          const raw = info.getValue();
-          const label = raw === "IT" ? "DIGITAL" : raw === "CIVIL" ? "INFRA" : raw || "—";
-          const variant = raw === "IT" ? "sky" : raw === "CIVIL" ? "warning" : "secondary";
-          return (
-            <Badge
-              variant={variant as any}
-              className={
-                raw === "IT"
-                  ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 border-0"
-                  : raw === "CIVIL"
-                  ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0"
-                  : ""
-              }
-            >
-              {label}
-            </Badge>
-          );
+          const row = info.row.original;
+          const dept = row.departmentTitle || row.departmentName || (row.departmentId ? `Dept #${row.departmentId}` : "General");
+          return <span className="text-xs font-medium text-foreground">{dept}</span>;
         }
-      }),
-      column.accessor("roles", {
-        header: "Roles",
-        cell: (info) => (
-          <div className="flex flex-wrap gap-1">
-            {(info.getValue() ?? []).slice(0, 2).map((r) => (
-              <Badge key={r} className="code-chip text-[10px]">
-                {roleCodeLabel(r)}
-              </Badge>
-            ))}
-          </div>
-        )
       }),
       column.display({
         id: "designation",
@@ -388,34 +365,100 @@ export default function EmployeesPage() {
           const label =
             row.designationTitle ||
             (row.designationId != null ? desigMap.get(row.designationId) : undefined);
-          return <span className="text-sm">{label || "—"}</span>;
+          return <span className="text-xs text-foreground">{label || "—"}</span>;
+        }
+      }),
+      column.display({
+        id: "employmentType",
+        header: "Employment Type",
+        cell: (info) => {
+          const raw = info.row.original.employmentType || "FULL_TIME";
+          const typeLabel = raw.replace("_", " ");
+          const variantColor = raw === "FULL_TIME" ? "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/20"
+            : raw === "PART_TIME" ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20"
+            : raw === "CONTRACT" ? "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20"
+            : "bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/20";
+          return (
+            <Badge className={cn("text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap", variantColor)}>
+              {typeLabel}
+            </Badge>
+          );
+        }
+      }),
+      column.accessor("roles", {
+        header: "Role",
+        cell: (info) => {
+          const rList = info.getValue() ?? [];
+          if (rList.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
+          const mainRole = rList[0];
+          const roleLabel = roleCodeLabel(mainRole);
+          const isManager = mainRole === "SUPER_ADMIN" || mainRole === "COMPANY_ADMIN" || mainRole === "IT_HR" || mainRole === "IT_MGR";
+          return (
+            <Badge className={cn("text-[10px] font-semibold border whitespace-nowrap", isManager ? "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30" : "bg-muted text-muted-foreground")}>
+              {roleLabel}
+            </Badge>
+          );
+        }
+      }),
+      column.display({
+        id: "company",
+        header: "Company",
+        cell: (info) => {
+          const row = info.row.original;
+          const comp = row.companyName || user?.companyName || row.companyId || user?.tenantId || "Pixous";
+          return <span className="text-xs font-medium text-muted-foreground truncate max-w-[120px]" title={comp}>{comp}</span>;
+        }
+      }),
+      column.display({
+        id: "joiningDate",
+        header: "Joining Date",
+        cell: (info) => {
+          const raw = info.row.original.joiningDate || info.row.original.createdAt;
+          const formatted = raw ? dayjs(raw).format("DD MMM YYYY") : "—";
+          return <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">{formatted}</span>;
+        }
+      }),
+      column.display({
+        id: "status",
+        header: "Status",
+        cell: (info) => {
+          const pStatus = info.row.original.profileStatus || ((info.row.original as any).active === false ? "OFFBOARDED" : "ACTIVE");
+          const isOffboard = pStatus === "OFFBOARDED";
+          const isOnboarding = pStatus === "ONBOARDING";
+          return (
+            <Badge className={cn("text-[10px] font-bold tracking-wide border whitespace-nowrap",
+              isOnboarding ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20"
+              : isOffboard ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20"
+              : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20"
+            )}>
+              {isOffboard ? "OFFBOARDED" : isOnboarding ? "ONBOARDING" : "ACTIVE"}
+            </Badge>
+          );
         }
       }),
       column.display({
         id: "actions",
-        header: "",
+        header: () => <div className="text-right">Actions</div>,
         cell: (info) => (
-          <div className="flex items-center gap-1.5">
-            <Button variant="ghost" size="sm" onClick={() => setDetailId(info.row.original.id)}>
-              View
+          <div className="flex items-center justify-end gap-1">
+            <Button variant="ghost" size="sm" className="h-8 px-2 text-xs gap-1 font-medium" onClick={() => setDetailId(info.row.original.id)}>
+              <Eye className="h-3.5 w-3.5" /> View
             </Button>
-            {/* An offboarded employee is a record of what was, so it is read
-                only -- there is nothing left to change about them. */}
             {canManage && info.row.original.profileStatus !== "OFFBOARDED" && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-primary hover:text-primary hover:bg-primary/10"
+                className="h-8 px-2 text-xs gap-1 font-medium text-primary hover:text-primary hover:bg-primary/10"
                 onClick={() => setEditId(info.row.original.id)}
               >
-                Edit
+                <Pencil className="h-3.5 w-3.5" /> Edit
               </Button>
             )}
           </div>
         )
       })
     ],
-    [canManage, desigMap]
+    [canManage, desigMap, user]
   );
 
   const rows = directory.data?.content ?? [];
@@ -428,14 +471,14 @@ export default function EmployeesPage() {
   const totalPages = directory.data?.totalPages ?? 1;
 
   return (
-    <div>
+    <div className="space-y-4">
       <PageHeader
         title="Employees"
         subtitle="Company directory across IT and field teams."
         actions={
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {/* Onboard / Offboard Toggle */}
-            <div className="flex gap-1.5 bg-muted/60 p-1 rounded-full border">
+            <div className="flex gap-1 bg-muted/60 p-1 rounded-full border">
               <button
                 type="button"
                 onClick={() => {
@@ -443,9 +486,9 @@ export default function EmployeesPage() {
                   setPage(0);
                 }}
                 className={cn(
-                  "px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200",
+                  "px-3 py-1 rounded-full text-xs font-semibold transition-all duration-200",
                   status === "ACTIVE"
-                    ? "bg-emerald-500 text-white shadow-sm"
+                    ? "bg-emerald-600 text-white shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
               >
@@ -458,7 +501,7 @@ export default function EmployeesPage() {
                   setPage(0);
                 }}
                 className={cn(
-                  "px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200",
+                  "px-3 py-1 rounded-full text-xs font-semibold transition-all duration-200",
                   status === "OFFBOARDED"
                     ? "bg-slate-600 text-white shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -469,17 +512,16 @@ export default function EmployeesPage() {
             </div>
 
             {/* Industry Toggle */}
-            <div className="flex gap-1.5 bg-muted/60 p-1 rounded-full border">
+            <div className="flex gap-1 bg-muted/60 p-1 rounded-full border">
               <button
                 type="button"
                 onClick={() => {
                   setIndustry("");
-                  // A team filter from one side means nothing on the other.
                   setFilter("designationTitle", "");
                   setPage(0);
                 }}
                 className={cn(
-                  "px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200",
+                  "px-3 py-1 rounded-full text-xs font-semibold transition-all duration-200",
                   industry === "" 
                     ? "bg-primary text-primary-foreground shadow-sm" 
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -491,14 +533,13 @@ export default function EmployeesPage() {
                 type="button"
                 onClick={() => {
                   setIndustry("IT");
-                  // A team filter from one side means nothing on the other.
                   setFilter("designationTitle", "");
                   setPage(0);
                 }}
                 className={cn(
-                  "px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200",
+                  "px-3 py-1 rounded-full text-xs font-semibold transition-all duration-200",
                   industry === "IT" 
-                    ? "bg-sky-500 text-white shadow-sm" 
+                    ? "bg-sky-600 text-white shadow-sm" 
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
               >
@@ -511,9 +552,9 @@ export default function EmployeesPage() {
                   setPage(0);
                 }}
                 className={cn(
-                  "px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200",
+                  "px-3 py-1 rounded-full text-xs font-semibold transition-all duration-200",
                   industry === "CIVIL" 
-                    ? "bg-amber-500 text-white shadow-sm" 
+                    ? "bg-amber-600 text-white shadow-sm" 
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
               >
@@ -522,41 +563,42 @@ export default function EmployeesPage() {
             </div>
 
             {canManage && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Recommended Action Order: Export Excel -> Roles & Logins -> Import Excel -> Add Employee */}
                 <Button
                   onClick={exportEmployees}
                   disabled={exporting}
-                  className="rounded-md bg-green-600 text-white hover:bg-green-700"
+                  className="rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm text-xs h-9 px-3"
                 >
                   {exporting
-                    ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                    : <Download className="mr-1.5 h-4 w-4" />}
+                    ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    : <Download className="mr-1.5 h-3.5 w-3.5" />}
                   Export Excel
                 </Button>
                 <Button
                   variant="outline"
                   onClick={exportLogins}
                   disabled={exportingLogins}
-                  className="rounded-md"
+                  className="rounded-md font-semibold border-border hover:bg-muted text-xs h-9 px-3"
                   title="Employee ID, name, role and username for everyone"
                 >
                   {exportingLogins
-                    ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                    : <Download className="mr-1.5 h-4 w-4" />}
+                    ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    : <Download className="mr-1.5 h-3.5 w-3.5" />}
                   Roles &amp; Logins
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => setImportOpen(true)}
-                  className="rounded-md"
+                  className="rounded-md font-semibold border-border hover:bg-muted text-xs h-9 px-3"
                 >
-                  <FileSpreadsheet className="mr-1.5 h-4 w-4" /> Import Excel
+                  <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5" /> Import Excel
                 </Button>
                 <Button
                   onClick={() => setAddIndustry("IT")}
-                  className="rounded-md shadow"
+                  className="rounded-md font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 text-xs h-9 px-3"
                 >
-                  <UserPlus className="mr-1.5 h-4 w-4" /> AddEmployee
+                  <UserPlus className="mr-1.5 h-3.5 w-3.5" /> Add Employee
                 </Button>
               </div>
             )}
@@ -564,14 +606,14 @@ export default function EmployeesPage() {
         }
       />
 
-      <Card>
-        <CardContent className="p-4">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+      <Card className="border shadow-sm">
+        <CardContent className="p-4 space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search by name, code or email…"
-                className="pl-9"
+                placeholder="Search by employee name, ID, email, phone or designation…"
+                className="pl-9 text-sm"
                 value={q}
                 onChange={(e) => {
                   setQ(e.target.value);
@@ -581,15 +623,13 @@ export default function EmployeesPage() {
             </div>
           </div>
 
-          {/* Narrowing filters. Every one is optional and they combine, so a
-              question like "who joined this quarter, in this team, as a TL" is a
-              single answer rather than a scroll. */}
+          {/* Narrowing filters */}
           {canManage && (
-            <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border bg-muted/20 p-3">
+            <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-muted/20 p-3">
               <div className="flex flex-col">
-                <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">Designation</label>
+                <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Designation</label>
                 <Select
-                  className="h-[38px] w-[13rem]"
+                  className="h-[36px] w-[12rem] text-xs"
                   value={filters.designationTitle}
                   onChange={(e) => setFilter("designationTitle", e.target.value)}
                 >
@@ -600,9 +640,9 @@ export default function EmployeesPage() {
                 </Select>
               </div>
               <div className="flex flex-col">
-                <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">Role</label>
+                <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Role</label>
                 <Select
-                  className="h-[38px] w-[11rem]"
+                  className="h-[36px] w-[11rem] text-xs"
                   value={filters.roleCode}
                   onChange={(e) => setFilter("roleCode", e.target.value)}
                 >
@@ -613,9 +653,9 @@ export default function EmployeesPage() {
                 </Select>
               </div>
               <div className="flex flex-col">
-                <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">Department</label>
+                <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Department</label>
                 <Select
-                  className="h-[38px] w-[13rem]"
+                  className="h-[36px] w-[11rem] text-xs"
                   value={filters.departmentId}
                   onChange={(e) => setFilter("departmentId", e.target.value)}
                 >
@@ -626,67 +666,105 @@ export default function EmployeesPage() {
                 </Select>
               </div>
               <div className="flex flex-col">
-                <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">Joined from</label>
+                <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Employment Type</label>
+                <Select
+                  className="h-[36px] w-[10.5rem] text-xs"
+                  value={filters.employmentType}
+                  onChange={(e) => setFilter("employmentType", e.target.value)}
+                >
+                  <option value="">All types</option>
+                  <option value="FULL_TIME">Full Time</option>
+                  <option value="PART_TIME">Part Time</option>
+                  <option value="CONTRACT">Contract</option>
+                  <option value="INTERN">Intern</option>
+                </Select>
+              </div>
+              <div className="flex flex-col">
+                <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Joined From</label>
                 <Input
                   type="date"
-                  className="h-[38px] w-[10.5rem]"
+                  className="h-[36px] w-[10rem] text-xs"
                   value={filters.joinedFrom}
                   max={filters.joinedTo || undefined}
                   onChange={(e) => setFilter("joinedFrom", e.target.value)}
                 />
               </div>
               <div className="flex flex-col">
-                <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">Joined to</label>
+                <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Joined To</label>
                 <Input
                   type="date"
-                  className="h-[38px] w-[10.5rem]"
+                  className="h-[36px] w-[10rem] text-xs"
                   value={filters.joinedTo}
                   min={filters.joinedFrom || undefined}
                   onChange={(e) => setFilter("joinedTo", e.target.value)}
                 />
               </div>
               {filtersOn && (
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={clearFilters}
-                  className="h-[38px] rounded-md border px-3 text-xs font-medium text-muted-foreground hover:bg-muted"
+                  className="h-[36px] gap-1 text-xs text-muted-foreground hover:bg-muted font-medium"
                 >
-                  Clear filters
-                </button>
+                  <FilterX className="h-3.5 w-3.5" /> Clear filters
+                </Button>
               )}
             </div>
           )}
 
           {directory.isLoading ? (
-            <Skeleton className="h-64" />
+            <div className="space-y-3 p-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4 py-2">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="space-y-1.5 flex-1">
+                    <Skeleton className="h-4 w-1/4" />
+                    <Skeleton className="h-3 w-1/6" />
+                  </div>
+                  <Skeleton className="h-6 w-20 rounded-md" />
+                  <Skeleton className="h-6 w-16 rounded-md" />
+                </div>
+              ))}
+            </div>
+          ) : directory.isError ? (
+            <div className="flex flex-col items-center justify-center p-8 text-center space-y-3">
+              <AlertCircle className="h-10 w-10 text-destructive" />
+              <p className="text-sm font-medium text-destructive">Could not load employee directory</p>
+              <Button size="sm" variant="outline" onClick={() => directory.refetch()}>
+                Retry
+              </Button>
+            </div>
           ) : rows.length === 0 ? (
-            <EmptyState icon={Users} title="No employees found" description="Try a different search." />
+            <EmptyState icon={Users} title="No employees found" description="Try changing your search or filters." />
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  {table.getHeaderGroups().map((hg) => (
-                    <TableRow key={hg.id}>
-                      {hg.headers.map((h) => (
-                        <TableHead key={h.id}>
-                          {flexRender(h.column.columnDef.header, h.getContext())}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="overflow-x-auto rounded-lg border">
+                <Table>
+                  <TableHeader className="bg-muted/50 sticky top-0 z-10 backdrop-blur">
+                    {table.getHeaderGroups().map((hg) => (
+                      <TableRow key={hg.id} className="hover:bg-transparent">
+                        {hg.headers.map((h) => (
+                          <TableHead key={h.id} className="font-semibold text-xs text-foreground uppercase tracking-wider py-3">
+                            {flexRender(h.column.columnDef.header, h.getContext())}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows.map((row) => (
+                      <TableRow key={row.id} className="hover:bg-muted/40 transition-colors">
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id} className="py-3">
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
               <div className="sticky bottom-0 z-10 mt-4 border-t bg-background/95 pr-16 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:pr-20">
                 <TablePagination

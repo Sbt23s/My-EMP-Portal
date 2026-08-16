@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/app_providers.dart';
-import '../../widgets/states.dart';
 
 final aiAssistantConfigProvider = FutureProvider.autoDispose<Map<String, dynamic>>(
   (ref) => ref.watch(workRepositoryProvider).chatbotConfig(),

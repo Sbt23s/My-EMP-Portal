@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/safety.dart';
 import '../../providers/app_providers.dart';
+import '../../themes/app_theme.dart';
 import '../../widgets/states.dart';
 
 final mySafetyProvider = FutureProvider.autoDispose<List<SafetyIncident>>(
@@ -180,7 +181,6 @@ class _IncidentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final status = (incident.status ?? 'OPEN').toUpperCase();
     final (label, color) = switch (status) {
       'RESOLVED' || 'CLOSED' => (incident.status!, AppTheme.success(context)),

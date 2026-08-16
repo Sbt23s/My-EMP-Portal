@@ -4,16 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../providers/app_providers.dart';
+import '../../themes/app_theme.dart';
 import '../../widgets/states.dart';
 
 final auditLogProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>(
   (ref) => ref.watch(workRepositoryProvider).auditLog(size: 100),
 );
-final auditSummaryProvider =
-    FutureProvider.autoDispose<Map<String, dynamic>>(
+final auditSummaryProvider = FutureProvider.autoDispose<Map<String, dynamic>>(
   (ref) async {
     final data = await ref.watch(workRepositoryProvider).auditSummary();
-    return data is Map<String, dynamic> ? data : const {};
+    if (data is! Map<String, dynamic>) return const <String, dynamic>{};
+    return data;
   },
 );
 

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../models/celebration.dart';
 import '../../models/my_team.dart';
 import '../../providers/app_providers.dart';
+import '../../themes/app_theme.dart';
 import '../../widgets/states.dart';
 import '../chat/chat_screen.dart';
 
@@ -240,7 +241,6 @@ class _CelebrationRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final isBirthday = celebration.isBirthday;
     final accent = isBirthday ? AppTheme.success(context) : AppTheme.warning(context);
     final when = celebration.isToday

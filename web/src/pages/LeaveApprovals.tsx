@@ -475,7 +475,6 @@ export default function LeaveApprovalsPage() {
                 </div>
               )}
             </div>
-          </div>
         </Dialog>
       )}
     </div>

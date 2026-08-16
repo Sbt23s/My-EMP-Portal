@@ -11,6 +11,7 @@ import java.util.List;
 public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long> {
 
     Page<LeaveRequest> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+    List<LeaveRequest> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     // Manager inbox: pending requests raised by the manager's direct reports
     @Query("SELECT r FROM LeaveRequest r WHERE r.status = 'PENDING' AND r.userId IN :userIds ORDER BY r.createdAt ASC")

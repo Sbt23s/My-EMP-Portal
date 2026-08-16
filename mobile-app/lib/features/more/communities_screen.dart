@@ -276,6 +276,7 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
     if (confirmed != true || !mounted) return;
     try {
       await ref.read(workRepositoryProvider).deleteCommunity(widget.group.id);
+      if (!mounted) return;
       ref.invalidate(communitiesProvider);
     } catch (e) {
       if (!mounted) return;
@@ -362,7 +363,7 @@ class _AddMemberRow extends ConsumerWidget {
 }
 
 class _CreateGroupSheet extends ConsumerStatefulWidget {
-  const _CreateGroupSheet({super.key});
+  const _CreateGroupSheet();
 
   @override
   ConsumerState<_CreateGroupSheet> createState() => _CreateGroupSheetState();

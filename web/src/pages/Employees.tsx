@@ -348,15 +348,7 @@ export default function EmployeesPage() {
           </div>
         )
       }),
-      column.display({
-        id: "department",
-        header: "Department",
-        cell: (info) => {
-          const row = info.row.original;
-          const dept = row.departmentTitle || row.departmentName || (row.departmentId ? `Dept #${row.departmentId}` : "General");
-          return <span className="text-xs font-medium text-foreground">{dept}</span>;
-        }
-      }),
+
       column.display({
         id: "designation",
         header: "Designation",
@@ -368,23 +360,7 @@ export default function EmployeesPage() {
           return <span className="text-xs text-foreground">{label || "—"}</span>;
         }
       }),
-      column.display({
-        id: "employmentType",
-        header: "Employment Type",
-        cell: (info) => {
-          const raw = info.row.original.employmentType || "FULL_TIME";
-          const typeLabel = raw.replace("_", " ");
-          const variantColor = raw === "FULL_TIME" ? "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/20"
-            : raw === "PART_TIME" ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20"
-            : raw === "CONTRACT" ? "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20"
-            : "bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/20";
-          return (
-            <Badge className={cn("text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap", variantColor)}>
-              {typeLabel}
-            </Badge>
-          );
-        }
-      }),
+
       column.accessor("roles", {
         header: "Role",
         cell: (info) => {
@@ -400,24 +376,7 @@ export default function EmployeesPage() {
           );
         }
       }),
-      column.display({
-        id: "company",
-        header: "Company",
-        cell: (info) => {
-          const row = info.row.original;
-          const comp = row.companyName || user?.companyName || row.companyId || user?.tenantId || "Pixous";
-          return <span className="text-xs font-medium text-muted-foreground truncate max-w-[120px]" title={comp}>{comp}</span>;
-        }
-      }),
-      column.display({
-        id: "joiningDate",
-        header: "Joining Date",
-        cell: (info) => {
-          const raw = info.row.original.joiningDate || info.row.original.createdAt;
-          const formatted = raw ? dayjs(raw).format("DD MMM YYYY") : "—";
-          return <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">{formatted}</span>;
-        }
-      }),
+
       column.display({
         id: "status",
         header: "Status",
@@ -652,53 +611,7 @@ export default function EmployeesPage() {
                   ))}
                 </Select>
               </div>
-              <div className="flex flex-col">
-                <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Department</label>
-                <Select
-                  className="h-[36px] w-[11rem] text-xs"
-                  value={filters.departmentId}
-                  onChange={(e) => setFilter("departmentId", e.target.value)}
-                >
-                  <option value="">All departments</option>
-                  {(filterLookups.data?.department ?? []).map((d) => (
-                    <option key={d.id} value={String(d.id)}>{d.label}</option>
-                  ))}
-                </Select>
-              </div>
-              <div className="flex flex-col">
-                <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Employment Type</label>
-                <Select
-                  className="h-[36px] w-[10.5rem] text-xs"
-                  value={filters.employmentType}
-                  onChange={(e) => setFilter("employmentType", e.target.value)}
-                >
-                  <option value="">All types</option>
-                  <option value="FULL_TIME">Full Time</option>
-                  <option value="PART_TIME">Part Time</option>
-                  <option value="CONTRACT">Contract</option>
-                  <option value="INTERN">Intern</option>
-                </Select>
-              </div>
-              <div className="flex flex-col">
-                <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Joined From</label>
-                <Input
-                  type="date"
-                  className="h-[36px] w-[10rem] text-xs"
-                  value={filters.joinedFrom}
-                  max={filters.joinedTo || undefined}
-                  onChange={(e) => setFilter("joinedFrom", e.target.value)}
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Joined To</label>
-                <Input
-                  type="date"
-                  className="h-[36px] w-[10rem] text-xs"
-                  value={filters.joinedTo}
-                  min={filters.joinedFrom || undefined}
-                  onChange={(e) => setFilter("joinedTo", e.target.value)}
-                />
-              </div>
+
               {filtersOn && (
                 <Button
                   type="button"

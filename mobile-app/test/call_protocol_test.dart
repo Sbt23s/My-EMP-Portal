@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:hr_portal_mobile/core/calls/call_service.dart';
 
 /// The call protocol must be exactly what the web client speaks, or a phone

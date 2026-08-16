@@ -34,26 +34,36 @@ class CallPeer {
 ///
 /// Signalling goes through the STOMP socket that is already open: the server
 /// routes `POST /calls/signal` to `/topic/calls/{recipientId}`, and both clients
-/// speak the same six messages — calling, offer, answer, candidate, hangup,
-/// busy. A call between a phone and a desk is therefore one protocol rather than
-/// a bridge between two.
+/// speak the same seven messages — calling, ringing, offer, answer, candidate,
+/// decline, hangup.
+///
+/// ## The handshake — why the offer waits for "ringing"
+///
+/// The web client orders the call so that a phone which is not listening still
+/// gets a working call when it starts listening. The caller opens its own
+/// devices, says "calling", and then *waits*. Only when the other side answers
+/// with "ringing" — which it cannot do until it is subscribed — does the offer
+/// go out. Sending the offer alongside "calling" rings nobody and wastes an SDP
+/// the callee was not ready for. This file previously did exactly that, which
+/// is why a browser calling a phone rang forever.
+///
+/// The SDP is serialised the way the web serialises it — the whole
+/// RTCSessionDescription (`{sdp, type}`) nested under `data.sdp` — and both
+/// forms are accepted on the way in, so a phone and a browser read each other.
 ///
 /// ## What will and will not connect
 ///
-/// The ICE configuration is STUN-only, matching the web client exactly. STUN
-/// tells each side its own public address, which is enough when at least one end
-/// is behind a friendly NAT — two devices on the same office wifi, or one on
-/// wifi and one on a home connection.
+/// The ICE configuration is read from the backend when it offers one (see
+/// `GET /calls/ice-servers`) and falls back to STUN-only otherwise, matching
+/// the web client exactly. STUN tells each side its own public address, which
+/// is enough when at least one end is behind a friendly NAT — two devices on
+/// the same office wifi, or one on wifi and one on a home connection.
 ///
 /// It is **not** enough when both ends are on mobile data. Carrier NAT is
 /// symmetric: the address STUN reports is valid only for the STUN server, and
-/// the other phone cannot use it. Those calls will ring, be answered, and carry
-/// no media.
-///
-/// That is not a limitation of this code — the web portal has it today, for the
-/// same reason. The fix is a TURN server to relay when no direct path exists
-/// (see `setup-turn.sh`), and [iceServers] reads its configuration from the
-/// backend so that adding one needs no change here and no new build.
+/// the other phone cannot use it. The fix is a TURN server to relay when no
+/// direct path exists (`setup-turn.sh`), and the backend's ice-servers endpoint
+/// returns its configuration so that adding one needs no app release.
 class CallService {
   CallService({required ApiClient api, required RealtimeService realtime})
       : _api = api,
@@ -73,6 +83,9 @@ class CallService {
   bool _muted = false;
   bool _speakerOn = false;
 
+  /// True on the side that placed the call — the side that offers.
+  bool _isCaller = false;
+
   /// The offer that arrived with an incoming call, held until it is accepted.
   Map<String, dynamic>? _pendingOffer;
 
@@ -83,6 +96,18 @@ class CallService {
   /// before the callee has finished answering. Dropping them makes a call that
   /// connects on a fast network and silently fails on a slow one.
   final List<RTCIceCandidate> _earlyCandidates = [];
+
+  /// Guards against sending a second offer if "ringing" arrives twice.
+  bool _offerSent = false;
+
+  /// When the conversation started, so a call log can say how long it ran.
+  DateTime? _connectedAt;
+
+  /// How long a call may ring before it is given up on as unanswered. The same
+  /// 45 seconds the web client uses — one number, so the two cannot disagree.
+  static const _noAnswer = Duration(seconds: 45);
+
+  Timer? _ringTimer;
 
   final _changes = StreamController<void>.broadcast();
 
@@ -165,18 +190,19 @@ class CallService {
     pc.onTrack = (event) {
       if (event.streams.isEmpty) return;
       _remoteStream = event.streams.first;
+      _connectedAt ??= DateTime.now();
       _state = CallState.connected;
+      _ringTimer?.cancel();
       _emit();
     };
 
     pc.onConnectionState = (s) {
       // A connection that drops mid-call must not leave the call screen up over
-      // nothing. This is also where a STUN-only call between two mobile
-      // networks ends up: negotiated, then failed.
+      // nothing. Only failed and closed end it: disconnected is transient on a
+      // phone (one bar, a tunnel, a handover) and WebRTC recovers on its own.
       if (s == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
-          s == RTCPeerConnectionState.RTCPeerConnectionStateClosed ||
-          s == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected) {
-        hangUp(notify: false);
+          s == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
+        if (_state != CallState.idle) hangUp(notify: false);
       }
     };
   }
@@ -197,32 +223,51 @@ class CallService {
     });
   }
 
+  /// The elapsed call time, for the call log.
+  int get _elapsedSeconds =>
+      _connectedAt == null ? 0 : DateTime.now().difference(_connectedAt!).inSeconds;
+
   /// Ring somebody.
+  ///
+  /// The offer deliberately does **not** go out here: it waits for "ringing",
+  /// exactly as the web client does, so a callee who is not listening yet still
+  /// receives a working call.
   Future<void> call(CallPeer to, {required bool video}) async {
     if (isBusy) return;
 
     _peer = to;
     _isVideo = video;
+    _isCaller = true;
+    _offerSent = false;
     _state = CallState.outgoing;
     _emit();
+    _startRingTimer();
 
     try {
       await _openMedia(video: video);
       await _openPeerConnection();
 
-      final offer = await _pc!.createOffer();
-      await _pc!.setLocalDescription(offer);
-
       // "calling" first, so their phone rings while the offer is still being
       // built — and so the server raises its notification for it.
-      await _send(to.id, 'calling', {'video': video});
-      await _send(to.id, 'offer', {
-        'sdp': offer.sdp,
-        'type': offer.type,
-        'video': video,
+      await _send(to.id, 'calling', {'isVideo': video});
+    } catch (_) {
+      await hangUp(notify: false);
+    }
+  }
+
+  /// The other side is listening — now the offer can go.
+  Future<void> _onRinging() async {
+    if (!_isCaller || _pc == null || _offerSent) return;
+    _offerSent = true;
+    try {
+      final offer = await _pc!.createOffer();
+      await _pc!.setLocalDescription(offer);
+      await _send(_peer!.id, 'offer', {
+        'sdp': offer.toMap(),
+        'isVideo': _isVideo,
       });
     } catch (_) {
-      await hangUp();
+      await hangUp(notify: false);
     }
   }
 
@@ -230,7 +275,7 @@ class CallService {
   Future<void> accept() async {
     final offer = _pendingOffer;
     final from = _peer;
-    if (offer == null || from == null) return;
+    if (from == null) return;
 
     _state = CallState.connecting;
     _emit();
@@ -239,32 +284,62 @@ class CallService {
       await _openMedia(video: _isVideo);
       await _openPeerConnection();
 
-      await _pc!.setRemoteDescription(
-        RTCSessionDescription(offer['sdp'] as String?, offer['type'] as String?),
-      );
-
-      // Anything that arrived early can go in now that there is a description
-      // for it to attach to.
-      for (final c in _earlyCandidates) {
-        await _pc!.addCandidate(c);
+      // The offer may have landed while the camera was opening; if it has, use
+      // it. If it has not, say "ringing" and let the arriving offer be answered
+      // below — the caller re-sends on ringing, so nothing is lost.
+      if (offer == null) {
+        await _send(from.id, 'ringing', null);
+        return;
       }
-      _earlyCandidates.clear();
-
-      final answer = await _pc!.createAnswer();
-      await _pc!.setLocalDescription(answer);
-      await _send(from.id, 'answer', {'sdp': answer.sdp, 'type': answer.type});
-
-      _pendingOffer = null;
+      await _answer(offer);
     } catch (_) {
-      await hangUp();
+      await hangUp(notify: false);
     }
+  }
+
+  /// Answer the held offer on the callee side.
+  Future<void> _answer(Map<String, dynamic> offer) async {
+    final from = _peer;
+    if (from == null || _pc == null) return;
+
+    final desc = _sessionDescription(offer);
+    if (desc == null) {
+      await hangUp(notify: false);
+      return;
+    }
+
+    await _pc!.setRemoteDescription(desc);
+    for (final c in _earlyCandidates) {
+      await _pc!.addCandidate(c);
+    }
+    _earlyCandidates.clear();
+
+    final answer = await _pc!.createAnswer();
+    await _pc!.setLocalDescription(answer);
+    await _send(from.id, 'answer', {'sdp': answer.toMap()});
+
+    _pendingOffer = null;
+    _connectedAt ??= DateTime.now();
+    _state = CallState.connecting;
+    _emit();
   }
 
   /// Refuse, or end.
   Future<void> hangUp({bool notify = true}) async {
     final to = _peer?.id;
-    if (notify && to != null) await _send(to, 'hangup', null);
+    final wasIncoming = !_isCaller && _state == CallState.incoming;
+    final wasConnected = _state == CallState.connected;
 
+    if (notify && to != null) {
+      await _send(to, 'hangup', null);
+      await _logCall(
+        to,
+        outcome: wasConnected ? 'ENDED' : (wasIncoming ? 'DECLINED' : 'MISSED'),
+        seconds: _elapsedSeconds,
+      );
+    }
+
+    _ringTimer?.cancel();
     await _pc?.close();
     _pc = null;
 
@@ -280,10 +355,23 @@ class CallService {
     _pendingOffer = null;
     _earlyCandidates.clear();
     _peer = null;
+    _isCaller = false;
+    _offerSent = false;
+    _connectedAt = null;
     _state = CallState.idle;
     _muted = false;
     _speakerOn = false;
     _emit();
+  }
+
+  /// Decline an incoming call without letting it ring out.
+  Future<void> decline() async {
+    final to = _peer?.id;
+    if (to != null) {
+      await _send(to, 'decline', null);
+      await _logCall(to, outcome: 'DECLINED', seconds: 0);
+    }
+    await hangUp(notify: false);
   }
 
   Future<void> toggleMute() async {
@@ -305,6 +393,20 @@ class CallService {
     if (track != null) await Helper.switchCamera(track);
   }
 
+  void _startRingTimer() {
+    _ringTimer?.cancel();
+    _ringTimer = Timer(_noAnswer, () async {
+      if (_state == CallState.outgoing) {
+        // Nobody picked up. Log it as missed and clear the screen.
+        final to = _peer?.id;
+        if (to != null) {
+          await _logCall(to, outcome: 'MISSED', seconds: 0);
+        }
+        await hangUp(notify: false);
+      }
+    });
+  }
+
   Future<void> _onSignal(Map<String, dynamic> body) async {
     final type = body['type']?.toString();
     final fromId = (body['senderId'] as num?)?.toInt();
@@ -320,38 +422,56 @@ class CallService {
     switch (type) {
       case 'calling':
         // Already on a call: tell them rather than letting it ring unanswered.
+        // The web client reads "decline" with a busy reason — say it the same
+        // way, because the browser does not understand a bare "busy".
         if (isBusy) {
-          await _send(fromId, 'busy', null);
+          await _send(fromId, 'decline', {'reason': 'busy'});
           return;
         }
+        _isCaller = false;
+        _offerSent = false;
         _peer = CallPeer(id: fromId, name: fromName);
-        _isVideo = data['video'] == true;
+        _isVideo = _readVideo(data);
+        _pendingOffer = null;
+        _earlyCandidates.clear();
         _state = CallState.incoming;
         _emit();
+        // Saying "ringing" is also what tells the caller to send the offer, so
+        // it must only be said once this side is genuinely listening.
+        await _send(fromId, 'ringing', null);
+
+      case 'ringing':
+        // The other side is listening — send the offer now.
+        await _onRinging();
 
       case 'offer':
-        // The offer can arrive before or after "calling" depending on timing, so
-        // this sets up the ringing state as well rather than assuming it exists.
-        if (isBusy && _peer?.id != fromId) {
-          await _send(fromId, 'busy', null);
-          return;
+        // If this side already accepted and was waiting for the offer, answer
+        // immediately. Otherwise hold it until Accept is pressed.
+        if (_pc != null && _localStream != null && !_isCaller) {
+          await _answer(data);
+          break;
         }
         _peer = CallPeer(id: fromId, name: fromName);
-        _isVideo = data['video'] == true || _isVideo;
+        _isVideo = _readVideo(data) || _isVideo;
         _pendingOffer = data;
-        if (_state == CallState.idle) _state = CallState.incoming;
-        _emit();
+        if (_state == CallState.idle) {
+          _state = CallState.incoming;
+          _emit();
+          await _send(fromId, 'ringing', null);
+        }
 
       case 'answer':
         if (_pc == null) return;
-        await _pc!.setRemoteDescription(
-          RTCSessionDescription(data['sdp'] as String?, data['type'] as String?),
-        );
+        final desc = _sessionDescription(data);
+        if (desc == null) return;
+        await _pc!.setRemoteDescription(desc);
         for (final c in _earlyCandidates) {
           await _pc!.addCandidate(c);
         }
         _earlyCandidates.clear();
+        _connectedAt ??= DateTime.now();
         _state = CallState.connecting;
+        _ringTimer?.cancel();
         _emit();
 
       case 'candidate':
@@ -371,9 +491,62 @@ class CallService {
           await pc.addCandidate(candidate);
         }
 
-      case 'hangup':
-      case 'busy':
+      case 'decline':
+        if (_state != CallState.idle) {
+          final busy = data['reason'] == 'busy';
+          await _logCall(
+            fromId,
+            outcome: busy ? 'MISSED' : 'DECLINED',
+            seconds: 0,
+          );
+        }
         await hangUp(notify: false);
+
+      case 'hangup':
+        if (_state == CallState.incoming) {
+          final to = _peer?.id;
+          if (to != null) await _logCall(to, outcome: 'MISSED', seconds: 0);
+        }
+        await hangUp(notify: false);
+    }
+  }
+
+  /// The web sends the SDP as the whole description (`{sdp, type}`) under
+  /// `data.sdp`; older mobile builds sent the flat strings. Accept both.
+  static RTCSessionDescription? _sessionDescription(Map<String, dynamic> data) {
+    final raw = data['sdp'];
+    if (raw is Map) {
+      return RTCSessionDescription(
+        raw['sdp']?.toString(),
+        raw['type']?.toString(),
+      );
+    }
+    if (raw is String && raw.isNotEmpty) {
+      return RTCSessionDescription(raw, data['type']?.toString());
+    }
+    return null;
+  }
+
+  /// The web names the flag `isVideo`; older mobile builds called it `video`.
+  /// Accept both so a phone and a browser always agree on what kind of call it
+  /// is — a video call arriving as voice was the symptom of the disagreement.
+  static bool _readVideo(Map<String, dynamic> data) {
+    final v = data['isVideo'] ?? data['video'];
+    return v == true || v == 'true';
+  }
+
+  Future<void> _logCall(int to,
+      {required String outcome, required int seconds}) async {
+    try {
+      await _api.post('/calls/log', body: {
+        'recipientId': to,
+        'outcome': outcome,
+        'video': _isVideo,
+        'seconds': seconds,
+      });
+    } catch (_) {
+      // A call log is a courtesy; failing to write it must not surface as a
+      // failed call to somebody who has just hung up.
     }
   }
 

@@ -411,11 +411,34 @@ public class LeaveService {
     public PageResponse<LeaveRequestResponse> myRequests(Long userId, int page, int size) {
         Map<Long, String> typeNames = typeNameMap();
         String name = userRepository.findById(userId).map(User::getName).orElse("?");
+        Map<Long, User> users = userRepository.findAll().stream().collect(Collectors.toMap(User::getId, u -> u));
         Page<LeaveRequestResponse> result = requestRepository
                 .findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(page, size))
-                .map(r -> LeaveRequestResponse.from(r, name,
-                        typeNames.getOrDefault(r.getLeaveTypeId(), "?")));
+                .map(r -> {
+                    String toName = r.getRequestedTo() != null && users.containsKey(r.getRequestedTo())
+                            ? users.get(r.getRequestedTo()).getName() : null;
+                    String decName = r.getDecidedBy() != null && users.containsKey(r.getDecidedBy())
+                            ? users.get(r.getDecidedBy()).getName() : null;
+                    return LeaveRequestResponse.from(r, name, typeNames.getOrDefault(r.getLeaveTypeId(), "?"),
+                            null, false, toName, decName);
+                });
         return PageResponse.from(result);
+    }
+
+    @Transactional(readOnly = true)
+    public List<LeaveRequestResponse> myQueue(Long userId) {
+        Map<Long, String> typeNames = typeNameMap();
+        String name = userRepository.findById(userId).map(User::getName).orElse("?");
+        Map<Long, User> users = userRepository.findAll().stream().collect(Collectors.toMap(User::getId, u -> u));
+        return requestRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .map(r -> {
+                    String toName = r.getRequestedTo() != null && users.containsKey(r.getRequestedTo())
+                            ? users.get(r.getRequestedTo()).getName() : null;
+                    String decName = r.getDecidedBy() != null && users.containsKey(r.getDecidedBy())
+                            ? users.get(r.getDecidedBy()).getName() : null;
+                    return LeaveRequestResponse.from(r, name, typeNames.getOrDefault(r.getLeaveTypeId(), "?"),
+                            null, false, toName, decName);
+                }).toList();
     }
 
     @Transactional

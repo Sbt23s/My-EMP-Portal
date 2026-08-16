@@ -9,8 +9,8 @@ import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Select } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ApiEnvelope, LeaveRequest, EmployeeTaskGroup } from "@/types";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,11 +25,20 @@ export default function LeaveApprovalsPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [tab, setTab] = useState<"PENDING" | "APPROVED" | "REJECTED" | "ALL">("ALL");
   const [teamFilter, setTeamFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState<"ALL" | "MY">("ALL");
+  const [viewModalData, setViewModalData] = useState<any | null>(null);
 
   const pending = useQuery({
     queryKey: ["leave", "for-me"],
     queryFn: async () =>
-      (await api.get<ApiEnvelope<LeaveRequest[]>>("/leave/requests-for-me")).data.data
+      (await api.get<ApiEnvelope<any[]>>("/leave/requests-for-me")).data.data
+  });
+
+  const myQueue = useQuery({
+    queryKey: ["leave", "my-queue"],
+    queryFn: async () =>
+      (await api.get<ApiEnvelope<any[]>>("/leave/my-queue")).data.data
   });
 
   const taskGroups = useQuery({
@@ -68,30 +77,38 @@ export default function LeaveApprovalsPage() {
     onError: (err) => toast.error(apiMessage(err, "Bulk action failed"))
   });
 
-  const rows = pending.data ?? [];
+  const rawRows = viewMode === "ALL" ? (pending.data ?? []) : (myQueue.data ?? []);
 
   // Counts come from everything in scope, so the tiles stay meaningful whichever
   // tab or team is being looked at.
   const counts = useMemo(() => ({
-    ALL: rows.length,
-    PENDING: rows.filter((r) => r.status === "PENDING").length,
-    APPROVED: rows.filter((r) => r.status === "APPROVED").length,
-    REJECTED: rows.filter((r) => r.status === "REJECTED").length
-  }), [rows]);
+    ALL: rawRows.length,
+    PENDING: rawRows.filter((r) => r.status === "PENDING").length,
+    APPROVED: rawRows.filter((r) => r.status === "APPROVED").length,
+    REJECTED: rawRows.filter((r) => r.status === "REJECTED").length
+  }), [rawRows]);
 
   // HR and admin look across teams, so they get a team picker.
   const teams = useMemo(
-    () => [...new Set(rows.map((r) => (r.team || "").trim()).filter(Boolean))].sort(),
-    [rows]
+    () => [...new Set(rawRows.map((r) => (r.team || "").trim()).filter(Boolean))].sort(),
+    [rawRows]
   );
 
-  const list = rows.filter((r) => {
+  const list = rawRows.filter((r) => {
     if (tab !== "ALL" && r.status !== tab) return false;
     if (teamFilter !== "all" && (r.team || "").trim() !== teamFilter) return false;
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      if (!r.employeeName?.toLowerCase().includes(q) &&
+          !r.team?.toLowerCase().includes(q) &&
+          !r.reason?.toLowerCase().includes(q)) {
+        return false;
+      }
+    }
     return true;
   });
   const { pageRows, page, setPage, totalPages, pageSize, setPageSize, total } =
-    usePagedRows(list, 15, [tab, teamFilter, pending.data]);
+    usePagedRows(list, 15, [tab, teamFilter, searchTerm, viewMode, pending.data, myQueue.data]);
 
   function toggle(id: number) {
     setSelected((prev) => {
@@ -150,6 +167,25 @@ export default function LeaveApprovalsPage() {
         }
       />
 
+      <div className="mb-4 flex items-center gap-2 bg-muted/20 p-1.5 rounded-lg w-max border">
+        <button
+          onClick={() => setViewMode("ALL")}
+          className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-colors ${
+            viewMode === "ALL" ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          All Requests
+        </button>
+        <button
+          onClick={() => setViewMode("MY")}
+          className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-colors ${
+            viewMode === "MY" ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          My Requests
+        </button>
+      </div>
+
       {/* Counts as tiles — each one is also the filter for that status. */}
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile
@@ -174,26 +210,36 @@ export default function LeaveApprovalsPage() {
         />
       </div>
 
-      {/* Team picker — only useful when more than one team is in scope. */}
-      {teams.length > 1 && (
-        <div className="mb-4 flex items-center gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Team
-          </span>
-          <Select
-            value={teamFilter}
-            onChange={(e) => setTeamFilter(e.target.value)}
-            className="max-w-[220px]"
-          >
-            <option value="all">All teams ({rows.length})</option>
-            {teams.map((t) => (
-              <option key={t} value={t}>
-                {t} ({rows.filter((r) => (r.team || "").trim() === t).length})
-              </option>
-            ))}
-          </Select>
+      {/* Team picker and Search filter */}
+      <div className="mb-4 flex flex-wrap items-center gap-4">
+        {teams.length > 1 && (
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Team
+            </span>
+            <Select
+              value={teamFilter}
+              onChange={(e) => setTeamFilter(e.target.value)}
+              className="w-[180px] h-9 bg-white"
+            >
+              <option value="all">All teams ({rawRows.length})</option>
+              {teams.map((t) => (
+                <option key={t} value={t}>
+                  {t} ({rawRows.filter((r) => (r.team || "").trim() === t).length})
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
+        <div className="flex flex-1 items-center gap-2 max-w-sm">
+          <Input
+            placeholder="Search employee, team, or reason..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="h-9 bg-white"
+          />
         </div>
-      )}
+      </div>
 
       {pending.isLoading ? (
         <Skeleton className="h-64 w-full rounded-lg" />
@@ -246,7 +292,7 @@ export default function LeaveApprovalsPage() {
             <tbody>
               {pageRows.map((r) => {
                 return (
-                  <tr key={r.id} className="border-b align-top last:border-0 hover:bg-muted/10 [&>td]:px-3 [&>td]:py-4">
+                  <tr key={r.id} className="border-b align-top last:border-0 hover:bg-muted/30 transition-colors [&>td]:px-3 [&>td]:py-4">
                     <td>
                       <div className="flex items-center gap-2">
                         <Avatar name={r.employeeName} className="shrink-0 h-9 w-9 bg-primary/10 text-primary font-medium" />
@@ -311,12 +357,12 @@ export default function LeaveApprovalsPage() {
                     </td>
                     <td>
                       <div className="flex items-center justify-end gap-1.5">
-                        {r.status === "PENDING" && r.canAct ? (
+                        {r.status === "PENDING" && r.canAct && viewMode === "ALL" ? (
                           <>
                             <Button
                               variant="outline"
                               size="icon"
-                              className="h-8 w-8 rounded text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                              className="h-8 w-8 rounded text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 shadow-sm"
                               disabled={decide.isPending}
                               onClick={() => decide.mutate({ id: r.id, decision: "APPROVED" })}
                             >
@@ -325,7 +371,7 @@ export default function LeaveApprovalsPage() {
                             <Button
                               variant="outline"
                               size="icon"
-                              className="h-8 w-8 rounded text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                              className="h-8 w-8 rounded text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 shadow-sm"
                               disabled={decide.isPending}
                               onClick={() => rejectOne(r.id)}
                             >
@@ -333,7 +379,12 @@ export default function LeaveApprovalsPage() {
                             </Button>
                           </>
                         ) : null}
-                        <Button variant="outline" size="icon" className="h-8 w-8 rounded text-muted-foreground hover:text-foreground">
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="h-8 w-8 rounded text-muted-foreground hover:text-foreground hover:bg-muted shadow-sm"
+                          onClick={() => setViewModalData(r)}
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
                       </div>
@@ -353,6 +404,80 @@ export default function LeaveApprovalsPage() {
             always
           />
         </div>
+      )}
+
+      {/* Leave Details Modal */}
+      {viewModalData && (
+        <Dialog open={!!viewModalData} onOpenChange={(open) => !open && setViewModalData(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3">
+                <Avatar name={viewModalData.employeeName} className="h-10 w-10 bg-primary/10 text-primary" />
+                <div>
+                  <div className="text-base font-bold">{viewModalData.employeeName}</div>
+                  <div className="text-xs font-normal text-muted-foreground">{viewModalData.team || viewModalData.employeeCode || "Employee"}</div>
+                </div>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4 text-sm">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="font-medium text-muted-foreground">Leave Type</div>
+                <div className="font-semibold">{viewModalData.leaveTypeName}</div>
+                
+                <div className="font-medium text-muted-foreground">Date Range</div>
+                <div className="font-semibold">{dayjs(viewModalData.fromDate).format("DD MMM YYYY")} – {dayjs(viewModalData.toDate).format("DD MMM YYYY")}</div>
+                
+                <div className="font-medium text-muted-foreground">Working Days</div>
+                <div className="font-semibold">{viewModalData.workingDays} days</div>
+
+                <div className="font-medium text-muted-foreground">Status</div>
+                <div>
+                  <Badge className={`border-0 uppercase tracking-wider text-[10px] font-bold ${
+                    viewModalData.status === "APPROVED" ? "bg-emerald-100 text-emerald-700"
+                    : viewModalData.status === "REJECTED" ? "bg-rose-100 text-rose-700"
+                    : "bg-amber-100 text-amber-700"}`}>
+                    {viewModalData.status}
+                  </Badge>
+                </div>
+
+                <div className="font-medium text-muted-foreground">Applied On</div>
+                <div className="font-semibold">{dayjs(viewModalData.createdAt).format("DD MMM YYYY, hh:mm A")}</div>
+
+                <div className="font-medium text-muted-foreground">Requested To</div>
+                <div className="font-semibold">
+                  {viewModalData.requestedToName || "—"} 
+                  {viewModalData.requestedToRole && <span className="text-muted-foreground text-xs block font-normal">{viewModalData.requestedToRole}</span>}
+                </div>
+
+                {viewModalData.status !== "PENDING" && (
+                  <>
+                    <div className="font-medium text-muted-foreground">Decided By</div>
+                    <div className="font-semibold">
+                      {viewModalData.decidedByName || "—"} 
+                      {viewModalData.decidedByRole && <span className="text-muted-foreground text-xs block font-normal">{viewModalData.decidedByRole}</span>}
+                    </div>
+                  </>
+                )}
+              </div>
+              
+              <div className="mt-2 space-y-1">
+                <div className="font-medium text-muted-foreground">Reason for Leave</div>
+                <div className="rounded-md bg-muted/30 p-3 text-sm border">
+                  {viewModalData.reason || <span className="italic text-muted-foreground">No reason provided</span>}
+                </div>
+              </div>
+
+              {viewModalData.status === "REJECTED" && viewModalData.decisionComment && (
+                <div className="mt-2 space-y-1">
+                  <div className="font-medium text-rose-600">Rejection Remark</div>
+                  <div className="rounded-md bg-rose-50 p-3 text-sm border border-rose-100 text-rose-800">
+                    “{viewModalData.decisionComment}”
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

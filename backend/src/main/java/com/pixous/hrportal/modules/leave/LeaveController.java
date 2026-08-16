@@ -90,6 +90,11 @@ public class LeaveController {
         return service.myRequests(SecurityUtils.currentUserId(), page, size);
     }
 
+    @GetMapping("/my-queue")
+    public ApiResponse<List<LeaveRequestResponse>> myQueue() {
+        return ApiResponse.ok(service.myQueue(SecurityUtils.currentUserId()));
+    }
+
     @PostMapping("/{id}/cancel")
     public ApiResponse<Void> cancel(@PathVariable Long id) {
         service.cancel(SecurityUtils.currentUserId(), id);

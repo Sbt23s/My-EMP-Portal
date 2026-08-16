@@ -335,12 +335,12 @@ export default function LeavePage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-10">#</TableHead>
                   <TableHead>Leave Type</TableHead>
                   <TableHead>Applied On</TableHead>
                   <TableHead>Leave Dates</TableHead>
                   <TableHead>Days</TableHead>
                   <TableHead>Reason</TableHead>
+                  <TableHead>Requested To</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Remark</TableHead>
                   <TableHead className="text-right">Action</TableHead>
@@ -349,7 +349,6 @@ export default function LeavePage() {
               <TableBody>
                 {reqPaged.pageRows.map((r, i) => (
                   <TableRow key={r.id} className="hover:bg-muted/10">
-                    <TableCell className="text-muted-foreground">{(reqPaged.page - 1) * reqPaged.pageSize + i + 1}</TableCell>
                     <TableCell className="font-medium text-foreground">{r.leaveTypeName}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {dayjs(r.createdAt).format("DD MMM YYYY")}
@@ -360,6 +359,11 @@ export default function LeavePage() {
                     <TableCell className="text-sm">{r.workingDays}</TableCell>
                     <TableCell className="max-w-[150px] truncate text-sm" title={r.reason}>
                       {r.reason || "—"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      <span className="block truncate font-medium text-foreground" title={r.requestedToName || ""}>
+                        {r.requestedToName || "—"}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <Badge className={`border-0 uppercase tracking-wider text-[10px] font-bold ${
@@ -375,9 +379,6 @@ export default function LeavePage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button variant="outline" size="icon" className="h-8 w-8 rounded text-primary">
-                          <Eye className="h-4 w-4" />
-                        </Button>
                         {r.status === "PENDING" ? (
                           <Button
                             variant="outline"

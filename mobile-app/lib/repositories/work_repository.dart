@@ -732,9 +732,10 @@ class WorkRepository {
   }
 
   /// GET /audit/summary — counts by category for the top of the audit screen.
-  Future<List<Map<String, dynamic>>> auditSummary() async {
+  Future<Map<String, dynamic>> auditSummary() async {
     final data = await _api.get('/audit/summary');
-    return ApiEnvelope.listOf(data).toList();
+    if (data is! Map<String, dynamic>) return const {};
+    return data;
   }
 
   // ---- AI assistant (chatbot) ---------------------------------------------

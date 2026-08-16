@@ -279,13 +279,7 @@ export default function PayrollPage() {
           </select>
         </div>
         <div className="flex flex-col ml-auto flex-row gap-2">
-          <Button
-            className="h-[38px] bg-violet-600 text-white hover:bg-violet-700"
-            disabled={true}
-            title="Bulk Run is coming soon"
-          >
-            Run Payroll
-          </Button>
+          {/* Run Payroll button removed as per design */}
           <Button
             variant="outline"
             className="h-[38px]"

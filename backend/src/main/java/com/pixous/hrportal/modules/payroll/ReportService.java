@@ -119,6 +119,11 @@ public class ReportService {
             doc.add(buildNetInWords(p, rs, f));
             doc.add(buildSignatures(p, user, displayName, f));
 
+            Paragraph footer = new Paragraph("This is a computer-generated document and requires no signature.", f.bodyBold);
+            footer.setAlignment(Element.ALIGN_CENTER);
+            footer.setSpacingBefore(30);
+            doc.add(footer);
+
             doc.close();
             return out.toByteArray();
         } catch (DocumentException | IOException e) {

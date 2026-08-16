@@ -47,6 +47,44 @@ export default function PayslipsPage() {
     }
   }
 
+  async function viewPdf(id: number) {
+    setDownloading(id);
+    try {
+      const res = await api.get(`/payroll/payslip/${id}/pdf`, { responseType: "blob" });
+      const url = URL.createObjectURL(res.data as Blob);
+      window.open(url, "_blank");
+      // Let the browser keep the URL valid for a bit
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (err) {
+      toast.error(apiMessage(err, "Could not view payslip"));
+    } finally {
+      setDownloading(null);
+    }
+  }
+
+  async function exportToExcel() {
+    try {
+      const XLSX = await import("xlsx");
+      const list = payslips.data ?? [];
+      const headers = ["Month/Year", "Pay Date", "Gross Pay", "Deductions", "Net Pay", "Status"];
+      const body = list.map((p) => [
+        `${monthName(p.payMonth)} ${p.payYear}`,
+        p.payDate ? dayjs(p.payDate).format("DD MMM YYYY") : "-",
+        p.grossSalary,
+        p.grossSalary - p.netPay,
+        p.netPay,
+        "Paid"
+      ]);
+
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...body]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "My Salary Details");
+      XLSX.writeFile(wb, "My_Salary_Details.xlsx");
+    } catch (err) {
+      toast.error("Failed to export Excel");
+    }
+  }
+
   // Derived metrics for the top tiles
   const metrics = useMemo(() => {
     const list = payslips.data ?? [];
@@ -112,6 +150,12 @@ export default function PayslipsPage() {
                 <option value="all">All years</option>
                 {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
               </select>
+            </div>
+            <div className="flex flex-col justify-end">
+              <Button variant="outline" className="h-[38px] gap-2" onClick={exportToExcel}>
+                <Download className="h-4 w-4" />
+                Export Excel
+              </Button>
             </div>
           </div>
         }
@@ -228,7 +272,7 @@ export default function PayslipsPage() {
                           <button
                             type="button"
                             className="inline-flex h-8 w-8 items-center justify-center rounded-md border text-muted-foreground hover:bg-muted/50 transition-colors"
-                            onClick={() => download(p.id, label)}
+                            onClick={() => viewPdf(p.id)}
                             title="Preview Payslip"
                           >
                             <Eye className="h-4 w-4" />

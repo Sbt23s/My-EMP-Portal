@@ -145,7 +145,7 @@ public class PayrollController {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=payslip-" + id + ".pdf")
+                        "inline; filename=payslip-" + id + ".pdf")
                 .body(new ByteArrayResource(bytes));
     }
 

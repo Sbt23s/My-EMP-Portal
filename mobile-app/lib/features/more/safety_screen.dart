@@ -338,7 +338,6 @@ class _IncidentDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final when = incident.occurredAt ?? incident.createdAt;
     final whenLabel = when == null ? '—' : DateFormat('d MMM yyyy, h:mm a').format(when);
 

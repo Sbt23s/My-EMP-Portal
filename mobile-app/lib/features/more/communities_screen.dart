@@ -273,13 +273,13 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
         ],
       ),
     );
-    if (confirmed != true || !mounted) return;
+    if (confirmed != true || !context.mounted) return;
     try {
       await ref.read(workRepositoryProvider).deleteCommunity(widget.group.id);
-      if (!mounted) return;
+      if (!context.mounted) return;
       ref.invalidate(communitiesProvider);
     } catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text('$e')));
@@ -289,14 +289,14 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
   Future<void> _removeMember(BuildContext context, int userId) async {
     try {
       await ref.read(workRepositoryProvider).removeCommunityMember(widget.group.id, userId);
-      if (!mounted) return;
+      if (!context.mounted) return;
       setState(() {
         _membersFuture = ref
             .read(workRepositoryProvider)
             .communityMembers(widget.group.id);
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text('$e')));

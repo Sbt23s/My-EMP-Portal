@@ -165,8 +165,6 @@ export default function PayrollPage() {
     return matchesSearch && matchesCat;
   });
 
-  const loading = employees.isLoading || salaries.isLoading;
-
   const rowsPaged = usePagedRows(rows, 15, [search, category, month, year, employees.data]);
 
   const payrollCounts = useMemo(() => {

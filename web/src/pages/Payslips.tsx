@@ -67,14 +67,17 @@ export default function PayslipsPage() {
       const XLSX = await import("xlsx");
       const list = payslips.data ?? [];
       const headers = ["Month/Year", "Pay Date", "Gross Pay", "Deductions", "Net Pay", "Status"];
-      const body = list.map((p) => [
-        `${monthName(p.payMonth)} ${p.payYear}`,
-        p.payDate ? dayjs(p.payDate).format("DD MMM YYYY") : "-",
-        p.grossSalary,
-        p.grossSalary - p.netPay,
-        p.netPay,
-        "Paid"
-      ]);
+      const body = list.map((p) => {
+        const payDate = dayjs(`${p.payYear}-${p.payMonth}-01`).endOf("month").format("DD MMM YYYY");
+        return [
+          `${monthName(p.payMonth)} ${p.payYear}`,
+          payDate,
+          p.grossSalary,
+          p.grossSalary - p.netPay,
+          p.netPay,
+          "Paid"
+        ];
+      });
 
       const ws = XLSX.utils.aoa_to_sheet([headers, ...body]);
       const wb = XLSX.utils.book_new();

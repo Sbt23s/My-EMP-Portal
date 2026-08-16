@@ -13,7 +13,7 @@ change was required, and the web application was not touched.**
 | | |
 |---|---|
 | `flutter analyze` | **No issues found** |
-| `flutter test` | **102 / 102 passing** |
+| `flutter test` | **107 / 107 passing** |
 | Architecture | Clean layers, Riverpod, repository pattern |
 | APK | `dist/Pixous_HR_Portal_v1.0.apk` (release, installable on any Android phone) |
 | Backend | Live at `https://pixoushrportal.pixous.info/api` (verified: login issues a real JWT) |
@@ -29,7 +29,7 @@ change was required, and the web application was not touched.**
 | **Permissions** | My permission requests + apply |
 | **Approvals** | Manager approvals queue |
 | **Chat** | Company chat |
-| **Calls** | Voice calls (WebRTC) + call history |
+| **Calls** | **Audio + video calls (WebRTC)** — voice/video buttons in 1:1 chat, full-screen call overlay, mute/camera/hang-up, incoming-call handling |
 | **Notifications** | List + unread state |
 | **Profile** | Details, sign out |
 | **Calendar** | Personal / work calendar |
@@ -38,6 +38,12 @@ change was required, and the web application was not touched.**
 | **Complaints** | Raise + track complaints |
 | **Helpdesk** | Raise support tickets |
 | **Claims** | Submit expense/travel claims |
+| **My team** | Team roster, upcoming birthdays/anniversaries, who is off today, one-tap team chat |
+| **Safety** | Report incidents (type, severity, zone, anonymous), my reports, staff review + resolve |
+| **Communities** | Create groups, add/remove members, delete groups, open group chat |
+| **Employees** | Searchable company directory with contact details |
+| **Audit log** | The security trail (who/what/when/where) for HR & admins |
+| **AI assistant** | Conversational assistant over the portal knowledge base |
 | **HR screens** | Leave policies, payroll, onboarding tasks, reports |
 | **Themes** | Material 3, light and dark, company branding applied at the root |
 
@@ -155,11 +161,16 @@ Every `DioException` becomes a `Failure` with a sentence worth showing:
 
 ```bash
 flutter analyze     # No issues found
-flutter test        # 102/102
+flutter test        # 107/107
 ```
 
 The suite covers login flow, session restore, parsing of API payloads (incl.
-nulls and missing fields), attendance, leave, work reports, branding, and more.
+nulls and missing fields), attendance, leave, work reports, branding, safety
+incidents, celebrations, and more.
+
+A full **web ↔ mobile parity audit** lives in `WEB_PARITY_AUDIT.md` — every web
+module is mapped to its mobile screen, with what was added in this pass and how
+to re-verify.
 Add a module by following the pattern below and matching the API contract in
 `backend/src/main/java/com/pixous/hrportal/modules/` rather than guessing —
 several endpoints put their payload directly in the body instead of under

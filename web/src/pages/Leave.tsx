@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Loader2, CalendarX2, X, FileSpreadsheet } from "lucide-react";
+import { CheckCircle2, Clock, CalendarDays, AlertTriangle, Eye, Download, X, Plus, Loader2, CalendarX2, FileSpreadsheet } from "lucide-react";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
@@ -335,7 +335,8 @@ export default function LeavePage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Type</TableHead>
+                  <TableHead className="w-10">#</TableHead>
+                  <TableHead>Leave Type</TableHead>
                   <TableHead>Applied On</TableHead>
                   <TableHead>Leave Dates</TableHead>
                   <TableHead>Days</TableHead>
@@ -346,40 +347,54 @@ export default function LeavePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {reqPaged.pageRows.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.leaveTypeName}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                {reqPaged.pageRows.map((r, i) => (
+                  <TableRow key={r.id} className="hover:bg-muted/10">
+                    <TableCell className="text-muted-foreground">{(reqPaged.page - 1) * reqPaged.pageSize + i + 1}</TableCell>
+                    <TableCell className="font-medium text-foreground">{r.leaveTypeName}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
                       {dayjs(r.createdAt).format("DD MMM YYYY")}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-sm">
                       {dayjs(r.fromDate).format("DD MMM YYYY")} – {dayjs(r.toDate).format("DD MMM YYYY")}
                     </TableCell>
-                    <TableCell>{r.workingDays}</TableCell>
-                    <TableCell className="max-w-[150px] truncate text-xs" title={r.reason}>
+                    <TableCell className="text-sm">{r.workingDays}</TableCell>
+                    <TableCell className="max-w-[150px] truncate text-sm" title={r.reason}>
                       {r.reason || "—"}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={statusVariant(r.status)}>{r.status}</Badge>
+                      <Badge className={`border-0 uppercase tracking-wider text-[10px] font-bold ${
+                        r.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                        r.status === 'REJECTED' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
+                        'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                      }`}>
+                        {r.status}
+                      </Badge>
                     </TableCell>
-                    <TableCell className="max-w-[160px] truncate text-xs text-muted-foreground" title={r.decisionComment}>
+                    <TableCell className="max-w-[160px] truncate text-sm text-muted-foreground" title={r.decisionComment}>
                       {r.status === "REJECTED" ? (r.decisionComment || "—") : "—"}
                     </TableCell>
                     <TableCell className="text-right">
-                      {(r.status === "PENDING" || r.status === "APPROVED") ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={cancel.isPending}
-                          onClick={() => {
-                            if (window.confirm("Cancel this leave request?")) cancel.mutate(r.id);
-                          }}
-                        >
-                          <X className="h-4 w-4" /> Cancel
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="outline" size="icon" className="h-8 w-8 rounded text-primary">
+                          <Eye className="h-4 w-4" />
                         </Button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
+                        {r.status === "PENDING" ? (
+                          <Button
+                            variant="outline"
+                            className="h-8 rounded px-2 text-foreground"
+                            disabled={cancel.isPending}
+                            onClick={() => {
+                              if (window.confirm("Cancel this leave request?")) cancel.mutate(r.id);
+                            }}
+                          >
+                            <X className="mr-1 h-3 w-3" /> Cancel
+                          </Button>
+                        ) : r.status === "APPROVED" ? (
+                          <Button variant="outline" size="icon" className="h-8 w-8 rounded text-primary">
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        ) : null}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

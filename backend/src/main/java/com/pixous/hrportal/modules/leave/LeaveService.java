@@ -470,9 +470,10 @@ public class LeaveService {
             User applicant = applicants.get(r.getUserId());
             boolean canAct = canApproveLeave(approver, applicant, r);
             boolean isTeamMember = leaveHasRole(approver, "IT_TL") && sameTeam(approver, applicant);
-            // Admins see the whole queue; TLs see their team members; other
+            boolean isHR = leaveHasRole(approver, "IT_MGR") || leaveHasRole(approver, "IT_HR");
+            // Admins and HR see the whole queue; TLs see their team members; other
             // approvers only see rows they can act on.
-            if (!canAct && !adminView && !isTeamMember) continue;
+            if (!canAct && !adminView && !isHR && !isTeamMember) continue;
             out.add(LeaveRequestResponse.from(r,
                     applicant != null ? applicant.getName() : "?",
                     typeNames.getOrDefault(r.getLeaveTypeId(), "?"),
@@ -555,8 +556,8 @@ public class LeaveService {
 
         if ("SUPER_ADMIN".equals(who)) return false;           // admin's own leave — not handled here
         if ("IT_MGR".equals(who) || "IT_HR".equals(who)) {
-            // Not "any admin": one named person, so HR cannot pick a second route.
-            return HR_LEAVE_APPROVER_CODE.equalsIgnoreCase(approver.getEmployeeCode());
+            // HR's leave escalates to Admin
+            return leaveHasRole(approver, "SUPER_ADMIN");
         }
         if ("IT_TL".equals(who)) return HR_LEAVE_APPROVER_CODE.equalsIgnoreCase(approver.getEmployeeCode());
 
@@ -619,7 +620,8 @@ public class LeaveService {
             User applicant = users.get(r.getUserId());
             boolean inScope = canApproveLeave(approver, applicant, r);
             boolean isTeamMember = leaveHasRole(approver, "IT_TL") && sameTeam(approver, applicant);
-            if (!inScope && !adminView && !isTeamMember) continue;
+            boolean isHR = leaveHasRole(approver, "IT_MGR") || leaveHasRole(approver, "IT_HR");
+            if (!inScope && !adminView && !isHR && !isTeamMember) continue;
             boolean canAct = inScope && "PENDING".equals(r.getStatus());
             String toName = r.getRequestedTo() != null && users.get(r.getRequestedTo()) != null
                     ? users.get(r.getRequestedTo()).getName() : null;

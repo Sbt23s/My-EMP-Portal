@@ -214,153 +214,128 @@ export default function LeaveApprovalsPage() {
           {/* Only the table itself scrolls sideways, so the count and the pager
               below stay where they are put. */}
           <div className="overflow-x-auto">
-          <table className="w-full min-w-[1240px] table-fixed text-sm">
-            {/* Fixed widths keep every row's columns on the same lines, and stop
-                a long reason from pushing the rest of the row out of shape. */}
+            <table className="w-full min-w-[1240px] table-fixed text-sm">
             <colgroup>
-              <col className="w-9" />
-              <col className="w-[165px]" />
-              <col className="w-[110px]" />
-              <col className="w-[100px]" />
+              <col className="w-[180px]" />
+              <col className="w-[140px]" />
+              <col className="w-[120px]" />
               <col className="w-14" />
               <col className="w-[140px]" />
               <col className="w-[150px]" />
-              <col className="w-[100px]" />
-              <col className="w-[135px]" />
+              <col className="w-[140px]" />
+              <col className="w-[140px]" />
               <col className="w-[120px]" />
-              <col className="w-[185px]" />
+              <col className="w-[100px]" />
+              <col className="w-[150px]" />
             </colgroup>
             <thead>
-              <tr className="border-b bg-muted/30 text-left align-middle text-[11px] font-semibold uppercase tracking-wide text-muted-foreground [&>th]:whitespace-nowrap [&>th]:px-3 [&>th]:py-3">
-                <th className="!pr-0">
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={toggleAll}
-                    className="h-4 w-4 accent-[hsl(var(--primary))]"
-                    aria-label="Select all"
-                  />
-                </th>
+              <tr className="border-b bg-muted/10 text-left align-middle text-[11px] font-bold text-muted-foreground [&>th]:whitespace-nowrap [&>th]:px-3 [&>th]:py-3">
                 <th>Employee</th>
                 <th>Team</th>
-                <th>Leave type</th>
+                <th>Leave Type</th>
                 <th className="text-right">Days</th>
-                <th>Date range</th>
+                <th>Date Range</th>
                 <th>Reason</th>
-                <th>Requested to</th>
-                <th>Decided by</th>
-                <th>Tasks</th>
-                <th className="text-right">Status / action</th>
+                <th>Requested To</th>
+                <th>Decided By</th>
+                <th>Applied On</th>
+                <th>Status</th>
+                <th className="text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {pageRows.map((r) => {
-                const g = tasksByUser.get(r.userId);
-                const pendingTasks = g?.pendingTasks ?? 0;
-                const totalTasks = g?.totalTasks ?? 0;
-                const checked = selected.has(r.id);
                 return (
-                  <tr key={r.id} className={`border-b align-top last:border-0 hover:bg-muted/20 ${checked ? "bg-primary/5" : ""} [&>td]:px-3 [&>td]:py-3`}>
-                    <td className="!pr-0">
-                      {r.canAct && (
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggle(r.id)}
-                          className="mt-0.5 h-4 w-4 accent-[hsl(var(--primary))]"
-                          aria-label={`Select ${r.employeeName}'s request`}
-                        />
-                      )}
-                    </td>
+                  <tr key={r.id} className="border-b align-top last:border-0 hover:bg-muted/10 [&>td]:px-3 [&>td]:py-4">
                     <td>
                       <div className="flex items-center gap-2">
-                        <Avatar name={r.employeeName} className="shrink-0" />
-                        <span className="truncate font-medium" title={r.employeeName}>{r.employeeName}</span>
+                        <Avatar name={r.employeeName} className="shrink-0 h-9 w-9 bg-primary/10 text-primary font-medium" />
+                        <div className="flex flex-col">
+                          <span className="truncate font-bold text-foreground text-sm" title={r.employeeName}>{r.employeeName}</span>
+                          <span className="text-[11px] text-muted-foreground">{r.employeeCode || "—"}</span>
+                        </div>
                       </div>
                     </td>
-                    <td className="truncate text-muted-foreground" title={r.team || ""}>{r.team || "—"}</td>
+                    <td className="truncate text-sm font-medium text-muted-foreground" title={r.team || ""}>{r.team || "—"}</td>
                     <td>
-                      <Badge variant="secondary" className="max-w-full truncate" title={r.leaveTypeName}>
-                        {r.leaveTypeName}
+                      <Badge className={`border-0 whitespace-nowrap ${
+                        r.leaveTypeName.toLowerCase().includes('sick') ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
+                        r.leaveTypeName.toLowerCase().includes('earned') ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                        'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                      }`}>
+                        {r.leaveTypeName.replace(/\s*\(.*\)/, '')}
                       </Badge>
                     </td>
-                    <td className="text-right font-medium tabular-nums">{r.workingDays}d</td>
-                    <td className="text-muted-foreground">
-                      {dayjs(r.fromDate).format("DD MMM")} – {dayjs(r.toDate).format("DD MMM YYYY")}
+                    <td className="text-right text-sm font-bold text-muted-foreground tabular-nums">{r.workingDays}d</td>
+                    <td className="text-sm font-medium text-muted-foreground">
+                      <div className="flex flex-col">
+                        <span>{dayjs(r.fromDate).format("DD MMM YYYY")}</span>
+                        <span>– {dayjs(r.toDate).format("DD MMM YYYY")}</span>
+                      </div>
                     </td>
                     <td>
-                      <span className="line-clamp-2 block break-words text-muted-foreground" title={r.reason || ""}>
+                      <span className="line-clamp-2 block break-words text-sm font-medium text-muted-foreground" title={r.reason || ""}>
                         {r.reason ? `“${r.reason}”` : "—"}
                       </span>
                     </td>
-                    <td className="text-muted-foreground">
-                      <span className="block truncate" title={r.requestedToName || ""}>
+                    <td className="text-sm">
+                      <span className="block truncate text-foreground font-medium" title={r.requestedToName || ""}>
                         {r.requestedToName || "—"}
                       </span>
-                      {/* Which hat they were wearing, so "Hr" and "System Admin"
-                          are not left to be told apart by name alone. */}
                       {r.requestedToName && r.requestedToRole && (
-                        <div className="text-[10px] font-medium text-primary">{r.requestedToRole}</div>
+                        <div className="text-[11px] font-bold text-primary">{r.requestedToRole}</div>
                       )}
                     </td>
-                    <td className="text-muted-foreground">
+                    <td className="text-sm">
                       <span className="block truncate font-medium text-foreground" title={r.decidedByName || ""}>
                         {r.decidedByName || "—"}
                       </span>
                       {r.decidedByName && r.decidedByRole && (
-                        <div className="text-[10px] font-medium text-primary">{r.decidedByRole}</div>
+                        <div className="text-[11px] font-bold text-primary">{r.decidedByRole}</div>
                       )}
-                      {r.decidedAt && <div className="text-[10px]">{dayjs(r.decidedAt).format("DD MMM, h:mm A")}</div>}
-                      {/* Why it was turned down, kept beside who turned it down. */}
-                      {r.status === "REJECTED" && r.decisionComment && (
-                        <div className="mt-1 line-clamp-2 break-words text-[10px] leading-snug text-rose-600 dark:text-rose-400"
-                          title={r.decisionComment}>
-                          “{r.decisionComment}”
-                        </div>
-                      )}
+                      {r.decidedAt && <div className="text-[11px] text-muted-foreground">{dayjs(r.decidedAt).format("DD MMM YYYY")}</div>}
+                    </td>
+                    <td className="text-sm font-medium text-muted-foreground">
+                      <div className="flex flex-col">
+                        <span>{dayjs(r.createdAt).format("DD MMM YYYY")}</span>
+                        <span>{dayjs(r.createdAt).format("hh:mm A")}</span>
+                      </div>
                     </td>
                     <td>
-                      {totalTasks > 0 ? (
-                        <span className="flex flex-wrap items-center gap-1 text-xs">
-                          <ListTodo className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                          <Badge className="border-0 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                            {pendingTasks} pending
-                          </Badge>
-                          <span className="text-muted-foreground">{totalTasks} total</span>
-                        </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">No tasks</span>
-                      )}
+                      <Badge className={`border-0 text-[11px] font-bold tracking-wider ${
+                        r.status === "APPROVED" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                        : r.status === "REJECTED" ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"
+                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"}`}>
+                        {r.status.charAt(0) + r.status.slice(1).toLowerCase()}
+                      </Badge>
                     </td>
                     <td>
-                      <div className="flex flex-wrap items-center justify-end gap-1.5">
-                        <Badge className={`border-0 ${
-                          r.status === "APPROVED" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                          : r.status === "REJECTED" ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"
-                          : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"}`}>
-                          {r.status.charAt(0) + r.status.slice(1).toLowerCase()}
-                        </Badge>
+                      <div className="flex items-center justify-end gap-1.5">
                         {r.status === "PENDING" && r.canAct ? (
                           <>
                             <Button
                               variant="outline"
-                              size="sm"
-                              disabled={decide.isPending}
-                              onClick={() => rejectOne(r.id)}
-                            >
-                              <X className="h-4 w-4" /> Reject
-                            </Button>
-                            <Button
-                              size="sm"
+                              size="icon"
+                              className="h-8 w-8 rounded text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
                               disabled={decide.isPending}
                               onClick={() => decide.mutate({ id: r.id, decision: "APPROVED" })}
                             >
-                              <Check className="h-4 w-4" /> Approve
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 rounded text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                              disabled={decide.isPending}
+                              onClick={() => rejectOne(r.id)}
+                            >
+                              <X className="h-4 w-4" />
                             </Button>
                           </>
-                        ) : (
-                          <span className="whitespace-nowrap text-xs text-muted-foreground">View only</span>
-                        )}
+                        ) : null}
+                        <Button variant="outline" size="icon" className="h-8 w-8 rounded text-muted-foreground hover:text-foreground">
+                          <Eye className="h-4 w-4" />
+                        </Button>
                       </div>
                     </td>
                   </tr>

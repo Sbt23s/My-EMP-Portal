@@ -184,3 +184,4 @@ volumes:
   mysql_data:
   backend_storage:
   faces_data:
+  certbot-webroot:

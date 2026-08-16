@@ -47,6 +47,8 @@ if (Test-Path $Key) {
     $remote = @"
 set -e
 cd ~/hr-portal
+echo '--- Resetting uncommitted server changes ---'
+git checkout .
 echo '--- Pulling latest code from GitHub ---'
 git pull
 echo '--- Rebuilding and starting services ---'

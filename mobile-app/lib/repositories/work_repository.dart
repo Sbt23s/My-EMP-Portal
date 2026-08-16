@@ -11,6 +11,9 @@ import '../models/work_items.dart';
 import '../models/complaint.dart';
 import '../models/directory_person.dart';
 import '../models/work_report.dart';
+import '../models/safety.dart';
+import '../models/celebration.dart';
+import '../models/my_team.dart';
 
 /// Everything an employee does about their own working day: attendance, leave
 /// and the dashboard that summarises both.

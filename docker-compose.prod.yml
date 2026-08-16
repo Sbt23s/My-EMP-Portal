@@ -80,15 +80,20 @@ services:
       FAST2SMS_API_KEY: ${FAST2SMS_API_KEY:-}
       FAST2SMS_ROUTE: ${FAST2SMS_ROUTE:-q}
       FAST2SMS_SENDER_ID: ${FAST2SMS_SENDER_ID:-}
-      # WebRTC calls: STUN always, TURN when this secret is set (see
+      # WebRTC calls: STUN always, TURN when the shared secret is present (see
       # setup-turn.sh on the server — it writes /etc/turn-secret). The backend
       # mints short-lived TURN credentials from it, so no password ships in the
-      # APK. TURN_DOMAIN defaults to the portal domain.
-      TURN_SECRET: ${TURN_SECRET:-}
+      # APK. The secret file is mounted read-only below; no copy of it is needed
+      # in .env. TURN_DOMAIN defaults to the portal domain.
+      TURN_SECRET_FILE: ${TURN_SECRET_FILE:-/etc/turn-secret}
       TURN_DOMAIN: ${TURN_DOMAIN:-pixoushrportal.pixous.info}
       JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx768m -Duser.timezone=Asia/Kolkata}
     volumes:
       - backend_storage:/app/storage   # payslip PDFs, QR codes, uploads survive restarts
+      # The coturn shared secret, mounted read-only so the backend can mint
+      # short-lived TURN credentials for calls. Absent on hosts without TURN;
+      # the backend then serves STUN only, exactly as before.
+      - /etc/turn-secret:/etc/turn-secret:ro
     depends_on:
       mysql:
         condition: service_healthy

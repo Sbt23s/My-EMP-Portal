@@ -34,6 +34,18 @@ public class CallController {
     @GetMapping("/ice-servers")
     public Map<String, Object> iceServers() {
         String turnSecret = System.getenv("TURN_SECRET");
+        if (turnSecret == null || turnSecret.isBlank()) {
+            // The compose file mounts /etc/turn-secret read-only (setup-turn.sh
+            // writes it). Read it when the env var is absent so a TURN server
+            // needs no .env edit.
+            String file = System.getenv().getOrDefault("TURN_SECRET_FILE", "/etc/turn-secret");
+            try {
+                turnSecret = java.nio.file.Files.readString(
+                        java.nio.file.Path.of(file)).trim();
+            } catch (Exception ignored) {
+                // No TURN on this host — STUN only, as before.
+            }
+        }
 
         List<Map<String, Object>> servers = new java.util.ArrayList<>();
         servers.add(Map.of("urls", "stun:stun.l.google.com:19302"));

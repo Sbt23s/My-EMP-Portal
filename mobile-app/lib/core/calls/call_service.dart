@@ -273,7 +273,6 @@ class CallService {
 
   /// Pick up.
   Future<void> accept() async {
-    final offer = _pendingOffer;
     final from = _peer;
     if (from == null) return;
 
@@ -284,9 +283,12 @@ class CallService {
       await _openMedia(video: _isVideo);
       await _openPeerConnection();
 
-      // The offer may have landed while the camera was opening; if it has, use
-      // it. If it has not, say "ringing" and let the arriving offer be answered
-      // below — the caller re-sends on ringing, so nothing is lost.
+      // The offer may have landed while the camera was opening, so it is read
+      // again after setup rather than captured before — the web client re-reads
+      // for the same reason. If it still has not arrived, say "ringing" and let
+      // the arriving offer be answered in the offer case below; the caller
+      // re-sends on ringing, so nothing is lost.
+      final offer = _pendingOffer;
       if (offer == null) {
         await _send(from.id, 'ringing', null);
         return;
@@ -448,7 +450,11 @@ class CallService {
         // If this side already accepted and was waiting for the offer, answer
         // immediately. Otherwise hold it until Accept is pressed.
         if (_pc != null && _localStream != null && !_isCaller) {
-          await _answer(data);
+          try {
+            await _answer(data);
+          } catch (_) {
+            await hangUp(notify: false);
+          }
           break;
         }
         _peer = CallPeer(id: fromId, name: fromName);

@@ -190,7 +190,7 @@ class _Controls extends ConsumerWidget {
             icon: Icons.call_end_rounded,
             colour: Colors.red,
             label: 'Decline',
-            onTap: () => calls.hangUp(),
+            onTap: calls.decline,
           ),
           _RoundButton(
             icon: calls.isVideo ? Icons.videocam_rounded : Icons.call_rounded,

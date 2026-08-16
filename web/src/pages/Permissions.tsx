@@ -282,9 +282,7 @@ export default function PermissionsPage() {
     ...(isApprover
       ? [["TO_ME", `Pending my approval (${(pending.data ?? []).filter((r) => r.status === "PENDING").length})`] as const]
       : []),
-    ...(isAdmin
-      ? []
-      : [["MINE", `My requests (${(mine.data ?? []).length})`] as const])
+    [["MINE", `My requests (${(mine.data ?? []).length})`] as const]
   ];
 
   const myList = (mine.data ?? []).filter((r) => tab === "ALL" || r.status === tab);
@@ -343,9 +341,30 @@ export default function PermissionsPage() {
       <PageHeader
         title="Permission"
         subtitle="Request short, hours-wise time off during a work day."
-        actions={isAdmin ? undefined : (
-          <Button onClick={() => setOpen(true)}><Plus className="mr-1.5 h-4 w-4" /> Apply for permission</Button>
-        )}
+        actions={
+          <div className="flex items-center gap-4">
+            <div className={cn("inline-flex rounded-full border bg-muted/60 p-1", views.length < 2 && "hidden")}>
+              {views.map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setView(key)}
+                  className={cn(
+                    "rounded-full px-4 py-1.5 text-xs font-semibold transition-colors",
+                    view === key
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <Button onClick={() => setOpen(true)}>
+              <Plus className="mr-1.5 h-4 w-4" /> Apply for permission
+            </Button>
+          </div>
+        }
       />
 
       {/* Counts on top, then one view at a time. */}
@@ -431,48 +450,6 @@ export default function PermissionsPage() {
               </button>
             )}
           </div>
-
-          {/* Twelve months of requests, by what was decided — so a month that ran
-              unusually high, or a run of rejections, is visible. */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="mb-2 flex items-center gap-1.5">
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-semibold">Permission trend · last 12 months</span>
-              </div>
-              <div className="h-44 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={trend} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                    <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={9} />
-                    <YAxis tickLine={false} axisLine={false} fontSize={9} allowDecimals={false} />
-                    <Tooltip />
-                    <Legend wrapperStyle={{ fontSize: 10 }} />
-                    <Bar dataKey="approved" name="Approved" stackId="a" fill="hsl(var(--success))" maxBarSize={16} />
-                    <Bar dataKey="pending" name="Pending" stackId="a" fill="#f59e0b" maxBarSize={16} />
-                    <Bar dataKey="rejected" name="Rejected" stackId="a" fill="hsl(var(--destructive))" maxBarSize={16} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className={cn("inline-flex rounded-full border bg-muted/60 p-1", views.length < 2 && "hidden")}>
-            {views.map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setView(key)}
-                className={cn(
-                  "rounded-full px-4 py-1.5 text-xs font-semibold transition-colors",
-                  view === key
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
         </>
       )}
 
@@ -523,7 +500,7 @@ export default function PermissionsPage() {
                 </TableHeader>
                 <TableBody>
                   {adminPaged.pageRows.map((r) => (
-                    <TableRow key={r.id} className="bg-card">
+                    <TableRow key={r.id} className="border-b align-top last:border-0 hover:bg-muted/30 transition-colors [&>td]:px-3 [&>td]:py-4">
                       <TableCell className="sticky left-0 z-10 bg-inherit font-medium shadow-[1px_0_0_0_hsl(var(--border))]">{r.employeeName}<div className="code-chip text-xs text-muted-foreground">{r.employeeCode}</div></TableCell>
                       <TableCell>{r.team || "—"}</TableCell>
                       <TableCell>{dayjs(r.requestDate).format("DD MMM YYYY")}</TableCell>
@@ -656,7 +633,7 @@ export default function PermissionsPage() {
                 </TableHeader>
                 <TableBody>
                   {approverPaged.pageRows.map((r) => (
-                    <TableRow key={r.id} className="bg-card">
+                    <TableRow key={r.id} className="border-b align-top last:border-0 hover:bg-muted/30 transition-colors [&>td]:px-3 [&>td]:py-4">
                       <TableCell className="sticky left-0 z-10 bg-inherit font-medium shadow-[1px_0_0_0_hsl(var(--border))]">{r.employeeName}<div className="code-chip text-xs text-muted-foreground">{r.employeeCode}</div></TableCell>
                       <TableCell>{r.team || "—"}</TableCell>
                       <TableCell>{dayjs(r.requestDate).format("DD MMM YYYY")}</TableCell>
@@ -746,7 +723,7 @@ export default function PermissionsPage() {
               </TableHeader>
               <TableBody>
                 {myPaged.pageRows.map((r) => (
-                  <TableRow key={r.id}>
+                  <TableRow key={r.id} className="border-b align-top last:border-0 hover:bg-muted/30 transition-colors [&>td]:px-3 [&>td]:py-4">
                     <TableCell>{dayjs(r.requestDate).format("DD MMM YYYY")}</TableCell>
                     <TableCell>{to12Hour(r.fromTime)} – {to12Hour(r.toTime)}</TableCell>
                     <TableCell>{r.hours}h</TableCell>

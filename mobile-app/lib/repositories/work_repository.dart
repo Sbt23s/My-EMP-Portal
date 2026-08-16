@@ -605,4 +605,150 @@ class WorkRepository {
   /// POST /onboarding/{userId}/tasks/{taskId}/complete
   Future<void> completeOnboardingTask(int userId, int taskId) =>
       _api.post('/onboarding/$userId/tasks/$taskId/complete');
+
+  // ---- safety incidents ---------------------------------------------------
+
+  /// POST /safety-incidents — report a safety incident.
+  Future<Map<String, dynamic>> reportSafetyIncident({
+    required String incidentType,
+    required String description,
+    String? zone,
+    bool anonymous = false,
+    String? occurredAt,
+    String? severity,
+  }) async {
+    final data = await _api.post('/safety-incidents', body: {
+      'incidentType': incidentType,
+      'description': description,
+      if (zone != null && zone.trim().isNotEmpty) 'zone': zone.trim(),
+      'anonymous': anonymous,
+      if (occurredAt != null) 'occurredAt': occurredAt,
+      if (severity != null) 'severity': severity,
+    });
+    if (data is! Map<String, dynamic>) throw const ParseFailure();
+    return data;
+  }
+
+  /// GET /safety-incidents/mine — the caller's own reports, paged on the server.
+  Future<List<SafetyIncident>> mySafetyIncidents({int size = 50}) async {
+    final data = await _api.get('/safety-incidents/mine', query: {'size': size});
+    return ApiEnvelope.listOf(data).map(SafetyIncident.fromJson).toList();
+  }
+
+  /// GET /safety-incidents — staff view of every report (REPORT_VIEW).
+  Future<List<SafetyIncident>> allSafetyIncidents({String? status, int size = 100}) async {
+    final data = await _api.get('/safety-incidents', query: {
+      'size': size,
+      if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
+    });
+    return ApiEnvelope.listOf(data).map(SafetyIncident.fromJson).toList();
+  }
+
+  /// POST /safety-incidents/{id}/resolve — staff resolution of one report.
+  Future<void> resolveSafetyIncident(int id, {required String status, String? notes}) =>
+      _api.post('/safety-incidents/$id/resolve', body: {
+        'status': status,
+        if (notes != null && notes.trim().isNotEmpty) 'resolutionNotes': notes.trim(),
+      });
+
+  // ---- my team ------------------------------------------------------------
+
+  /// GET /users/my-team — this person's team and its active members.
+  Future<MyTeam> myTeam() async {
+    final data = await _api.get('/users/my-team');
+    if (data is! Map<String, dynamic>) throw const ParseFailure();
+    return MyTeam.fromJson(data);
+  }
+
+  /// GET /dashboard/celebrations — upcoming birthdays and anniversaries.
+  Future<List<Celebration>> celebrations() async {
+    final data = await _api.get('/dashboard/celebrations');
+    return ApiEnvelope.listOf(data).map(Celebration.fromJson).toList();
+  }
+
+  /// GET /leave/on-leave — who is off today.
+  Future<List<LeaveRequest>> onLeaveToday() async {
+    final data = await _api.get('/leave/on-leave');
+    return ApiEnvelope.listOf(data).map(LeaveRequest.fromJson).toList();
+  }
+
+  /// POST /communities/team — find or create this person's team channel.
+  Future<ChatChannel> openTeamChat() async {
+    final data = await _api.post('/communities/team');
+    if (data is! Map<String, dynamic>) throw const ParseFailure();
+    return ChatChannel.fromJson(data);
+  }
+
+  // ---- communities management (ORG_MANAGE / COMMUNITY_MANAGE) -------------
+
+  /// POST /communities — create a community group.
+  Future<ChatChannel> createCommunityGroup({
+    required String name,
+    String? description,
+    bool isAnnouncement = false,
+  }) async {
+    final data = await _api.post('/communities', body: {
+      'name': name.trim(),
+      if (description != null && description.trim().isNotEmpty)
+        'description': description.trim(),
+      'isAnnouncement': isAnnouncement,
+    });
+    if (data is! Map<String, dynamic>) throw const ParseFailure();
+    return ChatChannel.fromJson(data);
+  }
+
+  /// GET /communities/{id}/members — who is in a group.
+  Future<List<DirectoryPerson>> communityMembers(int id) async {
+    final data = await _api.get('/communities/$id/members');
+    return ApiEnvelope.listOf(data).map(DirectoryPerson.fromJson).toList();
+  }
+
+  /// POST /communities/{id}/members — add a person to a group.
+  Future<void> addCommunityMember(int id, int userId) =>
+      _api.post('/communities/$id/members', body: {'userId': userId});
+
+  /// DELETE /communities/{id}/members/{userId} — remove a person from a group.
+  Future<void> removeCommunityMember(int id, int userId) =>
+      _api.delete('/communities/$id/members/$userId');
+
+  /// DELETE /communities/{id} — delete a group.
+  Future<void> deleteCommunity(int id) => _api.delete('/communities/$id');
+
+  // ---- audit log (USER_MANAGE / EMPLOYEE_MANAGE) --------------------------
+
+  /// GET /audit?page&size — the security trail, newest first.
+  Future<List<Map<String, dynamic>>> auditLog({int page = 0, int size = 50}) async {
+    final data = await _api.get('/audit', query: {'page': page, 'size': size});
+    return ApiEnvelope.listOf(data).toList();
+  }
+
+  /// GET /audit/summary — counts by category for the top of the audit screen.
+  Future<List<Map<String, dynamic>>> auditSummary() async {
+    final data = await _api.get('/audit/summary');
+    return ApiEnvelope.listOf(data).toList();
+  }
+
+  // ---- AI assistant (chatbot) ---------------------------------------------
+
+  /// POST /chatbot/chat — one turn of the assistant conversation.
+  Future<String> chatbotChat({
+    required String message,
+    String? lang,
+    List<Map<String, String>> history = const [],
+  }) async {
+    final data = await _api.post('/chatbot/chat', body: {
+      'message': message,
+      if (lang != null && lang.trim().isNotEmpty) 'lang': lang.trim(),
+      'history': history,
+    });
+    if (data is! Map<String, dynamic>) throw const ParseFailure();
+    return data['reply']?.toString() ?? '';
+  }
+
+  /// GET /chatbot/config — assistant name, enabled flag, language.
+  Future<Map<String, dynamic>> chatbotConfig() async {
+    final data = await _api.get('/chatbot/config');
+    if (data is! Map<String, dynamic>) throw const ParseFailure();
+    return data;
+  }
 }

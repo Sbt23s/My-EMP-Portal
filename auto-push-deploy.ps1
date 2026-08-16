@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Automatically commits, pushes to GitHub (my-emp main), and deploys to the live server.
+    Automatically commits, pushes to GitHub (my-emp main), and deploys to the live server with HTTPS/SSL.
 
 .EXAMPLE
     .\auto-push-deploy.ps1 -Message "Updated Employee Module"
@@ -51,7 +51,14 @@ echo '--- Resetting uncommitted server changes ---'
 git checkout .
 echo '--- Pulling latest code from GitHub ---'
 git pull
-echo '--- Rebuilding and starting services ---'
+echo '--- Checking SSL certificate for pixoushrportal.pixous.info ---'
+if [ ! -f /etc/letsencrypt/live/pixoushrportal.pixous.info/fullchain.pem ]; then
+    echo '--- Installing certbot and requesting SSL certificate ---'
+    sudo apt-get update -qq && sudo apt-get install -y -qq certbot || true
+    sudo docker compose -f docker-compose.prod.yml down || true
+    sudo certbot certonly --standalone -d pixoushrportal.pixous.info --non-interactive --agree-tos --email sethubala.pixous@gmail.com || true
+fi
+echo '--- Rebuilding and starting production services ---'
 sudo docker compose -f docker-compose.prod.yml up -d --build backend web
 echo '--- Checking recent logs ---'
 sudo docker logs --tail 10 hrportal-backend 2>&1 | tail -10

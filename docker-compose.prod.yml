@@ -139,13 +139,10 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
-      # Uncomment together with the 443 block in web/nginx.conf, after certbot
-      # has issued a certificate for employeeportal.pixoustech.app. HTTPS is
-      # what makes the microphone and GPS available to the browser at all.
-      # - "443:443"
-    # volumes:
-    #   - /etc/letsencrypt:/etc/letsencrypt:ro
-    #   - certbot-webroot:/var/www/certbot
+      - "443:443"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - certbot-webroot:/var/www/certbot
     depends_on:
       - backend
     networks: [hrnet]

@@ -31,7 +31,7 @@
 
 set -euo pipefail
 
-DOMAIN="ems.pixoustech.com"
+DOMAIN="pixoushrportal.pixous.info"
 EXPECTED_IP="16.192.105.61"
 EMAIL="sethubala.pixous@gmail.com"   # where expiry warnings go
 

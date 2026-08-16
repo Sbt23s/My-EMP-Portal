@@ -21,6 +21,52 @@ public class CallController {
     private final com.pixous.hrportal.modules.notification.NotificationService notificationService;
     private final CommunityService communityService;
 
+    /**
+     * The ICE servers a call may use: STUN always, plus TURN when the shared
+     * secret is configured (see setup-turn.sh on the server).
+     *
+     * The mobile client reads this endpoint and falls back to public STUN when
+     * it is absent, so this is purely additive. TURN credentials are minted
+     * time-limited from the shared secret rather than stored: a static password
+     * shipped in an APK would be a password published to everybody who installs
+     * it.
+     */
+    @GetMapping("/ice-servers")
+    public Map<String, Object> iceServers() {
+        String turnSecret = System.getenv("TURN_SECRET");
+
+        List<Map<String, Object>> servers = new java.util.ArrayList<>();
+        servers.add(Map.of("urls", "stun:stun.l.google.com:19302"));
+        servers.add(Map.of("urls", "stun:stun1.l.google.com:19302"));
+
+        if (turnSecret != null && !turnSecret.isBlank()) {
+            String domain = System.getenv().getOrDefault("TURN_DOMAIN", "pixoushrportal.pixous.info");
+            // coturn REST API: username "<expiry-epoch>:<user>", credential is
+            // base64(HMAC-SHA1(secret, username)). Expiry ten minutes out, so a
+            // call that takes a while to connect is never cut off by its own ICE
+            // configuration.
+            long expires = System.currentTimeMillis() / 1000 + 600;
+            String username = expires + ":mobile";
+            try {
+                javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA1");
+                mac.init(new javax.crypto.spec.SecretKeySpec(
+                        turnSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8), "HmacSHA1"));
+                String credential = java.util.Base64.getEncoder().encodeToString(
+                        mac.doFinal(username.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+                servers.add(Map.of(
+                        "urls", java.util.List.of(
+                                "turn:" + domain + ":3478?transport=udp",
+                                "turns:" + domain + ":5349?transport=tcp"),
+                        "username", username,
+                        "credential", credential));
+            } catch (Exception e) {
+                log.warn("Could not mint TURN credentials", e);
+            }
+        }
+
+        return Map.of("iceServers", servers);
+    }
+
     @PostMapping("/signal")
     public ResponseEntity<Void> sendSignal(@RequestBody CallSignalRequest request) {
         Long senderId = SecurityUtils.currentUserId();

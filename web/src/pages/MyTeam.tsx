@@ -796,7 +796,7 @@ function TeamChatRail({
               </Button>
             </div>
             
-            {lightbox && <PhotoLightbox url={lightbox} onClose={() => setLightbox(null)} />}
+            {lightbox && <PhotoLightbox src={lightbox} onClose={() => setLightbox(null)} />}
           </>
         )}
       </CardContent>

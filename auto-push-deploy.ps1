@@ -59,9 +59,9 @@ if [ ! -f /etc/letsencrypt/live/pixoushrportal.pixous.info/fullchain.pem ]; then
     sudo certbot certonly --standalone -d pixoushrportal.pixous.info --non-interactive --agree-tos --email sethubala.pixous@gmail.com || true
 fi
 echo '--- Removing leftover container conflicts ---'
-sudo docker rm -f hrportal-mysql hrportal-backend hrportal-web hrportal-redis 2>/dev/null || true
+sudo docker compose -f docker-compose.prod.yml down || true
 echo '--- Rebuilding and starting production services ---'
-sudo docker compose -f docker-compose.prod.yml up -d --build backend web
+sudo docker compose -f docker-compose.prod.yml up -d --build
 echo '--- Checking recent logs ---'
 sudo docker logs --tail 10 hrportal-backend 2>&1 | tail -10
 "@

@@ -92,7 +92,7 @@ export function CallOverlay({
     <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-neutral-900/95 p-6 text-white">
       {/* Background or Main Video */}
       {isVideo ? (
-        <div className="relative flex-1 w-full max-w-4xl overflow-hidden rounded-2xl bg-black shadow-2xl">
+        <div className="relative flex-1 w-full max-w-4xl overflow-hidden rounded-2xl bg-black shadow-2xl flex items-center justify-center">
           {state === "connected" ? (
             hasRemoteVideo ? (
               <>
@@ -100,7 +100,7 @@ export function CallOverlay({
                   ref={remoteVideo}
                   autoPlay
                   playsInline
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain bg-black"
                 />
                 {hasLocalVideo && (
                   <video
@@ -108,7 +108,7 @@ export function CallOverlay({
                     autoPlay
                     playsInline
                     muted
-                    className="absolute bottom-4 right-4 h-32 w-24 sm:h-40 sm:w-28 rounded-xl border-2 border-white/20 object-cover shadow-lg -scale-x-100"
+                    className="absolute bottom-4 right-4 w-36 h-24 sm:w-48 sm:h-32 rounded-xl border-2 border-white/30 object-contain bg-black shadow-xl -scale-x-100"
                   />
                 )}
                 <div className="absolute left-4 top-4 rounded-full bg-black/60 px-4 py-1.5 text-sm font-semibold tabular-nums backdrop-blur-md">
@@ -122,7 +122,7 @@ export function CallOverlay({
                   autoPlay
                   playsInline
                   muted
-                  className="h-full w-full object-cover -scale-x-100"
+                  className="h-full w-full object-contain bg-black -scale-x-100"
                 />
                 <div className="absolute left-4 top-4 rounded-full bg-black/60 px-4 py-1.5 text-sm font-semibold tabular-nums backdrop-blur-md">
                   {partnerName} · {label}

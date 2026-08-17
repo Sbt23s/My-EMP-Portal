@@ -52,25 +52,25 @@
      and semantic colours are brightened to stay legible on black. */
   .dark {
     --background: 240 6% 7%;
-    --foreground: 0 0% 98%;
+    --foreground: 0 0% 100%;
 
     --card: 240 5% 11%;
-    --card-foreground: 0 0% 98%;
+    --card-foreground: 0 0% 100%;
 
     --popover: 240 5% 13%;
-    --popover-foreground: 0 0% 98%;
+    --popover-foreground: 0 0% 100%;
 
     --primary: 243 90% 70%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 240 5% 18%;
-    --secondary-foreground: 0 0% 96%;
+    --secondary-foreground: 0 0% 98%;
 
     --accent: 38 95% 58%;
     --accent-foreground: 240 6% 7%;
 
-    --muted: 240 5% 17%;
-    --muted-foreground: 240 5% 68%;
+    --muted: 240 5% 20%;
+    --muted-foreground: 240 10% 82%;
 
     --success: 158 76% 46%;
     --success-foreground: 0 0% 100%;
@@ -81,8 +81,8 @@
     --destructive: 350 85% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 5% 20%;
-    --input: 240 5% 22%;
+    --border: 240 5% 28%;
+    --input: 240 5% 28%;
     --ring: 243 90% 70%;
   }
 
@@ -95,6 +95,38 @@
     color: hsl(var(--foreground));
     font-family: Inter, ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+  }
+
+  /* Executive Dark Mode Typography & Sharp Real-Time Lines */
+  .dark {
+    font-weight: 500;
+  }
+
+  .dark body, 
+  .dark p, 
+  .dark span, 
+  .dark div, 
+  .dark label, 
+  .dark button, 
+  .dark th, 
+  .dark td, 
+  .dark a, 
+  .dark input,
+  .dark select,
+  .dark textarea {
+    font-weight: 600;
+    text-shadow: 0 0 0.5px rgba(255, 255, 255, 0.4);
+  }
+
+  .dark .text-muted-foreground {
+    color: hsl(240 10% 85%) !important;
+    font-weight: 600 !important;
+  }
+
+  .dark .border-border,
+  .dark .border-border\/50,
+  .dark .border {
+    border-color: rgba(255, 255, 255, 0.16) !important;
   }
 
   h1, h2, h3, h4, .font-display {

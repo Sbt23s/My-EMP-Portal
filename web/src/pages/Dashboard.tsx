@@ -1337,7 +1337,18 @@ function ExecutiveDashboardView({
     queryFn: async () =>
       (await api.get<ApiEnvelope<LeaveRequest[]>>("/leave/pending")).data.data
   });
-  const leavePendingCount = leavePending.data?.length ?? 0;
+  const leavePendingCount = useMemo(() => {
+    const raw = leavePending.data ?? [];
+    if (!selectedIndustry || selectedIndustry === "ALL") return raw.length;
+    const userIdToIndustry = new Map<number, string>();
+    (allUsersQuery.data ?? []).forEach((u: any) => {
+      if (u.id && u.industry) userIdToIndustry.set(u.id, u.industry);
+    });
+    return raw.filter((lr: any) => {
+      const ind = userIdToIndustry.get(lr.userId);
+      return !ind || ind === "ALL" || ind === selectedIndustry;
+    }).length;
+  }, [leavePending.data, selectedIndustry, allUsersQuery.data]);
 
   // Real employees (with DOB) for the Upcoming Birthdays panel + task roles.
   // Birthdays and work anniversaries in the next 60 days, both from the server
@@ -1632,11 +1643,6 @@ function ExecutiveDashboardView({
                     Leave Approvals
                   </span>
                 </div>
-                {leavePendingCount > 0 && (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
-                    {leavePendingCount}
-                  </span>
-                )}
               </div>
               <div className="flex items-end justify-between mt-4">
                 <div>
@@ -2082,9 +2088,9 @@ function ExecutiveDashboardView({
                   <>
                     {/* Which colour means what, said once. */}
                     <div className="mb-2 flex flex-wrap items-center gap-3 text-[10px] font-semibold">
-                      <span className="flex items-center gap-1.5 text-violet-700 dark:text-violet-300">
-                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900/40">
-                          <Gift className="h-2.5 w-2.5" />
+                      <span className="flex items-center gap-1.5 text-red-600 dark:text-red-400">
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white">
+                          <Cake className="h-2.5 w-2.5" />
                         </span>
                         {birthdays} birthday{birthdays === 1 ? "" : "s"}
                       </span>
@@ -2109,11 +2115,11 @@ function ExecutiveDashboardView({
                             className={cn(
                               "flex flex-col items-center rounded-lg border p-2 transition-colors",
                               isBirthday
-                                ? "border-violet-200 bg-violet-50 dark:border-violet-900/60 dark:bg-violet-950/30"
+                                ? "border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/30"
                                 : "border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/30",
                               // Today gets a ring, so the one that needs a message
                               // now is not read off the date.
-                              today && (isBirthday ? "ring-2 ring-violet-400" : "ring-2 ring-amber-400")
+                              today && (isBirthday ? "ring-2 ring-red-400" : "ring-2 ring-amber-400")
                             )}
                           >
                             <div className="relative">
@@ -2121,11 +2127,11 @@ function ExecutiveDashboardView({
                               <span className={cn(
                                 "absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full ring-2 ring-white dark:ring-card",
                                 isBirthday
-                                  ? "bg-violet-500 text-white"
+                                  ? "bg-red-500 text-white"
                                   : "bg-amber-500 text-white"
                               )}>
                                 {isBirthday
-                                  ? <Gift className="h-2.5 w-2.5" />
+                                  ? <Cake className="h-2.5 w-2.5 text-white" />
                                   : <PartyPopper className="h-2.5 w-2.5" />}
                               </span>
                             </div>

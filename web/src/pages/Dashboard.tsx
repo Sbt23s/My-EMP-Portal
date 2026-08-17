@@ -1663,7 +1663,7 @@ function ExecutiveDashboardView({
                     {leavePendingCount}
                   </span>
                   <div className="mt-1 text-[10px] font-semibold text-muted-foreground">
-                    {leavePendingCount > 0 ? "pending · approve/reject" : "all caught up"}
+                    {leavePendingCount > 0 ? "pending/approve/reject" : "all caught up"}
                   </div>
                 </div>
               </div>

@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { RoleGuard } from "@/components/layout/RoleGuard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CustomLoader } from "@/components/ui/custom-loader";
 import { useAuth } from "@/hooks/useAuth";
 
 // Login stays eagerly imported. It is the first thing an unauthenticated visitor
@@ -86,14 +87,8 @@ const ModulePlaceholder = lazy(() =>
  */
 function PageFallback() {
   return (
-    <div className="flex flex-col gap-4 p-1" aria-busy="true" aria-label="Loading">
-      <Skeleton className="h-8 w-56" />
-      <Skeleton className="h-4 w-80" />
-      <div className="flex flex-col gap-2 pt-2">
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-24 w-full" />
-      </div>
+    <div className="flex h-full w-full items-center justify-center min-h-[50vh]" aria-busy="true" aria-label="Loading">
+      <CustomLoader className="h-16 w-16" />
     </div>
   );
 }

@@ -23,6 +23,34 @@ export type SummaryStat = {
  * an employee's own work, a team's, or the whole organisation's — and this only
  * handles presenting it, switching language and speaking it.
  */
+function toTamilMonthLabel(label: string) {
+  if (!label) return "";
+  return label
+    .replace(/January/gi, "ஜனவரி")
+    .replace(/February/gi, "பிப்ரவரி")
+    .replace(/March/gi, "மார்ச்")
+    .replace(/April/gi, "ஏப்ரல்")
+    .replace(/May/gi, "மே")
+    .replace(/June/gi, "ஜூன்")
+    .replace(/July/gi, "ஜூலை")
+    .replace(/August/gi, "ஆகஸ்ட்")
+    .replace(/September/gi, "செப்டம்பர்")
+    .replace(/October/gi, "அக்டோபர்")
+    .replace(/November/gi, "நவம்பர்")
+    .replace(/December/gi, "டிசம்பர்");
+}
+
+function translateStatLabel(label: string, lang: "en" | "ta") {
+  if (lang !== "ta") return label;
+  if (/projects/i.test(label)) return "திட்டங்கள்";
+  if (/hours/i.test(label)) return "மணி நேரம்";
+  if (/entries/i.test(label)) return "பதிவுகள்";
+  if (/employees/i.test(label)) return "ஊழியர்கள்";
+  if (/completed/i.test(label)) return "முடிந்தவை";
+  if (/pending/i.test(label)) return "நிலுவையில் உள்ளன";
+  return label;
+}
+
 export function MonthlySummaryCard({
   title = "Monthly Summary",
   monthLabel,
@@ -50,10 +78,6 @@ export function MonthlySummaryCard({
     setSpeaking(false);
   };
 
-  /**
-   * The backend voice pipeline gives native Tamil audio; browser speech is the
-   * fallback so the button still does something when TTS is unavailable.
-   */
   const speak = async () => {
     if (speaking) { stop(); return; }
     const text = lang === "ta" ? spokenTa : spokenEn;
@@ -68,7 +92,7 @@ export function MonthlySummaryCard({
         await audio.play();
         return;
       }
-    } catch { /* fall through to browser speech */ }
+    } catch { /* fall through */ }
     try {
       const synth = window.speechSynthesis;
       if (!synth) { setSpeaking(false); return; }
@@ -90,12 +114,11 @@ export function MonthlySummaryCard({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
-              {title} <Badge variant="secondary" className="text-[10px]">BETA</Badge>
+              {lang === "ta" ? (title === "Monthly Summary" ? "மாதாந்திர சுருக்கம்" : title) : title} <Badge variant="secondary" className="text-[10px]">BETA</Badge>
             </CardTitle>
-            <p className="text-xs text-muted-foreground">{monthLabel}</p>
+            <p className="text-xs text-muted-foreground">{lang === "ta" ? toTamilMonthLabel(monthLabel) : monthLabel}</p>
           </div>
           <div className="flex items-center gap-2">
-            {/* Language toggle — switches both the text and the voice. */}
             <div className="inline-flex rounded-full border bg-muted/60 p-1">
               {([["en", "English"], ["ta", "தமிழ்"]] as const).map(([code, label]) => (
                 <button
@@ -120,9 +143,9 @@ export function MonthlySummaryCard({
               title={speaking ? "Stop" : "Hear this summary"}
             >
               {speaking ? (
-                <><Square className="mr-1.5 h-3.5 w-3.5" /> Stop</>
+                <><Square className="mr-1.5 h-3.5 w-3.5" /> {lang === "ta" ? "நிறுத்து" : "Stop"}</>
               ) : (
-                <><Volume2 className="mr-1.5 h-4 w-4" /> Summary</>
+                <><Volume2 className="mr-1.5 h-4 w-4" /> {lang === "ta" ? "ஒலி சுருக்கம்" : "Summary"}</>
               )}
             </Button>
           </div>
@@ -135,7 +158,6 @@ export function MonthlySummaryCard({
           </span>
           <div className="space-y-1.5">
             <p className="text-sm">{lang === "ta" ? shortTa : shortEn}</p>
-            {/* The spoken script, shown as text as well. */}
             <p className="text-xs leading-relaxed text-muted-foreground">
               {lang === "ta" ? spokenTa : spokenEn}
             </p>
@@ -154,7 +176,7 @@ export function MonthlySummaryCard({
                 </span>
                 <div>
                   <div className="text-lg font-bold leading-none tabular-nums">{s.value}</div>
-                  <div className="text-[11px] text-muted-foreground">{s.label}</div>
+                  <div className="text-[11px] text-muted-foreground">{translateStatLabel(s.label, lang)}</div>
                 </div>
               </div>
             ))}

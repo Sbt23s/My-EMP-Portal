@@ -356,10 +356,10 @@ function AppShell() {
                 onClick={() => setSidebarOpen(false)}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-semibold transition-colors",
                     isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-white/70 hover:bg-white/10 hover:text-white"
+                      ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                      : "text-slate-200 hover:bg-white/15 hover:text-white"
                   )
                 }
               >
@@ -388,7 +388,7 @@ function AppShell() {
               <div className="truncate text-sm font-bold text-white leading-tight">
                 {userName}
               </div>
-              <div className="truncate text-[10px] font-semibold text-white/50 leading-tight mt-0.5">
+              <div className="truncate text-xs font-bold text-slate-300 leading-tight mt-0.5">
                 {roleLabel}
               </div>
             </div>

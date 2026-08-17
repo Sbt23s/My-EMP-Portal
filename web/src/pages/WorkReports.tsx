@@ -298,10 +298,7 @@ export default function WorkReportsPage() {
         />
       )}
       {canSeeAll && (
-        <>
-          <ReminderCard />
-          <EmployeeWorkListSection fromDate={fromDate} toDate={toDate} teamById={teamById} />
-        </>
+        <EmployeeWorkListSection fromDate={fromDate} toDate={toDate} teamById={teamById} />
       )}
     </div>
   );
@@ -668,9 +665,9 @@ function MyWorkReports({
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <CardTitle className="flex items-center gap-2 text-base">
-                Monthly Summary <Badge variant="secondary" className="text-[10px]">BETA</Badge>
+                {summaryLang === "ta" ? "மாதாந்திர சுருக்கம்" : "Monthly Summary"} <Badge variant="secondary" className="text-[10px]">BETA</Badge>
               </CardTitle>
-              <p className="text-xs text-muted-foreground">{monthlySummary.monthLabel}</p>
+              <p className="text-xs text-muted-foreground">{summaryLang === "ta" ? toTamilMonthLabel(monthlySummary.monthLabel) : monthlySummary.monthLabel}</p>
             </div>
             <div className="flex items-center gap-2">
               {/* Language toggle — switches both the text and the voice */}
@@ -698,9 +695,9 @@ function MyWorkReports({
                 title={speaking ? "Stop" : "Hear your project summary"}
               >
                 {speaking ? (
-                  <><Square className="mr-1.5 h-3.5 w-3.5" /> Stop</>
+                  <><Square className="mr-1.5 h-3.5 w-3.5" /> {summaryLang === "ta" ? "நிறுத்து" : "Stop"}</>
                 ) : (
-                  <><Volume2 className="mr-1.5 h-4 w-4" /> Summary</>
+                  <><Volume2 className="mr-1.5 h-4 w-4" /> {summaryLang === "ta" ? "ஒலி சுருக்கம்" : "Summary"}</>
                 )}
               </Button>
             </div>
@@ -725,7 +722,7 @@ function MyWorkReports({
               </span>
               <div>
                 <div className="text-lg font-bold leading-none">{monthlySummary.monthProjects}</div>
-                <div className="text-[11px] text-muted-foreground">Projects</div>
+                <div className="text-[11px] text-muted-foreground">{summaryLang === "ta" ? "திட்டங்கள்" : "Projects"}</div>
               </div>
             </div>
             <div className="flex items-center gap-2.5">
@@ -734,7 +731,7 @@ function MyWorkReports({
               </span>
               <div>
                 <div className="text-lg font-bold leading-none">{monthlySummary.monthHours}h</div>
-                <div className="text-[11px] text-muted-foreground">Hours logged</div>
+                <div className="text-[11px] text-muted-foreground">{summaryLang === "ta" ? "மணி நேரம்" : "Hours logged"}</div>
               </div>
             </div>
             <div className="flex items-center gap-2.5">
@@ -743,7 +740,7 @@ function MyWorkReports({
               </span>
               <div>
                 <div className="text-lg font-bold leading-none">{monthlySummary.completed}</div>
-                <div className="text-[11px] text-muted-foreground">Tasks completed</div>
+                <div className="text-[11px] text-muted-foreground">{summaryLang === "ta" ? "முடிந்தவை" : "Tasks completed"}</div>
               </div>
             </div>
             <div className="flex items-center gap-2.5">

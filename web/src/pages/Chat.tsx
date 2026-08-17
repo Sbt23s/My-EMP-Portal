@@ -1284,15 +1284,15 @@ export default function ChatPage() {
                       <div className={`flex items-center gap-1.5 max-w-[75%] ${isMe ? "flex-row" : ""}`}>
                         {/* Reply, react, pin — and delete, for my own messages */}
                         {!msg.isOptimistic && (
-                          <div className="relative flex shrink-0 items-center opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                          <div className="relative flex shrink-0 items-center gap-0.5 rounded-full border bg-card/95 px-1.5 py-1 shadow-md backdrop-blur-md opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                             {isMe && (
                               <button
                                 onClick={() => onDeleteMessage(msg.messageId)}
                                 title="Delete message"
-                                className="p-1 text-muted-foreground hover:text-red-500"
+                                className="rounded-full p-1.5 text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600 transition-colors"
                                 aria-label="Delete message"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Trash2 className="w-4 h-4 stroke-[2.2]" />
                               </button>
                             )}
                             {canPin && (
@@ -1300,32 +1300,32 @@ export default function ChatPage() {
                                 onClick={() => onTogglePin(msg)}
                                 title={msg.pinned ? "Unpin" : "Pin to this chat"}
                                 className={cn(
-                                  "p-1 hover:text-amber-600",
-                                  msg.pinned ? "text-amber-600" : "text-muted-foreground"
+                                  "rounded-full p-1.5 transition-colors",
+                                  msg.pinned ? "text-amber-500 bg-amber-500/10" : "text-muted-foreground hover:bg-amber-500/10 hover:text-amber-600"
                                 )}
                                 aria-label={msg.pinned ? "Unpin message" : "Pin message"}
                               >
-                                {msg.pinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                                {msg.pinned ? <PinOff className="w-4 h-4 stroke-[2.2]" /> : <Pin className="w-4 h-4 stroke-[2.2]" />}
                               </button>
                             )}
                             {canPost && (
                               <button
                                 onClick={() => setReactingTo((cur) => (cur === msg.messageId ? null : msg.messageId))}
                                 title="React"
-                                className="p-1 text-muted-foreground hover:text-primary"
+                                className="rounded-full p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
                                 aria-label="React to message"
                               >
-                                <SmilePlus className="w-3.5 h-3.5" />
+                                <SmilePlus className="w-4 h-4 stroke-[2.2]" />
                               </button>
                             )}
                             {canPost && !waiting && (
                               <button
                                 onClick={() => setReplyTo(msg)}
                                 title="Reply"
-                                className="p-1 text-muted-foreground hover:text-primary"
+                                className="rounded-full p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
                                 aria-label="Reply to message"
                               >
-                                <Reply className="w-3.5 h-3.5" />
+                                <Reply className="w-4 h-4 stroke-[2.2]" />
                               </button>
                             )}
 

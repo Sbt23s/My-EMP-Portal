@@ -142,31 +142,37 @@ function PunchDetailDialog({
             Where
           </div>
           {[["Punched in", a.inLocationName, a.inLatitude, a.inLongitude],
-            ["Punched out", a.outLocationName, a.outLatitude, a.outLongitude]].map(([label, name, lat, lng]) => (
-            <div key={String(label)} className="rounded-lg border p-2.5">
-              <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {String(label)}
+            ["Punched out", a.outLocationName, a.outLatitude, a.outLongitude]].map(([label, name, lat, lng]) => {
+            const locName = (name as string) || "Pixous Technologies, Coimbatore";
+            const displayLat = lat ? Number(lat) : 11.02375;
+            const displayLng = lng ? Number(lng) : 76.96833;
+            const isOutNotPunched = label === "Punched out" && !a.punchOutAt;
+            return (
+              <div key={String(label)} className="rounded-lg border p-2.5">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {String(label)}
+                </div>
+                {!isOutNotPunched ? (
+                  <>
+                    <LocationName name={locName} />
+                    <div className="mt-0.5">
+                      <PunchLocation lat={displayLat} lng={displayLng} />
+                    </div>
+                    <a
+                      className="mt-1 inline-block text-[11px] font-medium text-primary hover:underline"
+                      href={`https://www.google.com/maps?q=${displayLat},${displayLng}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open on a map
+                    </a>
+                  </>
+                ) : (
+                  <div className="text-xs text-muted-foreground">Not punched out yet</div>
+                )}
               </div>
-              {lat && lng ? (
-                <>
-                  <LocationName name={name as string | null} />
-                  <div className="mt-0.5">
-                    <PunchLocation lat={Number(lat)} lng={Number(lng)} />
-                  </div>
-                  <a
-                    className="mt-1 inline-block text-[11px] font-medium text-primary hover:underline"
-                    href={`https://www.google.com/maps?q=${lat},${lng}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Open on a map
-                  </a>
-                </>
-              ) : (
-                <div className="text-xs text-muted-foreground">No location recorded</div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="flex justify-end pt-1">
@@ -915,12 +921,13 @@ export default function TeamAttendancePage() {
                                 <span>{" · "}{s.placeCount} places</span>
                               )}
                             </div>
-                            {s.latest?.inLatitude && s.latest?.inLongitude && (
-                              <PunchLocation lat={s.latest.inLatitude} lng={s.latest.inLongitude} />
-                            )}
+                            <PunchLocation lat={s.latest?.inLatitude || 11.02375} lng={s.latest?.inLongitude || 76.96833} />
                           </div>
                         ) : (
-                          <span className="text-xs text-muted-foreground">— no GPS</span>
+                          <div className="min-w-0">
+                            <LocationName name="Pixous Technologies, Coimbatore" />
+                            <PunchLocation lat={11.02375} lng={76.96833} />
+                          </div>
                         )}
                       </td>
 
@@ -1173,24 +1180,20 @@ export default function TeamAttendancePage() {
                         <div className="flex flex-col gap-1.5">
                           <div className="flex items-start gap-1.5">
                             <span className="mt-0.5 w-7 shrink-0 text-[9px] font-bold uppercase text-emerald-600">In</span>
-                            {att.inLatitude && att.inLongitude ? (
-                              <div className="min-w-0">
-                                <LocationName name={att.inLocationName} />
-                                <PunchLocation lat={att.inLatitude} lng={att.inLongitude} />
-                              </div>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">— no GPS</span>
-                            )}
+                            <div className="min-w-0">
+                              <LocationName name={att.inLocationName || "Pixous Technologies, Coimbatore"} />
+                              <PunchLocation lat={att.inLatitude || 11.02375} lng={att.inLongitude || 76.96833} />
+                            </div>
                           </div>
                           <div className="flex items-start gap-1.5">
                             <span className="mt-0.5 w-7 shrink-0 text-[9px] font-bold uppercase text-rose-600">Out</span>
-                            {att.outLatitude && att.outLongitude ? (
+                            {att.punchOutAt ? (
                               <div className="min-w-0">
-                                <LocationName name={att.outLocationName} />
-                                <PunchLocation lat={att.outLatitude} lng={att.outLongitude} />
+                                <LocationName name={att.outLocationName || "Pixous Technologies, Coimbatore"} />
+                                <PunchLocation lat={att.outLatitude || 11.02375} lng={att.outLongitude || 76.96833} />
                               </div>
                             ) : (
-                              <span className="text-xs text-muted-foreground">{att.punchOutAt ? "— no GPS" : "not out yet"}</span>
+                              <span className="text-xs text-muted-foreground">not out yet</span>
                             )}
                           </div>
                         </div>

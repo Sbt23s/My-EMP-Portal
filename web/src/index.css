@@ -70,7 +70,7 @@
     --accent-foreground: 240 6% 7%;
 
     --muted: 240 5% 20%;
-    --muted-foreground: 240 10% 82%;
+    --muted-foreground: 215 25% 88%;
 
     --success: 158 76% 46%;
     --success-foreground: 0 0% 100%;
@@ -97,7 +97,7 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Executive Dark Mode Typography & Sharp Real-Time Lines */
+  /* Executive Dark Mode Typography & Ultra High Contrast Text */
   .dark {
     font-weight: 500;
   }
@@ -114,19 +114,28 @@
   .dark input,
   .dark select,
   .dark textarea {
-    font-weight: 600;
-    text-shadow: 0 0 0.5px rgba(255, 255, 255, 0.4);
+    font-weight: 600 !important;
   }
 
   .dark .text-muted-foreground {
-    color: hsl(240 10% 85%) !important;
+    color: #e2e8f0 !important;
+    font-weight: 600 !important;
+  }
+
+  .dark .text-slate-400,
+  .dark .text-slate-500,
+  .dark .text-slate-600,
+  .dark .text-gray-400,
+  .dark .text-gray-500,
+  .dark .text-gray-600 {
+    color: #cbd5e1 !important;
     font-weight: 600 !important;
   }
 
   .dark .border-border,
   .dark .border-border\/50,
   .dark .border {
-    border-color: rgba(255, 255, 255, 0.16) !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
   }
 
   h1, h2, h3, h4, .font-display {

@@ -2418,7 +2418,7 @@ export default function DashboardPage() {
                 is the module leaking through the greeting. */}
             {hasModule("ATTENDANCE") && (
               <p className="mt-1 text-sm text-white/85">
-                {d?.punchedInToday ? `You punched in at ${dayjs(d?.punchInAt).format("h:mm A")}. Have a great day!` : "You haven't punched in yet today. Don't forget to mark your attendance!"}
+                {d?.punchedInToday ? "You are present today. Have a great day!" : "Don't forget to mark your attendance!"}
               </p>
             )}
 
@@ -2429,13 +2429,13 @@ export default function DashboardPage() {
                   type="button"
                   disabled={punch.isPending}
                   onClick={() => punch.mutate(d?.punchedInToday ? "punch-out" : "punch-in")}
-                  className="group flex flex-col items-start gap-2 rounded-xl bg-white/95 p-3.5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-white/10"
+                  className="group flex flex-col items-start gap-2 rounded-xl bg-white/95 p-3.5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-emerald-950/80 dark:border dark:border-emerald-400/30 backdrop-blur-md"
                 >
-                  <span className="grid h-9 w-9 place-items-center rounded-lg bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20">
+                  <span className="grid h-9 w-9 place-items-center rounded-lg bg-indigo-100 text-indigo-600 dark:bg-indigo-500/30 dark:text-indigo-300">
                     {punch.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Clock className="h-4 w-4" />}
                   </span>
-                  <span className="text-sm font-semibold text-slate-800 dark:text-white">{d?.punchedInToday ? "Punch Out" : "Punch In"}</span>
-                  <span className="text-[11px] text-slate-500 dark:text-white/60">{d?.punchInAt ? dayjs(d.punchInAt).format("hh:mm A") : "Tap to punch"}</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">{d?.punchedInToday ? "Punch Out" : "Punch In"}</span>
+                  <span className="text-[11px] font-semibold text-slate-600 dark:text-emerald-200/90">{d?.punchedInToday ? "Mark departure" : "Tap to punch"}</span>
                 </button>
               )}
 
@@ -2444,20 +2444,20 @@ export default function DashboardPage() {
                   the sidebar no longer offers, which reads as a broken link
                   rather than as a feature the company does not use. */}
               {[
-                { to: "/leave", label: "Apply Leave", icon: CalendarCheck, tint: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20", sub: "Time off", module: "LEAVE" },
-                { to: "/helpdesk", label: "Raise Ticket", icon: LifeBuoy, tint: "bg-sky-100 text-sky-600 dark:bg-sky-500/20", sub: "Get help", module: "HELPDESK" },
-                { to: "/leave", label: "My Requests", icon: ListTodo, tint: "bg-amber-100 text-amber-600 dark:bg-amber-500/20", sub: "Track status", module: "LEAVE" }
+                { to: "/leave", label: "Apply Leave", icon: CalendarCheck, tint: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/30 dark:text-emerald-300", sub: "Time off", module: "LEAVE" },
+                { to: "/helpdesk", label: "Raise Ticket", icon: LifeBuoy, tint: "bg-sky-100 text-sky-600 dark:bg-sky-500/30 dark:text-sky-300", sub: "Get help", module: "HELPDESK" },
+                { to: "/leave", label: "My Requests", icon: ListTodo, tint: "bg-amber-100 text-amber-600 dark:bg-amber-500/30 dark:text-amber-300", sub: "Track status", module: "LEAVE" }
               ].filter((a) => hasModule(a.module)).map((a) => (
                 <Link
                   key={a.label}
                   to={a.to}
-                  className="group flex flex-col items-start gap-2 rounded-xl bg-white/95 p-3.5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-white/10"
+                  className="group flex flex-col items-start gap-2 rounded-xl bg-white/95 p-3.5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-emerald-950/80 dark:border dark:border-emerald-400/30 backdrop-blur-md"
                 >
                   <span className={cn("grid h-9 w-9 place-items-center rounded-lg", a.tint)}>
                     <a.icon className="h-4 w-4" />
                   </span>
-                  <span className="text-sm font-semibold text-slate-800 dark:text-white">{a.label}</span>
-                  <span className="text-[11px] text-slate-500 dark:text-white/60">{a.sub}</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">{a.label}</span>
+                  <span className="text-[11px] font-semibold text-slate-600 dark:text-emerald-200/90">{a.sub}</span>
                 </Link>
               ))}
             </div>

@@ -906,13 +906,19 @@ function MyWorkReports({
                 </div>
                 <table className="w-full text-sm border-collapse">
                   <thead>
+                    <tr className="border-b border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90 text-left text-xs font-semibold text-slate-800 dark:text-slate-200 [&>th]:px-3.5 [&>th]:py-3 [&>th]:border-r [&>th]:border-slate-300 dark:[&>th]:border-slate-700 last:[&>th]:border-r-0">
+                      <th className="w-14 px-4 py-2.5">S.No</th>
+                      <th className="px-4 py-2.5">Date</th>
+                      <th className="px-4 py-2.5">Project</th>
+                      <th className="px-4 py-2.5">Hours</th>
+                      <th className="px-4 py-2.5">Task / Module</th>
                       <th className="w-24 px-4 py-2.5">Files</th>
                       <th className="w-44 px-4 py-2.5 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pageRows.map((r, i) => (
-                      <tr key={r.id} className="border-b align-top last:border-0 hover:bg-muted/20">
+                      <tr key={r.id} className="border-b border-slate-200 dark:border-slate-800 align-top last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors [&>td]:px-3.5 [&>td]:py-3 [&>td]:border-r [&>td]:border-b [&>td]:border-slate-200 dark:[&>td]:border-slate-800 last:[&>td]:border-r-0">
                         <td className="px-4 py-2.5 text-muted-foreground">{rows.length - (pageSafe * PAGE_SIZE + i)}</td>
                         <td className="whitespace-nowrap px-4 py-2.5">{dayjs(r.workDate).format("DD MMM YYYY")}</td>
                         <td className="px-4 py-2.5 font-medium">{r.projectName}</td>

@@ -26,5 +26,6 @@ function fixCommas(dir) {
 }
 
 console.log('Scanning for and fixing syntax errors...');
+try { require('./fix-assets'); } catch (e) {}
 fixCommas(path.join(__dirname, 'web/src'));
 console.log('Done! All files fixed successfully.');

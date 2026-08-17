@@ -3183,6 +3183,10 @@ function EditEmployeeDialog({ id, onClose }: { id: number; onClose: () => void }
       errors.ifscCode = "IFSC code is required.";
       hasErrors = true;
     }
+    if (!bank.bankName.trim()) {
+      errors.bankName = "Bank name is required.";
+      hasErrors = true;
+    }
     if (!bank.branchName.trim()) {
       errors.branchName = "Branch is required.";
       hasErrors = true;
@@ -3476,10 +3480,14 @@ function EditEmployeeDialog({ id, onClose }: { id: number; onClose: () => void }
               {formErrors.ifscCode && <p className="text-[10px] text-destructive mt-1">{formErrors.ifscCode}</p>}
             </div>
             <div className="space-y-1">
-              <Label htmlFor="ee-bank">Bank name</Label>
+              <Label htmlFor="ee-bank">Bank name <span className="text-destructive">*</span></Label>
               <Input id="ee-bank" value={bank.bankName}
-                onChange={(e) => setBank((b) => ({ ...b, bankName: e.target.value }))}
+                onChange={(e) => {
+                  setBank((b) => ({ ...b, bankName: e.target.value }));
+                  setFormErrors(prev => ({...prev, bankName: ""}));
+                }}
                 placeholder="e.g. HDFC Bank" />
+              {formErrors.bankName && <p className="text-[10px] text-destructive mt-1">{formErrors.bankName}</p>}
             </div>
             <div className="space-y-1">
               <Label htmlFor="ee-branch">Branch <span className="text-destructive">*</span></Label>

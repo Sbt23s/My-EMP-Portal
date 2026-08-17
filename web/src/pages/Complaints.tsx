@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { PageLoader } from "@/components/ui/page-loader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -229,7 +230,7 @@ function MySubmissions() {
     </>
   );
 
-  if (query.isLoading) return <Skeleton className="h-64" />;
+  if (query.isLoading) return <PageLoader text="Loading complaints data..." />;
 
   if (rows.length === 0) {
     return (

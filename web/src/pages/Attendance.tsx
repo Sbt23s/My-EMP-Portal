@@ -12,6 +12,7 @@ import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { PageLoader } from "@/components/ui/page-loader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge, statusVariant } from "@/components/ui/badge";
@@ -112,7 +113,7 @@ function FaceStatusPanel({
     );
   }
 
-  if (status.isLoading) return <Skeleton className="h-16" />;
+  if (status.isLoading) return <PageLoader text="Loading attendance status..." />;
 
   const enrolled = !!status.data?.enrolled;
 

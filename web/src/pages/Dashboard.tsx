@@ -12,13 +12,14 @@ import {
 import { StatTile, TILE_FILLS } from "@/components/ui/stat-tile";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend, LineChart, Line, AreaChart, Area,
-  PieChart, Pie, Cell
+  PieChart, Pie, Cell, LabelList
 } from "recharts";
 import dayjs from "dayjs";
 import { api, apiMessage } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageLoader } from "@/components/ui/page-loader";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, resolvePhotoUrl } from "@/components/ui/avatar";
@@ -1756,31 +1757,130 @@ function ExecutiveDashboardView({
         />
       </div>
 
-      <Card className="shadow-sm border-border/50">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-1.5 text-sm font-bold">
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            Employee growth · joined and exited, last 12 months
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {insights.isLoading ? (
-            <Skeleton className="h-40" />
-          ) : (
-            <div className="h-48 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={ins?.growthTrend ?? []} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={9} />
-                  <YAxis tickLine={false} axisLine={false} fontSize={9} allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="joined" name="Joined" fill="hsl(var(--success))" maxBarSize={14} />
-                  <Bar dataKey="exited" name="Exited" fill="hsl(var(--destructive))" maxBarSize={14} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Employee Growth Chart - Matched to Image 1 design & "resigned" terminology */}
+      {(() => {
+        const rawTrend = ins?.growthTrend ?? [];
+        const growthData = rawTrend.map((d) => ({
+          month: d.month,
+          joined: d.joined,
+          resigned: d.exited
+        }));
+        const totalJoined = growthData.reduce((sum, item) => sum + item.joined, 0);
+        const totalResigned = growthData.reduce((sum, item) => sum + item.resigned, 0);
+
+        return (
+          <Card className="shadow-sm border-border/50 bg-card rounded-2xl overflow-hidden">
+            <CardHeader className="pb-3 pt-4 px-6 flex flex-row items-center justify-between space-y-0">
+              <div className="space-y-1">
+                <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
+                  <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                    <TrendingUp className="h-4 w-4" />
+                  </div>
+                  Employee growth - joined and resigned, last 12 months
+                </CardTitle>
+                <div className="flex items-center gap-4 text-xs pt-1 pl-8">
+                  <div className="flex items-center gap-1.5 font-medium text-muted-foreground">
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 inline-block" />
+                    Joined
+                  </div>
+                  <div className="flex items-center gap-1.5 font-medium text-muted-foreground">
+                    <span className="h-2.5 w-2.5 rounded-full bg-rose-500 inline-block" />
+                    Resigned
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <select className="h-9 rounded-xl border border-input bg-background px-3 py-1 text-xs font-medium shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                  <option>Last 12 months</option>
+                  <option>Last 6 months</option>
+                  <option>This Year</option>
+                </select>
+              </div>
+            </CardHeader>
+            <CardContent className="px-6 pb-6">
+              {insights.isLoading ? (
+                <Skeleton className="h-52 w-full rounded-xl" />
+              ) : (
+                <div className="space-y-4">
+                  <div className="h-56 w-full pt-2">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={growthData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.6} />
+                        <XAxis 
+                          dataKey="month" 
+                          tickLine={false} 
+                          axisLine={false} 
+                          fontSize={11} 
+                          tick={{ fill: "hsl(var(--muted-foreground))" }} 
+                        />
+                        <YAxis 
+                          tickLine={false} 
+                          axisLine={false} 
+                          fontSize={11} 
+                          allowDecimals={false} 
+                          tick={{ fill: "hsl(var(--muted-foreground))" }} 
+                        />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: "hsl(var(--card))", 
+                            borderColor: "hsl(var(--border))", 
+                            borderRadius: "0.75rem",
+                            fontSize: "12px",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
+                          }} 
+                        />
+                        <Bar dataKey="joined" name="Joined" fill="#10B981" radius={[4, 4, 0, 0]} maxBarSize={16}>
+                          <LabelList 
+                            dataKey="joined" 
+                            position="top" 
+                            fill="#10B981" 
+                            fontSize={11} 
+                            fontWeight={600} 
+                            formatter={(v: number) => (v > 0 ? v : "")} 
+                          />
+                        </Bar>
+                        <Bar dataKey="resigned" name="Resigned" fill="#EF4444" radius={[4, 4, 0, 0]} maxBarSize={16}>
+                          <LabelList 
+                            dataKey="resigned" 
+                            position="top" 
+                            fill="#EF4444" 
+                            fontSize={11} 
+                            fontWeight={600} 
+                            formatter={(v: number) => (v > 0 ? v : "")} 
+                          />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Bottom Stats Tiles matching Image 1 */}
+                  <div className="grid grid-cols-2 gap-4 rounded-xl border border-border/60 bg-muted/20 p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                        <UserPlus className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground">Total Joined</p>
+                        <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{totalJoined}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 pl-4 border-l border-border/60">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400">
+                        <UserMinus className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground">Total Resigned</p>
+                        <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">{totalResigned}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Bottom Row */}
       <div className={cn("grid gap-6", hasModule("TASKS") ? "lg:grid-cols-3" : "lg:grid-cols-1")}>

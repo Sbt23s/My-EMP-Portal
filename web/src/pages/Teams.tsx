@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { PageLoader } from "@/components/ui/page-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -221,7 +222,7 @@ export default function TeamsPage() {
       </div>
 
       {loading ? (
-        <Skeleton className="h-64 w-full rounded-lg" />
+        <PageLoader text="Loading team and employee details..." />
       ) : list.length === 0 ? (
         <EmptyState icon={Users2} title="No designations" description="Designations will appear here once set up." />
       ) : (

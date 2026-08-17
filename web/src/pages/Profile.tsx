@@ -2,8 +2,7 @@ import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  , Save, Plus, Trash2, Landmark, BadgeCheck, Camera, Download
+import { Save, Plus, Trash2, Landmark, BadgeCheck, Camera, Download
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import dayjs from "dayjs";

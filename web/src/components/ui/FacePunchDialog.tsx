@@ -63,8 +63,7 @@ export function FacePunchDialog({
   onOpenChange,
   userId,
   isPunchIn,
-  onDone,
-}: {
+  onDone}: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: number;
@@ -104,8 +103,7 @@ export function FacePunchDialog({
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
-      });
+        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }});
       streamRef.current = stream;
       if (videoRef.current) videoRef.current.srcObject = stream;
       setStreaming(true);
@@ -129,8 +127,7 @@ export function FacePunchDialog({
         setCoords({
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
-          accuracy: Math.round(pos.coords.accuracy),
-        });
+          accuracy: Math.round(pos.coords.accuracy)});
         setLocating(false);
       },
       () => setLocating(false),
@@ -188,8 +185,7 @@ export function FacePunchDialog({
       }
       form.append("mode", "FACE_VERIFIED");
       await api.post("/attendance/face-punch", form, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+        headers: { "Content-Type": "multipart/form-data" }});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dashboard", "me"] });
@@ -206,8 +202,7 @@ export function FacePunchDialog({
     onError: (err: any) => {
       setVerifying(false);
       setErrorMsg(err.response?.data?.message || "Could not record the punch.");
-    },
-  });
+    }});
 
   const captureAndVerify = async () => {
     setVerifying(true);
@@ -231,8 +226,7 @@ export function FacePunchDialog({
 
       const res = await fetch(`${ANALYTICS_BASE}/api/face/verify/${userId}`, {
         method: "POST",
-        body: form,
-      });
+        body: form});
       const data = await res.json();
 
       if (!res.ok) {

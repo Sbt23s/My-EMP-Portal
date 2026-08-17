@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { , Plus, Users, ShieldCheck, Key, Search, Filter, Check, X, Building, Mail, UserCheck, Eye, EyeOff, Edit2 } from "lucide-react";
+import { Plus, Users, ShieldCheck, Key, Search, Filter, Check, X, Building, Mail, UserCheck, Eye, EyeOff, Edit2 } from "lucide-react";
 import { useTechAdminAuth } from "@/context/TechAdminAuthContext";
 
 export function TechAdminUsers() {
@@ -592,8 +592,7 @@ export function TechAdminUsers() {
     admin: users.filter(
       (u: any) => inSelectedCompany(u) && checkStatus(u) && rolesOf(u).some((r) => isAdminRole(r))
     ).length,
-    total: users.filter((u: any) => inSelectedCompany(u) && checkStatus(u)).length,
-  };
+    total: users.filter((u: any) => inSelectedCompany(u) && checkStatus(u)).length};
 
   /**
    * Accounts in this tenant that the administrator-only table leaves out.

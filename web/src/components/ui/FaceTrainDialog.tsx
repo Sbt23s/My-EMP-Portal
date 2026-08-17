@@ -33,8 +33,7 @@ export function FaceTrainDialog({
   open,
   onOpenChange,
   userId,
-  onComplete,
-}: {
+  onComplete}: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: number;
@@ -70,8 +69,7 @@ export function FaceTrainDialog({
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
-      });
+        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }});
       streamRef.current = stream;
       if (videoRef.current) videoRef.current.srcObject = stream;
       setStreaming(true);

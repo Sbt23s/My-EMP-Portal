@@ -1542,8 +1542,7 @@ function getMockUserById(id: number): Profile | null {
               ...found,
               employeeCode: (found.role === "COMPANY_ADMIN" || found.role === "SUPER_ADMIN") ? "ADMIN" : `EMP${found.id.toString().substring(0, 4)}`,
               roles: [found.role || found.roles?.[0] || "EMPLOYEE"],
-              profileStatus: found.status || "ACTIVE",
-            };
+              profileStatus: found.status || "ACTIVE"};
           }
         } catch(e) {}
       }
@@ -2158,13 +2157,13 @@ const FIELD_RULES: Record<string, {
   },
   email: {
     check: (v) => !v.trim() ? "Email is required"
-      : /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(v.trim()) ? ""
+      : /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2}$/.test(v.trim()) ? ""
         : "Enter a full email address, like name@gmail.com"
   },
   // Optional — but if one is given it has to be a real address.
   personalEmail: {
     check: (v) => !v.trim() ? ""
-      : /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(v.trim()) ? ""
+      : /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2}$/.test(v.trim()) ? ""
         : "Enter a full email address, like name@gmail.com"
   },
   // A mobile number is ten digits and nothing else.

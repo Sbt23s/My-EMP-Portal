@@ -80,8 +80,7 @@ export function TechAdminModuleManagement() {
     CALENDAR: <CalendarDays className="w-5 h-5 text-blue-500" />,
     TEAMS: <Users2 className="w-5 h-5 text-blue-500" />,
     AUDIT_LOG: <History className="w-5 h-5 text-orange-500" />,
-    COMMUNITIES: <Users2 className="w-5 h-5 text-blue-500" />,
-  };
+    COMMUNITIES: <Users2 className="w-5 h-5 text-blue-500" />};
 
   const CATEGORY_COLOURS: Record<string, string> = {
     'Core HR': 'bg-purple-500/10 text-purple-600 dark:text-purple-400',

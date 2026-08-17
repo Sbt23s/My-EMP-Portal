@@ -5,7 +5,7 @@ import { useTechAdminAuth } from "@/context/TechAdminAuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { , ShieldCheck, Volume2, VolumeX } from "lucide-react";
+import { ShieldCheck, Volume2, VolumeX } from "lucide-react";
 
 export function TechAdminLogin() {
   const [username, setUsername] = useState("");

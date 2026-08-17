@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
-import { , Lock, User, Eye, EyeOff } from "lucide-react";
+import { Lock, User, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { tokenStore, apiMessage } from "@/lib/api";
 import { motion } from "framer-motion";
@@ -89,8 +89,7 @@ export default function LoginPage() {
   const container = { hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.15 } } }
   const item = {
     hidden: { opacity: 0, y: 14 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
-  }
+    show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } }}
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
@@ -187,8 +186,7 @@ export default function LoginPage() {
                 animate={{
                   boxShadow: buttonGlow
                     ? '0 0 0 3px rgba(129,140,248,0.4), 0 14px 30px -10px rgba(79,70,229,0.8)'
-                    : '0 8px 20px -10px rgba(79,70,229,0.6)',
-                }}
+                    : '0 8px 20px -10px rgba(79,70,229,0.6)'}}
                 transition={{ duration: 0.4 }}
                 className="group relative w-full overflow-hidden rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
               >

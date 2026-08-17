@@ -15,8 +15,7 @@ export function TechAdminSettings() {
     name: admin?.name || "Master Technical Admin",
     username: admin?.username || "admin",
     email: "admin@hrportal.com",
-    mfaEnabled: true,
-  });
+    mfaEnabled: true});
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();

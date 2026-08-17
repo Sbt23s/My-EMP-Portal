@@ -1,7 +1,7 @@
 import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { , History, Clock, Users, Activity, Filter, Search } from "lucide-react";
+import { History, Clock, Users, Activity, Filter, Search } from "lucide-react";
 import { useTechAdminAuth } from "@/context/TechAdminAuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -49,8 +49,7 @@ const generateLogsForRealUsers = (companyName: string, realUsers: any[]) => {
       action,
       duration,
       companyName,
-      timestamp: timestamp.toLocaleString(),
-    });
+      timestamp: timestamp.toLocaleString()});
   }
   
   // Sort by newest first

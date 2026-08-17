@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import toast from "react-hot-toast";
-import {
-  , Plus, Building, X, Sparkles, Check, Search, Trash2,
+import { Plus, Building, X, Sparkles, Check, Search, Trash2,
   Settings, SlidersHorizontal, AlertTriangle, ShieldCheck, Mail, Key,
   Building2, ChevronRight, CheckCircle2
 } from "lucide-react";
@@ -31,8 +30,7 @@ export function TechAdminCompanies() {
       adminEmail: company.adminEmail ?? "",
       phone: company.phone ?? "",
       domain: company.domain ?? "",
-      address: company.address ?? "",
-    });
+      address: company.address ?? ""});
   };
 
   const saveEdit = async () => {
@@ -51,8 +49,7 @@ export function TechAdminCompanies() {
         adminEmail: editForm.adminEmail?.trim(),
         phone: editForm.phone?.trim(),
         domain: editForm.domain?.trim(),
-        address: editForm.address?.trim(),
-      });
+        address: editForm.address?.trim()});
       toast.success(`${editForm.companyName.trim()} updated`);
       setEditTarget(null);
     } catch (err: any) {

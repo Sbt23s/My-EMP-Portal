@@ -6,7 +6,6 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useChat, type ChatMessage, type SendExtras } from "@/hooks/useChat";
 import {
-  ,
   Send,
   MessageSquare,
   Hash,

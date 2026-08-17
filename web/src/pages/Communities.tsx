@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { , Users, Plus, Trash2, Check, UserPlus } from "lucide-react";
+import { Users, Plus, Trash2, Check, UserPlus } from "lucide-react";
 import toast from "react-hot-toast";
 
 import type { ApiEnvelope, PageEnvelope, UserSummary } from "@/types";

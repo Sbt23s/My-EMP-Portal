@@ -361,9 +361,11 @@ export default function PermissionsPage() {
                 </button>
               ))}
             </div>
-            <Button onClick={() => setOpen(true)}>
-              <Plus className="mr-1.5 h-4 w-4" /> Apply for permission
-            </Button>
+            {!isAdmin && (
+              <Button onClick={() => setOpen(true)}>
+                <Plus className="mr-1.5 h-4 w-4" /> Apply for permission
+              </Button>
+            )}
           </div>
         }
       />

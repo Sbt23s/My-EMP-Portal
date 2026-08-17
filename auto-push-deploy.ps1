@@ -63,7 +63,7 @@ sudo docker compose -f docker-compose.prod.yml down --remove-orphans || true
 sudo docker rm -f hrportal-mysql hrportal-redis hrportal-backend hrportal-web analytics-service || true
 sudo docker ps -a -q --filter "name=hrportal" | xargs sudo docker rm -f || true
 echo '--- Rebuilding and starting production services ---'
-sudo docker compose -f docker-compose.prod.yml up -d --build
+sudo docker compose -f docker-compose.prod.yml --profile analytics up -d --build
 echo '--- Checking recent logs ---'
 sudo docker logs --tail 10 hrportal-backend 2>&1 | tail -10
 "@

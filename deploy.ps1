@@ -65,10 +65,8 @@ $build = if ($NoBuild) { "" } else { "--build" }
 $remote = @"
 set -e
 cd ~/hr-portal
-echo '--- pulling ---'
-git pull
-echo '--- starting ---'
-sudo docker compose -f docker-compose.prod.yml up -d $build backend web
+echo '--- Rebuilding and starting production services ---'
+sudo docker compose -f docker-compose.prod.yml --profile analytics up -d $build
 echo '--- waiting for the backend ---'
 sleep 25
 echo '--- database it is using ---'

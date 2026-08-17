@@ -67,7 +67,6 @@ fi
 echo '--- Removing leftover container conflicts ---'
 sudo docker compose -f docker-compose.prod.yml --profile analytics down -v --remove-orphans || true
 sudo docker ps -aq | xargs -r sudo docker rm -f || true
-sudo docker system prune -f || true
 echo '--- Rebuilding and starting production services ---'
 sudo docker compose -f docker-compose.prod.yml --profile analytics up -d --build
 echo '--- Waiting for backend service to become ready ---'
@@ -81,7 +80,7 @@ done
 echo '--- Checking recent logs ---'
 sudo docker logs --tail 15 hrportal-backend 2>&1 | tail -15
 '@
-    ssh -i $Key -o StrictHostKeyChecking=accept-new "ubuntu@$Server" $remote
+    ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=120 -i $Key -o StrictHostKeyChecking=accept-new "ubuntu@$Server" $remote
     if ($LASTEXITCODE -eq 0) {
         Ok "Live deployment successful!"
         Write-Host "  Open https://pixoushrportal.pixous.info/login and press Ctrl+Shift+R." -ForegroundColor Cyan

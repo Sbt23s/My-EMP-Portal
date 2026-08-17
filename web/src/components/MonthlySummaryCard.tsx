@@ -23,7 +23,7 @@ export type SummaryStat = {
  * an employee's own work, a team's, or the whole organisation's — and this only
  * handles presenting it, switching language and speaking it.
  */
-function toTamilMonthLabel(label: string) {
+export function toTamilMonthLabel(label: string) {
   if (!label) return "";
   return label
     .replace(/January/gi, "ஜனவரி")
@@ -38,6 +38,16 @@ function toTamilMonthLabel(label: string) {
     .replace(/October/gi, "அக்டோபர்")
     .replace(/November/gi, "நவம்பர்")
     .replace(/December/gi, "டிசம்பர்");
+}
+
+export function toTamilTeamName(name: string) {
+  if (!name) return "";
+  return name
+    .replace(/AI Engineer/gi, "செயற்கை நுண்ணறிவு பொறியாளர்")
+    .replace(/Software Engineer/gi, "மென்பொருள் பொறியாளர்")
+    .replace(/Civil Engineer/gi, "சிவில் பொறியாளர்")
+    .replace(/System Admin/gi, "கணினி நிர்வாகி")
+    .replace(/Admin/gi, "நிர்வாகி");
 }
 
 function translateStatLabel(label: string, lang: "en" | "ta") {

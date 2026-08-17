@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatTile } from "@/components/ui/stat-tile";
-import { MonthlySummaryCard } from "@/components/MonthlySummaryCard";
+import { MonthlySummaryCard, toTamilMonthLabel, toTamilTeamName } from "@/components/MonthlySummaryCard";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, resolvePhotoUrl } from "@/components/ui/avatar";
 import {

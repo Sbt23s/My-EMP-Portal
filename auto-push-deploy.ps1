@@ -70,8 +70,16 @@ sudo docker ps -aq | xargs -r sudo docker rm -f || true
 sudo docker system prune -f || true
 echo '--- Rebuilding and starting production services ---'
 sudo docker compose -f docker-compose.prod.yml --profile analytics up -d --build
+echo '--- Waiting for backend service to become ready ---'
+for i in $(seq 1 30); do
+    if sudo docker exec hrportal-backend curl -s http://localhost:8080/actuator/health | grep -q 'UP'; then
+        echo '--- Backend is UP and Healthy! ---'
+        break
+    fi
+    sleep 2
+done
 echo '--- Checking recent logs ---'
-sudo docker logs --tail 10 hrportal-backend 2>&1 | tail -10
+sudo docker logs --tail 15 hrportal-backend 2>&1 | tail -15
 '@
     ssh -i $Key -o StrictHostKeyChecking=accept-new "ubuntu@$Server" $remote
     if ($LASTEXITCODE -eq 0) {

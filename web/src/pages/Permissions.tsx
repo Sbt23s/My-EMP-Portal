@@ -487,18 +487,18 @@ export default function PermissionsPage() {
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/20">
-                    <TableHead className="sticky left-0 z-20 bg-muted/20 shadow-[1px_0_0_0_hsl(var(--border))]">Employee</TableHead>
-                    <TableHead>Team</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Hours</TableHead>
-                    <TableHead>Reason</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Requested to</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Decided by</TableHead>
-                    <TableHead>Decided at</TableHead>
+                  <TableRow className="bg-slate-50/80 dark:bg-slate-900/80">
+                    <TableHead sortable className="sticky left-0 z-20 bg-slate-50/90 dark:bg-slate-900/90 shadow-[1px_0_0_0_hsl(var(--border))]">Employee</TableHead>
+                    <TableHead sortable>Team</TableHead>
+                    <TableHead sortable>Date</TableHead>
+                    <TableHead sortable>Time</TableHead>
+                    <TableHead sortable>Hours</TableHead>
+                    <TableHead sortable>Reason</TableHead>
+                    <TableHead sortable>Priority</TableHead>
+                    <TableHead sortable>Requested to</TableHead>
+                    <TableHead sortable>Status</TableHead>
+                    <TableHead sortable>Decided by</TableHead>
+                    <TableHead sortable>Decided at</TableHead>
                     <TableHead>Reject reason</TableHead>
                     {isApprover && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
@@ -624,15 +624,15 @@ export default function PermissionsPage() {
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/20">
-                    <TableHead className="sticky left-0 z-20 bg-muted/20 shadow-[1px_0_0_0_hsl(var(--border))]">Employee</TableHead>
-                    <TableHead>Team</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Hours</TableHead>
-                    <TableHead>Reason</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Status</TableHead>
+                  <TableRow className="bg-slate-50/80 dark:bg-slate-900/80">
+                    <TableHead sortable className="sticky left-0 z-20 bg-slate-50/90 dark:bg-slate-900/90 shadow-[1px_0_0_0_hsl(var(--border))]">Employee</TableHead>
+                    <TableHead sortable>Team</TableHead>
+                    <TableHead sortable>Date</TableHead>
+                    <TableHead sortable>Time</TableHead>
+                    <TableHead sortable>Hours</TableHead>
+                    <TableHead sortable>Reason</TableHead>
+                    <TableHead sortable>Priority</TableHead>
+                    <TableHead sortable>Status</TableHead>
                     <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -715,28 +715,28 @@ export default function PermissionsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Hours</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Decided by</TableHead>
-                  <TableHead>Decided at</TableHead>
+                  <TableHead sortable>Date</TableHead>
+                  <TableHead sortable>Time</TableHead>
+                  <TableHead sortable>Hours</TableHead>
+                  <TableHead sortable>Reason</TableHead>
+                  <TableHead sortable>Priority</TableHead>
+                  <TableHead sortable>Status</TableHead>
+                  <TableHead sortable>Decided by</TableHead>
+                  <TableHead sortable>Decided at</TableHead>
                   <TableHead>Remark</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {myPaged.pageRows.map((r) => (
-                  <TableRow key={r.id} className="border-b align-top last:border-0 hover:bg-muted/30 transition-colors [&>td]:px-3 [&>td]:py-4">
-                    <TableCell>{dayjs(r.requestDate).format("DD MMM YYYY")}</TableCell>
-                    <TableCell>{to12Hour(r.fromTime)} – {to12Hour(r.toTime)}</TableCell>
-                    <TableCell>{r.hours}h</TableCell>
+                  <TableRow key={r.id} className="border-b border-slate-100 dark:border-slate-800 align-top last:border-0 hover:bg-slate-50/60 dark:hover:bg-slate-800/60 transition-colors [&>td]:px-3 [&>td]:py-4">
+                    <TableCell className="font-medium text-slate-800 dark:text-slate-200">{dayjs(r.requestDate).format("DD MMM YYYY")}</TableCell>
+                    <TableCell className="tabular-nums">{to12Hour(r.fromTime)} – {to12Hour(r.toTime)}</TableCell>
+                    <TableCell className="font-semibold text-slate-700 dark:text-slate-300">{r.hours}h</TableCell>
                     <TableCell className="max-w-[160px] truncate text-xs" title={r.reason}>{r.reason || "—"}</TableCell>
                     <TableCell><PriorityBadge priority={r.priority} /></TableCell>
                     <TableCell><PermissionStatus status={r.status} requestDate={r.requestDate} /></TableCell>
                     <TableCell>{r.decidedByName || "—"}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{r.decidedAt ? dayjs(r.decidedAt).format("DD MMM, h:mm A") : "—"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground tabular-nums">{r.decidedAt ? dayjs(r.decidedAt).format("DD MMM, h:mm A") : "—"}</TableCell>
                     <TableCell className="max-w-[160px] truncate text-xs" title={r.status === "REJECTED" ? r.decisionComment : ""}>{r.status === "REJECTED" ? (r.decisionComment || "—") : "—"}</TableCell>
                   </TableRow>
                 ))}

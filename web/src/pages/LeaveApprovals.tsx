@@ -278,17 +278,67 @@ export default function LeaveApprovalsPage() {
               <col className="w-[150px]" />
             </colgroup>
             <thead>
-              <tr className="border-b bg-muted/10 text-left align-middle text-[11px] font-bold text-muted-foreground [&>th]:whitespace-nowrap [&>th]:px-3 [&>th]:py-3">
-                <th>Employee</th>
-                <th>Team</th>
-                <th>Leave Type</th>
-                <th className="text-right">Days</th>
-                <th>Date Range</th>
-                <th>Reason</th>
-                <th>Requested To</th>
-                <th>Decided By</th>
-                <th>Applied On</th>
-                <th>Status</th>
+              <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 text-left align-middle text-xs font-semibold text-slate-700 dark:text-slate-200 [&>th]:whitespace-nowrap [&>th]:px-3 [&>th]:py-3">
+                <th>
+                  <div className="flex items-center gap-1.5">
+                    <span>Employee</span>
+                    <span className="text-[10px] text-slate-400 font-mono tracking-tighter">↑↓</span>
+                  </div>
+                </th>
+                <th>
+                  <div className="flex items-center gap-1.5">
+                    <span>Team</span>
+                    <span className="text-[10px] text-slate-400 font-mono tracking-tighter">↑↓</span>
+                  </div>
+                </th>
+                <th>
+                  <div className="flex items-center gap-1.5">
+                    <span>Leave Type</span>
+                    <span className="text-[10px] text-slate-400 font-mono tracking-tighter">↑↓</span>
+                  </div>
+                </th>
+                <th className="text-right">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <span>Days</span>
+                    <span className="text-[10px] text-slate-400 font-mono tracking-tighter">↑↓</span>
+                  </div>
+                </th>
+                <th>
+                  <div className="flex items-center gap-1.5">
+                    <span>Date Range</span>
+                    <span className="text-[10px] text-slate-400 font-mono tracking-tighter">↑↓</span>
+                  </div>
+                </th>
+                <th>
+                  <div className="flex items-center gap-1.5">
+                    <span>Reason</span>
+                    <span className="text-[10px] text-slate-400 font-mono tracking-tighter">↑↓</span>
+                  </div>
+                </th>
+                <th>
+                  <div className="flex items-center gap-1.5">
+                    <span>Requested To</span>
+                    <span className="text-[10px] text-slate-400 font-mono tracking-tighter">↑↓</span>
+                  </div>
+                </th>
+                <th>
+                  <div className="flex items-center gap-1.5">
+                    <span>Decided By</span>
+                    <span className="text-[10px] text-slate-400 font-mono tracking-tighter">↑↓</span>
+                  </div>
+                </th>
+                <th>
+                  <div className="flex items-center gap-1.5">
+                    <span>Applied On</span>
+                    <span className="text-[10px] text-slate-400 font-mono tracking-tighter">↑↓</span>
+                  </div>
+                </th>
+                <th>
+                  <div className="flex items-center gap-1.5">
+                    <span>Status</span>
+                    <span className="text-[10px] text-slate-400 font-mono tracking-tighter">↑↓</span>
+                  </div>
+                </th>
                 <th className="text-right">Actions</th>
               </tr>
             </thead>

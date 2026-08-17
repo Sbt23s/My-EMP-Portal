@@ -336,28 +336,28 @@ export default function LeavePage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Leave Type</TableHead>
-                  <TableHead>Applied On</TableHead>
-                  <TableHead>Leave Dates</TableHead>
-                  <TableHead>Days</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead>Requested To</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead sortable>Type</TableHead>
+                  <TableHead sortable>Applied On</TableHead>
+                  <TableHead sortable>Leave Dates</TableHead>
+                  <TableHead sortable>Days</TableHead>
+                  <TableHead sortable>Reason</TableHead>
+                  <TableHead sortable>Requested To</TableHead>
+                  <TableHead sortable>Status</TableHead>
                   <TableHead>Remark</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {reqPaged.pageRows.map((r, i) => (
-                  <TableRow key={r.id} className="hover:bg-muted/10">
-                    <TableCell className="font-medium text-foreground">{r.leaveTypeName}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                  <TableRow key={r.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800">
+                    <TableCell className="font-semibold text-slate-800 dark:text-slate-200">{r.leaveTypeName}</TableCell>
+                    <TableCell className="text-xs text-slate-500 tabular-nums">
                       {dayjs(r.createdAt).format("DD MMM YYYY")}
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-xs font-medium tabular-nums">
                       {dayjs(r.fromDate).format("DD MMM YYYY")} – {dayjs(r.toDate).format("DD MMM YYYY")}
                     </TableCell>
-                    <TableCell className="text-sm">{r.workingDays}</TableCell>
+                    <TableCell className="text-xs font-bold text-slate-700 dark:text-slate-300">{r.workingDays}</TableCell>
                     <TableCell className="max-w-[150px] truncate text-sm" title={r.reason}>
                       {r.reason || "—"}
                     </TableCell>

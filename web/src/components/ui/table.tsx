@@ -40,16 +40,24 @@ TableRow.displayName = "TableRow";
 
 export const TableHead = React.forwardRef<
   HTMLTableCellElement,
-  React.ThHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
+  React.ThHTMLAttributes<HTMLTableCellElement> & { sortable?: boolean }
+>(({ className, children, sortable, ...props }, ref) => (
   <th
     ref={ref}
     className={cn(
-      "h-11 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground",
+      "h-11 px-4 text-left align-middle text-xs font-semibold text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 whitespace-nowrap",
+      sortable && "cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-800",
       className
     )}
     {...props}
-  />
+  >
+    <div className="flex items-center gap-1.5">
+      <span>{children}</span>
+      {sortable && (
+        <span className="text-[10px] text-slate-400 font-mono tracking-tighter">↑↓</span>
+      )}
+    </div>
+  </th>
 ));
 TableHead.displayName = "TableHead";
 

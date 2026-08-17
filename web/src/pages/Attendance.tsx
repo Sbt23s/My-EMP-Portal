@@ -607,26 +607,26 @@ export default function AttendancePage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Employee ID</TableHead>
-                  <TableHead>In</TableHead>
-                  <TableHead>Out</TableHead>
-                  <TableHead>Mode</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead sortable>Date</TableHead>
+                  <TableHead sortable>Employee ID</TableHead>
+                  <TableHead sortable>In</TableHead>
+                  <TableHead sortable>Out</TableHead>
+                  <TableHead sortable>Mode</TableHead>
+                  <TableHead sortable>Status</TableHead>
                   <TableHead className="text-right">Details</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {historyPaged.pageRows.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-medium">
+                    <TableRow key={r.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800">
+                      <TableCell className="font-medium text-slate-800 dark:text-slate-200">
                         {dayjs(r.workDate).format("ddd, DD MMM")}
                       </TableCell>
                       <TableCell className="code-chip text-xs">{user?.employeeCode ?? "—"}</TableCell>
-                      <TableCell>{r.punchInAt ? dayjs(r.punchInAt).format("h:mm A") : "—"}</TableCell>
-                      <TableCell>{r.punchOutAt ? dayjs(r.punchOutAt).format("h:mm A") : "—"}</TableCell>
+                      <TableCell className="tabular-nums">{r.punchInAt ? dayjs(r.punchInAt).format("h:mm A") : "—"}</TableCell>
+                      <TableCell className="tabular-nums">{r.punchOutAt ? dayjs(r.punchOutAt).format("h:mm A") : "—"}</TableCell>
                       <TableCell>
-                        <span className="text-xs text-muted-foreground">{r.mode}</span>
+                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{r.mode}</span>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
@@ -635,8 +635,8 @@ export default function AttendancePage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => setDetail(r)}>
-                          <Eye className="h-4 w-4" /> View
+                        <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => setDetail(r)}>
+                          <Eye className="h-3.5 w-3.5" /> View
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -645,20 +645,15 @@ export default function AttendancePage() {
             </Table>
           )}
           {(history.data?.length ?? 0) > 0 && (
-            <>
-              <div className="border-t px-4 py-2 text-xs text-muted-foreground">
-                Showing {historyPaged.pageRows.length} of {historyRows.length} day{historyRows.length === 1 ? "" : "s"}
-              </div>
-              <TablePagination
-                page={historyPaged.page}
-                totalPages={historyPaged.totalPages}
-                onChange={historyPaged.setPage}
-                pageSize={historyPaged.pageSize}
-                onPageSizeChange={historyPaged.setPageSize}
-                total={historyPaged.total}
-                always
-              />
-            </>
+            <TablePagination
+              page={historyPaged.page}
+              totalPages={historyPaged.totalPages}
+              onChange={historyPaged.setPage}
+              pageSize={historyPaged.pageSize}
+              onPageSizeChange={historyPaged.setPageSize}
+              total={historyPaged.total}
+              always
+            />
           )}
         </CardContent>
       </Card>

@@ -278,12 +278,12 @@ export default function PermissionsPage() {
   /** The views this role actually has. A single one needs no toggle. */
   const views = [
     ...(seesAll
-      ? [["ALL_EMP", `All requests (${(all.data ?? []).length})`] as const]
+      ? [["ALL_EMP", "All Requests"] as const]
       : []),
     ...(isApprover
-      ? [["TO_ME", `Pending my approval (${(pending.data ?? []).filter((r) => r.status === "PENDING").length})`] as const]
+      ? [["TO_ME", "Pending My Approval"] as const]
       : []),
-    ["MINE", `My requests (${(mine.data ?? []).length})`] as const
+    ["MINE", "My Requests"] as const
   ];
 
   const myList = (mine.data ?? []).filter((r) => tab === "ALL" || r.status === tab);
@@ -343,32 +343,34 @@ export default function PermissionsPage() {
         title="Permission"
         subtitle="Request short, hours-wise time off during a work day."
         actions={
-          <div className="flex items-center gap-4">
-            <div className={cn("inline-flex rounded-full border bg-muted/60 p-1", views.length < 2 && "hidden")}>
-              {views.map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setView(key)}
-                  className={cn(
-                    "rounded-full px-4 py-1.5 text-xs font-semibold transition-colors",
-                    view === key
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            {!isAdmin && (
-              <Button onClick={() => setOpen(true)}>
-                <Plus className="mr-1.5 h-4 w-4" /> Apply for permission
-              </Button>
-            )}
-          </div>
+          !isAdmin ? (
+            <Button onClick={() => setOpen(true)}>
+              <Plus className="mr-1.5 h-4 w-4" /> Apply for permission
+            </Button>
+          ) : null
         }
       />
+
+      {/* View Mode Toggle Pill Tabs — identical layout & styling to Leave Approvals (2nd UI) */}
+      {views.length > 1 && (
+        <div className="flex gap-1 rounded-lg border bg-muted/60 p-1 w-fit">
+          {views.map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setView(key)}
+              className={cn(
+                "px-4 py-1.5 text-sm font-semibold rounded-md transition-colors",
+                view === key
+                  ? "bg-white dark:bg-card shadow-sm text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Counts on top, then one view at a time. */}
       {tiled && (

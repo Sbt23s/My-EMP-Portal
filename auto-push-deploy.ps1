@@ -60,8 +60,11 @@ if [ ! -f /etc/letsencrypt/live/pixoushrportal.pixous.info/fullchain.pem ]; then
 fi
 echo '--- Removing leftover container conflicts ---'
 sudo docker compose -f docker-compose.prod.yml down --remove-orphans || true
-sudo docker rm -f hrportal-mysql hrportal-redis hrportal-backend hrportal-web analytics-service || true
-sudo docker ps -a -q --filter "name=hrportal" | xargs sudo docker rm -f || true
+sudo docker rm -f hrportal-mysql hrportal-redis hrportal-backend hrportal-web analytics-service 2>/dev/null || true
+containers=$(sudo docker ps -a -q)
+if [ -n "$containers" ]; then
+    sudo docker rm -f $containers 2>/dev/null || true
+fi
 echo '--- Rebuilding and starting production services ---'
 sudo docker compose -f docker-compose.prod.yml --profile analytics up -d --build
 echo '--- Checking recent logs ---'

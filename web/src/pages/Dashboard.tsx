@@ -1337,18 +1337,6 @@ function ExecutiveDashboardView({
     queryFn: async () =>
       (await api.get<ApiEnvelope<LeaveRequest[]>>("/leave/pending")).data.data
   });
-  const leavePendingCount = useMemo(() => {
-    const raw = leavePending.data ?? [];
-    if (!selectedIndustry || selectedIndustry === "ALL") return raw.length;
-    const userIdToIndustry = new Map<number, string>();
-    (allUsersQuery.data ?? []).forEach((u: any) => {
-      if (u.id && u.industry) userIdToIndustry.set(u.id, u.industry);
-    });
-    return raw.filter((lr: any) => {
-      const ind = userIdToIndustry.get(lr.userId);
-      return !ind || ind === "ALL" || ind === selectedIndustry;
-    }).length;
-  }, [leavePending.data, selectedIndustry, allUsersQuery.data]);
 
   // Real employees (with DOB) for the Upcoming Birthdays panel + task roles.
   // Birthdays and work anniversaries in the next 60 days, both from the server
@@ -1406,6 +1394,19 @@ function ExecutiveDashboardView({
     },
     refetchInterval: 5000
   });
+
+  const leavePendingCount = useMemo(() => {
+    const raw = leavePending.data ?? [];
+    if (!selectedIndustry || selectedIndustry === "ALL") return raw.length;
+    const userIdToIndustry = new Map<number, string>();
+    (allUsersQuery.data ?? []).forEach((u: any) => {
+      if (u.id && u.industry) userIdToIndustry.set(u.id, u.industry);
+    });
+    return raw.filter((lr: any) => {
+      const ind = userIdToIndustry.get(lr.userId);
+      return !ind || ind === "ALL" || ind === selectedIndustry;
+    }).length;
+  }, [leavePending.data, selectedIndustry, allUsersQuery.data]);
 
   // Recent tasks (replaces the Recent Employees table).
   const tasksAllQuery = useQuery({

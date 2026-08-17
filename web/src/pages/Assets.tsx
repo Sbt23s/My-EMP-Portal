@@ -192,53 +192,80 @@ export default function AssetsPage() {
                 <Button onClick={() => setRegisterOpen(true)}>
                   <Plus className="h-4 w-4" /> Register asset
                 </Button>
-                <tr className="border-b bg-muted/20 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                  <th className="w-14 px-4 py-2.5">S.No</th>
-                  <th className="px-4 py-2.5">Asset</th>
-                  <th className="px-4 py-2.5">Asset Code</th>
-                  <th className="px-4 py-2.5">Brand / Model</th>
-                  <th className="px-4 py-2.5">Warranty</th>
-                  <th className="px-4 py-2.5">Purchased</th>
-                  <th className="px-4 py-2.5 text-right">Details</th>
-                </tr>
-              </thead>
-              <tbody>
-                {minePaged.pageRows.map((a, i) => (
-                  <tr key={a.id} className="border-b align-middle last:border-0 hover:bg-muted/20">
-                    <td className="px-4 py-2.5 text-muted-foreground">
-                      {minePaged.page * minePaged.pageSize + i + 1}
-                    </td>
-                    <td className="px-4 py-2.5 font-medium">{a.assetType || a.category}</td>
-                    <td className="px-4 py-2.5">
-                      <span className="code-chip text-xs text-muted-foreground">{a.assetCode}</span>
-                    </td>
-                    <td className="px-4 py-2.5 text-muted-foreground">
-                      {[a.brand, a.model].filter(Boolean).join(" ") || "—"}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-muted-foreground">
-                      {warrantyLabel(a.warrantyExpiry)}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-muted-foreground">
-                      {a.purchaseDate ? dayjs(a.purchaseDate).format("DD MMM YYYY") : "—"}
-                    </td>
-                    <td className="px-4 py-2.5 text-right">
-                      <Button variant="outline" size="sm" onClick={() => setMyView(a)}>
-                        <Eye className="mr-1 h-3.5 w-3.5" /> View
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <TablePagination
-              page={minePaged.page} totalPages={minePaged.totalPages} onChange={minePaged.setPage}
-              pageSize={minePaged.pageSize} onPageSizeChange={minePaged.setPageSize}
-              total={minePaged.total}
-              always
+              )}
+            </div>
+          ) : null
+        }
+      />
+
+      {/* My assets — not shown to HR */}
+      {!canManage && (
+        <>
+          <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Assigned to me
+          </h2>
+          {mine.isLoading ? (
+            <PageLoader text="Loading your assigned assets..." className="min-h-[200px]" />
+          ) : (mine.data?.length ?? 0) === 0 ? (
+            <EmptyState
+              icon={Boxes}
+              title="No assets assigned"
+              description="Equipment allocated to you will appear here."
             />
-          </CardContent>
-        </Card>
-      ))}
+          ) : (
+            <Card className="mb-8">
+              <CardContent className="p-0 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/20 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                      <th className="w-14 px-4 py-2.5">S.No</th>
+                      <th className="px-4 py-2.5">Asset</th>
+                      <th className="px-4 py-2.5">Asset Code</th>
+                      <th className="px-4 py-2.5">Brand / Model</th>
+                      <th className="px-4 py-2.5">Warranty</th>
+                      <th className="px-4 py-2.5">Purchased</th>
+                      <th className="px-4 py-2.5 text-right">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {minePaged.pageRows.map((a, i) => (
+                      <tr key={a.id} className="border-b align-middle last:border-0 hover:bg-muted/20">
+                        <td className="px-4 py-2.5 text-muted-foreground">
+                          {minePaged.page * minePaged.pageSize + i + 1}
+                        </td>
+                        <td className="px-4 py-2.5 font-medium">{a.assetType || a.category}</td>
+                        <td className="px-4 py-2.5">
+                          <span className="code-chip text-xs text-muted-foreground">{a.assetCode}</span>
+                        </td>
+                        <td className="px-4 py-2.5 text-muted-foreground">
+                          {[a.brand, a.model].filter(Boolean).join(" ") || "—"}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-2.5 text-muted-foreground">
+                          {warrantyLabel(a.warrantyExpiry)}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-2.5 text-muted-foreground">
+                          {a.purchaseDate ? dayjs(a.purchaseDate).format("DD MMM YYYY") : "—"}
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <Button variant="outline" size="sm" onClick={() => setMyView(a)}>
+                            <Eye className="mr-1 h-3.5 w-3.5" /> View
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <TablePagination
+                  page={minePaged.page} totalPages={minePaged.totalPages} onChange={minePaged.setPage}
+                  pageSize={minePaged.pageSize} onPageSizeChange={minePaged.setPageSize}
+                  total={minePaged.total}
+                  always
+                />
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
 
       {/* Inventory — HR acts on it, an admin reads it. */}
       {canView && (

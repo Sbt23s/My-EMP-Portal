@@ -904,14 +904,8 @@ function MyWorkReports({
                   {rows.length} {rows.length === 1 ? "entry" : "entries"} · {totalHours}h total ·{" "}
                   {dayjs(fromDate).format("DD MMM")} – {dayjs(toDate).format("DD MMM YYYY")}
                 </div>
-                <table className="w-full text-sm">
+                <table className="w-full text-sm border-collapse">
                   <thead>
-                    <tr className="border-b bg-muted/20 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                      <th className="w-14 px-4 py-2.5">S.No</th>
-                      <th className="px-4 py-2.5">Date</th>
-                      <th className="px-4 py-2.5">Project</th>
-                      <th className="px-4 py-2.5">Hours</th>
-                      <th className="px-4 py-2.5">Task / Module</th>
                       <th className="w-24 px-4 py-2.5">Files</th>
                       <th className="w-44 px-4 py-2.5 text-right">Action</th>
                     </tr>

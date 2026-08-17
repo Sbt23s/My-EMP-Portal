@@ -278,7 +278,7 @@ export default function LeaveApprovalsPage() {
               <col className="w-[150px]" />
             </colgroup>
             <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 text-left align-middle text-xs font-semibold text-slate-700 dark:text-slate-200 [&>th]:whitespace-nowrap [&>th]:px-3 [&>th]:py-3">
+              <tr className="border-b border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90 text-left align-middle text-xs font-semibold text-slate-800 dark:text-slate-200 [&>th]:whitespace-nowrap [&>th]:px-3.5 [&>th]:py-3 [&>th]:border-r [&>th]:border-slate-300 dark:[&>th]:border-slate-700 last:[&>th]:border-r-0">
                 <th>
                   <div className="flex items-center gap-1.5">
                     <span>Employee</span>
@@ -345,7 +345,7 @@ export default function LeaveApprovalsPage() {
             <tbody>
               {pageRows.map((r) => {
                 return (
-                  <tr key={r.id} className="border-b align-top last:border-0 hover:bg-muted/30 transition-colors [&>td]:px-3 [&>td]:py-4">
+                  <tr key={r.id} className="border-b border-slate-200 dark:border-slate-800 align-top last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors [&>td]:px-3.5 [&>td]:py-3 [&>td]:border-r [&>td]:border-b [&>td]:border-slate-200 dark:[&>td]:border-slate-800 last:[&>td]:border-r-0">
                     <td>
                       <div className="flex items-center gap-2">
                         <Avatar name={r.employeeName} className="shrink-0 h-9 w-9 bg-primary/10 text-primary font-medium" />

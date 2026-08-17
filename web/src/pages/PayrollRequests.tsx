@@ -356,19 +356,18 @@ export default function PayrollPage() {
       ) : (
         <div className="rounded-xl border bg-card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="border-b bg-muted/20 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground [&>th]:whitespace-nowrap">
-                  <th className="px-5 py-3">#</th>
-                  <th className="px-5 py-3">Employee</th>
-                  <th className="px-5 py-3">Employee ID</th>
-                  <th className="px-5 py-3">Department</th>
-                  <th className="px-5 py-3">Gross Pay</th>
-                  <th className="px-5 py-3">Deductions</th>
-                  <th className="px-5 py-3">Net Pay</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3">Pay Date</th>
-                  <th className="px-5 py-3 text-right">Actions</th>
+                <tr className="border-b border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90 text-left text-xs font-semibold text-slate-800 dark:text-slate-200 [&>th]:whitespace-nowrap [&>th]:px-3.5 [&>th]:py-3 [&>th]:border-r [&>th]:border-slate-300 dark:[&>th]:border-slate-700 last:[&>th]:border-r-0">
+                  <th>Employee</th>
+                  <th>Employee ID</th>
+                  <th>Department</th>
+                  <th>Gross Pay</th>
+                  <th>Deductions</th>
+                  <th>Net Pay</th>
+                  <th>Status</th>
+                  <th>Pay Date</th>
+                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -390,10 +389,7 @@ export default function PayrollPage() {
                   const payDate = dayjs(`${year}-${month}-01`).endOf('month').format("DD MMM YYYY");
 
                   return (
-                    <tr key={e.id} className="border-b align-middle last:border-0 hover:bg-muted/30 transition-colors [&>td]:px-5 [&>td]:py-4">
-                      <td className="font-medium text-muted-foreground">
-                        {(rowsPaged.page - 1) * rowsPaged.pageSize + idx + 1}
-                      </td>
+                    <tr key={e.id} className="border-b border-slate-200 dark:border-slate-800 align-middle last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors [&>td]:px-3.5 [&>td]:py-3 [&>td]:border-r [&>td]:border-b [&>td]:border-slate-200 dark:[&>td]:border-slate-800 last:[&>td]:border-r-0">
                       <td className="font-medium whitespace-nowrap">
                         {e.name}
                       </td>

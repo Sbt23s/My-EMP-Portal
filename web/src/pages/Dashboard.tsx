@@ -1410,27 +1410,7 @@ function ExecutiveDashboardView({
   });
 
   if (exec.isLoading) {
-    return (
-      <div className="space-y-6 pb-8 animate-pulse">
-        <div className="flex justify-between items-center">
-          <div>
-            <Skeleton className="h-8 w-64" />
-            <Skeleton className="h-4 w-96 mt-2" />
-          </div>
-          <Skeleton className="h-10 w-36 rounded-full" />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-28 rounded-xl" />
-          ))}
-        </div>
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Skeleton className="h-[340px] rounded-xl lg:col-span-1" />
-          <Skeleton className="h-[340px] rounded-xl lg:col-span-1" />
-          <Skeleton className="h-[340px] rounded-xl lg:col-span-1" />
-        </div>
-      </div>
-    );
+    return <PageLoader text="Loading Executive Dashboard..." className="min-h-[60vh]" />;
   }
 
   if (!d) return null;

@@ -18,6 +18,7 @@ import { Avatar, resolvePhotoUrl } from "@/components/ui/avatar";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageLoader } from "@/components/ui/page-loader";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { FaceTrainDialog } from "@/components/ui/FaceTrainDialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -616,19 +617,7 @@ export default function EmployeesPage() {
           )}
 
           {directory.isLoading ? (
-            <div className="space-y-3 p-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4 py-2">
-                  <Skeleton className="h-10 w-10 rounded-full" />
-                  <div className="space-y-1.5 flex-1">
-                    <Skeleton className="h-4 w-1/4" />
-                    <Skeleton className="h-3 w-1/6" />
-                  </div>
-                  <Skeleton className="h-6 w-20 rounded-md" />
-                  <Skeleton className="h-6 w-16 rounded-md" />
-                </div>
-              ))}
-            </div>
+            <PageLoader text="Loading employee directory..." className="min-h-[300px]" />
           ) : directory.isError ? (
             <div className="flex flex-col items-center justify-center p-8 text-center space-y-3">
               <AlertCircle className="h-10 w-10 text-destructive" />

@@ -16,6 +16,7 @@ import { todayIso } from "@/lib/dates";
 import { useAuth } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { PageLoader } from "@/components/ui/page-loader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge, statusVariant } from "@/components/ui/badge";
@@ -190,32 +191,6 @@ export default function AssetsPage() {
                 <Button onClick={() => setRegisterOpen(true)}>
                   <Plus className="h-4 w-4" /> Register asset
                 </Button>
-              )}
-            </div>
-          ) : null
-        }
-      />
-
-      {/* My assets — not shown to HR, which manages the inventory rather than
-          holding equipment, so the panel was always empty for them. */}
-      {!canManage && (
-      <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        Assigned to me
-      </h2>
-      )}
-      {!canManage && (mine.isLoading ? (
-        <Skeleton className="h-40" />
-      ) : (mine.data?.length ?? 0) === 0 ? (
-        <EmptyState
-          icon={Boxes}
-          title="No assets assigned"
-          description="Equipment allocated to you will appear here."
-        />
-      ) : (
-        <Card>
-          <CardContent className="p-0 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
                 <tr className="border-b bg-muted/20 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
                   <th className="w-14 px-4 py-2.5">S.No</th>
                   <th className="px-4 py-2.5">Asset</th>

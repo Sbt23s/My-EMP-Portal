@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { roleCodeLabel } from "@/lib/roles";
 import dayjs from "dayjs";
+import { useIsFetching } from "@tanstack/react-query";
+import { CustomLoader } from "@/components/ui/custom-loader";
 import { ChatBotWidget } from "@/components/ChatBotWidget";
 import { CallProvider } from "@/hooks/useCalls";
 
@@ -179,6 +181,7 @@ function notificationStyle(type?: string) {
 }
 
 function AppShell() {
+  const isFetching = useIsFetching();
   const { user, logout, hasPermission, hasRole, hasModule, hasDashboard } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
@@ -499,6 +502,14 @@ function AppShell() {
                 </>
               )}
             </div>
+
+            {/* Real-time Loading Indicator */}
+            {isFetching > 0 && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-semibold shadow-xs" title="Loading data...">
+                <CustomLoader className="h-4 w-4 text-primary" />
+                <span className="hidden sm:inline text-[11px] font-mono tracking-tight">Syncing...</span>
+              </div>
+            )}
 
             {/* Theme toggle */}
             <button

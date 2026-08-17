@@ -40,22 +40,39 @@ export function CallOverlay({
   onToggleCamera: () => void;
 }) {
   const localVideo = useRef<HTMLVideoElement | null>(null);
+  const mainLocalVideo = useRef<HTMLVideoElement | null>(null);
   // The other side plays through a video element on a video call and a bare
   // audio element otherwise; only one of the two is ever mounted.
   const remoteVideo = useRef<HTMLVideoElement | null>(null);
   const remoteAudio = useRef<HTMLAudioElement | null>(null);
   const [seconds, setSeconds] = useState(0);
 
+  const hasRemoteVideo = isVideo && !!remoteStream && remoteStream.getVideoTracks().some(t => t.readyState === "live" && t.enabled);
+  const hasLocalVideo = isVideo && !!localStream && localStream.getVideoTracks().some(t => t.readyState === "live" && t.enabled) && !cameraOff;
+
   // Streams are attached through the DOM rather than a src attribute. The state
   // and kind are watched too: connecting swaps the audio element for a video
   // one, and the new element would otherwise never be given the stream.
   useEffect(() => {
-    if (localVideo.current) localVideo.current.srcObject = localStream ?? null;
-  }, [localStream, state, isVideo]);
+    if (localVideo.current) {
+      localVideo.current.srcObject = localStream ?? null;
+      if (localStream) localVideo.current.play().catch(() => {});
+    }
+    if (mainLocalVideo.current) {
+      mainLocalVideo.current.srcObject = localStream ?? null;
+      if (localStream) mainLocalVideo.current.play().catch(() => {});
+    }
+  }, [localStream, state, isVideo, hasRemoteVideo]);
   useEffect(() => {
-    if (remoteVideo.current) remoteVideo.current.srcObject = remoteStream ?? null;
-    if (remoteAudio.current) remoteAudio.current.srcObject = remoteStream ?? null;
-  }, [remoteStream, state, isVideo]);
+    if (remoteVideo.current) {
+      remoteVideo.current.srcObject = remoteStream ?? null;
+      if (remoteStream) remoteVideo.current.play().catch(() => {});
+    }
+    if (remoteAudio.current) {
+      remoteAudio.current.srcObject = remoteStream ?? null;
+      if (remoteStream) remoteAudio.current.play().catch(() => {});
+    }
+  }, [remoteStream, state, isVideo, hasRemoteVideo]);
 
   useEffect(() => {
     if (state !== "connected") return;
@@ -77,24 +94,49 @@ export function CallOverlay({
       {isVideo ? (
         <div className="relative flex-1 w-full max-w-4xl overflow-hidden rounded-2xl bg-black shadow-2xl">
           {state === "connected" ? (
-            <>
-              <video
-                ref={remoteVideo}
-                autoPlay
-                playsInline
-                className="h-full w-full object-cover"
-              />
-              <video
-                ref={localVideo}
-                autoPlay
-                playsInline
-                muted
-                className="absolute bottom-4 right-4 h-32 w-24 sm:h-40 sm:w-28 rounded-xl border-2 border-white/20 object-cover shadow-lg"
-              />
-              <div className="absolute left-4 top-4 rounded-full bg-black/60 px-4 py-1.5 text-sm font-semibold tabular-nums backdrop-blur-md">
-                {partnerName} · {label}
+            hasRemoteVideo ? (
+              <>
+                <video
+                  ref={remoteVideo}
+                  autoPlay
+                  playsInline
+                  className="h-full w-full object-cover"
+                />
+                {hasLocalVideo && (
+                  <video
+                    ref={localVideo}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="absolute bottom-4 right-4 h-32 w-24 sm:h-40 sm:w-28 rounded-xl border-2 border-white/20 object-cover shadow-lg -scale-x-100"
+                  />
+                )}
+                <div className="absolute left-4 top-4 rounded-full bg-black/60 px-4 py-1.5 text-sm font-semibold tabular-nums backdrop-blur-md">
+                  {partnerName} · {label}
+                </div>
+              </>
+            ) : hasLocalVideo ? (
+              <>
+                <video
+                  ref={mainLocalVideo}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="h-full w-full object-cover -scale-x-100"
+                />
+                <div className="absolute left-4 top-4 rounded-full bg-black/60 px-4 py-1.5 text-sm font-semibold tabular-nums backdrop-blur-md">
+                  {partnerName} · {label}
+                </div>
+              </>
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/80">
+                <div className="flex h-28 w-28 items-center justify-center rounded-full bg-white/20 text-4xl font-bold backdrop-blur-sm shadow-xl">
+                  {initials(partnerName)}
+                </div>
+                <h3 className="font-display text-2xl font-bold drop-shadow-md">{partnerName}</h3>
+                <p className="text-base font-medium tabular-nums text-white/90 drop-shadow-md">{label}</p>
               </div>
-            </>
+            )
           ) : (
             <>
               <video

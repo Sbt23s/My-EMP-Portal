@@ -172,7 +172,15 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
     pc.ontrack = (event) => {
-      if (event.streams && event.streams[0]) setRemoteStream(event.streams[0]);
+      if (event.streams && event.streams[0]) {
+        setRemoteStream(event.streams[0]);
+      } else if (event.track) {
+        setRemoteStream((prev) => {
+          const ms = prev ? new MediaStream(prev.getTracks()) : new MediaStream();
+          ms.addTrack(event.track);
+          return ms;
+        });
+      }
     };
     pc.onicecandidate = (event) => {
       if (event.candidate) sendSignal(partnerId, "candidate", { candidate: event.candidate });

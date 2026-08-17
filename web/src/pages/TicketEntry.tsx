@@ -1,8 +1,9 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, FileText, Flag, Grid2x2, Info, Loader2, Send, Trash2, UploadCloud, UserRound, X
+  ArrowLeft, FileText, Flag, Grid2x2, Info, Send, Trash2, UploadCloud, UserRound, X
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";

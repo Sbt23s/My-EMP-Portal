@@ -1,7 +1,8 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  MapPin, LogIn, LogOut, Loader2, Building2, Home, HardHat, Calendar,
+  MapPin, LogIn, LogOut, Building2, Home, HardHat, Calendar,
   Download, Eye, ScanFace, ShieldCheck, ShieldAlert, Sparkles, AlertTriangle,
   Info, ListTodo, CheckCircle2, UserCog
 } from "lucide-react";

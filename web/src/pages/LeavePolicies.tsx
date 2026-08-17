@@ -1,8 +1,9 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Calendar, Settings, Plus, Trash2, Loader2, CalendarCheck, Users, Pencil, Search
+  Calendar, Settings, Plus, Trash2, CalendarCheck, Users, Pencil, Search
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";

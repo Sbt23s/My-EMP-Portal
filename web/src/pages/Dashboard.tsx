@@ -1,10 +1,11 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { fetchTtsUrl } from "@/lib/chatbot";
 import {
   Clock, CalendarCheck, LifeBuoy, Boxes, ArrowRight, Users, TrendingUp, AlertCircle, CheckCircle2, Briefcase, RefreshCw,
-  Plus, Gift, Building2, UserPlus, UserMinus, MoreVertical, Receipt, Loader2, ChevronLeft,
+  Plus, Gift, Building2, UserPlus, UserMinus, MoreVertical, Receipt, ChevronLeft,
   Check, X, Send, ListTodo, Inbox, PartyPopper, Cake, Upload, Image as ImageIcon, Smile,
   Home, Hourglass, BadgeCheck
 } from "lucide-react";
@@ -1289,6 +1290,7 @@ function ExecutiveDashboardView({
   // Quick-access state for clickable stat cards + leave approvals
   const [listKind, setListKind] = useState<"total" | "present" | "leave" | "absent" | "offboard" | null>(null);
   const [leaveOpen, setLeaveOpen] = useState(false);
+  const [celebrationFilter, setCelebrationFilter] = useState<"ALL" | "BIRTHDAY" | "ANNIVERSARY">("ALL");
   const canApproveLeave = !!user?.permissions?.includes("LEAVE_APPROVE");
 
   // Today's attendance (present punches) — used to derive the Absent count/list.
@@ -1949,18 +1951,44 @@ function ExecutiveDashboardView({
         <div className="flex flex-col gap-6">
           {/* Birthdays and work anniversaries */}
           <Card className="shadow-sm border-border/50">
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-bold text-foreground">Birthdays &amp; Anniversaries</CardTitle>
+              <div className="flex gap-1 rounded-md border p-1 bg-muted/20">
+                <button 
+                  onClick={() => setCelebrationFilter("ALL")}
+                  className={cn("px-2 py-1 text-[10px] font-semibold rounded transition-colors", celebrationFilter === "ALL" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted")}
+                >
+                  All
+                </button>
+                <button 
+                  onClick={() => setCelebrationFilter("BIRTHDAY")}
+                  className={cn("px-2 py-1 text-[10px] font-semibold rounded transition-colors", celebrationFilter === "BIRTHDAY" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted")}
+                >
+                  Birthdays
+                </button>
+                <button 
+                  onClick={() => setCelebrationFilter("ANNIVERSARY")}
+                  className={cn("px-2 py-1 text-[10px] font-semibold rounded transition-colors", celebrationFilter === "ANNIVERSARY" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted")}
+                >
+                  Anniversaries
+                </button>
+              </div>
             </CardHeader>
             <CardContent>
               {(() => {
                 // One source for both: birthdays come from the date of birth, work
                 // anniversaries from the date of joining, and the server counts
                 // the years so a first anniversary is not shown before it is one.
-                const ups = celebrationsQuery.data ?? [];
+                const allUps = celebrationsQuery.data ?? [];
                 if (celebrationsQuery.isLoading) {
                   return <Skeleton className="h-24" />;
                 }
+                const ups = allUps.filter(c => {
+                  if (celebrationFilter === "BIRTHDAY") return c.type === "BIRTHDAY";
+                  if (celebrationFilter === "ANNIVERSARY") return c.type === "ANNIVERSARY";
+                  return true;
+                });
+                
                 if (ups.length === 0) {
                   return (
                     <div className="flex h-24 flex-col items-center justify-center text-center text-xs text-muted-foreground">

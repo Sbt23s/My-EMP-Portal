@@ -1,8 +1,9 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import dayjs, { type Dayjs } from "dayjs";
 import {
-  ChevronLeft, ChevronRight, CalendarDays, RefreshCw, Palmtree, Plane, CalendarCheck, Plus, Loader2,
+  ChevronLeft, ChevronRight, CalendarDays, RefreshCw, Palmtree, Plane, CalendarCheck, Plus,
   ListTodo, AlertTriangle, Trash2, Search, Users, MapPin, Check, X,
   Cake, Award, PartyPopper, GraduationCap, Clock
 } from "lucide-react";

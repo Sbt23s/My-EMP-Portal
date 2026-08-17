@@ -1,7 +1,8 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Plus, Loader2, Check, X, Clock, Inbox, Search, AlertTriangle, Ban, TrendingUp, Timer
+  Plus, Check, X, Clock, Inbox, Search, AlertTriangle, Ban, TrendingUp, Timer
 } from "lucide-react";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";

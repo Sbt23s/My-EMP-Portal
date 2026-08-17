@@ -1,8 +1,9 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Plus, Loader2, LifeBuoy, Send, Star, MessageSquare,
+  Plus, LifeBuoy, Send, Star, MessageSquare,
   Ticket as TicketIcon, Clock, AlertTriangle, CheckCircle, Lock, Paperclip, Inbox,
   Eye, Pencil
 } from "lucide-react";
@@ -62,7 +63,7 @@ function priorityVariant(p: string) {
 }
 
 export default function HelpdeskPage() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const navigate = useNavigate();
   const isAgent = hasPermission("HELPDESK_AGENT");
   // HR / Admin / execs can oversee every ticket in the org.
@@ -285,6 +286,7 @@ export default function HelpdeskPage() {
                   <TableHead>Category</TableHead>
                   <TableHead>Priority</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Approved By</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead className="text-right pr-6">Action</TableHead>
                 </TableRow>
@@ -306,14 +308,33 @@ export default function HelpdeskPage() {
                     <TableCell>
                       <Badge variant={statusVariant(t.status)}>{t.status}</Badge>
                     </TableCell>
+                    <TableCell>{t.assignedToName || "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{dayjs(t.createdAt).format("DD MMM YYYY")}</TableCell>
                     <TableCell className="text-right pr-6">
-                      <Button
-                        size="sm"
-                        onClick={() => setOpenId(t.id)}
-                      >
-                        Respond
-                      </Button>
+                      {(t.status === "RESOLVED" || t.status === "CLOSED") ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setOpenId(t.id)}
+                        >
+                          <Eye className="mr-1 h-3.5 w-3.5" /> View
+                        </Button>
+                      ) : (t.assignedTo === user?.id || (!t.assignedTo && isAgent)) ? (
+                        <Button
+                          size="sm"
+                          onClick={() => setOpenId(t.id)}
+                        >
+                          Respond
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setOpenId(t.id)}
+                        >
+                          <Eye className="mr-1 h-3.5 w-3.5" /> View
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -579,6 +600,8 @@ function TicketDetail({
   });
 
   const isRequester = user?.id === t?.raisedBy;
+  const isAssignedToMe = user?.id === t?.assignedTo;
+  const canRespond = isRequester || isAssignedToMe || (!t?.assignedTo && isAgent);
   const canRate = isRequester && (t?.status === "RESOLVED" || t?.status === "CLOSED");
   const attachments = String(t?.attachments || "").split(",").map((p) => p.trim()).filter(Boolean);
 
@@ -648,7 +671,7 @@ function TicketDetail({
             </div>
           )}
 
-          {isAgent && (
+          {isAgent && (isAssignedToMe || !t?.assignedTo) && (
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <span className="text-xs font-medium text-muted-foreground">Set status:</span>
               {STATUSES.map((s) => (
@@ -719,26 +742,28 @@ function TicketDetail({
               )}
             </div>
 
-            <div className="mt-3 flex gap-2">
-              <Input
-                placeholder="Write a reply…"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && comment.trim()) addComment.mutate();
-                }}
-              />
-              <Button
-                disabled={!comment.trim() || addComment.isPending}
-                onClick={() => addComment.mutate()}
-              >
-                {addComment.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
+            {canRespond && (
+              <div className="mt-3 flex gap-2">
+                <Input
+                  placeholder="Write a reply…"
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && comment.trim()) addComment.mutate();
+                  }}
+                />
+                <Button
+                  disabled={!comment.trim() || addComment.isPending}
+                  onClick={() => addComment.mutate()}
+                >
+                  {addComment.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
         </>
       )}

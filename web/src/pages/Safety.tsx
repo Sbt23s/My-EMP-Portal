@@ -1,6 +1,7 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { Loader2, Plus, ShieldCheck, AlertTriangle, ChevronLeft, ChevronRight, CheckCircle2, MapPin, Clock } from "lucide-react";
+import { , Plus, ShieldCheck, AlertTriangle, ChevronLeft, ChevronRight, CheckCircle2, MapPin, Clock } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";

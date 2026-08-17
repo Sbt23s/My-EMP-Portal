@@ -1,7 +1,8 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useMemo, useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import {
-  Search, ShieldCheck, ShieldAlert, LogIn, Activity, Loader2, RefreshCw,
+  Search, ShieldCheck, ShieldAlert, LogIn, Activity, RefreshCw,
   Wallet, Users, Clock, CalendarCheck, ScanFace, MessageSquare, Lock, Settings,
   Globe, Monitor, ChevronRight, Download, XCircle
 } from "lucide-react";

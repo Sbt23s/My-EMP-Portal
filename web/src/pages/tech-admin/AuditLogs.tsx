@@ -1,6 +1,7 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, History, Clock, Users, Activity, Filter, Search } from "lucide-react";
+import { , History, Clock, Users, Activity, Filter, Search } from "lucide-react";
 import { useTechAdminAuth } from "@/context/TechAdminAuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";

@@ -1,9 +1,10 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Settings2, Save, ShieldCheck, Eye, Cpu, CheckCircle2, XCircle, Check } from "lucide-react";
+import { , Settings2, Save, ShieldCheck, Eye, Cpu, CheckCircle2, XCircle, Check } from "lucide-react";
 import { useTechAdminAuth } from "@/context/TechAdminAuthContext";
 
 export function TechAdminCompanyConfig() {

@@ -1,6 +1,7 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Wallet, FileText, Download, Loader2, IndianRupee, Eye, Users, Clock, Banknote, WalletCards, ReceiptText, CheckCircle2 } from "lucide-react";
+import { Wallet, FileText, Download, IndianRupee, Eye, Users, Clock, Banknote, WalletCards, ReceiptText, CheckCircle2 } from "lucide-react";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";

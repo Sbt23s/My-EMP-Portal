@@ -1,8 +1,9 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  ArrowLeft, ArrowRight, Check, FileText, Loader2, Send, Trash2, Upload, X
+  ArrowLeft, ArrowRight, Check, FileText, Send, Trash2, Upload, X
 } from "lucide-react";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";

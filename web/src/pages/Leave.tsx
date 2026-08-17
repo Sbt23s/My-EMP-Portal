@@ -1,9 +1,10 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Clock, CalendarDays, AlertTriangle, Eye, Download, X, Plus, Loader2, CalendarX2, FileSpreadsheet } from "lucide-react";
+import { CheckCircle2, Clock, CalendarDays, AlertTriangle, Eye, Download, X, Plus, CalendarX2, FileSpreadsheet } from "lucide-react";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";

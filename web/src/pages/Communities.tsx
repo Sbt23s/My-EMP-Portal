@@ -1,10 +1,11 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Users, Plus, Trash2, Check, UserPlus } from "lucide-react";
+import { , Users, Plus, Trash2, Check, UserPlus } from "lucide-react";
 import toast from "react-hot-toast";
 
 import type { ApiEnvelope, PageEnvelope, UserSummary } from "@/types";

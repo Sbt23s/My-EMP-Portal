@@ -1,7 +1,8 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Plus, Loader2, ClipboardList, Search, ChevronDown, Save, FileSpreadsheet, Eye, Pencil,
+  Plus, ClipboardList, Search, ChevronDown, Save, FileSpreadsheet, Eye, Pencil,
   Clock, FolderKanban, ListChecks, TrendingUp, Sparkles, Lightbulb, AlertTriangle, Volume2, Square,
   Users, Paperclip, Upload, X, FileText, Film, Sheet, Image as ImageIcon, BellRing
 } from "lucide-react";

@@ -1,7 +1,8 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  CalendarCheck, ClipboardList, Clock, Download, Loader2, ListTodo,
+  CalendarCheck, ClipboardList, Clock, Download, ListTodo,
   Map as MapIcon, Plane, UserX, Users
 } from "lucide-react";
 import dayjs from "dayjs";

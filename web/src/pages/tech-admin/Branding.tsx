@@ -1,9 +1,10 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { api } from "@/lib/api";
 import { useTechAdminAuth, defaultModulesTemplate } from "@/context/TechAdminAuthContext";
 import { Button } from "@/components/ui/button";
-import { Palette, Check, Loader2, RotateCcw, Type, Layers, Users, Building2, X } from "lucide-react";
+import { Palette, Check, RotateCcw, Type, Layers, Users, Building2, X } from "lucide-react";
 /*
  * The catalogue lives in lib/branding, not here.
  *

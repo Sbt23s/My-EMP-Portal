@@ -1,10 +1,11 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState } from "react";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
-import { Loader2, Lock, User, Eye, EyeOff } from "lucide-react";
+import { , Lock, User, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { tokenStore, apiMessage } from "@/lib/api";
 import { motion } from "framer-motion";

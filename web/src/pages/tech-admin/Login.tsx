@@ -1,10 +1,11 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTechAdminAuth } from "@/context/TechAdminAuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, ShieldCheck, Volume2, VolumeX } from "lucide-react";
+import { , ShieldCheck, Volume2, VolumeX } from "lucide-react";
 
 export function TechAdminLogin() {
   const [username, setUsername] = useState("");

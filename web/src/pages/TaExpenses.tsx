@@ -1,7 +1,8 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Map, Plus, Settings, Upload, Loader2, ImagePlus, Pencil, Clock, Check, X } from "lucide-react";
+import { Map, Plus, Settings, Upload, ImagePlus, Pencil, Clock, Check, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";

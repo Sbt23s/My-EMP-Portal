@@ -1,3 +1,4 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -5,7 +6,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useChat, type ChatMessage, type SendExtras } from "@/hooks/useChat";
 import {
-  Loader2,
+  ,
   Send,
   MessageSquare,
   Hash,

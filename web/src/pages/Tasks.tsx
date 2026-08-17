@@ -1,8 +1,9 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  ListTodo, Loader2, Plus, Search, ChevronRight, ChevronDown,
+  ListTodo, Plus, Search, ChevronRight, ChevronDown,
   CheckCircle2, Clock, Eye, CalendarDays, CalendarRange, Users, Download, Pencil, FileSpreadsheet,
   AlertTriangle, MessageSquare, Send, Paperclip, X, FileText, Film, Sheet,
   Image as ImageIcon, BellRing, Gauge

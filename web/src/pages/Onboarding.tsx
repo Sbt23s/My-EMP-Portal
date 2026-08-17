@@ -1,7 +1,8 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import {
-  Search, ClipboardList, Loader2, CheckCircle2, Circle, PlayCircle, UserCheck
+  Search, ClipboardList, CheckCircle2, Circle, PlayCircle, UserCheck
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";

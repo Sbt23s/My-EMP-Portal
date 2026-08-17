@@ -1,9 +1,10 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import {
   useReactTable, getCoreRowModel, flexRender, createColumnHelper
 } from "@tanstack/react-table";
-import { Search, Users, ChevronLeft, ChevronRight, UserPlus, Loader2, Camera, RefreshCw, Download, FileSpreadsheet, UploadCloud, CheckCircle2, AlertCircle, Upload, Paperclip, KeyRound, Eye, EyeOff, Trash2, X, History as HistoryIcon, ScanFace, ShieldCheck, ShieldAlert, Pencil, Filter, FilterX } from "lucide-react";
+import { Search, Users, ChevronLeft, ChevronRight, UserPlus, Camera, RefreshCw, Download, FileSpreadsheet, UploadCloud, CheckCircle2, AlertCircle, Upload, Paperclip, KeyRound, Eye, EyeOff, Trash2, X, History as HistoryIcon, ScanFace, ShieldCheck, ShieldAlert, Pencil, Filter, FilterX } from "lucide-react";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
@@ -533,18 +534,6 @@ export default function EmployeesPage() {
                     ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                     : <Download className="mr-1.5 h-3.5 w-3.5" />}
                   Export Excel
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={exportLogins}
-                  disabled={exportingLogins}
-                  className="rounded-md font-semibold border-border hover:bg-muted text-xs h-9 px-3"
-                  title="Employee ID, name, role and username for everyone"
-                >
-                  {exportingLogins
-                    ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                    : <Download className="mr-1.5 h-3.5 w-3.5" />}
-                  Roles &amp; Logins
                 </Button>
                 <Button
                   variant="outline"
@@ -2974,6 +2963,7 @@ function EditEmployeeDialog({ id, onClose }: { id: number; onClose: () => void }
   const queryClient = useQueryClient();
   const [form, setForm] = useState<EditEmployeeForm | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   // The salary account is edited here too, so it is held separately from the
   // profile form — it is saved through its own endpoint.
   const [bank, setBank] = useState({
@@ -3149,16 +3139,74 @@ function EditEmployeeDialog({ id, onClose }: { id: number; onClose: () => void }
   function submit() {
     if (!form) return;
     setError(null);
+    setFormErrors({});
+
+    let hasErrors = false;
+    const errors: Record<string, string> = {};
+
     if (!form.name.trim()) {
-      setError("Name is required");
+      errors.name = "Full name is required.";
+      hasErrors = true;
+    }
+    
+    if (!form.phone.trim()) {
+      errors.phone = "Phone number is required.";
+      hasErrors = true;
+    } else if (form.phone.length !== 10) {
+      errors.phone = "Phone number must be exactly 10 digits.";
+      hasErrors = true;
+    }
+
+    if (!form.roleCode) {
+      errors.roleCode = "Role is required.";
+      hasErrors = true;
+    }
+
+    if (!form.designationTitle.trim()) {
+      errors.designationTitle = "Designation is required.";
+      hasErrors = true;
+    }
+
+    if (form.personalEmail.trim() && form.personalEmail.trim().toLowerCase() === form.email.trim().toLowerCase()) {
+      errors.personalEmail = "Personal email cannot be the same as the official email (already exists).";
+      hasErrors = true;
+    }
+
+    if (!form.emergencyContact.trim()) {
+      errors.emergencyContact = "Emergency contact number is required.";
+      hasErrors = true;
+    } else if (form.emergencyContact.length !== 10) {
+      errors.emergencyContact = "Emergency contact must be exactly 10 digits.";
+      hasErrors = true;
+    } else if (form.emergencyContact === form.phone) {
+      errors.emergencyContact = "Emergency contact cannot be the same as your own phone number (already exists).";
+      hasErrors = true;
+    }
+
+    if (!bank.accountHolderName.trim()) {
+      errors.accountHolderName = "Account holder name is required.";
+      hasErrors = true;
+    }
+    if (!bank.accountNumber.trim()) {
+      errors.accountNumber = "Account number is required.";
+      hasErrors = true;
+    }
+    if (!bank.ifscCode.trim()) {
+      errors.ifscCode = "IFSC code is required.";
+      hasErrors = true;
+    }
+    if (!bank.branchName.trim()) {
+      errors.branchName = "Branch is required.";
+      hasErrors = true;
+    }
+
+    if (hasErrors) {
+      setFormErrors(errors);
       return;
     }
+
     if (form.aadhar && !/^\d{12}$/.test(form.aadhar)) {
       setError("Aadhaar must be exactly 12 digits (or leave it blank)");
-      return;
-    }
-    if (form.phone && !/^\d{10,15}$/.test(form.phone)) {
-      setError("Phone must be 10–15 digits (or leave it blank)");
       return;
     }
     updateMutation.mutate(form);
@@ -3199,9 +3247,10 @@ function EditEmployeeDialog({ id, onClose }: { id: number; onClose: () => void }
           </h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
-              <Label htmlFor="ee-name">Full name *</Label>
+              <Label htmlFor="ee-name">Full name <span className="text-destructive">*</span></Label>
               <Input id="ee-name" value={form.name}
-                onChange={(e) => set("name", e.target.value)} />
+                onChange={(e) => { set("name", e.target.value); setFormErrors(prev => ({...prev, name: ""})) }} />
+              {formErrors.name && <p className="text-[10px] text-destructive mt-1">{formErrors.name}</p>}
             </div>
             <div className="space-y-1">
               <Label htmlFor="ee-email">Email</Label>
@@ -3209,9 +3258,14 @@ function EditEmployeeDialog({ id, onClose }: { id: number; onClose: () => void }
                 onChange={(e) => set("email", e.target.value)} />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="ee-phone">Phone</Label>
-              <Input id="ee-phone" value={form.phone}
-                onChange={(e) => set("phone", e.target.value)} placeholder="10-digit mobile" />
+              <Label htmlFor="ee-phone">Phone <span className="text-destructive">*</span></Label>
+              <Input id="ee-phone" value={form.phone} inputMode="numeric" maxLength={10}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                  set("phone", digits);
+                  setFormErrors(prev => ({...prev, phone: ""}))
+                }} placeholder="10-digit mobile" />
+              {formErrors.phone && <p className="text-[10px] text-destructive mt-1">{formErrors.phone}</p>}
             </div>
             <div className="space-y-1">
               <Label htmlFor="ee-aadhar">Aadhaar</Label>
@@ -3262,9 +3316,9 @@ function EditEmployeeDialog({ id, onClose }: { id: number; onClose: () => void }
               </Select>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="ee-role">Role</Label>
+              <Label htmlFor="ee-role">Role <span className="text-destructive">*</span></Label>
               <Select id="ee-role" value={form.roleCode}
-                onChange={(e) => set("roleCode", e.target.value)}>
+                onChange={(e) => { set("roleCode", e.target.value); setFormErrors(prev => ({...prev, roleCode: ""})) }}>
                 {ROLE_OPTIONS.filter(r => {
                   if (form.industry === "CIVIL") return r.code.startsWith("CV_") || r.code === "COMPANY_ADMIN";
                   return r.code.startsWith("IT_") || r.code === "SUPER_ADMIN" || r.code === "COMPANY_ADMIN";
@@ -3272,6 +3326,7 @@ function EditEmployeeDialog({ id, onClose }: { id: number; onClose: () => void }
                   <option key={r.code} value={r.code}>{r.label}</option>
                 ))}
               </Select>
+              {formErrors.roleCode && <p className="text-[10px] text-destructive mt-1">{formErrors.roleCode}</p>}
             </div>
             <div className="space-y-1">
               <Label htmlFor="ee-dept">Department</Label>
@@ -3284,20 +3339,21 @@ function EditEmployeeDialog({ id, onClose }: { id: number; onClose: () => void }
               </Select>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="ee-desig">Designation</Label>
+              <Label htmlFor="ee-desig">Designation <span className="text-destructive">*</span></Label>
               <Input 
                 id="ee-desig" 
                 list="ee-desig-list" 
                 value={form.designationTitle}
                 placeholder="Select or type new..."
                 onChange={(e) => {
-                  const val = e.target.value;
+                  const val = e.target.value.replace(/[^A-Za-z\s]/g, '');
                   const match = designations.find(d => d.label.toLowerCase() === val.toLowerCase());
                   setForm(f => f ? {
                     ...f,
                     designationTitle: val,
                     designationId: match ? String(match.id) : ""
                   } : null);
+                  setFormErrors(prev => ({...prev, designationTitle: ""}));
                 }} 
               />
               <datalist id="ee-desig-list">
@@ -3305,6 +3361,7 @@ function EditEmployeeDialog({ id, onClose }: { id: number; onClose: () => void }
                   <option key={d.id} value={d.label} />
                 ))}
               </datalist>
+              {formErrors.designationTitle && <p className="text-[10px] text-destructive mt-1">{formErrors.designationTitle}</p>}
             </div>
             <div className="space-y-1">
               <Label htmlFor="ee-office">Office location</Label>
@@ -3366,12 +3423,18 @@ function EditEmployeeDialog({ id, onClose }: { id: number; onClose: () => void }
             <div className="space-y-1">
               <Label htmlFor="ee-pemail">Personal email</Label>
               <Input id="ee-pemail" type="email" value={form.personalEmail}
-                onChange={(e) => set("personalEmail", e.target.value)} />
+                onChange={(e) => { set("personalEmail", e.target.value); setFormErrors(prev => ({...prev, personalEmail: ""})) }} />
+              {formErrors.personalEmail && <p className="text-[10px] text-destructive mt-1">{formErrors.personalEmail}</p>}
             </div>
             <div className="space-y-1">
-              <Label htmlFor="ee-emc">Emergency contact</Label>
-              <Input id="ee-emc" value={form.emergencyContact}
-                onChange={(e) => set("emergencyContact", e.target.value)} placeholder="Name / number" />
+              <Label htmlFor="ee-emc">Emergency contact <span className="text-destructive">*</span></Label>
+              <Input id="ee-emc" value={form.emergencyContact} inputMode="numeric" maxLength={10}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                  set("emergencyContact", digits);
+                  setFormErrors(prev => ({...prev, emergencyContact: ""}))
+                }} placeholder="10-digit mobile" />
+              {formErrors.emergencyContact && <p className="text-[10px] text-destructive mt-1">{formErrors.emergencyContact}</p>}
             </div>
             <div className="space-y-1">
               <Label htmlFor="ee-emr">Emergency contact relation</Label>
@@ -3389,28 +3452,40 @@ function EditEmployeeDialog({ id, onClose }: { id: number; onClose: () => void }
           </h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
-              <Label htmlFor="ee-acholder">Account holder name</Label>
+              <Label htmlFor="ee-acholder">Account holder name <span className="text-destructive">*</span></Label>
               <Input id="ee-acholder" value={bank.accountHolderName}
-                onChange={(e) => setBank((b) => ({
-                  ...b, accountHolderName: e.target.value.replace(/[^A-Za-z .'-]/g, "")
-                }))}
+                onChange={(e) => {
+                  setBank((b) => ({
+                    ...b, accountHolderName: e.target.value.replace(/[^A-Za-z .'-]/g, "")
+                  }));
+                  setFormErrors(prev => ({...prev, accountHolderName: ""}));
+                }}
                 placeholder="As printed in the passbook" />
+              {formErrors.accountHolderName && <p className="text-[10px] text-destructive mt-1">{formErrors.accountHolderName}</p>}
             </div>
             <div className="space-y-1">
-              <Label htmlFor="ee-acnum">Account number</Label>
+              <Label htmlFor="ee-acnum">Account number <span className="text-destructive">*</span></Label>
               <Input id="ee-acnum" value={bank.accountNumber} inputMode="numeric" maxLength={20}
-                onChange={(e) => setBank((b) => ({
-                  ...b, accountNumber: e.target.value.replace(/\D/g, "").slice(0, 20)
-                }))}
+                onChange={(e) => {
+                  setBank((b) => ({
+                    ...b, accountNumber: e.target.value.replace(/\D/g, "").slice(0, 20)
+                  }));
+                  setFormErrors(prev => ({...prev, accountNumber: ""}));
+                }}
                 placeholder="6–20 digits" />
+              {formErrors.accountNumber && <p className="text-[10px] text-destructive mt-1">{formErrors.accountNumber}</p>}
             </div>
             <div className="space-y-1">
-              <Label htmlFor="ee-ifsc">IFSC code</Label>
+              <Label htmlFor="ee-ifsc">IFSC code <span className="text-destructive">*</span></Label>
               <Input id="ee-ifsc" className="uppercase" value={bank.ifscCode} maxLength={11}
-                onChange={(e) => setBank((b) => ({
-                  ...b, ifscCode: e.target.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 11)
-                }))}
+                onChange={(e) => {
+                  setBank((b) => ({
+                    ...b, ifscCode: e.target.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 11)
+                  }));
+                  setFormErrors(prev => ({...prev, ifscCode: ""}));
+                }}
                 placeholder="e.g. HDFC0001234" />
+              {formErrors.ifscCode && <p className="text-[10px] text-destructive mt-1">{formErrors.ifscCode}</p>}
             </div>
             <div className="space-y-1">
               <Label htmlFor="ee-bank">Bank name</Label>
@@ -3419,10 +3494,14 @@ function EditEmployeeDialog({ id, onClose }: { id: number; onClose: () => void }
                 placeholder="e.g. HDFC Bank" />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="ee-branch">Branch</Label>
+              <Label htmlFor="ee-branch">Branch <span className="text-destructive">*</span></Label>
               <Input id="ee-branch" value={bank.branchName}
-                onChange={(e) => setBank((b) => ({ ...b, branchName: e.target.value }))}
+                onChange={(e) => {
+                  setBank((b) => ({ ...b, branchName: e.target.value }));
+                  setFormErrors(prev => ({...prev, branchName: ""}));
+                }}
                 placeholder="e.g. Peelamedu" />
+              {formErrors.branchName && <p className="text-[10px] text-destructive mt-1">{formErrors.branchName}</p>}
             </div>
           </div>
           <p className="mt-1.5 text-[11px] text-muted-foreground">

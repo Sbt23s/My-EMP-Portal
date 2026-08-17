@@ -1,7 +1,8 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Building2, MapPin, Crosshair, Loader2, Pencil, Trash2, Plus, AlertTriangle, Check
+  Building2, MapPin, Crosshair, Pencil, Trash2, Plus, AlertTriangle, Check
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
@@ -350,7 +351,12 @@ function OfficeDialog({
             min={50}
             max={5000}
             value={radius}
-            onChange={(e) => setRadius(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val.length <= 3) {
+                setRadius(val);
+              }
+            }}
           />
           <p className={cn(
             "text-[11px]",

@@ -1,7 +1,8 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState } from "react";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
-import { Check, FileText, Loader2, X } from "lucide-react";
+import { Check, FileText, X } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";

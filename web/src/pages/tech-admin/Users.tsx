@@ -1,3 +1,4 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
@@ -5,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Plus, Users, ShieldCheck, Key, Search, Filter, Check, X, Building, Mail, UserCheck, Eye, EyeOff, Edit2 } from "lucide-react";
+import { , Plus, Users, ShieldCheck, Key, Search, Filter, Check, X, Building, Mail, UserCheck, Eye, EyeOff, Edit2 } from "lucide-react";
 import { useTechAdminAuth } from "@/context/TechAdminAuthContext";
 
 export function TechAdminUsers() {

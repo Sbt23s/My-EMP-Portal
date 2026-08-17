@@ -1,6 +1,7 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Eraser, Loader2, ShieldCheck, RefreshCw } from "lucide-react";
+import { AlertTriangle, Eraser, ShieldCheck, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";

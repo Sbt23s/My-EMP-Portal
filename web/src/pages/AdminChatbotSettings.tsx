@@ -1,6 +1,7 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bot, KeyRound, Globe, Trash2, Loader2, Save, RefreshCw, Database, ShieldCheck } from "lucide-react";
+import { Bot, KeyRound, Globe, Trash2, Save, RefreshCw, Database, ShieldCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";

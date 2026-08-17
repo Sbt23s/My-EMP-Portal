@@ -1,6 +1,7 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Loader2, Wallet, Eye, Users, Banknote, WalletCards, ReceiptText } from "lucide-react";
+import { Download, Wallet, Eye, Users, Banknote, WalletCards, ReceiptText } from "lucide-react";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
 import { api, apiMessage } from "@/lib/api";

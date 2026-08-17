@@ -1,6 +1,7 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { Volume2, VolumeX, Mic, Square, Send, X, Loader2, Sparkles } from "lucide-react";
+import { Volume2, VolumeX, Mic, Square, Send, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import {

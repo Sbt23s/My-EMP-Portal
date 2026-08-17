@@ -1,6 +1,7 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, ChevronRight, ChevronDown, CheckCircle2, Users2, X, Star } from "lucide-react";
+import { , Plus, ChevronRight, ChevronDown, CheckCircle2, Users2, X, Star } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";

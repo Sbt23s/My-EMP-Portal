@@ -1,8 +1,9 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Users2, Search, MessageSquare, Send, Volume2, Square, Sparkles, Rocket,
-  Paperclip, FileText, Trash2, SmilePlus, X, Loader2
+  Paperclip, FileText, Trash2, SmilePlus, X, 
 } from "lucide-react";
 import dayjs from "dayjs";
 import { api } from "@/lib/api";

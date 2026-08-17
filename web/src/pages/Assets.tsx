@@ -1,3 +1,4 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -6,7 +7,7 @@ import QRCode from "react-qr-code";
 import * as XLSX from "xlsx";
 import dayjs from "dayjs";
 import {
-  Plus, Loader2, Boxes, QrCode, CheckCircle2, PackageCheck, PackageX, Trash2,
+  Plus, Boxes, QrCode, CheckCircle2, PackageCheck, PackageX, Trash2,
   Download, Eye
 } from "lucide-react";
 import toast from "react-hot-toast";

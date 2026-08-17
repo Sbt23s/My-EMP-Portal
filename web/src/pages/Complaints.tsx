@@ -1,7 +1,8 @@
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useMemo, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import {
-  Loader2, Plus, Inbox, ChevronLeft, ChevronRight, Send,
+  , Plus, Inbox, ChevronLeft, ChevronRight, Send,
   Clock, CheckCircle, XCircle
 } from "lucide-react";
 import toast from "react-hot-toast";

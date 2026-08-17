@@ -17,7 +17,11 @@ const NO_ANSWER_MS = 45_000;
 const iceServers = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" }
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
+    { urls: "stun:global.stun.twilio.com:3478" }
   ]
 };
 
@@ -163,7 +167,19 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         "Calls need a secure (https) connection. Ask your admin to enable HTTPS on the portal."
       );
     }
-    const stream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
+    const constraints: MediaStreamConstraints = {
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      },
+      video: isVideo ? {
+        width: { ideal: 640, max: 1280 },
+        height: { ideal: 480, max: 720 },
+        frameRate: { ideal: 24, max: 30 }
+      } : false
+    };
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
     localStreamRef.current = stream;
     setLocalStream(stream);
 
@@ -185,13 +201,26 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     pc.onicecandidate = (event) => {
       if (event.candidate) sendSignal(partnerId, "candidate", { candidate: event.candidate });
     };
-    // A connection that drops mid-call should not leave the screen covered.
+
+    pc.oniceconnectionstatechange = () => {
+      if (pc.iceConnectionState === "failed") {
+        try {
+          pc.restartIce();
+        } catch (e) {}
+      }
+    };
+
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === "failed" || pc.connectionState === "closed") {
-        if (callStateRef.current === "connected" || callStateRef.current === "connecting" || callStateRef.current === "ringing") {
-          toast.error("The connection dropped.");
-          cleanupCall();
-        }
+      if (pc.connectionState === "failed") {
+        // Give ICE restart 3 seconds to recover before tearing down call
+        setTimeout(() => {
+          if (pcRef.current && (pcRef.current.connectionState === "failed" || pcRef.current.connectionState === "closed")) {
+            if (callStateRef.current === "connected" || callStateRef.current === "connecting" || callStateRef.current === "ringing") {
+              toast.error("The connection dropped.");
+              cleanupCall();
+            }
+          }
+        }, 3000);
       }
     };
     return pc;

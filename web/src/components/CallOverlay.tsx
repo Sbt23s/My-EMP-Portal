@@ -169,10 +169,10 @@ export function CallOverlay({
           </div>
           <h3 className="font-display text-2xl font-bold">{partnerName}</h3>
           <p className="text-base tabular-nums text-white/70">{label}</p>
-          {/* Audio only, but the sound still has to come from somewhere. */}
-          <audio ref={remoteAudio} autoPlay className="hidden" />
         </div>
       )}
+      {/* Audio element ensuring remote voice is played unconditionally for all calls */}
+      <audio ref={remoteAudio} autoPlay className="hidden" />
 
       <div className="mt-6 flex items-center gap-3">
         {state === "incoming" ? (

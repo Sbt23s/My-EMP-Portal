@@ -58,6 +58,12 @@ if [ ! -f /etc/letsencrypt/live/pixoushrportal.pixous.info/fullchain.pem ]; then
     sudo docker compose -f docker-compose.prod.yml down || true
     sudo certbot certonly --standalone -d pixoushrportal.pixous.info --non-interactive --agree-tos --email sethubala.pixous@gmail.com || true
 fi
+echo '--- Checking Coturn TURN server configuration ---'
+if [ ! -f /etc/turn-secret ]; then
+    echo '--- Configuring Coturn TURN server for cross-network WebRTC calling ---'
+    chmod +x setup-turn.sh 2>/dev/null || true
+    ./setup-turn.sh || true
+fi
 echo '--- Removing leftover container conflicts ---'
 sudo docker compose -f docker-compose.prod.yml --profile analytics down -v --remove-orphans || true
 sudo docker rm -f hrportal-mysql hrportal-redis hrportal-backend hrportal-web hrportal-analytics hr-portal-backend-1 hr-portal-web-1 hr-portal-mysql-1 hr-portal-redis-1 hr-portal-analytics-1 2>/dev/null || true

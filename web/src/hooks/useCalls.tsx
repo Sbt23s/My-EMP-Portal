@@ -158,6 +158,31 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const getIceServersConfig = useCallback(async (): Promise<RTCConfiguration> => {
+    try {
+      const res = await api.get<{ iceServers: RTCIceServer[] }>("/calls/ice-servers");
+      if (res.data?.iceServers && res.data.iceServers.length > 0) {
+        return {
+          iceServers: res.data.iceServers,
+          iceCandidatePoolSize: 10
+        };
+      }
+    } catch (e) {
+      console.warn("Could not fetch server ICE config, using default STUN", e);
+    }
+    return {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:19302" },
+        { urls: "stun:stun3.l.google.com:19302" },
+        { urls: "stun:stun4.l.google.com:19302" },
+        { urls: "stun:global.stun.twilio.com:3478" }
+      ],
+      iceCandidatePoolSize: 10
+    };
+  }, []);
+
   const setupPeerConnection = useCallback(async (partnerId: number, isVideo: boolean) => {
     // The camera and microphone are only offered to a secure page. On plain HTTP
     // navigator.mediaDevices does not exist at all, so say why rather than
@@ -179,11 +204,24 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         frameRate: { ideal: 24, max: 30 }
       } : false
     };
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (err: any) {
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        toast.error(isVideo ? "Camera & Microphone access is required for video calls." : "Microphone access is required for audio calls.");
+      } else {
+        toast.error("Could not access media devices: " + (err.message || "Unknown error"));
+      }
+      throw err;
+    }
+
     localStreamRef.current = stream;
     setLocalStream(stream);
 
-    const pc = new RTCPeerConnection(iceServers);
+    const iceConfig = await getIceServersConfig();
+    const pc = new RTCPeerConnection(iceConfig);
     pcRef.current = pc;
     stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
@@ -224,7 +262,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       }
     };
     return pc;
-  }, [sendSignal, cleanupCall]);
+  }, [sendSignal, cleanupCall, getIceServersConfig]);
 
   const startCall = useCallback(async (partnerId: number, partnerName: string, isVideo: boolean) => {
     if (callStateRef.current !== "idle") return;

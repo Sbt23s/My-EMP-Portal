@@ -137,7 +137,7 @@ public class CallController {
 
         try {
             Long roomId = communityService.openDirect(senderId, request.getRecipientId()).getId();
-            communityService.sendMessage(roomId, senderId, "📞 " + kind + " · " + outcome);
+            communityService.sendMessage(roomId, senderId, kind + " • " + outcome);
         } catch (Exception e) {
             // A call log is a courtesy; failing to write it must not surface as a
             // failed call to somebody who has just hung up.

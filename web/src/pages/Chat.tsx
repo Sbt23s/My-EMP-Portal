@@ -75,10 +75,17 @@ const QUICK_REACTIONS = ["👍", "❤️", "😂", "🎉", "🙏", "✅"];
 const MIN_POLL_OPTIONS = 2;
 const MAX_POLL_OPTIONS = 6;
 
+function cleanMessageContent(text?: string) {
+  if (!text) return "";
+  return text
+    .replace(/ðŸ“ž|ðŸ“|ðŸ/g, "📞 ")
+    .replace(/Â·|Â/g, "•");
+}
+
 /** One line of a message, for a quoted reply or a search hit. */
 function messagePreview(msg?: { content?: string; audioPath?: string; attachments?: string }) {
   if (!msg) return "Message unavailable";
-  if (msg.content && msg.content.trim()) return msg.content;
+  if (msg.content && msg.content.trim()) return cleanMessageContent(msg.content);
   if (msg.audioPath) return "Voice message";
   if (msg.attachments) return "Attachment";
   return "Message";
@@ -242,8 +249,8 @@ function MessageAttachments({
                 src={url}
                 alt={fileName(p)}
                 className={cn(
-                  "cursor-zoom-in object-cover",
-                  list.length > 1 ? "h-28 w-full" : "max-h-64 w-full"
+                  "cursor-zoom-in object-contain rounded-xl shadow-sm",
+                  list.length > 1 ? "h-28 w-full" : "max-h-80 max-w-xs sm:max-w-sm"
                 )}
               />
             </button>

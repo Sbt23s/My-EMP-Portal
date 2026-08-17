@@ -722,17 +722,17 @@ export default function TeamAttendancePage() {
         </div>
       )}
 
-      <div className="mb-6 flex flex-wrap items-end gap-3">
+      <div className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4 shadow-sm">
         <div className="flex flex-col">
-          <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">View</label>
-          <div className="inline-flex h-[38px] items-center gap-1 rounded-full border bg-muted/60 p-1">
+          <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">View Mode</label>
+          <div className="inline-flex h-9 items-center gap-1 rounded-lg border bg-muted/50 p-1">
             {([["SUMMARY", "Per employee"], ["DAILY", "Day by day"]] as const).map(([key, label]) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => setView(key)}
                 className={cn(
-                  "rounded-full px-3 py-1 text-xs font-semibold transition-all",
+                  "rounded-md px-3 py-1 text-xs font-semibold transition-all",
                   view === key ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -741,83 +741,79 @@ export default function TeamAttendancePage() {
             ))}
           </div>
         </div>
+
         {view === "DAILY" && (
           <div className="flex flex-col">
-            <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">Show</label>
-            <div className="inline-flex h-[38px] items-center gap-1 rounded-full border bg-muted/60 p-1">
-              {([
-                ["ALL", "All"], ["PRESENT", "Present"], ["ABSENT", "Absent"],
-                ["PUNCH_IN", "Punched in"], ["PUNCH_OUT", "Punched out"], ["MISSING", "Missing punch"]
-              ] as const).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setStatusFilter(key)}
-                  className={cn(
-                    "rounded-full px-3 py-1 text-xs font-semibold transition-all",
-                    statusFilter === key
-                      ? key === "MISSING"
-                        ? "bg-rose-500 text-white shadow-sm"
-                        : "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Status</label>
+            <select
+              className="h-9 w-40 rounded-lg border bg-background px-3 text-xs font-medium focus:ring-1 focus:ring-primary focus:outline-none"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+            >
+              <option value="ALL">All Status</option>
+              <option value="PRESENT">Present</option>
+              <option value="ABSENT">Absent</option>
+              <option value="PUNCH_IN">Punched In</option>
+              <option value="PUNCH_OUT">Punched Out</option>
+              <option value="MISSING">Missing Punch</option>
+            </select>
           </div>
         )}
+
         {!isTeamLeader && (
           <div className="flex flex-col">
-            <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">Team</label>
+            <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Team</label>
             <select
-              className="h-[38px] w-48 rounded-md border bg-background px-3 text-sm"
+              className="h-9 w-44 rounded-lg border bg-background px-3 text-xs font-medium focus:ring-1 focus:ring-primary focus:outline-none"
               value={teamFilter}
               onChange={(e) => setTeamFilter(e.target.value)}
             >
-              <option value="all">All teams</option>
+              <option value="all">All Teams</option>
               {teamOptions.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
         )}
-        <div className="flex flex-col">
-          <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">Search</label>
+
+        <div className="flex flex-col flex-1 min-w-[180px]">
+          <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Search</label>
           <input
             type="text"
-            placeholder="Name, employee ID or team…"
-            className="h-[38px] w-64 rounded-md border bg-background px-3 py-2 text-sm"
+            placeholder="Name, ID or team…"
+            className="h-9 w-full rounded-lg border bg-background px-3 text-xs focus:ring-1 focus:ring-primary focus:outline-none"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+
         <div className="flex flex-col">
-          <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">From</label>
+          <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">From Date</label>
           <input
             type="date"
-            className="h-[38px] w-[10.5rem] rounded-md border bg-background px-3 py-2 text-sm"
+            className="h-9 w-36 rounded-lg border bg-background px-2.5 text-xs focus:ring-1 focus:ring-primary focus:outline-none"
             value={fromDate}
             max={toDate}
             onChange={(e) => setFromDate(e.target.value)}
           />
         </div>
+
         <div className="flex flex-col">
-          <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">To</label>
+          <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">To Date</label>
           <input
             type="date"
-            className="h-[38px] w-[10.5rem] rounded-md border bg-background px-3 py-2 text-sm"
+            className="h-9 w-36 rounded-lg border bg-background px-2.5 text-xs focus:ring-1 focus:ring-primary focus:outline-none"
             value={toDate}
             min={fromDate}
             onChange={(e) => setToDate(e.target.value)}
           />
         </div>
+
         <button
           onClick={exportToExcel}
-          className="flex h-[38px] items-center gap-1.5 rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-green-700"
+          className="flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95 shrink-0"
           title="Export this date range to Excel"
         >
           <FileSpreadsheet className="h-4 w-4" />
-          <span className="hidden sm:inline">Export Excel</span>
+          <span>Export Excel</span>
         </button>
       </div>
 

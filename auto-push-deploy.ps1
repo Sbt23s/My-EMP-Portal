@@ -44,7 +44,7 @@ Ok "Pushed successfully to https://github.com/Sbt23s/My-EMP-Portal.git"
 # 3. Deploying to Server
 if (Test-Path $Key) {
     Step "Deploying to live server ($Server)"
-    $remote = @"
+    $remote = @'
 set -e
 cd ~/hr-portal
 echo '--- Resetting uncommitted server changes ---'
@@ -69,7 +69,7 @@ echo '--- Rebuilding and starting production services ---'
 sudo docker compose -f docker-compose.prod.yml --profile analytics up -d --build
 echo '--- Checking recent logs ---'
 sudo docker logs --tail 10 hrportal-backend 2>&1 | tail -10
-"@
+'@
     ssh -i $Key -o StrictHostKeyChecking=accept-new "ubuntu@$Server" $remote
     if ($LASTEXITCODE -eq 0) {
         Ok "Live deployment successful!"

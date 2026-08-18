@@ -746,6 +746,8 @@ function Pager({
 
 function SubmitDialog({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
+  const { hasRole } = useAuth();
+  const isTL = hasRole("IT_TL");
   const [category, setCategory] = useState("");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
@@ -762,6 +764,22 @@ function SubmitDialog({ onClose }: { onClose: () => void }) {
         "/complaints/recipients"
       )).data.data
   });
+
+  const filteredRecipients = useMemo(() => {
+    let list = recipients.data ?? [];
+    if (isTL || !hasRole("SUPER_ADMIN", "COMPANY_ADMIN", "IT_MGR", "IT_HR", "CV_HR")) {
+      list = list.filter((u) => {
+        const code = (u.code || "").toUpperCase();
+        const role = (u.role || "").toUpperCase();
+        const name = (u.name || "").toUpperCase();
+        const isAdmin = code === "ADM0001" || code.startsWith("ADM") || name.includes("ADMIN") || role.includes("ADMIN");
+        const isHR = code === "HR0001" || code.includes("HR") || role.includes("HR") || role.includes("MANAGER") || role.includes("HEAD");
+        const isCTO = code === "PIX-E100" || role.includes("CTO");
+        return isAdmin || isHR || isCTO;
+      });
+    }
+    return list;
+  }, [recipients.data, isTL, hasRole]);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -843,10 +861,10 @@ function SubmitDialog({ onClose }: { onClose: () => void }) {
           <Select id="cn-to" value={requestedTo} onChange={(e) => setRequestedTo(e.target.value)}>
             <option value="">
               {recipients.isLoading ? "Loading…"
-                : (recipients.data ?? []).length === 0 ? "Nobody available yet"
+                : filteredRecipients.length === 0 ? "Nobody available yet"
                   : "Select"}
             </option>
-            {(recipients.data ?? []).map((u) => (
+            {filteredRecipients.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.name}{u.role ? ` · ${u.role}` : ""}{u.code ? ` (${u.code})` : ""}
               </option>

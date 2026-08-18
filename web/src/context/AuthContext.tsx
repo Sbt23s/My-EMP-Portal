@@ -199,6 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const payload = res.data.data;
       tokenStore.set(payload.tokens.accessToken, payload.tokens.refreshToken);
+      sessionStorage.setItem("just_logged_in", "true");
       setUser(payload.user);
     } catch (err: any) {
       throw err;

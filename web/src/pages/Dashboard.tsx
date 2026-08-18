@@ -2421,18 +2421,16 @@ export default function DashboardPage() {
             {/* Quick action cards */}
             <div className="mt-5 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
               {hasModule("ATTENDANCE") && (
-                <button
-                  type="button"
-                  disabled={punch.isPending}
-                  onClick={() => punch.mutate(d?.punchedInToday ? "punch-out" : "punch-in")}
+                <Link
+                  to="/attendance"
                   className="group flex flex-col items-start gap-2 rounded-xl bg-white/95 p-3.5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-emerald-950/80 dark:border dark:border-emerald-400/30 backdrop-blur-md"
                 >
                   <span className="grid h-9 w-9 place-items-center rounded-lg bg-indigo-100 text-indigo-600 dark:bg-indigo-500/30 dark:text-indigo-300">
-                    {punch.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Clock className="h-4 w-4" />}
+                    <Clock className="h-4 w-4" />
                   </span>
                   <span className="text-sm font-bold text-slate-900 dark:text-white">{d?.punchedInToday ? "Punch Out" : "Punch In"}</span>
-                  <span className="text-[11px] font-semibold text-slate-600 dark:text-emerald-200/90">{d?.punchedInToday ? "Mark departure" : "Tap to punch"}</span>
-                </button>
+                  <span className="text-[11px] font-semibold text-slate-600 dark:text-emerald-200/90">Go to Attendance</span>
+                </Link>
               )}
 
               {/* Each shortcut names the module it belongs to and disappears

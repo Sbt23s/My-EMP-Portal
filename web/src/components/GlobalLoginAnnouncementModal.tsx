@@ -47,9 +47,13 @@ export function GlobalLoginAnnouncementModal() {
 
   const fetchActive = async () => {
     try {
+      const isJustLoggedIn = sessionStorage.getItem("just_logged_in") === "true";
+      if (!isJustLoggedIn) return;
+
       const res = await api.get<{ data: Announcement | null }>("/global-announcements/active");
       const active = res.data?.data;
       if (active && active.status === "ACTIVE") {
+        sessionStorage.removeItem("just_logged_in");
         showAnnouncement(active);
       }
     } catch (err) {
@@ -188,14 +192,14 @@ export function GlobalLoginAnnouncementModal() {
   return (
     <div
       style={{ position: "fixed", inset: 0, zIndex: 99999 }}
-      className="flex flex-col bg-black"
+      className="flex items-center justify-center p-4 sm:p-6 bg-black/75 backdrop-blur-md animate-in fade-in duration-300"
     >
-      {/* Full-screen background blurred media */}
+      {/* Full-screen background blurred ambient glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {announcement.mediaType === "VIDEO" ? (
           <video
             src={resolvedUrl}
-            className="h-full w-full object-cover opacity-20 blur-2xl scale-110"
+            className="h-full w-full object-cover opacity-25 blur-3xl scale-125"
             autoPlay
             loop
             muted
@@ -205,141 +209,81 @@ export function GlobalLoginAnnouncementModal() {
           <img
             src={resolvedUrl}
             alt=""
-            className="h-full w-full object-cover opacity-20 blur-2xl scale-110"
+            className="h-full w-full object-cover opacity-25 blur-3xl scale-125"
           />
         )}
       </div>
 
-      {/*
-        The entrance effect, over everything.
-
-        Full bleed and above the media rather than beside it: the point of a
-        light sweep is that it crosses the poster, and a small player in a
-        corner would be decoration instead of an entrance.
-
-        pointer-events-none throughout, so the animation never swallows the
-        close button underneath it -- an effect that traps somebody in the popup
-        is worse than no effect. It plays once rather than looping; a loop turns
-        an entrance into a distraction for the full fifteen seconds.
-      */}
-      {effectUrl ? (
-        <div className="absolute inset-0 z-30 pointer-events-none">
-          <Lottie
-            src={effectUrl}
-            autoplay
-            loop={false}
-            className="h-full w-full"
-          />
-        </div>
-      ) : null}
-
-      {/* Top Header Bar */}
-      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-6 py-4 bg-gradient-to-b from-black/80 to-transparent">
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-primary-foreground text-sm font-black shadow-lg">
-            HR
-          </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-bold tracking-widest text-white uppercase">COMPANY PORTAL</span>
-            <span className="text-[11px] text-white/60">Official Announcement</span>
-          </div>
-        </div>
-
-        {/* Circular Countdown Timer + Close */}
-        <div className="flex items-center gap-3">
-          <div className="relative grid h-14 w-14 place-items-center">
-            <svg className="h-14 w-14 -rotate-90 transform" viewBox="0 0 36 36">
-              <path
-                stroke="rgba(255,255,255,0.15)"
-                strokeWidth="3"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              <path
-                stroke="#6366f1"
-                strokeDasharray={`${progressPercent}, 100`}
-                strokeWidth="3"
-                strokeLinecap="round"
-                fill="none"
-                style={{ transition: "stroke-dasharray 1s linear" }}
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-            </svg>
-            <span className="absolute text-lg font-black text-white tabular-nums">{timeLeft}</span>
-          </div>
-          <div className="flex flex-col text-right mr-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-white/50">SECS</span>
-            <span className="text-xs font-semibold text-white/80">Auto-close</span>
-          </div>
-          <button
-            onClick={handleClose}
-            className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white hover:bg-white/25 transition-all border border-white/20"
-            title="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Full-Screen Media */}
-      <div className="relative flex-1 w-full h-full overflow-hidden flex items-center justify-center">
-        {announcement.mediaType === "VIDEO" ? (
-          <>
-            <video
-              ref={videoRef}
-              src={resolvedUrl}
-              className="w-full h-full object-cover"
-              autoPlay
-              loop
-              muted={isMuted}
-              playsInline
-              style={{ objectFit: "cover" }}
+      {/* Centered Poster Card Container */}
+      <div className="relative z-10 flex flex-col items-center justify-center max-w-4xl max-h-[85vh] w-full rounded-2xl overflow-hidden shadow-2xl border border-white/20 bg-slate-950/80 backdrop-blur-xl group">
+        {/* Entrance Lottie Effect Over Card */}
+        {effectUrl ? (
+          <div className="absolute inset-0 z-30 pointer-events-none">
+            <Lottie
+              src={effectUrl}
+              autoplay
+              loop={false}
+              className="h-full w-full"
             />
-            {/* Video Controls - bottom right */}
-            <div className="absolute bottom-20 right-6 flex items-center gap-2 rounded-full bg-black/60 backdrop-blur-md px-4 py-2 border border-white/20">
-              <button onClick={togglePlay} className="text-white hover:text-primary transition-colors" title={isPlaying ? "Pause" : "Play"}>
-                {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-              </button>
-              <div className="w-px h-4 bg-white/30" />
-              <button onClick={toggleMute} className="text-white hover:text-primary transition-colors" title={isMuted ? "Unmute" : "Mute"}>
-                {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-              </button>
-            </div>
-          </>
-        ) : (
-          <img
-            src={resolvedUrl}
-            alt={announcement.title || "Announcement"}
-            className="w-full h-full"
-            style={{ objectFit: "cover" }}
-          />
-        )}
-
-        {/* Title / Description Overlay at bottom */}
-        {(announcement.title || announcement.description) && (
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/60 to-transparent px-10 py-10">
-            {announcement.title && (
-              <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight drop-shadow-lg">
-                {announcement.title}
-              </h2>
-            )}
-            {announcement.description && (
-              <p className="mt-3 text-base sm:text-lg text-white/85 max-w-3xl font-medium drop-shadow">
-                {announcement.description}
-              </p>
-            )}
           </div>
-        )}
-      </div>
+        ) : null}
 
-      {/* Bottom Info Bar */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 flex items-center justify-center py-4 bg-gradient-to-t from-black/80 to-transparent">
-        <div className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/20 backdrop-blur-md px-6 py-2.5 text-sm font-semibold text-white shadow-xl">
-          <Megaphone className="h-4 w-4 text-primary animate-pulse" />
-          <span>
-            This message will close automatically after{" "}
-            <span className="font-black text-primary tabular-nums">{timeLeft} seconds</span>.
-          </span>
+        {/* Clean Sleek Floating Close Button */}
+        <button
+          onClick={handleClose}
+          className="absolute top-4 right-4 z-40 grid h-10 w-10 place-items-center rounded-full bg-black/70 text-white hover:bg-black/95 hover:scale-105 transition-all border border-white/30 shadow-xl backdrop-blur-md"
+          title="Close Announcement"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
+        {/* Centered Media Content */}
+        <div className="relative flex items-center justify-center w-full max-h-[80vh] overflow-hidden bg-black/40">
+          {announcement.mediaType === "VIDEO" ? (
+            <>
+              <video
+                ref={videoRef}
+                src={resolvedUrl}
+                className="max-h-[75vh] w-auto max-w-full object-contain rounded-lg"
+                autoPlay
+                loop
+                muted={isMuted}
+                playsInline
+              />
+              {/* Video Controls - bottom right of card */}
+              <div className="absolute bottom-4 right-4 z-30 flex items-center gap-2 rounded-full bg-black/70 backdrop-blur-md px-3.5 py-1.5 border border-white/20">
+                <button onClick={togglePlay} className="text-white hover:text-primary transition-colors" title={isPlaying ? "Pause" : "Play"}>
+                  {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                </button>
+                <div className="w-px h-3.5 bg-white/30" />
+                <button onClick={toggleMute} className="text-white hover:text-primary transition-colors" title={isMuted ? "Unmute" : "Mute"}>
+                  {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                </button>
+              </div>
+            </>
+          ) : (
+            <img
+              src={resolvedUrl}
+              alt={announcement.title || "Announcement"}
+              className="max-h-[75vh] w-auto max-w-full object-contain rounded-lg shadow-xl"
+            />
+          )}
+
+          {/* Title & Description overlay at bottom of poster if provided */}
+          {(announcement.title || announcement.description) && (
+            <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-6 text-left">
+              {announcement.title && (
+                <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight drop-shadow-md">
+                  {announcement.title}
+                </h2>
+              )}
+              {announcement.description && (
+                <p className="mt-1 text-xs sm:text-sm text-white/85 max-w-2xl font-medium drop-shadow">
+                  {announcement.description}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

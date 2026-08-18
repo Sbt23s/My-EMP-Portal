@@ -56,6 +56,7 @@ export function TechAdminGlobalAnnouncements() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [targetRoles, setTargetRoles] = useState<string[]>(["Employee", "TL", "HR", "Admin"]);
+  const [durationSeconds, setDurationSeconds] = useState<number>(15);
   const [effectEnabled, setEffectEnabled] = useState(false);
   const [effectFile, setEffectFile] = useState<File | null>(null);
   const [effectPreviewUrl, setEffectPreviewUrl] = useState<string | null>(null);
@@ -90,6 +91,7 @@ export function TechAdminGlobalAnnouncements() {
     setTitle("");
     setDescription("");
     setTargetRoles(["Employee", "TL", "HR", "Admin"]);
+    setDurationSeconds(15);
     setEditingId(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -109,7 +111,7 @@ export function TechAdminGlobalAnnouncements() {
       formData.append("title", title);
       formData.append("description", description);
       formData.append("targetRoles", targetRoles.join(","));
-      formData.append("durationSeconds", "15");
+      formData.append("durationSeconds", String(durationSeconds));
       formData.append("publishImmediately", "true");
       // Only send the effect when it is both chosen and switched on. The server
       // refuses to mark an effect active without a file, but sending a file that
@@ -173,6 +175,7 @@ export function TechAdminGlobalAnnouncements() {
     setDescription(ann.description || "");
     setFilePreviewUrl(resolvePhotoUrl(ann.mediaUrl) || ann.mediaUrl);
     setTargetRoles(ann.targetRoles ? ann.targetRoles.split(",") : ["Employee", "TL", "HR", "Admin"]);
+    setDurationSeconds(ann.durationSeconds || 15);
   };
 
   return (
@@ -412,10 +415,21 @@ export function TechAdminGlobalAnnouncements() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Duration</label>
-              <div className="h-9 px-3 rounded-md border bg-muted/30 flex items-center text-xs font-bold text-muted-foreground">
-                15 Seconds (Fixed)
-              </div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Duration (Seconds)</label>
+              <select
+                value={durationSeconds}
+                onChange={(e) => setDurationSeconds(Number(e.target.value))}
+                className="h-9 w-full rounded-md border bg-background px-3 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+              >
+                <option value={5}>5 Seconds</option>
+                <option value={10}>10 Seconds</option>
+                <option value={15}>15 Seconds</option>
+                <option value={20}>20 Seconds</option>
+                <option value={30}>30 Seconds</option>
+                <option value={45}>45 Seconds</option>
+                <option value={60}>60 Seconds (1 Min)</option>
+                <option value={120}>120 Seconds (2 Mins)</option>
+              </select>
             </div>
           </div>
 

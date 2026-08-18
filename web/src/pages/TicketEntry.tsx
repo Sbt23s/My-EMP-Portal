@@ -1,5 +1,5 @@
 import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,6 +65,8 @@ const isImage = (path: string) => /\.(png|jpe?g|gif|webp|bmp)$/i.test(path);
 export default function TicketEntryPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { hasRole } = useAuth();
+  const isTL = hasRole("IT_TL");
   const fileInput = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -94,6 +97,22 @@ export default function TicketEntryPage() {
         "/tickets/agents"
       )).data.data
   });
+
+  const filteredAgents = useMemo(() => {
+    let list = hrUsers.data ?? [];
+    if (isTL || !hasRole("SUPER_ADMIN", "COMPANY_ADMIN", "IT_MGR", "IT_HR", "CV_HR")) {
+      list = list.filter((u) => {
+        const code = (u.code || "").toUpperCase();
+        const desig = (u.designation || "").toUpperCase();
+        const name = (u.name || "").toUpperCase();
+        const isAdmin = code === "ADM0001" || code.startsWith("ADM") || name.includes("ADMIN") || desig.includes("ADMIN");
+        const isHR = code === "HR0001" || code.includes("HR") || desig.includes("HR") || desig.includes("MANAGER") || desig.includes("HEAD");
+        const isCTO = code === "PIX-E100" || desig.includes("CTO");
+        return isAdmin || isHR || isCTO;
+      });
+    }
+    return list;
+  }, [hrUsers.data, isTL, hasRole]);
 
   async function uploadOne(file: File): Promise<string> {
     const data = new FormData();
@@ -243,10 +262,10 @@ export default function TicketEntryPage() {
               <Select value={form.assignedTo} onChange={(e) => set("assignedTo", e.target.value)}>
                 <option value="">
                   {hrUsers.isLoading ? "Loading…"
-                    : (hrUsers.data ?? []).length === 0 ? "No HR available yet"
+                    : filteredAgents.length === 0 ? "No HR available yet"
                       : "Select"}
                 </option>
-                {(hrUsers.data ?? []).map((u) => (
+                {filteredAgents.map((u) => (
                   <option key={u.id} value={u.id}>{u.name}{u.code ? ` (${u.code})` : ""}</option>
                 ))}
               </Select>

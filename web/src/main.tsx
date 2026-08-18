@@ -6,8 +6,22 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "react-hot-toast";
 import { router } from "@/routes/router";
 import { queryClient } from "@/lib/queryClient";
-import { AuthProvider } from "@/context/AuthContext";
 import "./index.css";
+
+// Auto-clear reload flag
+sessionStorage.removeItem("chunk_reload_attempted");
+
+// Handle Vite dynamic import preload failures globally
+window.addEventListener("vite:preloadError", () => {
+  window.location.reload();
+});
+
+// Handle uncaught module import errors
+window.addEventListener("error", (e) => {
+  if (e.message?.includes("Failed to fetch dynamically imported module")) {
+    window.location.reload();
+  }
+});
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

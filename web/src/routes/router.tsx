@@ -1,10 +1,12 @@
-import { lazy, Suspense, type ReactNode } from "react";
+import { lazy, Suspense, Component, type ReactNode, type ErrorInfo } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { RoleGuard } from "@/components/layout/RoleGuard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CustomLoader } from "@/components/ui/custom-loader";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 // Login stays eagerly imported. It is the first thing an unauthenticated visitor
@@ -13,79 +15,125 @@ import { useAuth } from "@/hooks/useAuth";
 import LoginPage from "@/pages/Login";
 import NotFoundPage from "@/pages/NotFound";
 
-/**
- * Every other page is fetched when it is first visited, not before.
- *
- * <p>The whole application used to be one JavaScript file of 2.4 MB: opening the
- * login page downloaded and parsed the payroll screens, the org chart, the chat
- * client, the spreadsheet writer and the charting library, none of which anybody
- * had asked for yet. On a phone on mobile data that is most of the wait before
- * anything appears at all.
- *
- * <p>Nothing about what these pages do changes. They render exactly as before,
- * the same routes guard them, and a page already visited is not fetched again.
- */
-const DashboardPage = lazy(() => import("@/pages/Dashboard"));
-const AttendancePage = lazy(() => import("@/pages/Attendance"));
-const TeamAttendancePage = lazy(() => import("@/pages/TeamAttendance"));
-const LeavePage = lazy(() => import("@/pages/Leave"));
-const LeaveApprovalsPage = lazy(() => import("@/pages/LeaveApprovals"));
-const LeavePoliciesPage = lazy(() => import("@/pages/LeavePolicies"));
-const PermissionsPage = lazy(() => import("@/pages/Permissions"));
-const PayslipsPage = lazy(() => import("@/pages/Payslips"));
-const PayrollRunsPage = lazy(() => import("@/pages/PayrollRuns"));
-const PayrollRequestsPage = lazy(() => import("@/pages/PayrollRequests"));
-const EmployeesPage = lazy(() => import("@/pages/Employees"));
-const AssetsPage = lazy(() => import("@/pages/Assets"));
-const HelpdeskPage = lazy(() => import("@/pages/Helpdesk"));
-const TicketEntryPage = lazy(() => import("@/pages/TicketEntry"));
-const ComplaintsPage = lazy(() => import("@/pages/Complaints"));
-const ProfilePage = lazy(() => import("@/pages/Profile"));
-const NotificationsPage = lazy(() => import("@/pages/Notifications"));
-const TaExpensesPage = lazy(() => import("@/pages/TaExpenses"));
-const ClaimEntryPage = lazy(() => import("@/pages/ClaimEntry"));
-const ReportsPage = lazy(() => import("@/pages/Reports"));
-const OnboardingPage = lazy(() => import("@/pages/Onboarding"));
-const WorkReportsPage = lazy(() => import("@/pages/WorkReports"));
-const CommunitiesPage = lazy(() => import("@/pages/Communities"));
-const ChatPage = lazy(() => import("@/pages/Chat"));
-const AdminChatbotSettings = lazy(() => import("@/pages/AdminChatbotSettings"));
-const DataResetPage = lazy(() => import("@/pages/DataReset"));
-const AuditLogPage = lazy(() => import("@/pages/AuditLog"));
-const CalendarPage = lazy(() => import("@/pages/Calendar"));
-const TasksPage = lazy(() => import("@/pages/Tasks"));
-const TeamsPage = lazy(() => import("@/pages/Teams"));
-const MyTeamPage = lazy(() => import("@/pages/MyTeam"));
+function safeLazy<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T }>
+) {
+  return lazy(async () => {
+    try {
+      const component = await factory();
+      sessionStorage.removeItem("chunk_reload_attempted");
+      return component;
+    } catch (error: any) {
+      const isChunkError =
+        error?.message?.includes("Failed to fetch dynamically imported module") ||
+        error?.name === "TypeError" ||
+        String(error).includes("Importing a module script failed");
+
+      if (isChunkError && !sessionStorage.getItem("chunk_reload_attempted")) {
+        sessionStorage.setItem("chunk_reload_attempted", "true");
+        window.location.reload();
+        return new Promise(() => {});
+      }
+      throw error;
+    }
+  });
+}
+
+class RouteErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Route Error:", error, errorInfo);
+    if (
+      error?.message?.includes("Failed to fetch dynamically imported module") ||
+      String(error).includes("Importing a module script failed")
+    ) {
+      if (!sessionStorage.getItem("chunk_reload_attempted")) {
+        sessionStorage.setItem("chunk_reload_attempted", "true");
+        window.location.reload();
+      }
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex h-full w-full min-h-[50vh] flex-col items-center justify-center p-6 text-center">
+          <div className="rounded-full bg-destructive/10 p-4 text-destructive mb-4">
+            <RefreshCw className="h-8 w-8" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Updating Application...</h2>
+          <p className="text-sm text-muted-foreground max-w-md mb-4">
+            A new version of the HR Portal has been deployed. Please refresh to load the latest features.
+          </p>
+          <Button onClick={() => window.location.reload()} variant="default">
+            <RefreshCw className="mr-2 h-4 w-4" /> Refresh Application
+          </Button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const DashboardPage = safeLazy(() => import("@/pages/Dashboard"));
+const AttendancePage = safeLazy(() => import("@/pages/Attendance"));
+const TeamAttendancePage = safeLazy(() => import("@/pages/TeamAttendance"));
+const LeavePage = safeLazy(() => import("@/pages/Leave"));
+const LeaveApprovalsPage = safeLazy(() => import("@/pages/LeaveApprovals"));
+const LeavePoliciesPage = safeLazy(() => import("@/pages/LeavePolicies"));
+const PermissionsPage = safeLazy(() => import("@/pages/Permissions"));
+const PayslipsPage = safeLazy(() => import("@/pages/Payslips"));
+const PayrollRunsPage = safeLazy(() => import("@/pages/PayrollRuns"));
+const PayrollRequestsPage = safeLazy(() => import("@/pages/PayrollRequests"));
+const EmployeesPage = safeLazy(() => import("@/pages/Employees"));
+const AssetsPage = safeLazy(() => import("@/pages/Assets"));
+const HelpdeskPage = safeLazy(() => import("@/pages/Helpdesk"));
+const TicketEntryPage = safeLazy(() => import("@/pages/TicketEntry"));
+const ComplaintsPage = safeLazy(() => import("@/pages/Complaints"));
+const ProfilePage = safeLazy(() => import("@/pages/Profile"));
+const NotificationsPage = safeLazy(() => import("@/pages/Notifications"));
+const TaExpensesPage = safeLazy(() => import("@/pages/TaExpenses"));
+const ClaimEntryPage = safeLazy(() => import("@/pages/ClaimEntry"));
+const ReportsPage = safeLazy(() => import("@/pages/Reports"));
+const OnboardingPage = safeLazy(() => import("@/pages/Onboarding"));
+const WorkReportsPage = safeLazy(() => import("@/pages/WorkReports"));
+const CommunitiesPage = safeLazy(() => import("@/pages/Communities"));
+const ChatPage = safeLazy(() => import("@/pages/Chat"));
+const AdminChatbotSettings = safeLazy(() => import("@/pages/AdminChatbotSettings"));
+const DataResetPage = safeLazy(() => import("@/pages/DataReset"));
+const AuditLogPage = safeLazy(() => import("@/pages/AuditLog"));
+const CalendarPage = safeLazy(() => import("@/pages/Calendar"));
+const TasksPage = safeLazy(() => import("@/pages/Tasks"));
+const TeamsPage = safeLazy(() => import("@/pages/Teams"));
+const MyTeamPage = safeLazy(() => import("@/pages/MyTeam"));
 
 // Technical Admin Pages
 import { TechAdminProvider } from "@/context/TechAdminAuthContext";
 import { TechAdminLayout } from "@/pages/tech-admin/Layout";
 import { TechAdminLogin } from "@/pages/tech-admin/Login";
-const TechAdminDashboard = lazy(() => import("@/pages/tech-admin/Dashboard").then(m => ({ default: m.TechAdminDashboard })));
-const TechAdminCompanies = lazy(() => import("@/pages/tech-admin/Companies").then(m => ({ default: m.TechAdminCompanies })));
-const TechAdminCompanyConfig = lazy(() => import("@/pages/tech-admin/CompanyConfig").then(m => ({ default: m.TechAdminCompanyConfig })));
-const TechAdminAuditLogs = lazy(() => import("@/pages/tech-admin/AuditLogs").then(m => ({ default: m.TechAdminAuditLogs })));
-const TechAdminSettings = lazy(() => import("@/pages/tech-admin/Settings").then(m => ({ default: m.TechAdminSettings })));
-const TechAdminBranding = lazy(() => import("@/pages/tech-admin/Branding").then(m => ({ default: m.TechAdminBranding })));
-const TechAdminModuleManagement = lazy(() => import("@/pages/tech-admin/ModuleManagement").then(m => ({ default: m.TechAdminModuleManagement })));
-const TechAdminUsers = lazy(() => import("@/pages/tech-admin/Users").then(m => ({ default: m.TechAdminUsers })));
-const TechAdminRoles = lazy(() => import("@/pages/tech-admin/Roles").then(m => ({ default: m.TechAdminRoles })));
-const TechAdminGlobalAnnouncements = lazy(() => import("@/pages/tech-admin/GlobalAnnouncements").then(m => ({ default: m.TechAdminGlobalAnnouncements })));
+const TechAdminDashboard = safeLazy(() => import("@/pages/tech-admin/Dashboard").then(m => ({ default: m.TechAdminDashboard })));
+const TechAdminCompanies = safeLazy(() => import("@/pages/tech-admin/Companies").then(m => ({ default: m.TechAdminCompanies })));
+const TechAdminCompanyConfig = safeLazy(() => import("@/pages/tech-admin/CompanyConfig").then(m => ({ default: m.TechAdminCompanyConfig })));
+const TechAdminAuditLogs = safeLazy(() => import("@/pages/tech-admin/AuditLogs").then(m => ({ default: m.TechAdminAuditLogs })));
+const TechAdminSettings = safeLazy(() => import("@/pages/tech-admin/Settings").then(m => ({ default: m.TechAdminSettings })));
+const TechAdminBranding = safeLazy(() => import("@/pages/tech-admin/Branding").then(m => ({ default: m.TechAdminBranding })));
+const TechAdminModuleManagement = safeLazy(() => import("@/pages/tech-admin/ModuleManagement").then(m => ({ default: m.TechAdminModuleManagement })));
+const TechAdminUsers = safeLazy(() => import("@/pages/tech-admin/Users").then(m => ({ default: m.TechAdminUsers })));
+const TechAdminRoles = safeLazy(() => import("@/pages/tech-admin/Roles").then(m => ({ default: m.TechAdminRoles })));
+const TechAdminGlobalAnnouncements = safeLazy(() => import("@/pages/tech-admin/GlobalAnnouncements").then(m => ({ default: m.TechAdminGlobalAnnouncements })));
 
-// ModulePlaceholder is a named export, so it needs mapping to the default shape
-// React.lazy expects. Getting this wrong fails only when the route is opened,
-// which is exactly the kind of thing that reaches production unnoticed.
-const ModulePlaceholder = lazy(() =>
+const ModulePlaceholder = safeLazy(() =>
   import("@/pages/ModulePlaceholder").then((m) => ({ default: m.ModulePlaceholder }))
 );
 
-/**
- * What fills the page while its code is being fetched.
- *
- * <p>Shaped like the page that is coming -- a heading, then rows -- rather than a
- * spinner in the middle of an empty screen, so the layout does not jump when the
- * real content arrives. Only ever seen once per page per visit.
- */
 function PageFallback() {
   return (
     <div className="flex h-full w-full items-center justify-center min-h-[50vh]" aria-busy="true" aria-label="Loading">
@@ -94,15 +142,12 @@ function PageFallback() {
   );
 }
 
-/**
- * Wraps a lazily-loaded page in its own Suspense boundary.
- *
- * <p>Per route rather than one boundary around the whole layout on purpose: a
- * shared boundary would blank the sidebar and header every time somebody moved
- * between pages. This way the frame stays put and only the page area waits.
- */
 function page(node: ReactNode) {
-  return <Suspense fallback={<PageFallback />}>{node}</Suspense>;
+  return (
+    <RouteErrorBoundary>
+      <Suspense fallback={<PageFallback />}>{node}</Suspense>
+    </RouteErrorBoundary>
+  );
 }
 
 /** Admins & HR see all teams (HR read-only); others see only their own team. */

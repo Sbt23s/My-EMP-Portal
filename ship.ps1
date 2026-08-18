@@ -95,6 +95,15 @@ for i in $(seq 1 60); do
 done
 '@
 
+# Strip the carriage returns before this leaves Windows.
+#
+# A here-string in a .ps1 saved with CRLF carries  on every line, and bash
+# treats it as part of the last word: "set -e" becomes "set -e" (invalid
+# option), "git pull --ff-only" becomes "--ff-only" (unknown option), and
+# "do" is a syntax error. The script is correct; it was only ever the line
+# endings, and the errors name none of that.
+$remote = $remote -replace "`r", ""
+
 ssh -i $Key -o StrictHostKeyChecking=accept-new "ubuntu@$Server" $remote
 if ($LASTEXITCODE -ne 0) { Die "The deploy failed. Read the output above." }
 

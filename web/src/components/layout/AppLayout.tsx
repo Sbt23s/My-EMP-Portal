@@ -193,7 +193,11 @@ function AppShell() {
   const { notifications, unreadCount, markAllRead, markRead } = useNotifications(user?.id);
 
   if (loading || !user) {
-    return <PageLoader />;
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-background">
+        <CustomLoader className="h-8 w-8 text-primary animate-spin" />
+      </div>
+    );
   }
 
   /*
@@ -272,7 +276,7 @@ function AppShell() {
         {/* Company Header */}
         <div className="flex h-16 items-center gap-3 border-b border-white/10 px-4">
           <img
-            src={brand?.logoUrl || "/pixous-logo.png"}
+            src="/pixous-logo.png"
             alt="Logo"
             className="h-10 w-auto object-contain bg-white rounded p-1"
             onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}

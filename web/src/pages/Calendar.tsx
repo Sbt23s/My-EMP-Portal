@@ -99,6 +99,7 @@ export default function CalendarPage() {
   const { hasPermission } = useAuth();
   // Admins/approvers see everyone's leave on the calendar; others see their own.
   // A Team Leader is an approver, so this must not be used to gate event editing.
+  const { user, hasRole } = useAuth();
   const isAdmin = hasPermission("USER_MANAGE") || hasPermission("LEAVE_APPROVE");
   // Only HR and admins add or remove calendar events — never a Team Leader.
   const canManageEvents = hasPermission("ORG_MANAGE", "CALENDAR_MANAGE", "USER_MANAGE");

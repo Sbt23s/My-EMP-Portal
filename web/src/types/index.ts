@@ -524,7 +524,9 @@ export interface ComplaintNeed {
   raisedBy: number;
   raisedByName: string;
   raisedByCode?: string;
-  /** The raiser's team (designation title). */
+  userId?: number;
+  employeeName?: string;
+  employeeCode?: string;
   team?: string;
   /** The HR this was addressed to; null means any HR may pick it up. */
   requestedTo?: number;

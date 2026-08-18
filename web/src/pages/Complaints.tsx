@@ -350,7 +350,7 @@ function AllComplaints() {
         return c.requestedTo === user?.id || (c.requestedToName || "").toLowerCase().includes((user?.name || "").toLowerCase());
       }
       if (viewScope === "MY") {
-        return c.userId === user?.id;
+        return c.raisedBy === user?.id || c.userId === user?.id;
       }
       return true;
     });
@@ -381,7 +381,7 @@ function AllComplaints() {
       }
       if (searchQuery.trim()) {
         const q = searchQuery.trim().toLowerCase();
-        const haystack = [c.referenceCode, c.subject, c.description, c.employeeName, c.employeeCode, c.team, c.category].filter(Boolean).join(" ").toLowerCase();
+        const haystack = [c.referenceCode, c.subject, c.description, c.raisedByName, c.raisedByCode, c.team, c.category].filter(Boolean).join(" ").toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       return true;
@@ -400,8 +400,8 @@ function AllComplaints() {
     const headers = ["Ref Code", "Employee ID", "Employee Name", "Team", "Subject", "Category", "Priority", "Requested To", "Status", "Created Date", "Response"];
     const body = filteredComplaints.map((c) => [
       c.referenceCode,
-      c.employeeCode,
-      c.employeeName,
+      c.raisedByCode || c.employeeCode || "—",
+      c.raisedByName || c.employeeName || "—",
       c.team || "—",
       c.subject,
       c.category || "—",
@@ -572,11 +572,11 @@ function AllComplaints() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((c) => (
+                {paged.pageRows.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell className="pl-6 font-medium code-chip">{c.referenceCode}</TableCell>
-                    <TableCell className="code-chip text-xs text-muted-foreground">{c.raisedByCode || "—"}</TableCell>
-                    <TableCell className="font-medium">{c.raisedByName}</TableCell>
+                    <TableCell className="code-chip text-xs text-muted-foreground">{c.raisedByCode || c.employeeCode || "—"}</TableCell>
+                    <TableCell className="font-medium">{c.raisedByName || c.employeeName || "—"}</TableCell>
                     <TableCell>
                       {c.team ? (
                         <Badge className="border-0 bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
@@ -598,11 +598,9 @@ function AllComplaints() {
                       <Badge variant={statusVariant(c.status)}>{c.status.replace("_", " ")}</Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {dayjs(c.createdAt).format("DD MMM YYYY")}
+                      {c.createdAt ? dayjs(c.createdAt).format("DD MMM YYYY") : "—"}
                     </TableCell>
                     <TableCell className="text-right pr-6">
-                      {/* A resolved complaint has had its answer. Reopening it is
-                          not what Respond is for, so it is not offered. */}
                       {c.status === "RESOLVED" || c.status === "REJECTED" ? (
                         <span className="whitespace-nowrap text-xs text-muted-foreground">
                           {c.status === "RESOLVED" ? "Answered" : "Closed"}
@@ -623,12 +621,12 @@ function AllComplaints() {
 
       <div className="overflow-hidden rounded-lg border">
         <TablePagination
-          page={page}
-          totalPages={totalPages}
-          onChange={setPage}
+          page={paged.page}
+          totalPages={paged.totalPages}
+          onChange={paged.setPage}
           pageSize={pageSize}
           onPageSizeChange={(n) => { setPageSize(n); setPage(0); }}
-          total={query.data?.totalElements}
+          total={paged.total}
           always
         />
       </div>

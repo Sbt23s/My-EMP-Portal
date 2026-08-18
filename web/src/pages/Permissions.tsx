@@ -43,6 +43,7 @@ interface PermissionRow {
   status: string;
   decisionComment?: string;
   createdAt?: string;
+  requestedTo?: number;
   requestedToName?: string;
   decidedByName?: string;
   decidedAt?: string;

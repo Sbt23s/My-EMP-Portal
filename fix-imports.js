@@ -3,34 +3,6 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 try {
-  execSync('git checkout web/src/pages/Calendar.tsx', { stdio: 'ignore' });
-  const calPath = path.join(__dirname, 'web/src/pages/Calendar.tsx');
-  let calContent = fs.readFileSync(calPath, 'utf8');
-  calContent = calContent.replace(
-    'const isAdmin = hasPermission("USER_MANAGE") || hasPermission("LEAVE_APPROVE");',
-    'const { user, hasRole } = useAuth();\n  const isAdmin = hasPermission("USER_MANAGE") || hasPermission("LEAVE_APPROVE");'
-  ).replace(
-    '{isAdmin && l.status === "PENDING" && (',
-    `{(() => {
-      if (l.status !== "PENDING") return false;
-      const item = l as any;
-      if (user?.id && item.userId === user.id) return false;
-      const isSysAdmin = hasRole("SUPER_ADMIN", "COMPANY_ADMIN") || user?.employeeCode === "PIX-E100";
-      const isHR = hasRole("IT_MGR", "IT_HR");
-      const isTL = hasRole("IT_TL");
-      if (isSysAdmin) return item.requestedTo === user?.id || (item.employeeCode && (item.employeeCode.includes("HR") || item.employeeCode.includes("MGR")));
-      if (isHR) return true;
-      if (isTL) return item.requestedTo === user?.id;
-      return false;
-    })() && (`
-  );
-  fs.writeFileSync(calPath, calContent, 'utf8');
-  console.log('Fixed Calendar.tsx');
-} catch (e) {
-  console.log('Calendar.tsx check complete');
-}
-
-try {
   const fileContent = execSync('git show 43fdfa4:web/src/pages/Employees.tsx', { encoding: 'utf8' });
   const updatedContent = fileContent.replace(
     'if (res.data?.data?.content && res.data.data.content.length > 0) {\n          return res.data.data;\n        }',

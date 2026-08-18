@@ -21,6 +21,28 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { todayIso } from "@/lib/dates";
 
+interface Holiday {
+  id: number;
+  name: string;
+  holidayDate: string;
+  state?: string;
+}
+
+interface LeaveItem {
+  id: number;
+  fromDate: string;
+  toDate: string;
+  status: string;
+  leaveTypeName: string;
+  employeeName?: string;
+  reason?: string;
+  userId?: number;
+  requestedTo?: number;
+  employeeCode?: string;
+  designationTitle?: string;
+}
+
+interface CalendarEvent {
   id: number | null;
   type: "BIRTHDAY" | "ANNIVERSARY" | "CELEBRATION" | "MEETING" | "TRAINING" | "OTHER";
   title: string;
@@ -30,7 +52,6 @@ import { todayIso } from "@/lib/dates";
   startTime?: string;
   endTime?: string;
   location?: string;
-  /** Null means the whole company. */
   audienceTeam?: string;
   userId?: number;
   employeeName?: string;
@@ -40,7 +61,6 @@ import { todayIso } from "@/lib/dates";
   years?: number;
 }
 
-/** How each kind of event reads on the calendar. */
 const EVENT_STYLE: Record<CalendarEvent["type"], {
   label: string; dot: string; chip: string; text: string; icon: typeof Cake;
 }> = {
@@ -48,9 +68,6 @@ const EVENT_STYLE: Record<CalendarEvent["type"], {
     label: "Birthday", dot: "bg-violet-500", chip: "bg-violet-500/15",
     text: "text-violet-700 dark:text-violet-300", icon: Cake
   },
-  // Orange rather than the amber the dashboard uses: on this page amber already
-  // means a leave request waiting for a decision, and two amber dots on one day
-  // would say nothing.
   ANNIVERSARY: {
     label: "Work anniversary", dot: "bg-orange-500", chip: "bg-orange-500/15",
     text: "text-orange-700 dark:text-orange-300", icon: Award
@@ -73,7 +90,6 @@ const EVENT_STYLE: Record<CalendarEvent["type"], {
   }
 };
 
-/** The kinds somebody can create. A birthday is not one of them. */
 const CREATABLE_TYPES = ["CELEBRATION", "MEETING", "TRAINING", "OTHER"] as const;
 
 /** "9:30 AM – 11:00 AM", or nothing when no time was given. */

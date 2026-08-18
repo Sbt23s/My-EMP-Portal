@@ -35,7 +35,6 @@ interface PayslipSum {
   netPay?: number;
   grossSalary?: number;
 }
-/** Basic pay recorded for one employee in one month. */
 interface SalaryMonth {
   userId: number;
   month: number;
@@ -46,12 +45,6 @@ interface SalaryMonth {
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const inr = (n?: number) => (n == null ? "—" : "₹" + Number(n).toLocaleString("en-IN"));
 
-/**
- * Where a payslip stands for the chosen month. Generated is done, pending is
- * waiting to be run, failed is a run that did not complete, and not generated
- * covers an employee with no salary configured yet -- a different problem, and
- * the salary column says so in its own right.
- */
 function PayrollStatus({ state }: { state: "GENERATED" | "PENDING" | "FAILED" | "NOT_GENERATED" }) {
   const look: Record<string, [string, string, string]> = {
     GENERATED: ["Generated", "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300", "bg-emerald-500"],
@@ -71,7 +64,6 @@ function PayrollStatus({ state }: { state: "GENERATED" | "PENDING" | "FAILED" | 
 }
 const industryLabel = (i?: string) => (i === "IT" ? "Digital" : i === "CIVIL" ? "Infra" : i || "—");
 
-// Open the payslip PDF inline in a new tab (view only — no download prompt).
 async function viewPayslipPdf(id: number) {
   const toastId = toast.loading("Opening payslip…");
   try {
@@ -79,7 +71,6 @@ async function viewPayslipPdf(id: number) {
     const url = URL.createObjectURL(res.data as Blob);
     window.open(url, "_blank", "noopener,noreferrer");
     toast.dismiss(toastId);
-    // Revoke a little later so the new tab has time to load it.
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   } catch (e) {
     toast.error(apiMessage(e, "Could not open payslip"), { id: toastId });
@@ -106,17 +97,17 @@ async function downloadPayslipPdf(id: number, name: string) {
 
 export default function PayrollPage() {
   const { user, hasRole, hasPermission } = useAuth();
-  // Everyone who runs payroll gets the same page: HR, the admin, and the company
-  // head. Setting salary, generating and downloading all sit behind PAYROLL_RUN,
-  // which the admin already holds — the page used to hide them anyway.
   const canRun = hasRole("IT_MGR", "IT_HR", "CV_HR", "SUPER_ADMIN", "COMPANY_ADMIN")
     || hasPermission("PAYROLL_RUN", "USER_MANAGE")
     || user?.employeeCode === "PIX-E100";
   const [tab, setTab] = useState<"payslips" | "salary">("payslips");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<"all" | "IT" | "CIVIL">("all");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "GENERATED" | "PENDING">("ALL");
   const [month, setMonth] = useState(dayjs().month() + 1);
   const [year, setYear] = useState(dayjs().year());
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [salaryFor, setSalaryFor] = useState<UserSummary | null>(null);
   const [genFor, setGenFor] = useState<UserSummary | null>(null);
   const [payslipsFor, setPayslipsFor] = useState<UserSummary | null>(null);
@@ -132,15 +123,12 @@ export default function PayrollPage() {
     queryFn: async () => (await api.get<ApiEnvelope<Salary[]>>("/payroll/salaries")).data.data
   });
 
-  // Payslips generated for the selected month, keyed by userId.
   const monthPayslips = useQuery({
     queryKey: ["payroll-month-payslips", month, year],
     queryFn: async () =>
       (await api.get<ApiEnvelope<Record<string, PayslipSum>>>(`/payroll/payslips/month?month=${month}&year=${year}`)).data.data
   });
 
-  // Basic pay recorded against the chosen month, which is what a payslip for
-  // that month is built on.
   const monthSalaries = useQuery({
     queryKey: ["payroll-salary-months", month, year],
     queryFn: async () =>
@@ -159,14 +147,18 @@ export default function PayrollPage() {
     return m;
   }, [monthSalaries.data]);
 
-  const rows = (employees.data ?? []).filter((e) => {
-    const q = search.trim().toLowerCase();
-    const matchesSearch = !q || e.name.toLowerCase().includes(q) || (e.employeeCode || "").toLowerCase().includes(q);
-    const matchesCat = category === "all" || e.industry === category;
-    return matchesSearch && matchesCat;
-  });
+  const rows = useMemo(() => {
+    return (employees.data ?? []).filter((e) => {
+      const q = search.trim().toLowerCase();
+      const matchesSearch = !q || e.name.toLowerCase().includes(q) || (e.employeeCode || "").toLowerCase().includes(q);
+      const matchesCat = category === "all" || e.industry === category;
+      const isGen = !!monthPayslips.data?.[String(e.id)];
+      const matchesStatus = statusFilter === "ALL" || (statusFilter === "GENERATED" ? isGen : !isGen);
+      return matchesSearch && matchesCat && matchesStatus;
+    });
+  }, [employees.data, search, category, statusFilter, monthPayslips.data]);
 
-  const rowsPaged = usePagedRows(rows, 15, [search, category, month, year, employees.data]);
+  const rowsPaged = usePagedRows(rows, 15, [search, category, statusFilter, month, year, employees.data]);
 
   const payrollCounts = useMemo(() => {
     const configured = rows.filter((e) => salaryMap.has(e.id)).length;
@@ -175,12 +167,26 @@ export default function PayrollPage() {
     let totalNet = 0;
     let totalGross = 0;
     
-    if (monthPayslips.data) {
-      Object.values(monthPayslips.data).forEach(p => {
-        totalNet += (p.netPay || 0);
-        totalGross += (p.grossSalary || 0);
-      });
-    }
+    rows.forEach((e) => {
+      const payslip = monthPayslips.data?.[String(e.id)];
+      const s = salaryMap.get(e.id);
+      if (payslip) {
+        totalGross += (payslip.grossSalary || 0);
+        totalNet += (payslip.netPay || 0);
+      } else if (s) {
+        const basic = monthBasicMap.get(e.id) || s.basicSalary || 0;
+        const hra = s.hra || 0;
+        const allowances = s.allowances || 0;
+        const g = s.grossSalary || (basic + hra + allowances);
+        const pf = (basic * (s.pfPercentage || 0)) / 100;
+        const esi = s.esiApplicable ? (g * 0.0075) : 0;
+        const pt = s.ptAmount || 0;
+        const d = Math.round(pf + esi + pt);
+        const n = Math.max(0, g - d);
+        totalGross += g;
+        totalNet += n;
+      }
+    });
 
     return {
       total: rows.length,
@@ -192,7 +198,7 @@ export default function PayrollPage() {
       totalGross,
       totalDeductions: totalGross - totalNet
     };
-  }, [rows, salaryMap, monthPayslips.data]);
+  }, [rows, salaryMap, monthPayslips.data, monthBasicMap]);
 
   const loading = employees.isLoading || salaries.isLoading || monthPayslips.isLoading;
 
@@ -240,25 +246,25 @@ export default function PayrollPage() {
         subtitle="Process employee payroll, configure salaries, and generate payslips."
       />
 
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4 shadow-sm">
         <div className="flex flex-col">
-          <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">Search</label>
+          <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Search</label>
           <Input
             placeholder="Search employee by name or code…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-[38px] w-[18rem]"
+            className="h-9 w-[15rem] bg-background"
           />
         </div>
         <div className="flex flex-col">
-          <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">Department</label>
-          <div className="flex h-[38px] items-center gap-1.5 rounded-full border bg-muted/60 p-1">
-          {([["all", "All Departments"], ["IT", "Digital"], ["CIVIL", "Infra"]] as const).map(([val, label]) => (
+          <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Department</label>
+          <div className="flex h-9 items-center gap-1 rounded-lg border bg-muted/40 p-1">
+          {([["all", "All"], ["IT", "Digital"], ["CIVIL", "Infra"]] as const).map(([val, label]) => (
             <button
               key={val}
               type="button"
               onClick={() => setCategory(val)}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
+              className={`rounded-md px-3 py-1 text-xs font-semibold transition-all ${
                 category === val ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -268,26 +274,41 @@ export default function PayrollPage() {
           </div>
         </div>
         <div className="flex flex-col">
-          <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">Month</label>
-          <select className="h-[38px] w-[8rem] rounded-md border bg-background px-3 text-sm" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+          <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Status</label>
+          <select className="h-9 w-[9rem] rounded-md border bg-background px-3 text-xs font-semibold" value={statusFilter} onChange={(e: any) => setStatusFilter(e.target.value)}>
+            <option value="ALL">All Statuses</option>
+            <option value="GENERATED">Generated / Paid</option>
+            <option value="PENDING">Pending / Unpaid</option>
+          </select>
+        </div>
+        <div className="flex flex-col">
+          <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Month</label>
+          <select className="h-9 w-[7.5rem] rounded-md border bg-background px-3 text-xs font-semibold" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
             {MONTHS.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
           </select>
         </div>
         <div className="flex flex-col">
-          <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">Year</label>
-          <select className="h-[38px] w-[7rem] rounded-md border bg-background px-3 text-sm" value={year} onChange={(e) => setYear(Number(e.target.value))}>
+          <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Year</label>
+          <select className="h-9 w-[6.5rem] rounded-md border bg-background px-3 text-xs font-semibold" value={year} onChange={(e) => setYear(Number(e.target.value))}>
             {[dayjs().year(), dayjs().year() - 1, dayjs().year() - 2].map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
-        <div className="flex flex-col ml-auto flex-row gap-2">
-          {/* Run Payroll button removed as per design */}
+        <div className="flex flex-col">
+          <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">From Date</label>
+          <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="h-9 w-36 bg-background text-xs" />
+        </div>
+        <div className="flex flex-col">
+          <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">To Date</label>
+          <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-9 w-36 bg-background text-xs" />
+        </div>
+        <div className="ml-auto flex items-center gap-2">
           <Button
-            variant="outline"
-            className="h-[38px]"
+            variant="default"
+            className="h-9 font-semibold"
             onClick={() => exportSalaryDetails()}
             disabled={rows.length === 0}
           >
-            <Download className="mr-1.5 h-4 w-4" /> Export
+            <Download className="mr-1.5 h-4 w-4" /> Export Excel
           </Button>
         </div>
       </div>
@@ -343,35 +364,39 @@ export default function PayrollPage() {
           value={payrollCounts.pending.toString()}
           subtitle="Not Processed"
           icon={Clock}
-          color="text-orange-600"
-          bg="bg-orange-100"
-          titleColor="text-orange-600"
+          color="text-amber-600"
+          bg="bg-amber-100"
+          titleColor="text-amber-600"
         />
       </div>
 
       {loading ? (
         <Skeleton className="h-64 w-full rounded-xl" />
       ) : rows.length === 0 ? (
-        <EmptyState icon={Wallet} title="No employees" description="Active employees will appear here to set salary and generate payslips." />
+        <EmptyState
+          icon={Wallet}
+          title="No employees found"
+          description="Adjust your search or filter options to view employees."
+        />
       ) : (
-        <div className="rounded-xl border bg-card overflow-hidden">
+        <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="border-b border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90 text-left text-xs font-semibold text-slate-800 dark:text-slate-200 [&>th]:whitespace-nowrap [&>th]:px-3.5 [&>th]:py-3 [&>th]:border-r [&>th]:border-slate-300 dark:[&>th]:border-slate-700 last:[&>th]:border-r-0">
-                  <th>Employee</th>
-                  <th>Employee ID</th>
-                  <th>Department</th>
-                  <th>Gross Pay</th>
-                  <th>Deductions</th>
-                  <th>Net Pay</th>
-                  <th>Status</th>
-                  <th>Pay Date</th>
-                  <th className="text-right">Actions</th>
+            <table className="w-full text-sm text-left">
+              <thead className="bg-muted/50 border-b text-xs font-semibold text-muted-foreground uppercase">
+                <tr>
+                  <th className="px-4 py-3">Employee</th>
+                  <th className="px-4 py-3">Employee ID</th>
+                  <th className="px-4 py-3">Department</th>
+                  <th className="px-4 py-3">Gross Pay</th>
+                  <th className="px-4 py-3">Deductions</th>
+                  <th className="px-4 py-3">Net Pay</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Pay Date</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {rowsPaged.pageRows.map((e, idx) => {
+              <tbody className="divide-y">
+                {rowsPaged.pageRows.map((e) => {
                   const s = salaryMap.get(e.id);
                   const payslip = monthPayslips.data?.[String(e.id)];
                   const isPaid = !!payslip;
@@ -384,45 +409,55 @@ export default function PayrollPage() {
                     gross = payslip.grossSalary || 0;
                     net = payslip.netPay || 0;
                     deds = gross - net;
+                  } else if (s) {
+                    const basic = monthBasicMap.get(e.id) || s.basicSalary || 0;
+                    const hra = s.hra || 0;
+                    const allowances = s.allowances || 0;
+                    gross = s.grossSalary || (basic + hra + allowances);
+                    const pf = (basic * (s.pfPercentage || 0)) / 100;
+                    const esi = s.esiApplicable ? (gross * 0.0075) : 0;
+                    const pt = s.ptAmount || 0;
+                    deds = Math.round(pf + esi + pt);
+                    net = Math.max(0, gross - deds);
                   }
                   
                   const payDate = dayjs(`${year}-${month}-01`).endOf('month').format("DD MMM YYYY");
 
                   return (
-                    <tr key={e.id} className="border-b border-slate-200 dark:border-slate-800 align-middle last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors [&>td]:px-3.5 [&>td]:py-3 [&>td]:border-r [&>td]:border-b [&>td]:border-slate-200 dark:[&>td]:border-slate-800 last:[&>td]:border-r-0">
-                      <td className="font-medium whitespace-nowrap">
-                        {e.name}
+                    <tr key={e.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3 font-medium whitespace-nowrap">
+                        {e.name} {e.id === user?.id && <span className="ml-1 text-[10px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded-full">(You)</span>}
                       </td>
-                      <td className="text-muted-foreground">
+                      <td className="px-4 py-3 text-muted-foreground font-mono text-xs">
                         {e.employeeCode || "—"}
                       </td>
-                      <td className="whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {e.designationTitle || industryLabel(e.industry)}
                       </td>
-                      <td className="font-bold tabular-nums">
+                      <td className="px-4 py-3 font-bold tabular-nums">
                         {inr(gross)}
                       </td>
-                      <td className="font-bold tabular-nums text-muted-foreground">
-                        {isPaid ? inr(deds) : "—"}
+                      <td className="px-4 py-3 font-bold tabular-nums text-muted-foreground">
+                        {isPaid || s ? inr(deds) : "—"}
                       </td>
-                      <td className="font-bold tabular-nums">
-                        {isPaid ? inr(net) : "—"}
+                      <td className="px-4 py-3 font-bold tabular-nums">
+                        {isPaid || s ? inr(net) : "—"}
                       </td>
-                      <td>
+                      <td className="px-4 py-3">
                         {isPaid ? (
-                          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
+                          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
                             Paid
                           </span>
                         ) : (
-                          <span className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-[11px] font-bold text-orange-700">
+                          <span className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-[11px] font-bold text-orange-700 dark:bg-orange-950/40 dark:text-orange-300">
                             Pending
                           </span>
                         )}
                       </td>
-                      <td className="text-muted-foreground font-medium whitespace-nowrap">
+                      <td className="px-4 py-3 text-muted-foreground font-medium whitespace-nowrap">
                         {isPaid ? payDate : "—"}
                       </td>
-                      <td className="text-right">
+                      <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2 whitespace-nowrap">
                           {isPaid ? (
                             <>
@@ -436,7 +471,7 @@ export default function PayrollPage() {
                               </button>
                               <button
                                 type="button"
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border text-violet-600 hover:bg-violet-50 transition-colors"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors"
                                 onClick={() => downloadPayslipPdf(payslip.id, e.name)}
                                 title="Download PDF"
                               >
@@ -533,14 +568,11 @@ function StatCard({
 function SalaryDialog({ employee, current, monthBasic, periodLabel, onClose }: {
   employee: UserSummary;
   current?: Salary;
-  /** Basic recorded under Salary details for the month on screen, if any. */
   monthBasic?: number;
   periodLabel: string;
   onClose: () => void;
 }) {
   const qc = useQueryClient();
-  // What Salary details says for this month wins the box, so the figure entered
-  // there is the one being worked from rather than an older standing number.
   const [basic, setBasic] = useState(
     String(monthBasic != null ? monthBasic : current?.basicSalary ?? "")
   );
@@ -632,8 +664,6 @@ function GenerateDialog({ employee, grossMonthly, standingBasic, salary, default
 
   const num = (v: string) => (v.trim() === "" ? 0 : Number(v));
 
-  // The basic recorded for whichever month is chosen here — the same figure the
-  // server will build the payslip on. Follows the month picker.
   const basicPreview = useQuery({
     queryKey: ["payroll-salary-months", month, year],
     queryFn: async () =>
@@ -642,7 +672,6 @@ function GenerateDialog({ employee, grossMonthly, standingBasic, salary, default
   const monthBasic = (basicPreview.data ?? []).find((s) => s.userId === employee.id)?.basicSalary;
   const effectiveBasic = monthBasic != null ? Number(monthBasic) : standingBasic;
 
-  // Auto Loss of Pay: (monthly salary / working days in month) × unpaid leave days.
   const lopPreview = useQuery({
     queryKey: ["lop-preview", employee.id, year, month],
     queryFn: async () =>
@@ -656,27 +685,9 @@ function GenerateDialog({ employee, grossMonthly, standingBasic, salary, default
   const absentDays = Number(lopPreview.data?.absentDays ?? 0);
   const presentDays = Number(lopPreview.data?.presentDays ?? 0);
   const perDay = grossMonthly > 0 && workingDays > 0 ? grossMonthly / workingDays : 0;
-  /**
-   * Days not paid for: unpaid leave, and absence.
-   *
-   * A day neither worked nor covered by approved leave is a day not paid for.
-   * Counting only unpaid leave meant somebody absent for a whole month with no
-   * leave applied showed a Loss of Pay of zero, and that is what the payslip
-   * deducted. Casual and Sick leave stay paid; loss-of-pay leave can be taken in
-   * any quantity and every day of it comes off.
-   */
   const deductibleDays = Number(lopPreview.data?.deductibleDays ?? (unpaidDays + absentDays));
   const autoLop = perDay > 0 ? Math.round(perDay * deductibleDays) : 0;
 
-  /**
-   * What the payslip will say, worked out from the same figures the server uses.
-   *
-   * The rates are the ones in PayslipService: overtime at gross over 240 hours,
-   * ESI at 0.75% of gross while gross is within the ceiling, PF and PT as the flat
-   * amounts held on the salary structure. Kept in step deliberately — if those
-   * change, this has to change with them, and a mismatch here is visible
-   * immediately rather than after a payslip is issued.
-   */
   const OT_DIVISOR = 240;
   const ESI_CEILING = 21000;
   const ESI_RATE = 0.0075;
@@ -684,7 +695,7 @@ function GenerateDialog({ employee, grossMonthly, standingBasic, salary, default
   const salaryParts = {
     hra: Number(salary?.hra ?? 0),
     allowances: Number(salary?.allowances ?? 0),
-    pf: Number(salary?.pfPercentage ?? 0),   // a flat rupee amount, despite the name
+    pf: Number(salary?.pfPercentage ?? 0),
     pt: Number(salary?.ptAmount ?? 0),
     esiApplicable: salary?.esiApplicable !== false
   };
@@ -701,10 +712,8 @@ function GenerateDialog({ employee, grossMonthly, standingBasic, salary, default
     - salaryParts.pf - esiPreview - salaryParts.pt
     - num(tds) - num(advance) - num(lopAmt) - num(otherDed);
 
-  // Prefill the Loss of Pay field from the computed amount whenever it changes.
   useEffect(() => {
     if (lopPreview.data) setLopAmt(autoLop > 0 ? String(autoLop) : "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lopPreview.data, autoLop]);
 
   const gen = useMutation({
@@ -734,8 +743,6 @@ function GenerateDialog({ employee, grossMonthly, standingBasic, salary, default
     <Dialog open onClose={onClose} className="max-w-md">
       <DialogHeader title={`Generate payslip — ${employee.name}`} />
       <div className="mt-3 space-y-3">
-        {/* Which basic this payslip will be built on, so the month picked above
-            visibly decides it rather than being taken on trust. */}
         <div className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm">
           <span className="text-muted-foreground">
             Basic for {MONTHS[month - 1]} {year}
@@ -810,8 +817,6 @@ function GenerateDialog({ employee, grossMonthly, standingBasic, salary, default
           </div>
         )}
 
-        {/* What the payslip will actually say, before it is generated. Getting a
-            figure wrong used to be visible only afterwards. */}
         <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2.5 text-xs">
           <div className="mb-1.5 font-semibold uppercase tracking-wide text-muted-foreground">
             This payslip
@@ -917,7 +922,6 @@ function PayslipsDialog({ employee, canDownload, onClose }: { employee: UserSumm
   );
 }
 
-/** What the leave preview reports for one employee and one month. */
 interface LopPreview {
   unpaidLeaveDays: number;
   paidLeaveDays: number;
@@ -926,14 +930,11 @@ interface LopPreview {
   presentDays: number;
   absentDays: number;
   workingDaysInMonth: number;
-  /** Unpaid leave plus absence — every day that is not paid for. */
   deductibleDays: number;
   lopFromUnpaidLeave: number;
   lopFromAbsence: number;
 }
 
-/** One figure with its label, for the small counts strip. */
-/** One line of the payslip preview. A negative value reads as a deduction. */
 function Line({ label, value, bold }: { label: string; value: number; bold?: boolean }) {
   const negative = value < 0;
   return (
@@ -961,10 +962,6 @@ function Count({ label, value, tone }: { label: string; value: string; tone?: "b
   );
 }
 
-/**
- * Leave and absence for the month a payslip covers. Read on the payslip list so
- * whoever is checking a slip can see what was behind the number.
- */
 function MonthAbsenceLine({ userId, month, year }: { userId: number; month: number; year: number }) {
   const q = useQuery({
     queryKey: ["lop-preview", userId, year, month],

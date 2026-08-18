@@ -153,6 +153,15 @@ public class PermissionService {
     @Transactional
     public PermissionResponse decide(Long deciderId, Long id, boolean approve, String comment) {
         PermissionRequest p = repo.findById(id).orElseThrow(() -> ApiException.notFound("Permission request"));
+        if (p.getUserId().equals(deciderId)) {
+            throw ApiException.business("You cannot approve or reject your own permission request");
+        }
+        User decider = userRepository.findById(deciderId).orElseThrow(() -> ApiException.notFound("Decider"));
+        boolean isDirectApprover = p.getRequestedTo() != null && p.getRequestedTo().equals(deciderId);
+        boolean isSysAdmin = hasRole(decider, "SUPER_ADMIN") || hasRole(decider, "COMPANY_ADMIN");
+        if (!isDirectApprover && !isSysAdmin) {
+            throw ApiException.business("Only the assigned approver for this request can approve or reject it");
+        }
         if (!approve && (comment == null || comment.isBlank())) {
             throw ApiException.business("A reason is required to reject a permission request");
         }

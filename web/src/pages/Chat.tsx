@@ -1,4 +1,3 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -28,6 +27,7 @@ import {
   SmilePlus,
   Eye,
   BarChart3,
+  Loader2
   Clock,
   CheckCircle2,
   Plus,
@@ -790,7 +790,7 @@ export default function ChatPage() {
   if (groupsLoading) {
     return (
       <div className="flex h-[70vh] items-center justify-center">
-        <Loader2 className="animate-spin text-primary w-10 h-10" />
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
   }

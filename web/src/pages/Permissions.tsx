@@ -146,12 +146,10 @@ function overlappingIds(list: PermissionRow[]): Set<number> {
 
 export default function PermissionsPage() {
   const qc = useQueryClient();
-  const { hasPermission, hasRole } = useAuth();
+  const { user, hasPermission, hasRole } = useAuth();
   const isAdmin = hasPermission("USER_MANAGE");
   const isHR = hasRole("IT_MGR") || hasRole("IT_HR");
   const isApprover = hasPermission("LEAVE_APPROVE");
-  // Admin joins the same layout: without it, a request addressed to the admin
-  // was visible but had no approve/reject anywhere on the page.
   const seesAll = isHR || isAdmin;
   const tiled = true;
   const [open, setOpen] = useState(false);
@@ -163,6 +161,20 @@ export default function PermissionsPage() {
   /** Pending request being approved or rejected, and which of the two. */
   const [decideOn, setDecideOn] = useState<{ row: PermissionRow; approve: boolean } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+
+  const canDecideRow = useCallback((r: PermissionRow) => {
+    if (r.status !== "PENDING" || isOverdue(r.status, r.requestDate)) return false;
+    if (r.userId === user?.id) return false;
+
+    // Direct recipient of the permission request always can approve/reject
+    if (r.requestedTo && user?.id && r.requestedTo === user.id) return true;
+
+    // System Admin override for requests addressed to Admin
+    const isSysAdmin = hasRole("SUPER_ADMIN") || hasRole("COMPANY_ADMIN");
+    if (isSysAdmin && (r.requestedTo === user?.id || !r.requestedTo)) return true;
+
+    return false;
+  }, [user?.id, hasRole]);
   // Which view opens first: everyone's requests for HR and admins, the inbox for
   // an approver, and their own for an employee — who has only that one.
   const [view, setView] = useState<"ALL_EMP" | "TO_ME" | "MINE">(
@@ -542,7 +554,7 @@ export default function PermissionsPage() {
                       </TableCell>
                       {isApprover && (
                         <TableCell className="text-right">
-                          {r.status === "PENDING" && !isOverdue(r.status, r.requestDate) ? (
+                          {canDecideRow(r) ? (
                             <div className="flex items-center justify-end gap-1.5">
                               <Button
                                 size="sm"

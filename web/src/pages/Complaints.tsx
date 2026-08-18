@@ -319,29 +319,18 @@ function Req() {
 /** HR / Admin view: incoming complaints as a data table with a Respond action. */
 function AllComplaints() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [page, setPage] = useState(0);
   const [status, setStatus] = useState("");
+  const [viewScope, setViewScope] = useState<"ALL" | "ASSIGNED" | "MY">("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [teamFilter, setTeamFilter] = useState("all");
+  const [year, setYear] = useState("all");
+  const [month, setMonth] = useState("all");
+  const [exactDate, setExactDate] = useState("");
   const [respondTo, setRespondTo] = useState<ComplaintNeed | null>(null);
-  /** Rows per page. The server pages this table, so the size travels with it. */
   const [pageSize, setPageSize] = useState(10);
 
-  const query = useQuery({
-    queryKey: ["complaints", "all", status, page, pageSize],
-    placeholderData: keepPreviousData,
-    queryFn: async () => {
-      // Complaints only — the "Need" kind has been retired.
-      const params = new URLSearchParams({
-        page: String(page), size: String(pageSize), kind: "COMPLAINT"
-      });
-      if (status) params.set("status", status);
-      const res = await api.get<ApiEnvelope<PageEnvelope<ComplaintNeed>>>(
-        `/complaints?${params.toString()}`
-      );
-      return res.data.data;
-    }
-  });
-
-  // Separate unfiltered pull just for the summary counts.
   const countsQuery = useQuery({
     queryKey: ["complaints", "counts"],
     queryFn: async () => {
@@ -352,26 +341,121 @@ function AllComplaints() {
     }
   });
 
-  const allForCounts = countsQuery.data ?? [];
-  const openCount = allForCounts.filter((c) => c.status === "OPEN").length;
-  const reviewCount = allForCounts.filter((c) => c.status === "IN_REVIEW").length;
-  const resolvedCount = allForCounts.filter((c) => c.status === "RESOLVED").length;
-  const rejectedCount = allForCounts.filter((c) => c.status === "REJECTED").length;
+  const rawComplaints = countsQuery.data ?? [];
 
-  const rows = query.data?.content ?? [];
-  const totalPages = query.data?.totalPages ?? 1;
+  // Apply scope filtering (All vs Assigned to Me vs My Submissions)
+  const scopedComplaints = useMemo(() => {
+    return rawComplaints.filter((c) => {
+      if (viewScope === "ASSIGNED") {
+        return c.requestedTo === user?.id || (c.requestedToName || "").toLowerCase().includes((user?.name || "").toLowerCase());
+      }
+      if (viewScope === "MY") {
+        return c.userId === user?.id;
+      }
+      return true;
+    });
+  }, [rawComplaints, viewScope, user]);
+
+  const years = useMemo(() => {
+    const set = new Set<string>();
+    scopedComplaints.forEach((c) => { if (c.createdAt) set.add(dayjs(c.createdAt).format("YYYY")); });
+    return [...set].sort((a, b) => b.localeCompare(a));
+  }, [scopedComplaints]);
+
+  const teams = useMemo(() => {
+    const set = new Set<string>();
+    scopedComplaints.forEach((c) => { if (c.team) set.add(c.team.trim()); });
+    return [...set].sort();
+  }, [scopedComplaints]);
+
+  // Date, team & search filtered complaints
+  const filteredComplaints = useMemo(() => {
+    return scopedComplaints.filter((c) => {
+      if (status && c.status !== status) return false;
+      if (teamFilter !== "all" && (c.team || "").trim() !== teamFilter) return false;
+      if (exactDate) {
+        if (!c.createdAt || dayjs(c.createdAt).format("YYYY-MM-DD") !== exactDate) return false;
+      } else {
+        if (year !== "all" && c.createdAt && dayjs(c.createdAt).format("YYYY") !== year) return false;
+        if (month !== "all" && c.createdAt && dayjs(c.createdAt).format("MM") !== month) return false;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase();
+        const haystack = [c.referenceCode, c.subject, c.description, c.employeeName, c.employeeCode, c.team, c.category].filter(Boolean).join(" ").toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [scopedComplaints, status, teamFilter, exactDate, year, month, searchQuery]);
+
+  const paged = usePagedRows(filteredComplaints, pageSize, [status, viewScope, searchQuery, teamFilter, year, month, exactDate, scopedComplaints]);
+
+  const openCount = scopedComplaints.filter((c) => c.status === "OPEN").length;
+  const reviewCount = scopedComplaints.filter((c) => c.status === "IN_REVIEW").length;
+  const resolvedCount = scopedComplaints.filter((c) => c.status === "RESOLVED").length;
+  const rejectedCount = scopedComplaints.filter((c) => c.status === "REJECTED").length;
+
+  const exportExcel = async () => {
+    const XLSX = await import("xlsx");
+    const headers = ["Ref Code", "Employee ID", "Employee Name", "Team", "Subject", "Category", "Priority", "Requested To", "Status", "Created Date", "Response"];
+    const body = filteredComplaints.map((c) => [
+      c.referenceCode,
+      c.employeeCode,
+      c.employeeName,
+      c.team || "—",
+      c.subject,
+      c.category || "—",
+      c.priority,
+      c.requestedToName || "Any HR",
+      c.status,
+      c.createdAt ? dayjs(c.createdAt).format("DD MMM YYYY, hh:mm A") : "—",
+      c.hrResponse || "—"
+    ]);
+    const ws = XLSX.utils.aoa_to_sheet([["Complaints Summary Report"], [`Exported on ${dayjs().format("DD MMM YYYY, h:mm A")}`], [], headers, ...body]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Complaints");
+    XLSX.writeFile(wb, `Complaints_Report_${dayjs().format("YYYY-MM-DD")}.xlsx`);
+    toast.success("Complaints report exported successfully");
+  };
 
   return (
-    <div className="space-y-3">
-      {/* Same coloured tiles the employee view has, with All added — each one
-          is also the status filter. */}
+    <div className="space-y-4">
+      {/* Top Scope View Toggle: All Complaints vs Assigned to Me vs My Submissions */}
+      <div className="flex items-center gap-2 bg-muted/30 p-1.5 rounded-lg w-max border">
+        <button
+          onClick={() => { setViewScope("ALL"); setPage(0); }}
+          className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-colors ${
+            viewScope === "ALL" ? "bg-card shadow-sm text-primary border" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          All Complaints
+        </button>
+        <button
+          onClick={() => { setViewScope("ASSIGNED"); setPage(0); }}
+          className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-colors ${
+            viewScope === "ASSIGNED" ? "bg-card shadow-sm text-primary border" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Assigned to Me
+        </button>
+        <button
+          onClick={() => { setViewScope("MY"); setPage(0); }}
+          className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-colors ${
+            viewScope === "MY" ? "bg-card shadow-sm text-primary border" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          My Submissions
+        </button>
+      </div>
+
+      {/* Stat Tiles */}
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
         {COMPLAINT_TILES.map((t) => (
           <StatTile
             key={t.key}
             compact
             label={t.label}
-            value={t.key === "ALL" ? allForCounts.length
+            value={t.key === "ALL" ? scopedComplaints.length
               : t.key === "OPEN" ? openCount
                 : t.key === "IN_REVIEW" ? reviewCount
                   : t.key === "RESOLVED" ? resolvedCount : rejectedCount}
@@ -384,28 +468,85 @@ function AllComplaints() {
         ))}
       </div>
 
-      <Card>
-        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row">
-          <Select
+      {/* Complete Filter Toolbar */}
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4 shadow-sm">
+        <div className="flex flex-col">
+          <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Search</label>
+          <Input
+            placeholder="Search subject, employee, code…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-9 w-52 bg-background"
+          />
+        </div>
+        <div className="flex flex-col">
+          <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Status</label>
+          <select
             value={status}
-            onChange={(e) => {
-              setStatus(e.target.value);
-              setPage(0);
-            }}
-            className="sm:w-48"
+            onChange={(e) => { setStatus(e.target.value); setPage(0); }}
+            className="h-9 w-36 rounded-md border bg-background px-3 text-xs font-semibold"
           >
             <option value="">All statuses</option>
             <option value="OPEN">Open</option>
             <option value="IN_REVIEW">In review</option>
             <option value="RESOLVED">Resolved</option>
             <option value="REJECTED">Rejected</option>
-          </Select>
-        </CardContent>
-      </Card>
+          </select>
+        </div>
+        {teams.length > 0 && (
+          <div className="flex flex-col">
+            <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Team</label>
+            <select
+              value={teamFilter}
+              onChange={(e) => setTeamFilter(e.target.value)}
+              className="h-9 w-36 rounded-md border bg-background px-3 text-xs font-semibold"
+            >
+              <option value="all">All teams</option>
+              {teams.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+        )}
+        <div className="flex flex-col">
+          <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Year</label>
+          <select
+            value={year}
+            onChange={(e) => { setYear(e.target.value); setExactDate(""); setPage(0); }}
+            className="h-9 w-28 rounded-md border bg-background px-3 text-xs font-semibold"
+          >
+            <option value="all">All years</option>
+            {years.map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+        <div className="flex flex-col">
+          <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Month</label>
+          <select
+            value={month}
+            onChange={(e) => { setMonth(e.target.value); setExactDate(""); setPage(0); }}
+            className="h-9 w-32 rounded-md border bg-background px-3 text-xs font-semibold"
+          >
+            <option value="all">All months</option>
+            {MONTHS.map((m, i) => (
+              <option key={m} value={String(i + 1).padStart(2, "0")}>{m}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col">
+          <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Exact Date</label>
+          <Input type="date" value={exactDate} onChange={(e) => { setExactDate(e.target.value); setPage(0); }} className="h-9 w-36 bg-background text-xs" />
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant="default"
+            className="h-9 font-semibold"
+            onClick={exportExcel}
+            disabled={filteredComplaints.length === 0}
+          >
+            Export Excel
+          </Button>
+        </div>
+      </div>
 
-      {query.isLoading ? (
-        <Skeleton className="h-64" />
-      ) : rows.length === 0 ? (
+      {paged.pageRows.length === 0 ? (
         <EmptyState
           icon={Inbox}
           title="No complaints found"

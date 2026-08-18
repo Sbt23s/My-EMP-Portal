@@ -1,5 +1,11 @@
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
+
+try {
+  execSync('git checkout web/src/pages/Employees.tsx', { stdio: 'ignore' });
+  console.log('Restored Employees.tsx from git repository');
+} catch (e) {}
 
 function fixCommas(dir) {
   const files = fs.readdirSync(dir);
@@ -10,8 +16,6 @@ function fixCommas(dir) {
     } else if (fullPath.endsWith('.tsx') || fullPath.endsWith('.ts')) {
       let content = fs.readFileSync(fullPath, 'utf8');
       
-      // Fix stray commas in imports/objects caused by the loader replacement
-      // Matches { followed by commas, multiple commas, or trailing commas before }
       let newContent = content
         .replace(/\{\s*,/g, '{')
         .replace(/,\s*,/g, ',')

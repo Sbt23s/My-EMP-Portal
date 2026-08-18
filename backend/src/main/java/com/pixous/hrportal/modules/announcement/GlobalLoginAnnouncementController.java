@@ -20,8 +20,14 @@ public class GlobalLoginAnnouncementController {
     @GetMapping("/active")
     public ApiResponse<GlobalLoginAnnouncement> getActiveAnnouncement(@AuthenticationPrincipal UserPrincipal principal) {
         String role = "Employee";
-        if (principal != null && principal.getAuthorities() != null && !principal.getAuthorities().isEmpty()) {
-            role = principal.getAuthorities().iterator().next().getAuthority().replace("ROLE_", "");
+        if (principal != null && principal.getAuthorities() != null) {
+            for (var auth : principal.getAuthorities()) {
+                String authority = auth.getAuthority();
+                if (authority.startsWith("ROLE_")) {
+                    role = authority.substring(5);
+                    break;
+                }
+            }
         }
         Optional<GlobalLoginAnnouncement> active = announcementService.getActiveForUserRole(role);
         return ApiResponse.ok(active.orElse(null));

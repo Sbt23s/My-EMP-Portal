@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
+import { resolvePhotoUrl } from "@/components/ui/avatar";
 
 interface Announcement {
   id: number;
@@ -152,7 +153,7 @@ export function TechAdminGlobalAnnouncements() {
     setMediaType(ann.mediaType);
     setTitle(ann.title || "");
     setDescription(ann.description || "");
-    setFilePreviewUrl(ann.mediaUrl);
+    setFilePreviewUrl(resolvePhotoUrl(ann.mediaUrl) || ann.mediaUrl);
     setTargetRoles(ann.targetRoles ? ann.targetRoles.split(",") : ["Employee", "TL", "HR", "Admin"]);
   };
 
@@ -369,103 +370,106 @@ export function TechAdminGlobalAnnouncements() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {listQuery.data?.map((ann) => (
-                    <tr key={ann.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="p-3">
-                        <div className="relative h-10 w-16 rounded overflow-hidden bg-black/90 grid place-items-center">
-                          {ann.mediaType === "VIDEO" ? (
-                            <div className="relative h-full w-full grid place-items-center">
-                              <video src={ann.mediaUrl} className="h-full w-full object-cover opacity-70" />
-                              <Play className="absolute h-4 w-4 text-white fill-white" />
-                            </div>
-                          ) : (
-                            <img src={ann.mediaUrl} alt="" className="h-full w-full object-cover" />
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-3 font-semibold">
-                        <span className="flex items-center gap-1">
-                          {ann.mediaType === "VIDEO" ? <Video className="h-3.5 w-3.5 text-violet-500" /> : <ImageIcon className="h-3.5 w-3.5 text-blue-500" />}
-                          {ann.mediaType}
-                        </span>
-                      </td>
-                      <td className="p-3 font-medium max-w-[140px] truncate" title={ann.title || "Untitled"}>
-                        {ann.title || "Untitled"}
-                      </td>
-                      <td className="p-3">
-                        <div className="flex flex-wrap gap-1">
-                          {(ann.targetRoles || "Employee,TL,HR,Admin").split(",").map((r) => (
-                            <span key={r} className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-semibold">
-                              {r}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <Badge
-                          className={`text-[10px] font-bold uppercase border-0 ${
-                            ann.status === "ACTIVE"
-                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                              : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                          }`}
-                        >
-                          {ann.status}
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-muted-foreground whitespace-nowrap">
-                        {ann.publishedAt ? dayjs(ann.publishedAt).format("DD MMM YYYY, hh:mm A") : "—"}
-                      </td>
-                      <td className="p-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => setPreviewModal(ann)}
-                            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                            title="Preview"
+                  {listQuery.data?.map((ann) => {
+                    const resolved = resolvePhotoUrl(ann.mediaUrl) || ann.mediaUrl;
+                    return (
+                      <tr key={ann.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="p-3">
+                          <div className="relative h-10 w-16 rounded overflow-hidden bg-black/90 grid place-items-center">
+                            {ann.mediaType === "VIDEO" ? (
+                              <div className="relative h-full w-full grid place-items-center">
+                                <video src={resolved} className="h-full w-full object-cover opacity-70" />
+                                <Play className="absolute h-4 w-4 text-white fill-white" />
+                              </div>
+                            ) : (
+                              <img src={resolved} alt="" className="h-full w-full object-cover" />
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-3 font-semibold">
+                          <span className="flex items-center gap-1">
+                            {ann.mediaType === "VIDEO" ? <Video className="h-3.5 w-3.5 text-violet-500" /> : <ImageIcon className="h-3.5 w-3.5 text-blue-500" />}
+                            {ann.mediaType}
+                          </span>
+                        </td>
+                        <td className="p-3 font-medium max-w-[140px] truncate" title={ann.title || "Untitled"}>
+                          {ann.title || "Untitled"}
+                        </td>
+                        <td className="p-3">
+                          <div className="flex flex-wrap gap-1">
+                            {(ann.targetRoles || "Employee,TL,HR,Admin").split(",").map((r) => (
+                              <span key={r} className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-semibold">
+                                {r}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <Badge
+                            className={`text-[10px] font-bold uppercase border-0 ${
+                              ann.status === "ACTIVE"
+                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                                : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                            }`}
                           >
-                            <Eye className="h-4 w-4" />
-                          </button>
+                            {ann.status}
+                          </Badge>
+                        </td>
+                        <td className="p-3 text-muted-foreground whitespace-nowrap">
+                          {ann.publishedAt ? dayjs(ann.publishedAt).format("DD MMM YYYY, hh:mm A") : "—"}
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => setPreviewModal(ann)}
+                              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                              title="Preview"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
 
-                          <button
-                            onClick={() => handleEdit(ann)}
-                            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                            title="Edit"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </button>
+                            <button
+                              onClick={() => handleEdit(ann)}
+                              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                              title="Edit"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
 
-                          <button
-                            onClick={() =>
-                              statusMutation.mutate({
-                                id: ann.id,
-                                status: ann.status === "ACTIVE" ? "INACTIVE" : "ACTIVE"
-                              })
-                            }
-                            className={`p-1 rounded ${ann.status === "ACTIVE" ? "text-emerald-600" : "text-slate-400"}`}
-                            title={ann.status === "ACTIVE" ? "Deactivate" : "Activate"}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={ann.status === "ACTIVE"}
-                              readOnly
-                              className="h-4 w-4 accent-emerald-600 cursor-pointer"
-                            />
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              if (confirm("Are you sure you want to delete this announcement?")) {
-                                deleteMutation.mutate(ann.id);
+                            <button
+                              onClick={() =>
+                                statusMutation.mutate({
+                                  id: ann.id,
+                                  status: ann.status === "ACTIVE" ? "INACTIVE" : "ACTIVE"
+                                })
                               }
-                            }}
-                            className="p-1 rounded hover:bg-rose-50 text-rose-500 hover:text-rose-700"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                              className={`p-1 rounded ${ann.status === "ACTIVE" ? "text-emerald-600" : "text-slate-400"}`}
+                              title={ann.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={ann.status === "ACTIVE"}
+                                readOnly
+                                className="h-4 w-4 accent-emerald-600 cursor-pointer"
+                              />
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                if (confirm("Are you sure you want to delete this announcement?")) {
+                                  deleteMutation.mutate(ann.id);
+                                }
+                              }}
+                              className="p-1 rounded hover:bg-rose-50 text-rose-500 hover:text-rose-700"
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -488,9 +492,9 @@ export function TechAdminGlobalAnnouncements() {
           <div className="space-y-4 pt-2">
             <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black grid place-items-center">
               {previewModal.mediaType === "VIDEO" ? (
-                <video src={previewModal.mediaUrl} className="h-full w-full object-contain" controls autoPlay />
+                <video src={resolvePhotoUrl(previewModal.mediaUrl) || previewModal.mediaUrl} className="h-full w-full object-contain" controls autoPlay />
               ) : (
-                <img src={previewModal.mediaUrl} alt="" className="h-full w-full object-contain" />
+                <img src={resolvePhotoUrl(previewModal.mediaUrl) || previewModal.mediaUrl} alt="" className="h-full w-full object-contain" />
               )}
             </div>
             {previewModal.description && (

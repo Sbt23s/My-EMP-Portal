@@ -31,15 +31,16 @@ public class GlobalLoginAnnouncementService {
 
         GlobalLoginAnnouncement ann = opt.get();
         if (ann.getTargetRoles() != null && !ann.getTargetRoles().isBlank()) {
-            String normalizedRole = role == null ? "Employee" : role.trim();
-            String[] roles = ann.getTargetRoles().split(",");
-            boolean match = false;
-            for (String r : roles) {
-                if (r.trim().equalsIgnoreCase(normalizedRole) || r.trim().equalsIgnoreCase("All") || normalizedRole.equalsIgnoreCase("SUPER_ADMIN") || normalizedRole.equalsIgnoreCase("COMPANY_ADMIN")) {
-                    match = true;
-                    break;
-                }
-            }
+            String normalizedRole = role == null ? "Employee" : role.trim().toUpperCase();
+            String target = ann.getTargetRoles().toUpperCase();
+
+            boolean match = target.contains("ALL")
+                    || target.contains(normalizedRole)
+                    || (normalizedRole.contains("EMP") && target.contains("EMPLOYEE"))
+                    || (normalizedRole.contains("TL") && target.contains("TL"))
+                    || ((normalizedRole.contains("HR") || normalizedRole.contains("MGR")) && target.contains("HR"))
+                    || ((normalizedRole.contains("ADMIN") || normalizedRole.contains("SUPER")) && target.contains("ADMIN"));
+
             if (!match) return Optional.empty();
         }
         return Optional.of(ann);
@@ -67,11 +68,18 @@ public class GlobalLoginAnnouncementService {
         Long mediaSize = null;
 
         if (file != null && !file.isEmpty()) {
-            String contentType = file.getContentType();
             String originalFilename = file.getOriginalFilename();
-            log.info("Uploading announcement media: {}, type: {}", originalFilename, contentType);
+            log.info("Uploading announcement media: {}, type: {}", originalFilename, file.getContentType());
 
-            mediaUrl = storageService.store(file, "announcements");
+            String storedPath = storageService.store(file, "announcements");
+            if (storedPath.startsWith("/api/files/")) {
+                mediaUrl = storedPath;
+            } else if (storedPath.startsWith("api/files/")) {
+                mediaUrl = "/" + storedPath;
+            } else {
+                mediaUrl = "/api/files/" + storedPath.replaceAll("^/+", "");
+            }
+
             mediaName = originalFilename;
             mediaSize = file.getSize();
         } else {

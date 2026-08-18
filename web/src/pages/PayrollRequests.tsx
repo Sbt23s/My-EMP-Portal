@@ -149,6 +149,10 @@ export default function PayrollPage() {
 
   const rows = useMemo(() => {
     return (employees.data ?? []).filter((e) => {
+      const isCeoRecord = e.employeeCode === "PIX-E100" || e.name === "CEO" || e.designationTitle === "CEO";
+      const isCurrentUserCeo = user?.employeeCode === "PIX-E100";
+      if (isCeoRecord && !isCurrentUserCeo) return false;
+
       const q = search.trim().toLowerCase();
       const matchesSearch = !q || e.name.toLowerCase().includes(q) || (e.employeeCode || "").toLowerCase().includes(q);
       const matchesCat = category === "all" || e.industry === category;
@@ -156,7 +160,7 @@ export default function PayrollPage() {
       const matchesStatus = statusFilter === "ALL" || (statusFilter === "GENERATED" ? isGen : !isGen);
       return matchesSearch && matchesCat && matchesStatus;
     });
-  }, [employees.data, search, category, statusFilter, monthPayslips.data]);
+  }, [employees.data, search, category, statusFilter, monthPayslips.data, user]);
 
   const rowsPaged = usePagedRows(rows, 15, [search, category, statusFilter, month, year, employees.data]);
 
@@ -302,6 +306,14 @@ export default function PayrollPage() {
           <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-9 w-36 bg-background text-xs" />
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-9 font-semibold text-primary border-primary/30 hover:bg-primary/10"
+            onClick={() => setPayslipsFor(user as UserSummary)}
+          >
+            <FileText className="mr-1.5 h-4 w-4" /> My Payslips
+          </Button>
           <Button
             variant="default"
             className="h-9 font-semibold"
@@ -885,37 +897,62 @@ function PayslipsDialog({ employee, canDownload, onClose }: { employee: UserSumm
   });
 
   return (
-    <Dialog open onClose={onClose} className="max-w-md">
+    <Dialog open onClose={onClose} className="max-w-3xl">
       <DialogHeader title={`Payslips — ${employee.name}`} />
-      <div className="mt-3">
+      <div className="mt-3 overflow-x-auto rounded-lg border">
         {list.isLoading ? (
           <Skeleton className="h-32 w-full" />
         ) : (list.data?.length ?? 0) === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">No payslips generated yet.</p>
+          <p className="py-8 text-center text-sm text-muted-foreground">No payslips generated yet.</p>
         ) : (
-          <div className="divide-y rounded-md border">
-            {list.data!.map((p) => (
-              <div key={p.id} className="flex items-center justify-between px-3 py-2.5">
-                <div>
-                  <div className="text-sm font-medium">{MONTHS[p.payMonth - 1]} {p.payYear}</div>
-                  <div className="text-xs text-muted-foreground">
-                    Net {inr(p.netPay)}{p.grossSalary != null ? ` · Gross ${inr(p.grossSalary)}` : ""}
-                  </div>
-                  <MonthAbsenceLine userId={employee.id} month={p.payMonth} year={p.payYear} />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => viewPayslipPdf(p.id)}>
-                    <Eye className="h-4 w-4" /> View
-                  </Button>
-                  {canDownload && (
-                    <Button variant="outline" size="sm" onClick={() => downloadPayslipPdf(p.id, employee.name)}>
-                      <Download className="h-4 w-4" /> Download
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+          <table className="w-full text-left text-xs">
+            <thead className="bg-muted/60 border-b text-muted-foreground uppercase font-semibold">
+              <tr>
+                <th className="p-3">Month &amp; Year</th>
+                <th className="p-3">Pay Date</th>
+                <th className="p-3">Gross Pay</th>
+                <th className="p-3">Net Pay</th>
+                <th className="p-3">Status</th>
+                <th className="p-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {list.data!.map((p) => {
+                const payDateStr = dayjs(`${p.payYear}-${String(p.payMonth).padStart(2, '0')}-01`).endOf('month').format("DD MMM YYYY");
+                return (
+                  <tr key={p.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="p-3 font-semibold text-foreground">
+                      {MONTHS[p.payMonth - 1]} {p.payYear}
+                    </td>
+                    <td className="p-3 text-muted-foreground whitespace-nowrap">
+                      {payDateStr}
+                    </td>
+                    <td className="p-3 font-bold tabular-nums">
+                      {p.grossSalary != null ? inr(p.grossSalary) : "—"}
+                    </td>
+                    <td className="p-3 font-bold tabular-nums text-emerald-600">
+                      {inr(p.netPay)}
+                    </td>
+                    <td className="p-3">
+                      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 uppercase">
+                        Paid
+                      </span>
+                    </td>
+                    <td className="p-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button variant="outline" size="sm" className="h-8 px-2.5 text-xs" onClick={() => viewPayslipPdf(p.id)}>
+                          <Eye className="mr-1 h-3.5 w-3.5" /> View
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-8 px-2.5 text-xs text-primary border-primary/30" onClick={() => downloadPayslipPdf(p.id, employee.name)}>
+                          <Download className="mr-1 h-3.5 w-3.5" /> Download
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
     </Dialog>

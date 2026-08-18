@@ -4,6 +4,7 @@ import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import { api, tokenStore } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { resolvePhotoUrl } from "@/components/ui/avatar";
 
 interface Announcement {
   id: number;
@@ -27,32 +28,28 @@ export function GlobalLoginAnnouncementModal() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const timerRef = useRef<any>(null);
 
+  const fetchActive = async () => {
+    try {
+      const res = await api.get<{ data: Announcement | null }>("/global-announcements/active");
+      const active = res.data?.data;
+
+      if (active && active.status === "ACTIVE") {
+        const seenKey = `seen_announcement_${active.id}`;
+        const hasSeen = sessionStorage.getItem(seenKey);
+        if (!hasSeen) {
+          setAnnouncement(active);
+          setTimeLeft(active.durationSeconds || 15);
+          setIsOpen(true);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch active announcement", err);
+    }
+  };
+
   // Fetch active announcement on mount or when user changes
   useEffect(() => {
     if (!user) return;
-
-    let isMounted = true;
-
-    async function fetchActive() {
-      try {
-        const res = await api.get<{ data: Announcement | null }>("/global-announcements/active");
-        const active = res.data?.data;
-        if (!isMounted) return;
-
-        if (active && active.status === "ACTIVE") {
-          // Check if already seen in current browser session
-          const seenKey = `seen_announcement_${active.id}`;
-          const hasSeen = sessionStorage.getItem(seenKey);
-          if (!hasSeen) {
-            setAnnouncement(active);
-            setTimeLeft(active.durationSeconds || 15);
-            setIsOpen(true);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch active announcement", err);
-      }
-    }
 
     fetchActive();
 
@@ -72,27 +69,20 @@ export function GlobalLoginAnnouncementModal() {
           try {
             const body = JSON.parse(message.body);
             if (body.action === "PUBLISHED" && body.status === "ACTIVE") {
-              // Check target roles
-              const userRole = user.roles?.[0] || "Employee";
-              const targetRoles = (body.targetRoles || "Employee,TL,HR,Admin").split(",");
-              const matches = targetRoles.some(
-                (r: string) => r.trim().toLowerCase() === userRole.toLowerCase() || r.trim() === "All" || userRole.toLowerCase().includes("admin")
-              );
-              if (matches) {
-                const newAnn: Announcement = {
-                  id: body.id,
-                  title: body.title,
-                  description: body.description,
-                  mediaType: body.mediaType,
-                  mediaUrl: body.mediaUrl,
-                  status: "ACTIVE",
-                  targetRoles: body.targetRoles,
-                  durationSeconds: body.durationSeconds || 15
-                };
-                setAnnouncement(newAnn);
-                setTimeLeft(newAnn.durationSeconds);
-                setIsOpen(true);
-              }
+              const newAnn: Announcement = {
+                id: body.id,
+                title: body.title,
+                description: body.description,
+                mediaType: body.mediaType,
+                mediaUrl: body.mediaUrl,
+                status: "ACTIVE",
+                targetRoles: body.targetRoles,
+                durationSeconds: body.durationSeconds || 15
+              };
+              sessionStorage.removeItem(`seen_announcement_${body.id}`);
+              setAnnouncement(newAnn);
+              setTimeLeft(newAnn.durationSeconds);
+              setIsOpen(true);
             } else if (body.action === "DELETED" || body.action === "INACTIVATED") {
               setAnnouncement((prev) => {
                 if (prev && prev.id === body.id) {
@@ -112,7 +102,6 @@ export function GlobalLoginAnnouncementModal() {
     client.activate();
 
     return () => {
-      isMounted = false;
       client.deactivate();
     };
   }, [user]);
@@ -167,6 +156,7 @@ export function GlobalLoginAnnouncementModal() {
 
   if (!isOpen || !announcement) return null;
 
+  const resolvedUrl = resolvePhotoUrl(announcement.mediaUrl) || announcement.mediaUrl;
   const duration = announcement.durationSeconds || 15;
   const progressPercent = Math.max(0, Math.min(100, ((duration - timeLeft) / duration) * 100));
 
@@ -175,9 +165,9 @@ export function GlobalLoginAnnouncementModal() {
       {/* Background Media Blur Container */}
       <div className="absolute inset-0 overflow-hidden opacity-30 pointer-events-none">
         {announcement.mediaType === "VIDEO" ? (
-          <video src={announcement.mediaUrl} className="h-full w-full object-cover blur-2xl scale-110" autoPlay loop muted playsInline />
+          <video src={resolvedUrl} className="h-full w-full object-cover blur-2xl scale-110" autoPlay loop muted playsInline />
         ) : (
-          <img src={announcement.mediaUrl} alt="" className="h-full w-full object-cover blur-2xl scale-110" />
+          <img src={resolvedUrl} alt="" className="h-full w-full object-cover blur-2xl scale-110" />
         )}
       </div>
 
@@ -242,7 +232,7 @@ export function GlobalLoginAnnouncementModal() {
               <>
                 <video
                   ref={videoRef}
-                  src={announcement.mediaUrl}
+                  src={resolvedUrl}
                   className="h-full w-full object-contain"
                   autoPlay
                   loop
@@ -261,7 +251,7 @@ export function GlobalLoginAnnouncementModal() {
               </>
             ) : (
               <img
-                src={announcement.mediaUrl}
+                src={resolvedUrl}
                 alt={announcement.title || "Announcement"}
                 className="h-full w-full object-contain"
               />

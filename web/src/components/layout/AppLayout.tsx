@@ -19,6 +19,7 @@ import dayjs from "dayjs";
 import { useIsFetching } from "@tanstack/react-query";
 import { CustomLoader } from "@/components/ui/custom-loader";
 import { ChatBotWidget } from "@/components/ChatBotWidget";
+import { GlobalLoginAnnouncementModal } from "@/components/GlobalLoginAnnouncementModal";
 import { CallProvider } from "@/hooks/useCalls";
 
 interface NavItem {
@@ -592,6 +593,7 @@ function AppShell() {
         </main>
       </div>
       <ChatBotWidget />
+      <GlobalLoginAnnouncementModal />
     </div>
   );
 }

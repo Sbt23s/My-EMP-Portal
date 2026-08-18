@@ -98,10 +98,8 @@ export function TechAdminLayout() {
     {
       label: "SYSTEM",
       items: [
+        { name: "Global Login Announcement", path: "/tech-admin/global-announcements", icon: Megaphone },
         { name: "Audit Logs", path: "/tech-admin/audit-logs", icon: History },
-        // Employees, Integrations, Security and System Settings were removed
-        // from this sidebar on request. Their routes are untouched, so anything
-        // linking to them still works and putting an entry back is one line.
         { name: "Branding & Appearance", path: "/tech-admin/branding", icon: Palette },
       ]
     }

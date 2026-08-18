@@ -70,6 +70,7 @@ const TechAdminBranding = lazy(() => import("@/pages/tech-admin/Branding").then(
 const TechAdminModuleManagement = lazy(() => import("@/pages/tech-admin/ModuleManagement").then(m => ({ default: m.TechAdminModuleManagement })));
 const TechAdminUsers = lazy(() => import("@/pages/tech-admin/Users").then(m => ({ default: m.TechAdminUsers })));
 const TechAdminRoles = lazy(() => import("@/pages/tech-admin/Roles").then(m => ({ default: m.TechAdminRoles })));
+const TechAdminGlobalAnnouncements = lazy(() => import("@/pages/tech-admin/GlobalAnnouncements").then(m => ({ default: m.TechAdminGlobalAnnouncements })));
 
 // ModulePlaceholder is a named export, so it needs mapping to the default shape
 // React.lazy expects. Getting this wrong fails only when the route is opened,
@@ -302,6 +303,7 @@ export const router = createBrowserRouter([
       // Companies page, which /tech-admin/companies already does.
       { path: "module/*", element: page(<TechAdminModuleManagement />) },
       { path: "audit-logs", element: page(<TechAdminAuditLogs />) },
+      { path: "global-announcements", element: page(<TechAdminGlobalAnnouncements />) },
       { path: "integrations", element: page(<TechAdminSettings />) },
       { path: "branding", element: page(<TechAdminBranding />) },
       { path: "security", element: page(<TechAdminSettings />) },

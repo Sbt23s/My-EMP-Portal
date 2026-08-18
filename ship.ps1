@@ -79,8 +79,48 @@ for n in hrportal-backend hrportal-web hrportal-analytics; do
     sudo docker rm -f "$id" >/dev/null 2>&1 || true
   done
 done
-echo "--- building and starting ---"
-sudo docker compose -f docker-compose.prod.yml up -d --build backend web analytics
+echo "--- deciding what to rebuild ---"
+# Rebuild only the images whose source actually moved.
+#
+# All three were rebuilt on every deploy: a Maven build, an npm build and a pip
+# install, minutes of work to ship a change that often touched none of them. The
+# pull just told us exactly what moved, so ask it.
+#
+# ORIG_HEAD is where we were before the pull. Absent it, rebuild everything -
+# guessing wrong in that direction only costs time, the other way ships nothing.
+CHANGED=""
+if [ -f .git/ORIG_HEAD ]; then
+  CHANGED=$(git diff --name-only ORIG_HEAD HEAD 2>/dev/null || echo "")
+fi
+
+SERVICES=""
+if [ -z "$CHANGED" ]; then
+  echo "  cannot tell what changed - rebuilding everything"
+  SERVICES="backend web analytics"
+else
+  echo "$CHANGED" | head -20 | sed "s/^/    /"
+  case "$CHANGED" in *backend/*) SERVICES="$SERVICES backend";; esac
+  case "$CHANGED" in *web/*) SERVICES="$SERVICES web";; esac
+  case "$CHANGED" in *analytics-service/*) SERVICES="$SERVICES analytics";; esac
+  # The compose file describes all of them, so a change there touches all of them.
+  case "$CHANGED" in *docker-compose.prod.yml*) SERVICES="backend web analytics";; esac
+fi
+
+SERVICES=$(echo $SERVICES | xargs)
+
+if [ -z "$SERVICES" ]; then
+  echo "  nothing server-side changed - nothing to rebuild"
+  exit 0
+fi
+
+echo "--- rebuilding: $SERVICES ---"
+sudo docker compose -f docker-compose.prod.yml up -d --build $SERVICES
+
+# Only wait on the backend if it was actually one of them.
+case "$SERVICES" in
+  *backend*) ;;
+  *) echo "backend untouched - done"; exit 0;;
+esac
 echo "--- waiting for the backend ---"
 for i in $(seq 1 60); do
   code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost/api/my-modules || true)

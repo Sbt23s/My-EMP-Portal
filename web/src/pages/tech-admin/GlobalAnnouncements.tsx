@@ -11,9 +11,9 @@ import {
   Trash2,
   Plus,
   Play,
-  Info,
-  CustomLoader as Loader2
+  Info
 } from "lucide-react";
+import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
 import { api, apiMessage } from "@/lib/api";

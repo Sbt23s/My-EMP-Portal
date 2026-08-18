@@ -25,7 +25,7 @@ export function GlobalLoginAnnouncementModal() {
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<any>(null);
 
   // Fetch active announcement on mount or when user changes
   useEffect(() => {

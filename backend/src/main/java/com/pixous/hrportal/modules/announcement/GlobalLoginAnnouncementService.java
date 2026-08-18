@@ -67,7 +67,6 @@ public class GlobalLoginAnnouncementService {
         Long mediaSize = null;
 
         if (file != null && !file.isEmpty()) {
-            // Validate file content type
             String contentType = file.getContentType();
             String originalFilename = file.getOriginalFilename();
             log.info("Uploading announcement media: {}, type: {}", originalFilename, contentType);
@@ -76,13 +75,12 @@ public class GlobalLoginAnnouncementService {
             mediaName = originalFilename;
             mediaSize = file.getSize();
         } else {
-            throw ApiException.badRequest("Media file is required for announcement");
+            throw ApiException.business("Media file is required for announcement");
         }
 
         boolean active = publishImmediately == null || publishImmediately;
 
         if (active) {
-            // Deactivate all existing active announcements
             List<GlobalLoginAnnouncement> activeList = repository.findByStatus("ACTIVE");
             for (GlobalLoginAnnouncement item : activeList) {
                 item.setStatus("INACTIVE");
@@ -121,7 +119,6 @@ public class GlobalLoginAnnouncementService {
 
         String newStatus = status.toUpperCase();
         if ("ACTIVE".equals(newStatus)) {
-            // Deactivate all existing active announcements
             List<GlobalLoginAnnouncement> activeList = repository.findByStatus("ACTIVE");
             for (GlobalLoginAnnouncement item : activeList) {
                 if (!item.getId().equals(id)) {

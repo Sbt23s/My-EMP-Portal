@@ -3,7 +3,6 @@ package com.pixous.hrportal.modules.announcement;
 import com.pixous.hrportal.common.ApiResponse;
 import com.pixous.hrportal.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,7 +34,7 @@ public class TechAdminGlobalAnnouncementController {
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         Long createdBy = principal != null ? principal.getId() : null;
-        String createdByName = principal != null ? principal.getName() : "Tech Admin";
+        String createdByName = principal != null ? principal.getUsername() : "Tech Admin";
 
         GlobalLoginAnnouncement ann = announcementService.createAndPublish(
                 file, mediaType, title, description, targetRoles, durationSeconds, createdBy, createdByName, publishImmediately

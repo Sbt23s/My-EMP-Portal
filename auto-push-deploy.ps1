@@ -65,8 +65,9 @@ if [ ! -f /etc/turn-secret ]; then
     ./setup-turn.sh || true
 fi
 echo '--- Removing leftover container conflicts ---'
-sudo docker compose -f docker-compose.prod.yml --profile analytics down -v --remove-orphans || true
-sudo docker ps -aq | xargs -r sudo docker rm -f || true
+sudo docker stop $(sudo docker ps -q) 2>/dev/null || true
+sudo docker rm -f $(sudo docker ps -aq) 2>/dev/null || true
+sudo docker compose -f docker-compose.prod.yml --profile analytics down --remove-orphans || true
 echo '--- Rebuilding and starting production services ---'
 sudo docker compose -f docker-compose.prod.yml --profile analytics up -d --build
 echo '--- Waiting for backend service to become ready ---'

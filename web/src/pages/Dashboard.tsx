@@ -1392,7 +1392,7 @@ function ExecutiveDashboardView({
       
       return tenantList as any[];
     },
-    refetchInterval: 5000
+    staleTime: 1000 * 60 * 10
   });
 
   const leavePendingCount = useMemo(() => {
@@ -1704,8 +1704,8 @@ function ExecutiveDashboardView({
             <div className="h-[96px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={attendanceWeekData} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
-                  <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={9} />
-                  <YAxis tickLine={false} axisLine={false} fontSize={9} />
+                  <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={9} tick={{ fill: "currentColor" }} />
+                  <YAxis tickLine={false} axisLine={false} fontSize={9} tick={{ fill: "currentColor" }} />
                   <Tooltip />
                   <Bar dataKey="Present" stackId="a" fill="hsl(var(--success))" maxBarSize={12} />
                   <Bar dataKey="Absent" stackId="a" fill="hsl(var(--destructive))" maxBarSize={12} />
@@ -3026,16 +3026,18 @@ function EmployeeToday({ userName, d, punch, org }: {
           <div className="flex-1 space-y-2">
             <div className="flex items-center gap-2 text-sm"><Clock className="h-4 w-4 text-success" /><span className="text-xs text-muted-foreground">Working</span><b className="ml-auto tabular-nums">{minutesToHours(worked)}</b></div>
             <div className="flex items-center gap-2 text-sm"><Clock className="h-4 w-4 text-muted-foreground" /><span className="text-xs text-muted-foreground">Punch in</span><b className="ml-auto tabular-nums">{d.punchInAt ? dayjs(d.punchInAt).format("h:mm A") : "—"}</b></div>
-            {/* The payload has always carried punchOutAt; only the in-time was shown,
-                so after punching out there was nothing saying when. */}
             <div className="flex items-center gap-2 text-sm"><Clock className="h-4 w-4 text-muted-foreground" /><span className="text-xs text-muted-foreground">Punch out</span><b className="ml-auto tabular-nums">{d.punchOutAt ? dayjs(d.punchOutAt).format("h:mm A") : "—"}</b></div>
             <Button
               size="sm"
-              className="mt-1 w-full rounded-lg"
-              disabled={punch.isPending}
-              onClick={() => punch.mutate(d.punchedInToday ? "punch-out" : "punch-in")}
+              className={cn("mt-1 w-full rounded-lg", !!d.punchOutAt && "opacity-65 cursor-not-allowed")}
+              disabled={punch.isPending || !!d.punchOutAt}
+              onClick={() => {
+                if (!d.punchOutAt) {
+                  punch.mutate(d.punchedInToday ? "punch-out" : "punch-in");
+                }
+              }}
             >
-              {d.punchedInToday ? "Punch Out" : "Punch In"}
+              {d.punchOutAt ? "Punched Out Today" : d.punchedInToday ? "Punch Out" : "Punch In"}
             </Button>
           </div>
         </CardContent>

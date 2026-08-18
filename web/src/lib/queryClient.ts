@@ -5,7 +5,10 @@ export const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 5000, // 5 seconds fresh state so page data re-checks & shows loading symbol
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes fresh cache for instant UI rendering
+      gcTime: 1000 * 60 * 30, // Keep in memory for 30 minutes
     }
   }
 });

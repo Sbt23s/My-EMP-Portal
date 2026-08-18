@@ -47,6 +47,52 @@ interface CallApi {
 
 const CallContext = createContext<CallApi | null>(null);
 
+function playRingtone() {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return () => {};
+    const ctx = new AudioCtx();
+
+    let isRinging = true;
+    const ringCycle = () => {
+      if (!isRinging || ctx.state === "closed") return;
+      try {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc1.frequency.setValueAtTime(440, ctx.currentTime);
+        osc2.frequency.setValueAtTime(480, ctx.currentTime);
+
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.8);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc1.start(ctx.currentTime);
+        osc2.start(ctx.currentTime);
+        osc1.stop(ctx.currentTime + 1.8);
+        osc2.stop(ctx.currentTime + 1.8);
+
+        if (isRinging) {
+          setTimeout(ringCycle, 2800);
+        }
+      } catch (e) {}
+    };
+
+    ringCycle();
+
+    return () => {
+      isRinging = false;
+      ctx.close().catch(() => {});
+    };
+  } catch (e) {
+    return () => {};
+  }
+}
+
 /**
  * Calling, for the whole portal rather than the chat page.
  *
@@ -465,7 +511,23 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           pendingOfferRef.current = { senderId, sdp: data?.sdp, isVideo: !!data?.isVideo };
           setActiveCallPartner({ id: senderId, name: senderName });
           setCallIsVideo(!!data?.isVideo);
-          if (callStateRef.current === "idle") setCallState("incoming");
+          if (callStateRef.current === "idle") {
+            setCallState("incoming");
+            if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+              try {
+                const n = new Notification(`📞 Incoming ${data?.isVideo ? "Video" : "Voice"} Call`, {
+                  body: `${senderName} is calling you. Click to answer.`,
+                  icon: "/pixous-logo.png",
+                  requireInteraction: true,
+                  tag: "incoming-call"
+                });
+                n.onclick = () => {
+                  window.focus();
+                  n.close();
+                };
+              } catch (e) {}
+            }
+          }
         }
         break;
 
@@ -544,6 +606,22 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       setConnected(false);
     };
   }, [user?.id]);
+
+  // Request Notification permission on mount for background push alerts
+  useEffect(() => {
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+  }, []);
+
+  // Continuous realistic Ringtone sound effect while receiving an incoming call
+  useEffect(() => {
+    if (callState !== "incoming" && callState !== "ringing") return;
+    const stopRing = playRingtone();
+    return () => {
+      stopRing();
+    };
+  }, [callState]);
 
   // A call nobody picks up stops ringing after three quarters of a minute.
   useEffect(() => {

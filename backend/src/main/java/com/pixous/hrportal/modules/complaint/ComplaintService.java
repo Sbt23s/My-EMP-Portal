@@ -109,8 +109,6 @@ public class ComplaintService {
      */
     @Transactional(readOnly = true)
     public java.util.List<java.util.Map<String, Object>> recipients(Long requesterId) {
-        User me = requesterId == null ? null : userRepository.findById(requesterId).orElse(null);
-        boolean iAmHr = isHrRole(me);
         java.util.Map<Long, java.util.Map<String, Object>> byId = new java.util.LinkedHashMap<>();
         java.util.function.BiConsumer<User, String> add = (u, role) -> {
             if (!u.isEnabled()) return;
@@ -121,21 +119,22 @@ public class ComplaintService {
                 row.put("code", u.getEmployeeCode());
                 return row;
             });
-            // Someone holding both shows as Admin, the wider of the two.
-            if (!"Admin".equals(m.get("role"))) m.put("role", role);
+            m.put("role", role);
         };
-        if (iAmHr) {
-            // By code, not by permission: if he happened not to hold the manage
-            // permission the list would come back empty and HR could raise
-            // nothing at all.
-            userRepository.findByEmployeeCode(HR_COMPLAINT_APPROVER_CODE)
-                    .ifPresent(u -> add.accept(u, "Admin"));
-        } else {
-            userRepository.findByPermission("COMPLAINT_MANAGE").stream()
-                    .filter(ComplaintService::isHrRole)
-                    .forEach(u -> add.accept(u, "HR"));
-        }
-        byId.remove(requesterId);
+
+        // Always add CTO Elamaran Subramanian (PIX-E100)
+        userRepository.findByEmployeeCode(HR_COMPLAINT_APPROVER_CODE)
+                .ifPresent(u -> add.accept(u, "CTO"));
+
+        // Always add HR and System Admin
+        userRepository.findByPermission("COMPLAINT_MANAGE").stream()
+                .filter(ComplaintService::isHrRole)
+                .forEach(u -> add.accept(u, "HR"));
+        userRepository.findByPermission("USER_MANAGE").stream()
+                .filter(u -> !HR_COMPLAINT_APPROVER_CODE.equals(u.getEmployeeCode()))
+                .forEach(u -> add.accept(u, "Admin"));
+
+        if (requesterId != null) byId.remove(requesterId);
         return java.util.List.copyOf(byId.values());
     }
 

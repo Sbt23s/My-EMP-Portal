@@ -103,34 +103,14 @@ public class PermissionService {
      */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> approvers(Long requesterId) {
-        User me = userRepository.findById(requesterId).orElseThrow(() -> ApiException.notFound("User"));
-        java.util.Set<String> myRoles = me.getRoles().stream()
-                .map(com.pixous.hrportal.modules.user.Role::getCode).collect(java.util.stream.Collectors.toSet());
-        String myTitle = me.getDesignationTitle() == null ? "" : me.getDesignationTitle().trim();
-
-        java.util.function.Predicate<User> allowed;
-        if (myRoles.contains("IT_MGR") || myRoles.contains("IT_HR")) {
-            // HR -> the company head, matched on employee code so no other
-            // account can stand in for him, or the System Admin, who runs the
-            // portal and can answer when he is away.
-            allowed = u -> HR_APPROVER_CODE.equalsIgnoreCase(u.getEmployeeCode())
-                    || hasRole(u, "SUPER_ADMIN");
-        } else if (myRoles.contains("IT_TL")) {
-            // Team Leader -> HR only.
-            allowed = u -> hasRole(u, "IT_MGR") || hasRole(u, "IT_HR");
-        } else {
-            // Employee -> their OWN team's Team Leader only. HR is deliberately
-            // absent: a short time-off request belongs with the person who runs
-            // the day's work.
-            allowed = u -> hasRole(u, "IT_TL")
-                    && u.getDesignationTitle() != null
-                    && !myTitle.isEmpty()
-                    && u.getDesignationTitle().trim().equalsIgnoreCase(myTitle);
-        }
-
         return userRepository.findByEnabledTrue().stream()
-                .filter(u -> !u.getId().equals(requesterId))
-                .filter(allowed)
+                .filter(u -> requesterId == null || !u.getId().equals(requesterId))
+                .filter(u -> HR_APPROVER_CODE.equalsIgnoreCase(u.getEmployeeCode())
+                        || hasRole(u, "SUPER_ADMIN")
+                        || hasRole(u, "COMPANY_ADMIN")
+                        || hasRole(u, "IT_MGR")
+                        || hasRole(u, "IT_HR")
+                        || hasRole(u, "IT_TL"))
                 .map(u -> {
                     Map<String, Object> m = new java.util.HashMap<>();
                     m.put("id", u.getId());

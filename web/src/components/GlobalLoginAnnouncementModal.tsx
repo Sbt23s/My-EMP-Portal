@@ -214,8 +214,29 @@ export function GlobalLoginAnnouncementModal() {
         )}
       </div>
 
-      {/* Centered Poster Card Container */}
-      <div className="relative z-10 flex flex-col items-center justify-center max-w-4xl max-h-[85vh] w-full rounded-2xl overflow-hidden shadow-2xl border border-white/20 bg-slate-950/80 backdrop-blur-xl group">
+      {/* Centered Poster Card Container - Auto-fits media aspect ratio with zero black sidebars */}
+      <div className="relative z-10 inline-flex flex-col items-center justify-center max-h-[85vh] max-w-[90vw] md:max-w-[80vw] lg:max-w-4xl rounded-2xl overflow-hidden shadow-2xl border border-white/25 bg-slate-950/90 backdrop-blur-2xl group">
+        
+        {/* Inner Media Blurred Ambient Fill (Fills side gaps with matching video/photo artwork glow) */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+          {announcement.mediaType === "VIDEO" ? (
+            <video
+              src={resolvedUrl}
+              className="h-full w-full object-cover opacity-50 blur-2xl scale-125"
+              autoPlay
+              loop
+              muted
+              playsInline
+            />
+          ) : (
+            <img
+              src={resolvedUrl}
+              alt=""
+              className="h-full w-full object-cover opacity-50 blur-2xl scale-125"
+            />
+          )}
+        </div>
+
         {/* Entrance Lottie Effect Over Card */}
         {effectUrl ? (
           <div className="absolute inset-0 z-30 pointer-events-none">
@@ -231,27 +252,27 @@ export function GlobalLoginAnnouncementModal() {
         {/* Clean Sleek Floating Close Button */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 z-40 grid h-10 w-10 place-items-center rounded-full bg-black/70 text-white hover:bg-black/95 hover:scale-105 transition-all border border-white/30 shadow-xl backdrop-blur-md"
+          className="absolute top-4 right-4 z-40 grid h-10 w-10 place-items-center rounded-full bg-black/75 text-white hover:bg-black/95 hover:scale-105 transition-all border border-white/30 shadow-2xl backdrop-blur-md"
           title="Close Announcement"
         >
           <X className="h-5 w-5" />
         </button>
 
-        {/* Centered Media Content */}
-        <div className="relative flex items-center justify-center w-full max-h-[80vh] overflow-hidden bg-black/40">
+        {/* Media Content */}
+        <div className="relative z-10 flex items-center justify-center max-h-[82vh] overflow-hidden">
           {announcement.mediaType === "VIDEO" ? (
             <>
               <video
                 ref={videoRef}
                 src={resolvedUrl}
-                className="max-h-[75vh] w-auto max-w-full object-contain rounded-lg"
+                className="max-h-[80vh] w-auto max-w-full object-contain rounded-2xl shadow-2xl"
                 autoPlay
                 loop
                 muted={isMuted}
                 playsInline
               />
               {/* Video Controls - bottom right of card */}
-              <div className="absolute bottom-4 right-4 z-30 flex items-center gap-2 rounded-full bg-black/70 backdrop-blur-md px-3.5 py-1.5 border border-white/20">
+              <div className="absolute bottom-4 right-4 z-30 flex items-center gap-2 rounded-full bg-black/75 backdrop-blur-md px-3.5 py-1.5 border border-white/25 shadow-xl">
                 <button onClick={togglePlay} className="text-white hover:text-primary transition-colors" title={isPlaying ? "Pause" : "Play"}>
                   {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                 </button>
@@ -265,20 +286,20 @@ export function GlobalLoginAnnouncementModal() {
             <img
               src={resolvedUrl}
               alt={announcement.title || "Announcement"}
-              className="max-h-[75vh] w-auto max-w-full object-contain rounded-lg shadow-xl"
+              className="max-h-[80vh] w-auto max-w-full object-contain rounded-2xl shadow-2xl"
             />
           )}
 
           {/* Title & Description overlay at bottom of poster if provided */}
           {(announcement.title || announcement.description) && (
-            <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-6 text-left">
+            <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/95 via-black/70 to-transparent p-6 text-left">
               {announcement.title && (
                 <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight drop-shadow-md">
                   {announcement.title}
                 </h2>
               )}
               {announcement.description && (
-                <p className="mt-1 text-xs sm:text-sm text-white/85 max-w-2xl font-medium drop-shadow">
+                <p className="mt-1 text-xs sm:text-sm text-white/90 max-w-2xl font-medium drop-shadow">
                   {announcement.description}
                 </p>
               )}

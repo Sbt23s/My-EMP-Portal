@@ -574,6 +574,9 @@ public class LeaveService {
      */
     private boolean canActOnLeave(User approver, User applicant, java.math.BigDecimal workingDays) {
         if (approver.getId().equals(applicant.getId())) return false;
+        if ("PIX-E100".equalsIgnoreCase(approver.getEmployeeCode()) || leaveHasRole(approver, "SUPER_ADMIN") || leaveHasRole(approver, "COMPANY_ADMIN")) {
+            return true;
+        }
         String who = topLeaveRole(applicant);
         double days = workingDays == null ? 0 : workingDays.doubleValue();
 
@@ -594,6 +597,9 @@ public class LeaveService {
 
     /** Who may act on this specific leave: the chosen approver if routed, else the day/role rule. */
     private boolean canApproveLeave(User approver, User applicant, LeaveRequest r) {
+        if (approver != null && ("PIX-E100".equalsIgnoreCase(approver.getEmployeeCode()) || leaveHasRole(approver, "SUPER_ADMIN") || leaveHasRole(approver, "COMPANY_ADMIN"))) {
+            return true;
+        }
         if (r.getRequestedTo() != null) return r.getRequestedTo().equals(approver.getId());
         return applicant != null && canActOnLeave(approver, applicant, r.getWorkingDays());
     }
@@ -604,7 +610,8 @@ public class LeaveService {
         User me = userRepository.findById(userId).orElseThrow(() -> ApiException.notFound("User"));
         java.math.BigDecimal wd = java.math.BigDecimal.valueOf(days);
         return userRepository.findByEnabledTrue().stream()
-                .filter(u -> canActOnLeave(u, me, wd))
+                .filter(u -> !u.getId().equals(userId))
+                .filter(u -> "PIX-E100".equalsIgnoreCase(u.getEmployeeCode()) || leaveHasRole(u, "SUPER_ADMIN") || leaveHasRole(u, "COMPANY_ADMIN") || canActOnLeave(u, me, wd))
                 .map(u -> {
                     Map<String, Object> m = new java.util.HashMap<>();
                     m.put("id", u.getId());

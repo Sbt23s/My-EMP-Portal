@@ -59,14 +59,14 @@ export function useNotifications(userId?: number) {
   const feed = useQuery({
     queryKey: ["notifications"],
     queryFn: fetchFeed,
-    refetchInterval: 15_000,
-    refetchOnWindowFocus: true
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: false
   });
   const unread = useQuery({
     queryKey: ["notifications", "unread"],
     queryFn: fetchUnreadCount,
-    refetchInterval: 15_000,
-    refetchOnWindowFocus: true
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: false
   });
 
   // Rich, clickable toast for any notification. `id` keeps a notification from
@@ -75,6 +75,21 @@ export function useNotifications(userId?: number) {
     // The list is filtered further down, but a toast arrives on its own from
     // the WebSocket and would otherwise pop up for a module that is off.
     if (!notificationAllowed(n.type, hasModule)) return;
+
+    if (typeof Notification !== "undefined" && Notification.permission === "granted" && document.visibilityState === "hidden") {
+      try {
+        const notif = new Notification(n.title, {
+          body: n.body || "",
+          icon: "/pixous-logo.png",
+          tag: `notif-${n.id}`
+        });
+        notif.onclick = () => {
+          window.focus();
+          if (n.link) navigate(n.link);
+          notif.close();
+        };
+      } catch (e) {}
+    }
 
     toast.custom(
       (t) =>

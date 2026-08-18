@@ -183,7 +183,7 @@ function notificationStyle(type?: string) {
 
 function AppShell() {
   const isFetching = useIsFetching();
-  const { user, logout, hasPermission, hasRole, hasModule, hasDashboard } = useAuth();
+  const { user, loading, logout, hasPermission, hasRole, hasModule, hasDashboard } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -191,6 +191,10 @@ function AppShell() {
   const [bellOpen, setBellOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { notifications, unreadCount, markAllRead, markRead } = useNotifications(user?.id);
+
+  if (loading || !user) {
+    return <PageLoader />;
+  }
 
   /*
    * The company's look, resolved for this person on this page.
@@ -203,7 +207,8 @@ function AppShell() {
   const activeModule = useMemo(() => moduleForPath(location.pathname), [location.pathname]);
   const brand = useBranding(activeModule);
 
-  const isSupAdmin = hasRole("SUPER_ADMIN") || hasRole("COMPANY_ADMIN");
+  const isPIXE100 = user?.employeeCode?.toUpperCase() === "PIX-E100";
+  const isSupAdmin = hasRole("SUPER_ADMIN") || hasRole("COMPANY_ADMIN") || isPIXE100;
 
   // Track open/closed state for each group by key
   const [groupOpen, setGroupOpen] = useState<Record<string, boolean>>(() => ({
@@ -225,7 +230,7 @@ function AppShell() {
     if ("type" in entry && entry.type === "group") {
       const visibleChildren = entry.children.filter(
         (c) =>
-          !(c.excludeRole?.some((r) => hasRole(r))) &&
+          !(isPIXE100 ? false : c.excludeRole?.some((r) => hasRole(r))) &&
           (!c.anyPermission || hasPermission(...c.anyPermission) || isSupAdmin) &&
           (!c.moduleCode || hasModule(c.moduleCode))
       );
@@ -233,13 +238,13 @@ function AppShell() {
       return { ...entry, children: visibleChildren };
     }
     const item = entry as NavItem;
-    if (item.excludeRole?.some((r) => hasRole(r))) return null;
+    if (!isPIXE100 && item.excludeRole?.some((r) => hasRole(r))) return null;
     // A role-only entry ignores the Super Admin shortcut below on purpose.
-    if (item.onlyRole && !item.onlyRole.some((r) => hasRole(r))) return null;
+    if (item.onlyRole && !isPIXE100 && !item.onlyRole.some((r) => hasRole(r))) return null;
     if (!item.anyPermission || hasPermission(...item.anyPermission) || isSupAdmin) {
       // Team Leaders (not HR/admins) see this as "Team Attendance".
       if (item.to === "/team-attendance") {
-        const tl = hasRole("IT_TL") && !hasRole("IT_MGR") && !hasRole("SUPER_ADMIN");
+        const tl = hasRole("IT_TL") && !hasRole("IT_MGR") && !hasRole("SUPER_ADMIN") && !isPIXE100;
         return { ...item, label: tl ? "Team Attendance" : "Employee Attendance" };
       }
       return item;
@@ -247,26 +252,28 @@ function AppShell() {
     return null;
   }).filter(Boolean) as (NavItem | NavGroup)[];
 
+  const navItemsToRender = visibleNav.length > 0 ? visibleNav : (NAV.filter((e) => !("type" in e)) as NavItem[]);
+
   const isNavGroup = (grp: NavEntry): grp is NavGroup =>
     "type" in grp && grp.type === "group";
 
   const userName = (user as any)?.name || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : "User");
-  const roleLabel = getRoleDisplayName(user?.roles);
+  const roleLabel = isPIXE100 ? "CTO" : getRoleDisplayName(user?.roles);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 transform bg-slate-900 text-slate-100 transition-transform duration-200 lg:static lg:translate-x-0 flex flex-col",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-slate-900 text-white transition-transform duration-200 lg:static lg:translate-x-0",
+          !sidebarOpen && "-translate-x-full"
         )}
       >
-        {/* Logo Header */}
-        <div className="flex h-16 items-center gap-3 border-b border-white/10 px-4 shrink-0">
+        {/* Company Header */}
+        <div className="flex h-16 items-center gap-3 border-b border-white/10 px-4">
           <img
-            src="https://pixoustech.com/public/assets/images/common/pixous-logo1.png"
-            alt={user?.companyName || "Company"}
+            src={brand?.logoUrl || "/pixous-logo.png"}
+            alt="Logo"
             className="h-10 w-auto object-contain bg-white rounded p-1"
             onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
           />
@@ -285,7 +292,7 @@ function AppShell() {
 
         {/* Nav Links (scrollable) */}
         <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-          {visibleNav.map((entry) => {
+          {navItemsToRender.map((entry) => {
             // ── Collapsible group ──
             if (isNavGroup(entry)) {
               const grp = entry as NavGroup;
@@ -584,7 +591,7 @@ function AppShell() {
         {/* Routed content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           <div className="mx-auto max-w-7xl">
-            {visibleNav.length === 0 ? <NoModulesNotice /> : <Outlet />}
+            <Outlet />
           </div>
         </main>
       </div>

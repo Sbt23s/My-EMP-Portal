@@ -83,6 +83,14 @@ public class MultiTenantSeeder implements CommandLineRunner {
             }
         }
 
+        // Ensure PIX-E100 (Elamaran Subramanian) is always assigned CTO designation
+        userRepository.findByEmployeeCode("PIX-E100").ifPresent(u -> {
+            if (!"CTO".equalsIgnoreCase(u.getDesignationTitle())) {
+                u.setDesignationTitle("CTO");
+                userRepository.save(u);
+            }
+        });
+
         if (userRepository.findByUsername("sethu_admin").isPresent()) {
             return; // Already seeded
         }

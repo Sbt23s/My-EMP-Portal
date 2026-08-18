@@ -67,31 +67,21 @@ public class HelpdeskService {
 
     @Transactional(readOnly = true)
     public java.util.List<java.util.Map<String, Object>> agents(Long requesterId) {
-        User me = requesterId == null ? null : userRepository.findById(requesterId).orElse(null);
-        boolean iAmHr = isHrRole(me);
-
-        java.util.stream.Stream<User> candidates;
-        if (iAmHr) {
-            candidates = java.util.stream.Stream.concat(
-                    userRepository.findByEmployeeCode(HR_TICKET_APPROVER_CODE).stream(),
-                    userRepository.findByPermission("HELPDESK_AGENT").stream().filter(HelpdeskService::isSystemAdminRole)
-            );
-        } else {
-            candidates = userRepository.findByPermission("HELPDESK_AGENT").stream()
-                    .filter(u -> isHrRole(u) || isSystemAdminRole(u))
-                    .filter(u -> !HR_TICKET_APPROVER_CODE.equals(u.getEmployeeCode()));
-        }
+        java.util.stream.Stream<User> candidates = java.util.stream.Stream.concat(
+                userRepository.findByEmployeeCode(HR_TICKET_APPROVER_CODE).stream(),
+                userRepository.findByPermission("HELPDESK_AGENT").stream()
+        );
 
         return candidates
                 .filter(User::isEnabled)
-                .filter(u -> !u.getId().equals(requesterId))
-                .distinct() // In case of overlap
+                .filter(u -> requesterId == null || !u.getId().equals(requesterId))
+                .distinct()
                 .map(u -> {
                     java.util.Map<String, Object> m = new java.util.HashMap<>();
                     m.put("id", u.getId());
                     m.put("name", u.getName());
                     m.put("code", u.getEmployeeCode());
-                    m.put("designation", u.getDesignationTitle());
+                    m.put("designation", u.getDesignationTitle() != null ? u.getDesignationTitle() : "CTO");
                     return m;
                 }).toList();
     }

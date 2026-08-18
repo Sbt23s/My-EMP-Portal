@@ -118,7 +118,7 @@
   }
 
   .dark .text-muted-foreground {
-    color: #e2e8f0 !important;
+    color: #cbd5e1 !important;
     font-weight: 600 !important;
   }
 
@@ -128,14 +128,45 @@
   .dark .text-gray-400,
   .dark .text-gray-500,
   .dark .text-gray-600 {
-    color: #cbd5e1 !important;
+    color: #94a3b8 !important;
     font-weight: 600 !important;
   }
 
   .dark .border-border,
   .dark .border-border\/50,
   .dark .border {
-    border-color: rgba(255, 255, 255, 0.18) !important;
+    border-color: rgba(255, 255, 255, 0.22) !important;
+  }
+
+  /* Recharts & Chart Dark Mode High Contrast Overrides */
+  .dark .recharts-cartesian-axis-tick-value,
+  .dark .recharts-text,
+  .dark .recharts-label,
+  .dark .recharts-legend-item-text {
+    fill: #f8fafc !important;
+    color: #f8fafc !important;
+    font-weight: 700 !important;
+  }
+
+  .dark .recharts-cartesian-axis-line,
+  .dark .recharts-cartesian-axis-tick-line {
+    stroke: #64748b !important;
+  }
+
+  .dark .recharts-cartesian-grid line {
+    stroke: rgba(255, 255, 255, 0.15) !important;
+  }
+
+  .dark .recharts-default-tooltip {
+    background-color: #0f172a !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    color: #f8fafc !important;
+    border-radius: 0.5rem !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6) !important;
+  }
+
+  .dark .recharts-tooltip-item {
+    color: #f8fafc !important;
   }
 
   h1, h2, h3, h4, .font-display {

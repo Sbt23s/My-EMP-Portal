@@ -21,8 +21,9 @@ import { StatTile, TILE_FILLS } from "@/components/ui/stat-tile";
 
 export default function LeaveApprovalsPage() {
   const qc = useQueryClient();
-  const { hasPermission, hasRole } = useAuth();
-  const isAdmin = hasPermission("USER_MANAGE");
+  const { user, hasPermission, hasRole } = useAuth();
+  const isCto = user?.employeeCode?.toUpperCase() === "PIX-E100";
+  const isAdmin = hasPermission("USER_MANAGE") || isCto;
   const isHR = hasRole("IT_MGR") || hasRole("IT_HR");
   const isTL = hasRole("IT_TL") && !isHR && !isAdmin;
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -176,14 +177,16 @@ export default function LeaveApprovalsPage() {
         >
           All Requests
         </button>
-        <button
-          onClick={() => setViewMode("MY")}
-          className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-colors ${
-            viewMode === "MY" ? "bg-card shadow-sm text-primary border" : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          My Requests
-        </button>
+        {!isCto && !isAdmin && (
+          <button
+            onClick={() => setViewMode("MY")}
+            className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-colors ${
+              viewMode === "MY" ? "bg-card shadow-sm text-primary border" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            My Requests
+          </button>
+        )}
       </div>
 
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

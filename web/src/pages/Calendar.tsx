@@ -21,29 +21,6 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { todayIso } from "@/lib/dates";
 
-interface Holiday {
-  id: number;
-  name: string;
-  holidayDate: string;
-  state?: string;
-}
-interface LeaveItem {
-  id: number;
-  fromDate: string;
-  toDate: string;
-  status: string;
-  leaveTypeName: string;
-  employeeName?: string;
-  reason?: string;
-}
-
-/**
- * One thing on one day, whatever kind. A birthday and an anniversary are worked
- * out from the employee record rather than stored, so they carry a person; a
- * meeting carries a time and a place instead.
- */
-interface CalendarEvent {
-  /** Null for a birthday or anniversary — those have no row of their own. */
   id: number | null;
   type: "BIRTHDAY" | "ANNIVERSARY" | "CELEBRATION" | "MEETING" | "TRAINING" | "OTHER";
   title: string;
@@ -882,15 +859,16 @@ export default function CalendarPage() {
                           </div>
                           {(() => {
                             if (l.status !== "PENDING") return false;
-                            if (user?.id && l.userId === user.id) return false;
+                            const item = l as any;
+                            if (user?.id && item.userId === user.id) return false;
 
-                            const isAdmin = hasRole("SUPER_ADMIN", "COMPANY_ADMIN") || user?.employeeCode === "PIX-E100";
+                            const isSysAdmin = hasRole("SUPER_ADMIN", "COMPANY_ADMIN") || user?.employeeCode === "PIX-E100";
                             const isHR = hasRole("IT_MGR", "IT_HR");
                             const isTL = hasRole("IT_TL");
 
                             // Admin only approves HR requests or requests addressed to Admin
-                            if (isAdmin) {
-                              return l.requestedTo === user?.id || (l.employeeCode && (l.employeeCode.includes("HR") || l.employeeCode.includes("MGR")));
+                            if (isSysAdmin) {
+                              return item.requestedTo === user?.id || (item.employeeCode && (item.employeeCode.includes("HR") || item.employeeCode.includes("MGR")));
                             }
                             // HR approves Employees and TLs
                             if (isHR) {
@@ -898,7 +876,7 @@ export default function CalendarPage() {
                             }
                             // TL approves Team Members
                             if (isTL) {
-                              return l.requestedTo === user?.id;
+                              return item.requestedTo === user?.id;
                             }
                             return false;
                           })() && (

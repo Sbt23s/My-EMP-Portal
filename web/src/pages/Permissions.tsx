@@ -301,9 +301,6 @@ export default function PermissionsPage() {
     ["MINE", "My Requests"] as const
   ];
 
-  const myList = (mine.data ?? []).filter((r) => tab === "ALL" || r.status === tab);
-  const myPaged = usePagedRows(myList, 15, [tab, mine.data]);
-
   const decide = useMutation({
     mutationFn: async ({ id, status, comment }: { id: number; status: "APPROVED" | "REJECTED"; comment?: string }) =>
       api.post(`/leave/permissions/${id}/decision`, { status, comment }),

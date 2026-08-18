@@ -301,9 +301,9 @@ export default function LeavePoliciesPage() {
                   <tbody className="divide-y">
                     {holidaysPaged.pageRows.map((h) => (
                       <tr key={h.id} className="hover:bg-muted/50">
-                        <td className="px-4 py-3 font-medium">{h.date}</td>
+                        <td className="px-4 py-3 font-medium">{h.holidayDate || (h as any).date}</td>
                         <td className="px-4 py-3 font-semibold">{h.name}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{h.type || "National"}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{(h as any).type || "National"}</td>
                         <td className="px-4 py-3 text-right">
                           {canManage && (
                             <Button

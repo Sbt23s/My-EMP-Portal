@@ -65,8 +65,8 @@ if [ ! -f /etc/turn-secret ]; then
     ./setup-turn.sh || true
 fi
 echo '--- Removing leftover container conflicts ---'
-sudo docker stop $(sudo docker ps -q) 2>/dev/null || true
-sudo docker rm -f $(sudo docker ps -aq) 2>/dev/null || true
+sudo docker rm -f hrportal-mysql hrportal-backend hrportal-web hrportal-redis hrportal-analytics 2>/dev/null || true
+sudo docker container prune -f 2>/dev/null || true
 sudo docker compose -f docker-compose.prod.yml --profile analytics down --remove-orphans || true
 echo '--- Rebuilding and starting production services ---'
 sudo docker compose -f docker-compose.prod.yml --profile analytics up -d --build

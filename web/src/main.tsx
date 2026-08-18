@@ -6,6 +6,7 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "react-hot-toast";
 import { router } from "@/routes/router";
 import { queryClient } from "@/lib/queryClient";
+import { AuthProvider } from "@/context/AuthContext";
 import "./index.css";
 
 // Auto-clear reload flag

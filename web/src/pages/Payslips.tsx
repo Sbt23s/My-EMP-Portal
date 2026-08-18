@@ -1,4 +1,72 @@
 import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Download, Wallet, Eye, Users, Banknote, WalletCards, ReceiptText } from "lucide-react";
+import toast from "react-hot-toast";
+import dayjs from "dayjs";
+import { api, apiMessage } from "@/lib/api";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatMoney, monthName } from "@/lib/utils";
+import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
+import { cn } from "@/lib/utils";
+import type { ApiEnvelope, PayslipSummary } from "@/types";
+
+const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
+const CUR_MONTH = new Date().getMonth() + 1;
+const CUR_YEAR = new Date().getFullYear();
+const YEARS = [CUR_YEAR, CUR_YEAR - 1, CUR_YEAR - 2, CUR_YEAR - 3];
+
+export default function PayslipsPage() {
+  const [downloading, setDownloading] = useState<number | null>(null);
+  const [fMonth, setFMonth] = useState<string>("all");
+  const [fYear, setFYear] = useState<string>(String(CUR_YEAR));
+
+  const payslips = useQuery({
+    queryKey: ["payslips"],
+    queryFn: async () =>
+      (await api.get<ApiEnvelope<PayslipSummary[]>>("/payroll/payslip/list")).data.data
+  });
+
+  async function download(id: number, label: string) {
+    setDownloading(id);
+    try {
+      const res = await api.get(`/payroll/payslip/${id}/pdf`, { responseType: "blob" });
+      const url = URL.createObjectURL(res.data as Blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `payslip-${label}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(apiMessage(err, "Could not download payslip"));
+    } finally {
+      setDownloading(null);
+    }
+  }
+
+  async function viewPdf(id: number) {
+    setDownloading(id);
+    try {
+      const res = await api.get(`/payroll/payslip/${id}/pdf`, { responseType: "blob" });
+      const url = URL.createObjectURL(res.data as Blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (err) {
+      toast.error(apiMessage(err, "Could not view payslip"));
+    } finally {
+      setDownloading(null);
+    }
+  }
+
+  async function exportToExcel() {
+    try {
+      const XLSX = await import("xlsx");
+      const list = payslips.data ?? [];
       const headers = ["Month/Year", "Pay Date", "Gross Pay", "Deductions", "Net Pay", "Status"];
       const body = list.map((p) => {
         const payDate = dayjs(`${p.payYear}-${p.payMonth}-01`).endOf("month").format("DD MMM YYYY");

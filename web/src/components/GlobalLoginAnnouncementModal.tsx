@@ -5,6 +5,7 @@ import SockJS from "sockjs-client";
 import { api, tokenStore } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { resolvePhotoUrl } from "@/components/ui/avatar";
+import { Lottie } from "lottie-react";
 
 interface Announcement {
   id: number;
@@ -16,6 +17,10 @@ interface Announcement {
   status: "ACTIVE" | "INACTIVE" | "DELETED";
   targetRoles: string;
   durationSeconds: number;
+  /** Lottie JSON played over the media. Absent when none was uploaded. */
+  effectUrl?: string | null;
+  /** Whether to play it. An effect can be uploaded and switched off. */
+  effectEnabled?: boolean;
 }
 
 export function GlobalLoginAnnouncementModal() {
@@ -83,7 +88,9 @@ export function GlobalLoginAnnouncementModal() {
                 mediaUrl: body.mediaUrl,
                 status: "ACTIVE",
                 targetRoles: body.targetRoles,
-                durationSeconds: body.durationSeconds || 15
+                durationSeconds: body.durationSeconds || 15,
+                effectUrl: body.effectUrl,
+                effectEnabled: body.effectEnabled
               };
               // Real-time: always show immediately for new published announcements
               shownThisSessionRef.current.delete(body.id);
@@ -169,6 +176,13 @@ export function GlobalLoginAnnouncementModal() {
 
   const resolvedUrl = resolvePhotoUrl(announcement.mediaUrl) || announcement.mediaUrl;
   const duration = announcement.durationSeconds || 15;
+
+  // Null unless there is an effect and it is switched on. Uploading one and
+  // turning it off has to leave the popup exactly as it was without one.
+  const effectUrl =
+    announcement.effectEnabled && announcement.effectUrl
+      ? resolvePhotoUrl(announcement.effectUrl) || announcement.effectUrl
+      : null;
   const progressPercent = Math.max(0, Math.min(100, ((duration - timeLeft) / duration) * 100));
 
   return (
@@ -195,6 +209,29 @@ export function GlobalLoginAnnouncementModal() {
           />
         )}
       </div>
+
+      {/*
+        The entrance effect, over everything.
+
+        Full bleed and above the media rather than beside it: the point of a
+        light sweep is that it crosses the poster, and a small player in a
+        corner would be decoration instead of an entrance.
+
+        pointer-events-none throughout, so the animation never swallows the
+        close button underneath it -- an effect that traps somebody in the popup
+        is worse than no effect. It plays once rather than looping; a loop turns
+        an entrance into a distraction for the full fifteen seconds.
+      */}
+      {effectUrl ? (
+        <div className="absolute inset-0 z-30 pointer-events-none">
+          <Lottie
+            src={effectUrl}
+            autoplay
+            loop={false}
+            className="h-full w-full"
+          />
+        </div>
+      ) : null}
 
       {/* Top Header Bar */}
       <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-6 py-4 bg-gradient-to-b from-black/80 to-transparent">

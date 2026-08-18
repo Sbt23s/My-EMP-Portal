@@ -142,9 +142,22 @@ done
 # option), "git pull --ff-only" becomes "--ff-only" (unknown option), and
 # "do" is a syntax error. The script is correct; it was only ever the line
 # endings, and the errors name none of that.
-$remote = $remote -replace "`r", ""
+# Send it as base64, not as a command line.
+#
+# PowerShell re-parses a string before handing it to a native program, and it
+# does not leave quotes alone: awk -v n="$n" '$2 ~ n"$"' arrived on the server
+# as $2 ~ n$ - quotes gone, regex broken - and the parentheses in a bash case
+# statement came apart the same way. Escaping each one is a game of whack-a-mole
+# that the next edit restarts.
+#
+# Base64 is A-Z a-z 0-9 + / = and nothing else, so there is nothing left for
+# PowerShell, ssh, or the remote shell to interpret. The script arrives byte for
+# byte, whatever is in it. This also carries the CRLF fix along with it, since
+# the bytes are stripped before encoding.
+$remote  = $remote -replace "`r", ""
+$encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($remote))
 
-ssh -i $Key -o StrictHostKeyChecking=accept-new "ubuntu@$Server" $remote
+ssh -i $Key -o StrictHostKeyChecking=accept-new "ubuntu@$Server" "echo $encoded | base64 -d | bash"
 if ($LASTEXITCODE -ne 0) { Die "The deploy failed. Read the output above." }
 
 Step "Checking the live site"

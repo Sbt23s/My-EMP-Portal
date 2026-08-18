@@ -11,7 +11,9 @@ import {
   Trash2,
   Plus,
   Play,
-  Info
+  Info,
+  Sparkles,
+  Check
 } from "lucide-react";
 import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import toast from "react-hot-toast";
@@ -23,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { resolvePhotoUrl } from "@/components/ui/avatar";
+import { Lottie } from "lottie-react";
 
 interface Announcement {
   id: number;
@@ -32,6 +35,11 @@ interface Announcement {
   mediaUrl: string;
   mediaName?: string;
   mediaSize?: number;
+  /** Lottie animation played over the media when the popup opens. */
+  effectUrl?: string | null;
+  effectName?: string | null;
+  effectSize?: number | null;
+  effectEnabled?: boolean;
   status: "ACTIVE" | "INACTIVE" | "DELETED";
   targetRoles: string;
   durationSeconds: number;
@@ -48,6 +56,9 @@ export function TechAdminGlobalAnnouncements() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [targetRoles, setTargetRoles] = useState<string[]>(["Employee", "TL", "HR", "Admin"]);
+  const [effectEnabled, setEffectEnabled] = useState(false);
+  const [effectFile, setEffectFile] = useState<File | null>(null);
+  const [effectPreviewUrl, setEffectPreviewUrl] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [previewModal, setPreviewModal] = useState<Announcement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -100,6 +111,13 @@ export function TechAdminGlobalAnnouncements() {
       formData.append("targetRoles", targetRoles.join(","));
       formData.append("durationSeconds", "15");
       formData.append("publishImmediately", "true");
+      // Only send the effect when it is both chosen and switched on. The server
+      // refuses to mark an effect active without a file, but sending a file that
+      // is switched off would store one nobody asked to keep.
+      if (effectEnabled && effectFile) {
+        formData.append("effectFile", effectFile);
+        formData.append("effectEnabled", "true");
+      }
 
       const res = await api.post("/tech-admin/global-announcements", formData, {
         headers: { "Content-Type": "multipart/form-data" }
@@ -297,6 +315,84 @@ export function TechAdminGlobalAnnouncements() {
             />
           </div>
 
+          {/*
+            Entrance effect.
+
+            Optional, and applies to every media type -- a poster benefits from
+            a light sweep as much as a video does, which is why this sits below
+            the media picker rather than inside the video branch of it.
+          */}
+          <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4 space-y-3">
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={effectEnabled}
+                onChange={(e) => {
+                  setEffectEnabled(e.target.checked);
+                  // Clearing the file on unticking would mean re-uploading to
+                  // turn it back on, so the choice is kept and simply not sent.
+                }}
+                className="h-4 w-4 rounded border-primary text-primary focus:ring-primary"
+              />
+              <span className="text-sm font-semibold">Enable Entrance Effect (Optional)</span>
+            </label>
+
+            {effectEnabled && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Upload Effect (JSON / Lottie)
+                  </label>
+                  <label className="flex items-center gap-3 rounded-lg border-2 border-dashed p-3 cursor-pointer hover:border-primary/60 transition-colors">
+                    <input
+                      type="file"
+                      // Lottie only. A .gif or .mp4 would upload happily and then
+                      // fail to play, with nothing on screen to say why.
+                      accept="application/json,.json,.lottie"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] ?? null;
+                        setEffectFile(f);
+                        if (effectPreviewUrl) URL.revokeObjectURL(effectPreviewUrl);
+                        setEffectPreviewUrl(f ? URL.createObjectURL(f) : null);
+                      }}
+                    />
+                    <Sparkles className="h-5 w-5 shrink-0 text-primary" />
+                    <div className="min-w-0 flex-1">
+                      {effectFile ? (
+                        <>
+                          <p className="truncate text-xs font-semibold">{effectFile.name}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {(effectFile.size / 1024).toFixed(1)} KB
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Choose a .json animation</p>
+                      )}
+                    </div>
+                    {effectFile && <Check className="h-4 w-4 shrink-0 text-green-600" />}
+                  </label>
+                  <p className="text-[11px] text-muted-foreground">Supported format: JSON (Lottie)</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Effect Preview
+                  </label>
+                  {/* Played on the dark ground it will appear over, so a light
+                      effect is not judged against a white panel it never meets. */}
+                  <div className="h-[92px] rounded-lg bg-slate-900 overflow-hidden flex items-center justify-center">
+                    {effectPreviewUrl ? (
+                      <Lottie src={effectPreviewUrl} autoplay loop className="h-full w-full" />
+                    ) : (
+                      <span className="text-[11px] text-slate-500">No effect chosen</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Target Users & Duration */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -363,6 +459,7 @@ export function TechAdminGlobalAnnouncements() {
                     <th className="p-3">Media</th>
                     <th className="p-3">Type</th>
                     <th className="p-3">Title</th>
+                    <th className="p-3">Effect</th>
                     <th className="p-3">Target Users</th>
                     <th className="p-3">Status</th>
                     <th className="p-3">Published At</th>
@@ -394,6 +491,24 @@ export function TechAdminGlobalAnnouncements() {
                         </td>
                         <td className="p-3 font-medium max-w-[140px] truncate" title={ann.title || "Untitled"}>
                           {ann.title || "Untitled"}
+                        </td>
+                        <td className="p-3">
+                          {/* The file and whether it plays are separate facts.
+                              An effect that is uploaded but switched off reads
+                              as "Off", not as absent, so nobody re-uploads one
+                              that is already there. */}
+                          {ann.effectUrl ? (
+                            <div className="space-y-0.5">
+                              <p className="max-w-[110px] truncate text-[11px] font-medium" title={ann.effectName || "effect.json"}>
+                                {ann.effectName || "effect.json"}
+                              </p>
+                              <span className={`text-[10px] font-bold ${ann.effectEnabled ? "text-green-600" : "text-muted-foreground"}`}>
+                                {ann.effectEnabled ? "Active" : "Off"}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground">None</span>
+                          )}
                         </td>
                         <td className="p-3">
                           <div className="flex flex-wrap gap-1">

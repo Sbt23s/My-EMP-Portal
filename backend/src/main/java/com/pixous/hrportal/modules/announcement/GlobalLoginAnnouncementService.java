@@ -61,7 +61,9 @@ public class GlobalLoginAnnouncementService {
             Integer durationSeconds,
             Long createdBy,
             String createdByName,
-            Boolean publishImmediately
+            Boolean publishImmediately,
+            MultipartFile effectFile,
+            Boolean effectEnabled
     ) {
         String mediaUrl;
         String mediaName = null;
@@ -86,6 +88,25 @@ public class GlobalLoginAnnouncementService {
             throw ApiException.business("Media file is required for announcement");
         }
 
+        // The effect, if one was given. Stored beside the media and normalised
+        // the same way, so both are served by the same /api/files route.
+        String effectUrl = null;
+        String effectName = null;
+        Long effectSize = null;
+
+        if (effectFile != null && !effectFile.isEmpty()) {
+            String stored = storageService.store(effectFile, "announcements");
+            effectUrl = stored.startsWith("/api/files/")
+                    ? stored
+                    : "/api/files/" + stored.replaceAll("^/+", "");
+            effectName = effectFile.getOriginalFilename();
+            effectSize = effectFile.getSize();
+        }
+
+        // An effect cannot be on without a file to play. Saying otherwise would
+        // leave the popup waiting for an animation that does not exist.
+        boolean playEffect = Boolean.TRUE.equals(effectEnabled) && effectUrl != null;
+
         boolean active = publishImmediately == null || publishImmediately;
 
         if (active) {
@@ -103,6 +124,10 @@ public class GlobalLoginAnnouncementService {
                 .mediaUrl(mediaUrl)
                 .mediaName(mediaName)
                 .mediaSize(mediaSize)
+                .effectUrl(effectUrl)
+                .effectName(effectName)
+                .effectSize(effectSize)
+                .effectEnabled(playEffect)
                 .status(active ? "ACTIVE" : "INACTIVE")
                 .targetRoles(targetRoles != null && !targetRoles.isBlank() ? targetRoles : "Employee,TL,HR,Admin")
                 .durationSeconds(durationSeconds != null && durationSeconds > 0 ? durationSeconds : 15)

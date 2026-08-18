@@ -35,6 +35,26 @@ public class GlobalLoginAnnouncement {
     @Column(name = "media_size")
     private Long mediaSize;
 
+    /**
+     * An optional Lottie animation played over the media when the popup opens.
+     *
+     * Separate from the media rather than replacing it: both are on screen at
+     * once, the effect layered above. Null when none was uploaded.
+     */
+    @Column(name = "effect_url", length = 1000)
+    private String effectUrl;
+    @Column(name = "effect_name")
+    private String effectName;
+    @Column(name = "effect_size")
+    private Long effectSize;
+
+    /**
+     * Whether to play it. Distinct from having one: an effect can be switched
+     * off and back on without uploading it again.
+     */
+    @Column(name = "effect_enabled", nullable = false)
+    private boolean effectEnabled;
+
     @Column(nullable = false)
     private String status; // ACTIVE | INACTIVE | DELETED
 

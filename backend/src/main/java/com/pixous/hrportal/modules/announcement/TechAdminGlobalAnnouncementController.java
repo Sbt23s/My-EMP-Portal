@@ -31,13 +31,16 @@ public class TechAdminGlobalAnnouncementController {
             @RequestParam(value = "targetRoles", required = false) String targetRoles,
             @RequestParam(value = "durationSeconds", required = false) Integer durationSeconds,
             @RequestParam(value = "publishImmediately", required = false) Boolean publishImmediately,
+            @RequestParam(value = "effectFile", required = false) MultipartFile effectFile,
+            @RequestParam(value = "effectEnabled", required = false) Boolean effectEnabled,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         Long createdBy = principal != null ? principal.getId() : null;
         String createdByName = principal != null ? principal.getUsername() : "Tech Admin";
 
         GlobalLoginAnnouncement ann = announcementService.createAndPublish(
-                file, mediaType, title, description, targetRoles, durationSeconds, createdBy, createdByName, publishImmediately
+                file, mediaType, title, description, targetRoles, durationSeconds,
+                createdBy, createdByName, publishImmediately, effectFile, effectEnabled
         );
         return ApiResponse.ok(ann);
     }

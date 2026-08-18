@@ -17,6 +17,8 @@ public interface PermissionRequestRepository extends JpaRepository<PermissionReq
 
     List<PermissionRequest> findByRequestedToOrderByCreatedAtDesc(Long requestedTo);
 
+    List<PermissionRequest> findAllByOrderByCreatedAtDesc();
+
     default List<PermissionRequest> findByStatusAndRequestedTo(String status, Long requestedTo) {
         return findByStatusAndRequestedToOrderByCreatedAtAsc(status, requestedTo);
     }

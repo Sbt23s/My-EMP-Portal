@@ -298,7 +298,9 @@ export default function PermissionsPage() {
     ...(isApprover
       ? [["TO_ME", "Pending My Approval"] as const]
       : []),
-    ["MINE", "My Requests"] as const
+    ...(!seesAll
+      ? [["MINE", "My Requests"] as const]
+      : [])
   ];
 
   const decide = useMutation({

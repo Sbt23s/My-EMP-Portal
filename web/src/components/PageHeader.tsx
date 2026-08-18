@@ -2,7 +2,7 @@ import { useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Clock, CalendarCheck, CheckSquare, Wallet, Users, Boxes,
   LifeBuoy, FileBarChart, ClipboardList, Settings, Map, MessageSquareWarning,
-  FileText, ListTodo, FileArchive, CalendarDays, Bot, Users2, MessageSquare, User
+  FileText, ListTodo, FileArchive, CalendarDays, Bot, Users2, MessageSquare, User, Briefcase
 } from "lucide-react";
 
 type IconType = React.ComponentType<{ className?: string }>;
@@ -15,7 +15,7 @@ const ROUTE_ICONS: [string, IconType][] = [
   ["/attendance", Clock],
   ["/leave/permissions", Clock],
   ["/leave/approvals", CheckSquare],
-  ["/leave/policies", Settings],
+  ["/leave/policies", Briefcase],
   ["/leave", CalendarCheck],
   ["/payroll", FileText],
   ["/payslips", Wallet],

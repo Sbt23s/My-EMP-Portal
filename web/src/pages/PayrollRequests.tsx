@@ -95,7 +95,10 @@ async function downloadPayslipPdf(id: number, name: string) {
   }
 }
 
+import { useNavigate } from "react-router-dom";
+
 export default function PayrollPage() {
+  const navigate = useNavigate();
   const { user, hasRole, hasPermission } = useAuth();
   const canRun = hasRole("IT_MGR", "IT_HR", "CV_HR", "SUPER_ADMIN", "COMPANY_ADMIN")
     || hasPermission("PAYROLL_RUN", "USER_MANAGE")
@@ -149,6 +152,9 @@ export default function PayrollPage() {
 
   const rows = useMemo(() => {
     return (employees.data ?? []).filter((e) => {
+      const isSystemAdmin = e.employeeCode === "ADM0001" || e.name === "System Admin" || (e.employeeCode && e.employeeCode.startsWith("ADM"));
+      if (isSystemAdmin) return false;
+
       const isCtoRecord = e.employeeCode === "PIX-E100" || e.name === "CTO" || (e.designationTitle && e.designationTitle.includes("CTO"));
       const isCurrentUserCto = user?.employeeCode === "PIX-E100";
       if (isCtoRecord && !isCurrentUserCto) return false;
@@ -306,14 +312,16 @@ export default function PayrollPage() {
           <Input type="date" min="2020-01-01" max="2099-12-31" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-9 w-36 bg-background text-xs" />
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            className="h-9 font-semibold text-primary border-primary/30 hover:bg-primary/10"
-            onClick={() => setPayslipsFor(user as UserSummary)}
-          >
-            <FileText className="mr-1.5 h-4 w-4" /> My Payslips
-          </Button>
+          {!((hasRole("SUPER_ADMIN", "COMPANY_ADMIN") || user?.employeeCode === "ADM0001") && !hasRole("IT_MGR", "IT_HR", "CV_HR")) && (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9 font-semibold text-primary border-primary/30 hover:bg-primary/10"
+              onClick={() => navigate("/payslips")}
+            >
+              <FileText className="mr-1.5 h-4 w-4" /> My Payslips
+            </Button>
+          )}
           <Button
             variant="default"
             className="h-9 font-semibold"

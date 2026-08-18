@@ -99,6 +99,7 @@ export default function LeavePoliciesPage() {
   return (
     <div>
       <PageHeader 
+        icon={Briefcase}
         title="Leave Policies & Holidays" 
         subtitle="Manage organization leave types and holiday calendar." 
       />

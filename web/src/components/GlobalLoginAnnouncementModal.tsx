@@ -23,37 +23,43 @@ export function GlobalLoginAnnouncementModal() {
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [timeLeft, setTimeLeft] = useState(15);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const timerRef = useRef<any>(null);
+  const shownThisSessionRef = useRef<Set<number>>(new Set());
+
+  const showAnnouncement = (active: Announcement) => {
+    // Show on every login - only skip if already shown in this page load session
+    if (shownThisSessionRef.current.has(active.id)) return;
+    shownThisSessionRef.current.add(active.id);
+    setAnnouncement(active);
+    setTimeLeft(active.durationSeconds || 15);
+    setIsPlaying(true);
+    setIsMuted(false);
+    setIsOpen(true);
+  };
 
   const fetchActive = async () => {
     try {
       const res = await api.get<{ data: Announcement | null }>("/global-announcements/active");
       const active = res.data?.data;
-
       if (active && active.status === "ACTIVE") {
-        const seenKey = `seen_announcement_${active.id}`;
-        const hasSeen = sessionStorage.getItem(seenKey);
-        if (!hasSeen) {
-          setAnnouncement(active);
-          setTimeLeft(active.durationSeconds || 15);
-          setIsOpen(true);
-        }
+        showAnnouncement(active);
       }
     } catch (err) {
       console.error("Failed to fetch active announcement", err);
     }
   };
 
-  // Fetch active announcement on mount or when user changes
   useEffect(() => {
     if (!user) return;
 
-    fetchActive();
+    // Short delay so the dashboard renders first, then popup appears
+    const delay = setTimeout(() => {
+      fetchActive();
+    }, 800);
 
-    // Subscribe to WebSocket / STOMP real-time updates
     const protocol = window.location.protocol === "https:" ? "https:" : "http:";
     const host = window.location.host;
     const wsUrl = `${protocol}//${host}/ws`;
@@ -79,10 +85,9 @@ export function GlobalLoginAnnouncementModal() {
                 targetRoles: body.targetRoles,
                 durationSeconds: body.durationSeconds || 15
               };
-              sessionStorage.removeItem(`seen_announcement_${body.id}`);
-              setAnnouncement(newAnn);
-              setTimeLeft(newAnn.durationSeconds);
-              setIsOpen(true);
+              // Real-time: always show immediately for new published announcements
+              shownThisSessionRef.current.delete(body.id);
+              showAnnouncement(newAnn);
             } else if (body.action === "DELETED" || body.action === "INACTIVATED") {
               setAnnouncement((prev) => {
                 if (prev && prev.id === body.id) {
@@ -102,18 +107,26 @@ export function GlobalLoginAnnouncementModal() {
     client.activate();
 
     return () => {
+      clearTimeout(delay);
       client.deactivate();
     };
   }, [user]);
 
-  // Countdown timer logic
+  // Reset shown set when user changes (i.e. new login)
+  useEffect(() => {
+    shownThisSessionRef.current.clear();
+  }, [user?.id]);
+
+  // Countdown timer
   useEffect(() => {
     if (!isOpen || !announcement) return;
+
+    if (timerRef.current) clearInterval(timerRef.current);
 
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          clearInterval(timerRef.current!);
+          clearInterval(timerRef.current);
           handleClose();
           return 0;
         }
@@ -124,16 +137,14 @@ export function GlobalLoginAnnouncementModal() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isOpen, announcement]);
+  }, [isOpen, announcement?.id]);
 
   const handleClose = () => {
-    if (announcement) {
-      sessionStorage.setItem(`seen_announcement_${announcement.id}`, "true");
-    }
     setIsOpen(false);
     if (videoRef.current) {
       videoRef.current.pause();
     }
+    if (timerRef.current) clearInterval(timerRef.current);
   };
 
   const toggleMute = () => {
@@ -161,126 +172,137 @@ export function GlobalLoginAnnouncementModal() {
   const progressPercent = Math.max(0, Math.min(100, ((duration - timeLeft) / duration) * 100));
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
-      {/* Background Media Blur Container */}
-      <div className="absolute inset-0 overflow-hidden opacity-30 pointer-events-none">
+    <div
+      style={{ position: "fixed", inset: 0, zIndex: 99999 }}
+      className="flex flex-col bg-black"
+    >
+      {/* Full-screen background blurred media */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {announcement.mediaType === "VIDEO" ? (
-          <video src={resolvedUrl} className="h-full w-full object-cover blur-2xl scale-110" autoPlay loop muted playsInline />
+          <video
+            src={resolvedUrl}
+            className="h-full w-full object-cover opacity-20 blur-2xl scale-110"
+            autoPlay
+            loop
+            muted
+            playsInline
+          />
         ) : (
-          <img src={resolvedUrl} alt="" className="h-full w-full object-cover blur-2xl scale-110" />
+          <img
+            src={resolvedUrl}
+            alt=""
+            className="h-full w-full object-cover opacity-20 blur-2xl scale-110"
+          />
         )}
       </div>
 
       {/* Top Header Bar */}
-      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-8 py-6">
+      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-6 py-4 bg-gradient-to-b from-black/80 to-transparent">
         <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/30">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-primary-foreground text-sm font-black shadow-lg">
             HR
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-bold tracking-wide text-white uppercase">COMPANY PORTAL</span>
-            <span className="text-[11px] text-white/70">Official Announcement</span>
+            <span className="text-sm font-bold tracking-widest text-white uppercase">COMPANY PORTAL</span>
+            <span className="text-[11px] text-white/60">Official Announcement</span>
           </div>
         </div>
 
-        {/* 15-Second Circular Countdown Timer */}
-        <div className="flex items-center gap-4">
-          <div className="relative grid h-16 w-16 place-items-center">
-            <svg className="h-16 w-16 -rotate-90 transform" viewBox="0 0 36 36">
+        {/* Circular Countdown Timer + Close */}
+        <div className="flex items-center gap-3">
+          <div className="relative grid h-14 w-14 place-items-center">
+            <svg className="h-14 w-14 -rotate-90 transform" viewBox="0 0 36 36">
               <path
-                className="text-white/10"
+                stroke="rgba(255,255,255,0.15)"
                 strokeWidth="3"
-                stroke="currentColor"
                 fill="none"
                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
               />
               <path
-                className="text-primary transition-all duration-1000 ease-linear"
+                stroke="#6366f1"
                 strokeDasharray={`${progressPercent}, 100`}
                 strokeWidth="3"
                 strokeLinecap="round"
-                stroke="currentColor"
                 fill="none"
+                style={{ transition: "stroke-dasharray 1s linear" }}
                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
               />
             </svg>
-            <div className="absolute flex flex-col items-center justify-center text-center">
-              <span className="font-display text-xl font-black text-white tabular-nums leading-none">{timeLeft}</span>
-            </div>
+            <span className="absolute text-lg font-black text-white tabular-nums">{timeLeft}</span>
           </div>
-          <div className="hidden sm:flex flex-col text-right">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-white/60">SECS REMAINING</span>
-            <span className="text-xs font-semibold text-white">Auto-closing</span>
+          <div className="flex flex-col text-right mr-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-white/50">SECS</span>
+            <span className="text-xs font-semibold text-white/80">Auto-close</span>
           </div>
-
           <button
             onClick={handleClose}
-            className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-all border border-white/20 shadow-lg"
-            title="Close popup"
+            className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white hover:bg-white/25 transition-all border border-white/20"
+            title="Close"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
       </div>
 
-      {/* Main Content Modal Container */}
-      <div className="relative z-10 mx-auto w-full max-w-5xl px-4 py-8">
-        <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-slate-950/80 shadow-2xl backdrop-blur-2xl">
-          {/* Media Display Window */}
-          <div className="relative aspect-video w-full overflow-hidden bg-black grid place-items-center">
-            {announcement.mediaType === "VIDEO" ? (
-              <>
-                <video
-                  ref={videoRef}
-                  src={resolvedUrl}
-                  className="h-full w-full object-contain"
-                  autoPlay
-                  loop
-                  muted={isMuted}
-                  playsInline
-                />
-                {/* Video Controls Overlay */}
-                <div className="absolute bottom-4 right-4 flex items-center gap-2 rounded-full bg-black/60 backdrop-blur-md px-3 py-1.5 border border-white/20">
-                  <button onClick={togglePlay} className="text-white hover:text-primary transition-colors">
-                    {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                  </button>
-                  <button onClick={toggleMute} className="text-white hover:text-primary transition-colors">
-                    {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <img
-                src={resolvedUrl}
-                alt={announcement.title || "Announcement"}
-                className="h-full w-full object-contain"
-              />
-            )}
+      {/* Full-Screen Media */}
+      <div className="relative flex-1 w-full h-full overflow-hidden flex items-center justify-center">
+        {announcement.mediaType === "VIDEO" ? (
+          <>
+            <video
+              ref={videoRef}
+              src={resolvedUrl}
+              className="w-full h-full object-cover"
+              autoPlay
+              loop
+              muted={isMuted}
+              playsInline
+              style={{ objectFit: "cover" }}
+            />
+            {/* Video Controls - bottom right */}
+            <div className="absolute bottom-20 right-6 flex items-center gap-2 rounded-full bg-black/60 backdrop-blur-md px-4 py-2 border border-white/20">
+              <button onClick={togglePlay} className="text-white hover:text-primary transition-colors" title={isPlaying ? "Pause" : "Play"}>
+                {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+              </button>
+              <div className="w-px h-4 bg-white/30" />
+              <button onClick={toggleMute} className="text-white hover:text-primary transition-colors" title={isMuted ? "Unmute" : "Mute"}>
+                {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+              </button>
+            </div>
+          </>
+        ) : (
+          <img
+            src={resolvedUrl}
+            alt={announcement.title || "Announcement"}
+            className="w-full h-full"
+            style={{ objectFit: "cover" }}
+          />
+        )}
 
-            {/* Content Text Overlay */}
-            {(announcement.title || announcement.description) && (
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-8 text-center sm:text-left">
-                {announcement.title && (
-                  <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight drop-shadow-md">
-                    {announcement.title}
-                  </h2>
-                )}
-                {announcement.description && (
-                  <p className="mt-2 text-sm sm:text-base text-white/80 max-w-2xl drop-shadow-sm font-medium">
-                    {announcement.description}
-                  </p>
-                )}
-              </div>
+        {/* Title / Description Overlay at bottom */}
+        {(announcement.title || announcement.description) && (
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/60 to-transparent px-10 py-10">
+            {announcement.title && (
+              <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight drop-shadow-lg">
+                {announcement.title}
+              </h2>
+            )}
+            {announcement.description && (
+              <p className="mt-3 text-base sm:text-lg text-white/85 max-w-3xl font-medium drop-shadow">
+                {announcement.description}
+              </p>
             )}
           </div>
-        </div>
+        )}
+      </div>
 
-        {/* Bottom Closing Info Badge */}
-        <div className="mt-4 flex items-center justify-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/20 px-5 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur-md">
-            <Megaphone className="h-4 w-4 text-primary animate-pulse" />
-            <span>This message will close automatically after <span className="font-bold text-primary tabular-nums">{timeLeft} seconds</span>.</span>
-          </div>
+      {/* Bottom Info Bar */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 flex items-center justify-center py-4 bg-gradient-to-t from-black/80 to-transparent">
+        <div className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/20 backdrop-blur-md px-6 py-2.5 text-sm font-semibold text-white shadow-xl">
+          <Megaphone className="h-4 w-4 text-primary animate-pulse" />
+          <span>
+            This message will close automatically after{" "}
+            <span className="font-black text-primary tabular-nums">{timeLeft} seconds</span>.
+          </span>
         </div>
       </div>
     </div>

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Calendar, Settings, Plus, Trash2, CalendarCheck, Users, Pencil, Search
+  Calendar, Briefcase, Plus, Trash2, CalendarCheck, Users, Pencil, Search
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
@@ -26,13 +26,14 @@ export default function LeavePoliciesPage() {
   const [createTypeOpen, setCreateTypeOpen] = useState(false);
   const [editType, setEditType] = useState<LeaveType | null>(null);
   const [createHolidayOpen, setCreateHolidayOpen] = useState(false);
-  // Allocation only ever runs forward: this year or a year still to come. A
-  // year that has already gone by cannot be allocated.
+
+  // Strict Current Year enforcement (e.g., 2026)
   const thisYear = new Date().getFullYear();
-  const [allocYear, setAllocYear] = useState<number>(thisYear);
-  /** Narrows the leave-type table by name or code. */
+  const [allocYearStr, setAllocYearStr] = useState<string>(String(thisYear));
   const [typeQuery, setTypeQuery] = useState("");
-  const allocYearIsPast = Number.isFinite(allocYear) && allocYear < thisYear;
+
+  const numYear = Number(allocYearStr);
+  const isInvalidYear = allocYearStr.length > 0 && numYear !== thisYear;
 
   // Fetch Leave Types
   const leaveTypes = useQuery({
@@ -86,15 +87,12 @@ export default function LeavePoliciesPage() {
 
   const canManage = hasPermission("ORG_MANAGE");
 
-  /** Leave types matching the search, by name or by code. */
-  /** Leave types matching the search, by name or by code. */
   const filteredTypes = (leaveTypes.data ?? []).filter((t) => {
     const needle = typeQuery.trim().toLowerCase();
     if (!needle) return true;
     return `${t.name ?? ""} ${t.code ?? ""}`.toLowerCase().includes(needle);
   });
 
-  /** Both tables paged, with the numbers and rows-per-page. */
   const typesPaged = usePagedRows(filteredTypes, 10, [typeQuery, leaveTypes.data]);
   const holidaysPaged = usePagedRows(holidays.data ?? [], 10, [holidays.data]);
 
@@ -107,20 +105,20 @@ export default function LeavePoliciesPage() {
 
       <div className="flex gap-2 mb-6 border-b pb-2">
         <button
-          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+          className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors flex items-center ${
             activeTab === "types" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
           }`}
           onClick={() => setActiveTab("types")}
         >
-          <Settings className="w-4 h-4 inline mr-2" /> Leave Types
+          <Briefcase className="w-4 h-4 mr-2 shrink-0" /> Leave Types
         </button>
         <button
-          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+          className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors flex items-center ${
             activeTab === "holidays" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
           }`}
           onClick={() => setActiveTab("holidays")}
         >
-          <Calendar className="w-4 h-4 inline mr-2" /> Holidays
+          <Calendar className="w-4 h-4 mr-2 shrink-0" /> Holidays
         </button>
       </div>
 
@@ -144,30 +142,31 @@ export default function LeavePoliciesPage() {
                 </div>
                 <div className="flex items-start gap-2 shrink-0">
                   <div className="flex flex-col">
-                    <Label htmlFor="allocYear" className="text-[10px] uppercase text-muted-foreground">Year</Label>
+                    <Label htmlFor="allocYear" className="text-[10px] uppercase text-muted-foreground font-bold">Year</Label>
                     <Input
                       id="allocYear"
-                      type="number"
-                      value={allocYear}
-                      min={thisYear}
-                      max={thisYear + 10}
-                      onChange={(e) => setAllocYear(Number(e.target.value))}
-                      className={`h-9 w-24 ${allocYearIsPast ? "border-destructive ring-1 ring-destructive" : ""}`}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={4}
+                      placeholder={String(thisYear)}
+                      value={allocYearStr}
+                      onChange={(e) => setAllocYearStr(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                      className={`h-9 w-24 font-bold text-center ${isInvalidYear ? "border-destructive ring-1 ring-destructive" : ""}`}
                     />
-                    <p className={`mt-1 text-[10px] ${allocYearIsPast ? "font-medium text-destructive" : "text-muted-foreground"}`}>
-                      {allocYearIsPast ? `${thisYear} or later only` : `From ${thisYear} onwards`}
+                    <p className={`mt-1 text-[10px] ${isInvalidYear ? "font-bold text-destructive" : "text-emerald-600 font-semibold"}`}>
+                      {isInvalidYear ? `Only ${thisYear} allowed` : `Current year (${thisYear})`}
                     </p>
                   </div>
                   <Button
                     className="mt-[18px] bg-green-600 text-white hover:bg-green-700"
-                    disabled={allocateMutation.isPending || allocYearIsPast}
+                    disabled={allocateMutation.isPending || isInvalidYear}
                     onClick={() => {
-                      if (allocYear < thisYear) {
-                        toast.error(`A past year cannot be allocated — pick ${thisYear} or later`);
+                      if (numYear !== thisYear) {
+                        toast.error(`Only the current year (${thisYear}) can be allocated. Past and future years are not allowed.`);
                         return;
                       }
-                      if (confirm(`Allocate default leave balances to all employees for ${allocYear}?`)) {
-                        allocateMutation.mutate(allocYear);
+                      if (confirm(`Allocate default leave balances to all employees for ${thisYear}?`)) {
+                        allocateMutation.mutate(thisYear);
                       }
                     }}
                   >
@@ -178,6 +177,7 @@ export default function LeavePoliciesPage() {
               </CardContent>
             </Card>
           )}
+
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="font-semibold text-lg">Leave Types</h3>
             <div className="flex flex-wrap items-center gap-2">
@@ -191,53 +191,69 @@ export default function LeavePoliciesPage() {
                 />
               </div>
               {canManage && (
-                <Button size="sm" onClick={() => setCreateTypeOpen(true)}><Plus className="w-4 h-4 mr-2" /> Add Leave Type</Button>
+                <Button size="sm" onClick={() => setCreateTypeOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" /> Add Leave Type
+                </Button>
               )}
             </div>
           </div>
-          
+
           {leaveTypes.isLoading ? (
             <Skeleton className="h-40 w-full" />
           ) : (
             <Card>
               <CardContent className="p-0">
                 <table className="w-full text-sm text-left">
-                  <thead className="bg-muted text-muted-foreground">
+                  <thead className="bg-muted text-muted-foreground font-semibold uppercase text-xs">
                     <tr>
-                      <th className="px-4 py-3 font-medium">Name</th>
-                      <th className="px-4 py-3 font-medium">Code</th>
-                      <th className="px-4 py-3 font-medium">Max Days/Year</th>
-                      <th className="px-4 py-3 font-medium">Pay</th>
-                      <th className="px-4 py-3 font-medium text-right">Actions</th>
+                      <th className="px-4 py-3 font-bold">Name</th>
+                      <th className="px-4 py-3 font-bold">Code</th>
+                      <th className="px-4 py-3 font-bold">Max Days/Year</th>
+                      <th className="px-4 py-3 font-bold">Pay</th>
+                      <th className="px-4 py-3 font-bold text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {typesPaged.pageRows.map(t => (
+                    {typesPaged.pageRows.map((t) => (
                       <tr key={t.id} className="hover:bg-muted/50">
                         <td className="px-4 py-3 font-medium">{t.name}</td>
                         <td className="px-4 py-3 text-muted-foreground">{t.code}</td>
                         <td className="px-4 py-3 text-muted-foreground">{t.maxDaysPerYear || "Unlimited"}</td>
                         <td className="px-4 py-3">
-                          {t.paid
-                            ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Paid</span>
-                            : <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Unpaid (LOP)</span>}
+                          {t.paid ? (
+                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                              Paid
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                              Unpaid (LOP)
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right">
                           {canManage && (
-                            <>
-                              <Button variant="ghost" size="sm" title="Edit leave type"
-                                onClick={() => setEditType(t)}>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Edit leave type"
+                                onClick={() => setEditType(t)}
+                              >
                                 <Pencil className="w-4 h-4" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-destructive"
-                                onClick={() => { if (confirm("Are you sure?")) deleteTypeMutation.mutate(t.id); }}
+                                title="Delete leave type"
+                                onClick={() => {
+                                  if (confirm(`Delete ${t.name}? Existing balances stay, but nobody can be given it again.`)) {
+                                    deleteTypeMutation.mutate(t.id);
+                                  }
+                                }}
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-4 h-4 text-destructive" />
                               </Button>
-                            </>
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -245,10 +261,12 @@ export default function LeavePoliciesPage() {
                   </tbody>
                 </table>
                 <TablePagination
-                  page={typesPaged.page} totalPages={typesPaged.totalPages} onChange={typesPaged.setPage}
-                  pageSize={typesPaged.pageSize} onPageSizeChange={typesPaged.setPageSize}
+                  page={typesPaged.page}
+                  totalPages={typesPaged.totalPages}
+                  onChange={typesPaged.setPage}
+                  pageSize={typesPaged.pageSize}
+                  onPageSizeChange={typesPaged.setPageSize}
                   total={typesPaged.total}
-                  always
                 />
               </CardContent>
             </Card>
@@ -258,42 +276,47 @@ export default function LeavePoliciesPage() {
 
       {activeTab === "holidays" && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="font-semibold text-lg">Holidays</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-lg">Holidays Calendar</h3>
             {canManage && (
-              <Button size="sm" onClick={() => setCreateHolidayOpen(true)}><Plus className="w-4 h-4 mr-2" /> Add Holiday</Button>
+              <Button size="sm" onClick={() => setCreateHolidayOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" /> Add Holiday
+              </Button>
             )}
           </div>
-          
           {holidays.isLoading ? (
             <Skeleton className="h-40 w-full" />
           ) : (
             <Card>
               <CardContent className="p-0">
                 <table className="w-full text-sm text-left">
-                  <thead className="bg-muted text-muted-foreground">
+                  <thead className="bg-muted text-muted-foreground font-semibold uppercase text-xs">
                     <tr>
-                      <th className="px-4 py-3 font-medium">Holiday Name</th>
-                      <th className="px-4 py-3 font-medium">Date</th>
-                      <th className="px-4 py-3 font-medium text-right">Actions</th>
+                      <th className="px-4 py-3 font-bold">Date</th>
+                      <th className="px-4 py-3 font-bold">Holiday Name</th>
+                      <th className="px-4 py-3 font-bold">Type</th>
+                      <th className="px-4 py-3 font-bold text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {holidaysPaged.pageRows.map(h => (
+                    {holidaysPaged.pageRows.map((h) => (
                       <tr key={h.id} className="hover:bg-muted/50">
-                        <td className="px-4 py-3 font-medium">{h.name}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{h.holidayDate}</td>
+                        <td className="px-4 py-3 font-medium">{h.date}</td>
+                        <td className="px-4 py-3 font-semibold">{h.name}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{h.type || "National"}</td>
                         <td className="px-4 py-3 text-right">
                           {canManage && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-destructive"
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Delete holiday"
                               onClick={() => {
-                                if(confirm("Are you sure?")) deleteHolidayMutation.mutate(h.id)
+                                if (confirm(`Delete holiday ${h.name}?`)) {
+                                  deleteHolidayMutation.mutate(h.id);
+                                }
                               }}
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-4 h-4 text-destructive" />
                             </Button>
                           )}
                         </td>
@@ -302,147 +325,166 @@ export default function LeavePoliciesPage() {
                   </tbody>
                 </table>
                 <TablePagination
-                  page={holidaysPaged.page} totalPages={holidaysPaged.totalPages} onChange={holidaysPaged.setPage}
-                  pageSize={holidaysPaged.pageSize} onPageSizeChange={holidaysPaged.setPageSize}
+                  page={holidaysPaged.page}
+                  totalPages={holidaysPaged.totalPages}
+                  onChange={holidaysPaged.setPage}
+                  pageSize={holidaysPaged.pageSize}
+                  onPageSizeChange={holidaysPaged.setPageSize}
                   total={holidaysPaged.total}
-                  always
                 />
               </CardContent>
             </Card>
           )}
         </div>
       )}
-      {(createTypeOpen || editType) && (
-        <CreateLeaveTypeDialog
-          edit={editType}
-          onClose={() => { setCreateTypeOpen(false); setEditType(null); }}
-        />
+
+      {/* Dialogs */}
+      {createTypeOpen && (
+        <CreateTypeDialog onClose={() => setCreateTypeOpen(false)} />
       )}
-      {createHolidayOpen && <CreateHolidayDialog onClose={() => setCreateHolidayOpen(false)} />}
+      {editType && (
+        <EditTypeDialog type={editType} onClose={() => setEditType(null)} />
+      )}
+      {createHolidayOpen && (
+        <CreateHolidayDialog onClose={() => setCreateHolidayOpen(false)} />
+      )}
     </div>
   );
 }
 
-interface LeaveTypeForm {
-  name: string;
-  code: string;
-  maxDaysPerYear?: number;
-  carryForward: boolean;
-  encashable: boolean;
-  paid: boolean;
-}
-
-function CreateLeaveTypeDialog({ onClose, edit }: { onClose: () => void; edit?: LeaveType | null }) {
-  const qc = useQueryClient();
-  const { register, handleSubmit, formState: { errors } } = useForm<LeaveTypeForm>({
-    defaultValues: edit
-      ? { name: edit.name, code: edit.code, maxDaysPerYear: edit.maxDaysPerYear,
-          carryForward: edit.carryForward, encashable: edit.encashable, paid: !!edit.paid }
-      : { carryForward: false, encashable: false, paid: false }
-  });
-
-  const create = useMutation({
-    mutationFn: async (v: LeaveTypeForm) => {
-      const body = {
-        ...v,
-        maxDaysPerYear: v.maxDaysPerYear ? Number(v.maxDaysPerYear) : null,
-        // Preserve the fields the form doesn't edit so an update never wipes them.
-        carryForward: edit?.carryForward ?? false,
-        encashable: edit?.encashable ?? false,
-        genderRestriction: edit?.genderRestriction ?? null,
-        allowPastDates: edit?.allowPastDates ?? false,
-        accrualType: edit?.accrualType ?? "ANNUAL",
-        minNoticeDays: edit?.minNoticeDays ?? 0,
-        monthlyLimit: edit?.monthlyLimit ?? null
-      };
-      return edit ? api.put(`/leave/types/${edit.id}`, body) : api.post("/leave/types", body);
+function CreateTypeDialog({ onClose }: { onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const { register, handleSubmit } = useForm();
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      await api.post("/leave/types", data);
     },
     onSuccess: () => {
-      toast.success(edit ? "Leave type updated" : "Leave type created");
-      qc.invalidateQueries({ queryKey: ["leave-types"] });
+      toast.success("Leave type created");
+      queryClient.invalidateQueries({ queryKey: ["leave-types"] });
       onClose();
     },
-    onError: (err) => toast.error(apiMessage(err, "Could not save leave type"))
+    onError: (err) => toast.error(apiMessage(err, "Failed to create leave type"))
   });
 
   return (
     <Dialog open onClose={onClose}>
-      <DialogHeader title={edit ? "Edit Leave Type" : "Add Leave Type"} description="Casual & Sick are paid; other unpaid types drive Loss of Pay." />
-      <form onSubmit={handleSubmit((v) => create.mutate(v))} className="space-y-4">
-        <div className="space-y-1.5">
+      <DialogHeader title="Add Leave Type" />
+      <form onSubmit={handleSubmit((d) => createMutation.mutate(d))} className="space-y-4 mt-2">
+        <div>
           <Label htmlFor="name">Name</Label>
-          <Input id="name" placeholder="e.g. Annual Leave" {...register("name", { required: true })} />
-          {errors.name && <p className="text-xs text-destructive">Name is required</p>}
+          <Input id="name" {...register("name", { required: true })} placeholder="e.g. Casual Leave" />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="code">Code</Label>
-            <Input id="code" placeholder="e.g. AL" {...register("code", { required: true })} />
-            {errors.code && <p className="text-xs text-destructive">Code is required</p>}
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="maxDaysPerYear">Max Days / Year</Label>
-            <Input id="maxDaysPerYear" type="number" placeholder="Leave empty for unlimited" {...register("maxDaysPerYear")} />
-          </div>
+        <div>
+          <Label htmlFor="code">Code</Label>
+          <Input id="code" {...register("code", { required: true })} placeholder="e.g. CL" />
         </div>
-        <div className="pt-1">
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <input type="checkbox" className="rounded border-input text-primary focus:ring-primary" {...register("paid")} />
-            Paid leave (no salary deduction)
-          </label>
-          <p className="mt-1 text-xs text-muted-foreground">Untick for unpaid leave — those days are deducted as Loss of Pay on the payslip.</p>
+        <div>
+          <Label htmlFor="maxDaysPerYear">Max Days Per Year</Label>
+          <Input id="maxDaysPerYear" type="number" {...register("maxDaysPerYear")} placeholder="e.g. 12 (leave blank for unlimited)" />
+        </div>
+        <div className="flex items-center gap-2">
+          <input type="checkbox" id="paid" {...register("paid")} defaultChecked className="h-4 w-4 rounded border-gray-300 accent-primary" />
+          <Label htmlFor="paid">Paid Leave</Label>
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={create.isPending}>
-            {create.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-            Save
-          </Button>
+          <Button type="submit" disabled={createMutation.isPending}>Save</Button>
         </div>
       </form>
     </Dialog>
   );
 }
 
-interface HolidayForm {
-  name: string;
-  holidayDate: string;
-}
+function EditTypeDialog({ type, onClose }: { type: LeaveType; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const { register, handleSubmit } = useForm({
+    defaultValues: {
+      name: type.name,
+      code: type.code,
+      maxDaysPerYear: type.maxDaysPerYear,
+      paid: type.paid
+    }
+  });
 
-function CreateHolidayDialog({ onClose }: { onClose: () => void }) {
-  const qc = useQueryClient();
-  const { register, handleSubmit, formState: { errors } } = useForm<HolidayForm>();
-
-  const create = useMutation({
-    mutationFn: async (v: HolidayForm) => api.post("/org/holidays", v),
+  const editMutation = useMutation({
+    mutationFn: async (data: any) => {
+      await api.put(`/leave/types/${type.id}`, data);
+    },
     onSuccess: () => {
-      toast.success("Holiday created");
-      qc.invalidateQueries({ queryKey: ["holidays"] });
+      toast.success("Leave type updated");
+      queryClient.invalidateQueries({ queryKey: ["leave-types"] });
       onClose();
     },
-    onError: (err) => toast.error(apiMessage(err, "Could not create holiday"))
+    onError: (err) => toast.error(apiMessage(err, "Failed to update leave type"))
   });
 
   return (
     <Dialog open onClose={onClose}>
-      <DialogHeader title="Add Holiday" description="Schedule a company-wide holiday." />
-      <form onSubmit={handleSubmit((v) => create.mutate(v))} className="space-y-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="name">Holiday Name</Label>
-          <Input id="name" placeholder="e.g. New Year" {...register("name", { required: true })} />
-          {errors.name && <p className="text-xs text-destructive">Name is required</p>}
+      <DialogHeader title={`Edit ${type.name}`} />
+      <form onSubmit={handleSubmit((d) => editMutation.mutate(d))} className="space-y-4 mt-2">
+        <div>
+          <Label htmlFor="name">Name</Label>
+          <Input id="name" {...register("name", { required: true })} />
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="holidayDate">Date<span className="ml-0.5 text-destructive">*</span></Label>
-          <Input id="holidayDate" type="date" min={todayIso()} {...register("holidayDate", { required: true })} />
-          {errors.holidayDate && <p className="text-xs text-destructive">Date is required</p>}
+        <div>
+          <Label htmlFor="code">Code</Label>
+          <Input id="code" {...register("code", { required: true })} />
+        </div>
+        <div>
+          <Label htmlFor="maxDaysPerYear">Max Days Per Year</Label>
+          <Input id="maxDaysPerYear" type="number" {...register("maxDaysPerYear")} />
+        </div>
+        <div className="flex items-center gap-2">
+          <input type="checkbox" id="paid" {...register("paid")} className="h-4 w-4 rounded border-gray-300 accent-primary" />
+          <Label htmlFor="paid">Paid Leave</Label>
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={create.isPending}>
-            {create.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-            Save
-          </Button>
+          <Button type="submit" disabled={editMutation.isPending}>Save</Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+function CreateHolidayDialog({ onClose }: { onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const { register, handleSubmit } = useForm({
+    defaultValues: { date: todayIso(), name: "", type: "National" }
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      await api.post("/org/holidays", data);
+    },
+    onSuccess: () => {
+      toast.success("Holiday added");
+      queryClient.invalidateQueries({ queryKey: ["holidays"] });
+      onClose();
+    },
+    onError: (err) => toast.error(apiMessage(err, "Failed to add holiday"))
+  });
+
+  return (
+    <Dialog open onClose={onClose}>
+      <DialogHeader title="Add Holiday" />
+      <form onSubmit={handleSubmit((d) => createMutation.mutate(d))} className="space-y-4 mt-2">
+        <div>
+          <Label htmlFor="date">Date</Label>
+          <Input id="date" type="date" {...register("date", { required: true })} />
+        </div>
+        <div>
+          <Label htmlFor="name">Holiday Name</Label>
+          <Input id="name" {...register("name", { required: true })} placeholder="e.g. Gandhi Jayanti" />
+        </div>
+        <div>
+          <Label htmlFor="type">Type</Label>
+          <Input id="type" {...register("type")} placeholder="e.g. National, Optional" />
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+          <Button type="submit" disabled={createMutation.isPending}>Save</Button>
         </div>
       </form>
     </Dialog>

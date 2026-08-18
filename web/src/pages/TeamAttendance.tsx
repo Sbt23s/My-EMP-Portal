@@ -47,19 +47,25 @@ const addressCache: Record<string, string> = {};
  */
 function LocationName({ name }: { name?: string | null }) {
   if (!name) return null;
-  const elsewhere = name.startsWith("Other location");
+  let displayName = name.trim();
+  if (displayName.toLowerCase() === "pixous technologies" || displayName.toLowerCase() === "pixous technologies.") {
+    displayName = "Pixous Technologies, Coimbatore";
+  } else if (displayName.toLowerCase().includes("pixous technologies") && !displayName.toLowerCase().includes("coimbatore")) {
+    displayName = `${displayName}, Coimbatore`;
+  }
+  const elsewhere = displayName.startsWith("Other location");
   return (
     <div
       className={cn(
         "flex items-start gap-1 text-[11px] font-semibold leading-tight",
         elsewhere ? "text-amber-700 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400"
       )}
-      title={name}
+      title={displayName}
     >
       {elsewhere
         ? <AlertTriangle className="mt-px h-3 w-3 shrink-0" />
         : <Building2 className="mt-px h-3 w-3 shrink-0" />}
-      <span className="break-words">{name}</span>
+      <span className="break-words">{displayName}</span>
     </div>
   );
 }

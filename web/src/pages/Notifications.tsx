@@ -58,37 +58,44 @@ export default function NotificationsPage() {
         />
       ) : (
         <div className="space-y-2">
-          {notifications.map((n) => (
-            <Card
-              key={n.id}
-              className={cn(
-                "cursor-pointer transition-colors hover:bg-muted/40",
-                !n.read && "border-l-4 border-l-primary"
-              )}
-              onClick={() => {
-                if (!n.read) markRead(n.id);
-                if (n.link) navigate(n.link);
-              }}
-            >
-              <CardContent className="flex items-start gap-3 p-4">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    {!n.read && <span className="h-2 w-2 rounded-full bg-primary" />}
-                    <span className="font-medium">{n.title}</span>
-                    {n.type && (
-                      <Badge variant="secondary" className="text-[10px]">
-                        {n.type}
-                      </Badge>
-                    )}
+          {notifications.map((n) => {
+            const isCallNotification = n.type === "CALL" || n.title?.toLowerCase().includes("call") || n.body?.toLowerCase().includes("calling");
+            const isPastCall = isCallNotification && (Date.now() - new Date(n.createdAt).getTime() > 45000 || n.body?.includes("Voice call") || n.read);
+            const displayTitle = isPastCall && n.title === "Incoming Call" ? (n.body ? `${n.body.replace(/\s+is calling you\.\.\.$/, "")} - voice call` : "Voice call") : n.title;
+            const displayBody = isPastCall && n.body?.includes("is calling you...") ? "Called you" : n.body;
+
+            return (
+              <Card
+                key={n.id}
+                className={cn(
+                  "cursor-pointer transition-colors hover:bg-muted/40",
+                  !n.read && "border-l-4 border-l-primary"
+                )}
+                onClick={() => {
+                  if (!n.read) markRead(n.id);
+                  if (n.link) navigate(n.link);
+                }}
+              >
+                <CardContent className="flex items-start gap-3 p-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      {!n.read && <span className="h-2 w-2 rounded-full bg-primary" />}
+                      <span className="font-medium">{displayTitle}</span>
+                      {n.type && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          {n.type}
+                        </Badge>
+                      )}
+                    </div>
+                    {displayBody && <p className="mt-0.5 text-sm text-muted-foreground">{displayBody}</p>}
                   </div>
-                  {n.body && <p className="mt-0.5 text-sm text-muted-foreground">{n.body}</p>}
-                </div>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {dayjs(n.createdAt).format("DD MMM, h:mm A")}
-                </span>
-              </CardContent>
-            </Card>
-          ))}
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {dayjs(n.createdAt).format("DD MMM, h:mm A")}
+                  </span>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

@@ -396,8 +396,15 @@ export default function AssetsPage() {
                         <Badge variant={statusVariant(a.status)}>{a.status}</Badge>
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-sm">
-                        {a.assignedTo ? (nameById.get(a.assignedTo) ?? `#${a.assignedTo}`)
-                          : <span className="text-muted-foreground">—</span>}
+                        {a.assignedTo ? (
+                          <span className="font-semibold">{nameById.get(a.assignedTo) ?? `#${a.assignedTo}`}</span>
+                        ) : canManage && a.status === "IN_STOCK" ? (
+                          <Button variant="outline" size="sm" className="h-7 text-xs font-semibold" onClick={() => setAllocateAsset(a)}>
+                            <PackageCheck className="h-3.5 w-3.5 mr-1 text-primary" /> Allocate
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums">{a.quantity ?? 1}</TableCell>
                       <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
@@ -409,11 +416,6 @@ export default function AssetsPage() {
                       {canManage && (
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          {a.status === "IN_STOCK" && (
-                            <Button variant="ghost" size="sm" onClick={() => setAllocateAsset(a)}>
-                              <PackageCheck className="h-4 w-4" /> Allocate
-                            </Button>
-                          )}
                           <Button
                             variant="ghost"
                             size="sm"

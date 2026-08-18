@@ -1,14 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 /**
  * Client-side pagination helper. Returns the rows for the current page plus the
  * controls state. `deps` (filters/search) reset the view to page 1.
- *
- * The size passed in is the starting size; it can be changed from the controls,
- * which is what {@link TablePagination} does with `onPageSizeChange`. Callers
- * that ignore the extra return values behave exactly as they did.
  */
 export function usePagedRows<T>(rows: T[], pageSize = 15, deps: unknown[] = []) {
   const [page, setPage] = useState(0);
@@ -16,7 +13,6 @@ export function usePagedRows<T>(rows: T[], pageSize = 15, deps: unknown[] = []) 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { setPage(0); }, deps);
 
-  /** A different page size means a different page 1. */
   const setPageSize = (next: number) => {
     setSize(next);
     setPage(0);
@@ -36,11 +32,6 @@ export function usePagedRows<T>(rows: T[], pageSize = 15, deps: unknown[] = []) 
 
 const PAGE_SIZES = [10, 25, 50, 100];
 
-/**
- * Which page numbers to draw. With a handful they all show; beyond that the
- * first and last stay put and a window follows the current page, with a gap
- * either side — so a hundred pages still fit on one line.
- */
 function pageWindow(page: number, totalPages: number): (number | "gap")[] {
   if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i);
   const out: (number | "gap")[] = [0];
@@ -65,12 +56,9 @@ export function TablePagination({
   page: number;
   totalPages: number;
   onChange: (p: number) => void;
-  /** Keep the controls on screen even when everything fits on one page. */
   always?: boolean;
-  /** Current rows-per-page. Pass with `onPageSizeChange` to offer the choice. */
   pageSize?: number;
   onPageSizeChange?: (n: number) => void;
-  /** Total rows, so the controls can say which of them are on screen. */
   total?: number;
 }) {
   if (totalPages <= 1 && !always && !onPageSizeChange) return null;
@@ -80,10 +68,7 @@ export function TablePagination({
   const to = showing ? Math.min((page + 1) * pageSize, total) : 0;
 
   return (
-    // Buttons sit beside the page count rather than out at the right edge: the
-    // floating chat bubble is fixed to the bottom-right of every page and was
-    // covering "Next" whenever a table ran to the bottom of the window.
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 px-4 py-3 text-sm">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 px-4 pr-20 sm:pr-24 py-3 text-sm">
       {onPageSizeChange && (
         <div className="flex items-center gap-2">
           <select
@@ -97,7 +82,7 @@ export function TablePagination({
         </div>
       )}
 
-      <div className="flex items-center gap-4 ml-auto">
+      <div className="flex items-center gap-3 ml-auto">
         <span className="text-xs font-medium text-slate-600 dark:text-slate-400 tabular-nums">
           {showing
             ? <>{from}–{to} of {total}</>
@@ -113,7 +98,7 @@ export function TablePagination({
             onClick={() => onChange(0)}
             title="First page"
           >
-            «
+            <ChevronsLeft className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
@@ -123,7 +108,7 @@ export function TablePagination({
             onClick={() => onChange(page - 1)}
             title="Previous page"
           >
-            ‹
+            <ChevronLeft className="h-4 w-4" />
           </Button>
 
           {pageWindow(page, totalPages).map((p, i) =>
@@ -155,7 +140,7 @@ export function TablePagination({
             onClick={() => onChange(page + 1)}
             title="Next page"
           >
-            ›
+            <ChevronRight className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
@@ -165,7 +150,7 @@ export function TablePagination({
             onClick={() => onChange(totalPages - 1)}
             title="Last page"
           >
-            »
+            <ChevronsRight className="h-4 w-4" />
           </Button>
         </div>
       </div>

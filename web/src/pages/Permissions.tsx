@@ -197,6 +197,8 @@ export default function PermissionsPage() {
   const narrow = useCallback((list: PermissionRow[]) => {
     const needle = q.trim().toLowerCase();
     const today = dayjs();
+    const weekStart = today.startOf("week").add(1, "day").startOf("day");
+    const weekEnd = today.startOf("week").add(7, "day").endOf("day");
     return list.filter((r) => {
       if (needle) {
         const haystack = [
@@ -207,10 +209,7 @@ export default function PermissionsPage() {
       if (period) {
         const d = dayjs(String(r.requestDate).slice(0, 10));
         if (period === "TODAY" && !d.isSame(today, "day")) return false;
-        // The week runs Monday to Sunday, and the month is the calendar month.
-        if (period === "WEEK" && !(
-          !d.isBefore(today.startOf("week").add(1, "day"), "day")
-          && !d.isAfter(today.startOf("week").add(7, "day"), "day"))) return false;
+        if (period === "WEEK" && (d.isBefore(weekStart, "day") || d.isAfter(weekEnd, "day"))) return false;
         if (period === "MONTH" && !d.isSame(today, "month")) return false;
       }
       return true;
@@ -218,7 +217,7 @@ export default function PermissionsPage() {
   }, [q, period]);
 
   // Every employee's request — what HR and the admin see under "All employees".
-  const adminList = narrow((all.data ?? []).filter((r) => tab === "ALL" || r.status === tab));
+  const adminList = narrow((all.data ?? []).filter((r) => tab === "ALL" || (r.status || "").toUpperCase() === tab));
   const adminPaged = usePagedRows(adminList, 15, [tab, all.data, q, period]);
 
   const mine = useQuery({
@@ -232,7 +231,10 @@ export default function PermissionsPage() {
     queryFn: async () => (await api.get<ApiEnvelope<PermissionRow[]>>("/leave/permissions/for-me")).data.data
   });
 
-  const approverList = narrow((pending.data ?? []).filter((r) => tab === "ALL" || r.status === tab));
+  const myList = narrow((mine.data ?? []).filter((r) => tab === "ALL" || (r.status || "").toUpperCase() === tab));
+  const myPaged = usePagedRows(myList, 15, [tab, mine.data, q, period]);
+
+  const approverList = narrow((pending.data ?? []).filter((r) => tab === "ALL" || (r.status || "").toUpperCase() === tab));
   const approverPaged = usePagedRows(approverList, 15, [tab, pending.data, q, period]);
 
   // Counts for the tiles — of whichever view the Team Leader is looking at.
@@ -393,22 +395,22 @@ export default function PermissionsPage() {
               label="All" value={counts.ALL} icon={Inbox} fill={TILE_FILLS.violet}
               hint={view === "MINE" ? "Requests you raised"
                 : view === "ALL_EMP" ? "Across every team" : "Sent to you"}
-              active={tab === "ALL"} onClick={() => setTab("ALL")}
+              active={tab === "ALL" && !period} onClick={() => { setTab("ALL"); setPeriod(""); }}
             />
             <StatTile
               label="Pending" value={counts.PENDING} icon={Clock} fill={TILE_FILLS.amber}
               hint={overdueCount > 0
                 ? `${overdueCount} of them overdue`
                 : counts.PENDING > 0 ? "Waiting on a decision" : "Nothing waiting"}
-              active={tab === "PENDING"} onClick={() => setTab("PENDING")}
+              active={tab === "PENDING" && !period} onClick={() => { setTab("PENDING"); setPeriod(""); }}
             />
             <StatTile
               label="Approved" value={counts.APPROVED} icon={Check} fill={TILE_FILLS.green}
-              hint="Granted" active={tab === "APPROVED"} onClick={() => setTab("APPROVED")}
+              hint="Granted" active={tab === "APPROVED" && !period} onClick={() => { setTab("APPROVED"); setPeriod(""); }}
             />
             <StatTile
               label="Rejected" value={counts.REJECTED} icon={X} fill={TILE_FILLS.red}
-              hint="Turned down" active={tab === "REJECTED"} onClick={() => setTab("REJECTED")}
+              hint="Turned down" active={tab === "REJECTED" && !period} onClick={() => { setTab("REJECTED"); setPeriod(""); }}
             />
           </div>
 
@@ -419,24 +421,36 @@ export default function PermissionsPage() {
               label="Today's requests" value={periodCounts.today} icon={Clock}
               fill={TILE_FILLS.blue} hint={dayjs().format("DD MMM YYYY")}
               active={period === "TODAY"}
-              onClick={() => setPeriod(period === "TODAY" ? "" : "TODAY")}
+              onClick={() => {
+                const next = period === "TODAY" ? "" : "TODAY";
+                setPeriod(next);
+                if (next) setTab("ALL");
+              }}
             />
             <StatTile
               label="This week" value={periodCounts.week} icon={Inbox}
               fill={TILE_FILLS.violet} hint="Monday to Sunday"
               active={period === "WEEK"}
-              onClick={() => setPeriod(period === "WEEK" ? "" : "WEEK")}
+              onClick={() => {
+                const next = period === "WEEK" ? "" : "WEEK";
+                setPeriod(next);
+                if (next) setTab("ALL");
+              }}
             />
             <StatTile
               label="This month" value={periodCounts.month} icon={Inbox}
               fill={TILE_FILLS.green} hint={dayjs().format("MMMM YYYY")}
               active={period === "MONTH"}
-              onClick={() => setPeriod(period === "MONTH" ? "" : "MONTH")}
+              onClick={() => {
+                const next = period === "MONTH" ? "" : "MONTH";
+                setPeriod(next);
+                if (next) setTab("ALL");
+              }}
             />
             <StatTile
               label="Cancelled" value={periodCounts.cancelled} icon={Ban}
               fill={TILE_FILLS.violet} hint="Withdrawn by the employee"
-              active={tab === "CANCELLED"} onClick={() => setTab("CANCELLED")}
+              active={tab === "CANCELLED" && !period} onClick={() => { setTab("CANCELLED"); setPeriod(""); }}
             />
             <StatTile
               label="Hours approved" value={`${periodCounts.approvedHours.toFixed(2)}h`}

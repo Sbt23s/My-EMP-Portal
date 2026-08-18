@@ -1718,7 +1718,7 @@ function ExecutiveDashboardView({
 
       {/* Who joined, who works from home, who left.
           Each tile opens the people behind the number. */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile
           label="New joinees" value={ins?.newJoineesThisMonth ?? 0} icon={UserPlus}
           fill={TILE_FILLS.green}
@@ -1728,10 +1728,6 @@ function ExecutiveDashboardView({
             people: ins?.newJoineeList ?? [],
             dateLabel: "joined"
           })}
-        />
-        <StatTile
-          label="Work from home" value={ins?.workFromHomeToday ?? 0} icon={Home}
-          fill={TILE_FILLS.blue} hint="Today"
         />
         <StatTile
           label="Resigned" value={ins?.resigned ?? 0} icon={UserMinus}

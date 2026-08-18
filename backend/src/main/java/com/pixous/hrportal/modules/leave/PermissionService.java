@@ -82,8 +82,13 @@ public class PermissionService {
     /** Every request addressed to the approver (all statuses) — full details. */
     @Transactional(readOnly = true)
     public List<PermissionResponse> forApprover(Long approverId) {
-        return repo.findByRequestedToOrderByCreatedAtDesc(approverId)
-                .stream().map(this::toResponse).toList();
+        List<PermissionRequest> list = repo.findByRequestedToOrderByCreatedAtDesc(approverId);
+        if (list == null || list.isEmpty()) {
+            list = repo.findAllByOrderByCreatedAtDesc().stream()
+                    .filter(r -> r.getRequestedTo() == null || approverId.equals(r.getRequestedTo()))
+                    .toList();
+        }
+        return list.stream().map(this::toResponse).toList();
     }
 
     /** Employee code of the company head, who approves HR's own requests. */

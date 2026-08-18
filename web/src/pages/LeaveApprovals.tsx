@@ -256,22 +256,22 @@ export default function LeaveApprovalsPage() {
       ) : (
         <div className="rounded-lg border bg-card">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1240px] table-fixed text-sm">
+            <table className="w-full min-w-[1400px] table-fixed text-sm">
               <colgroup>
+                <col className="w-[190px]" />
+                <col className="w-[130px]" />
+                <col className="w-[130px]" />
+                <col className="w-[60px]" />
+                <col className="w-[200px]" />
                 <col className="w-[180px]" />
-                <col className="w-[140px]" />
-                <col className="w-[120px]" />
-                <col className="w-14" />
-                <col className="w-[140px]" />
-                <col className="w-[150px]" />
-                <col className="w-[140px]" />
-                <col className="w-[140px]" />
+                <col className="w-[130px]" />
+                <col className="w-[130px]" />
                 <col className="w-[120px]" />
                 <col className="w-[100px]" />
-                <col className="w-[150px]" />
+                <col className="w-[130px]" />
               </colgroup>
               <thead>
-                <tr className="border-b bg-muted/50 text-left align-middle text-xs font-semibold text-muted-foreground uppercase [&>th]:px-3.5 [&>th]:py-3">
+                <tr className="border-b bg-muted/50 text-left align-middle text-xs font-bold text-muted-foreground uppercase tracking-wider [&>th]:px-3.5 [&>th]:py-3">
                   <th>Employee</th>
                   <th>Team</th>
                   <th>Leave Type</th>

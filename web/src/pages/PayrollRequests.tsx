@@ -149,9 +149,9 @@ export default function PayrollPage() {
 
   const rows = useMemo(() => {
     return (employees.data ?? []).filter((e) => {
-      const isCeoRecord = e.employeeCode === "PIX-E100" || e.name === "CEO" || e.designationTitle === "CEO";
-      const isCurrentUserCeo = user?.employeeCode === "PIX-E100";
-      if (isCeoRecord && !isCurrentUserCeo) return false;
+      const isCtoRecord = e.employeeCode === "PIX-E100" || e.name === "CTO" || (e.designationTitle && e.designationTitle.includes("CTO"));
+      const isCurrentUserCto = user?.employeeCode === "PIX-E100";
+      if (isCtoRecord && !isCurrentUserCto) return false;
 
       const q = search.trim().toLowerCase();
       const matchesSearch = !q || e.name.toLowerCase().includes(q) || (e.employeeCode || "").toLowerCase().includes(q);
@@ -293,17 +293,17 @@ export default function PayrollPage() {
         </div>
         <div className="flex flex-col">
           <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Year</label>
-          <select className="h-9 w-[6.5rem] rounded-md border bg-background px-3 text-xs font-semibold" value={year} onChange={(e) => setYear(Number(e.target.value))}>
-            {[dayjs().year(), dayjs().year() - 1, dayjs().year() - 2].map((y) => <option key={y} value={y}>{y}</option>)}
+          <select className="h-9 w-[6.5rem] rounded-md border bg-background px-3 text-xs font-bold" value={year} onChange={(e) => setYear(Number(e.target.value))}>
+            {[dayjs().year(), dayjs().year() - 1, dayjs().year() - 2, dayjs().year() - 3, dayjs().year() - 4, dayjs().year() - 5, dayjs().year() - 6].map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
         <div className="flex flex-col">
           <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">From Date</label>
-          <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="h-9 w-36 bg-background text-xs" />
+          <Input type="date" min="2020-01-01" max="2099-12-31" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="h-9 w-36 bg-background text-xs" />
         </div>
         <div className="flex flex-col">
           <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">To Date</label>
-          <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-9 w-36 bg-background text-xs" />
+          <Input type="date" min="2020-01-01" max="2099-12-31" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-9 w-36 bg-background text-xs" />
         </div>
         <div className="ml-auto flex items-center gap-2">
           <Button
@@ -327,24 +327,6 @@ export default function PayrollPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
         <StatCard
-          title="Total Employees"
-          value={payrollCounts.total.toString()}
-          subtitle="Active Employees"
-          icon={Users}
-          color="text-violet-600"
-          bg="bg-violet-100"
-          titleColor="text-violet-600"
-        />
-        <StatCard
-          title="This Month Payroll"
-          value={inr(payrollCounts.totalNet)}
-          subtitle={`${MONTHS[month - 1]} ${year}`}
-          icon={Banknote}
-          color="text-green-600"
-          bg="bg-green-100"
-          titleColor="text-foreground"
-        />
-        <StatCard
           title="Total Gross Pay"
           value={inr(payrollCounts.totalGross)}
           subtitle={`${MONTHS[month - 1]} ${year}`}
@@ -361,6 +343,24 @@ export default function PayrollPage() {
           color="text-rose-600"
           bg="bg-rose-100"
           titleColor="text-rose-600"
+        />
+        <StatCard
+          title="Total Net Pay"
+          value={inr(payrollCounts.totalNet)}
+          subtitle={`${MONTHS[month - 1]} ${year}`}
+          icon={Banknote}
+          color="text-green-600"
+          bg="bg-green-100"
+          titleColor="text-green-600"
+        />
+        <StatCard
+          title="Total Employees"
+          value={payrollCounts.total.toString()}
+          subtitle="Active Employees"
+          icon={Users}
+          color="text-violet-600"
+          bg="bg-violet-100"
+          titleColor="text-violet-600"
         />
         <StatCard
           title="Processed"

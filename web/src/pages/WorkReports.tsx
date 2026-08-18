@@ -1600,7 +1600,7 @@ function TeamWorkReports({ fromDate, toDate }: { fromDate: string; toDate: strin
           fill={TEAM_TILE_FILLS.violet} hint={`${oneDp(stats.perDay)}h average per active day`}
         />
         <StatTile
-          label="Team reporting" value={`${stats.reported}/${stats.teamSize}`} icon={Users}
+          label="Team reporting" value={stats.reported} icon={Users}
           fill={TEAM_TILE_FILLS.pink}
           hint={stats.teamSize - stats.reported > 0
             ? `${stats.teamSize - stats.reported} logged nothing yet`
@@ -2025,7 +2025,7 @@ function EmployeeWorkListSection({ fromDate, toDate, teamById }: { fromDate: str
         fill={TEAM_TILE_FILLS.violet} hint={`${oneDp(stats.perDay)}h average per active day`}
       />
       <StatTile
-        label="Employees reporting" value={`${stats.reported}/${stats.eligible}`} icon={Users}
+        label="Employees reporting" value={stats.reported} icon={Users}
         fill={TEAM_TILE_FILLS.pink}
         hint={stats.eligible - stats.reported > 0
           ? `${stats.eligible - stats.reported} logged nothing yet`

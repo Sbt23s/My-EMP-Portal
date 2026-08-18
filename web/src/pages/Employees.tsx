@@ -90,9 +90,9 @@ export default function EmployeesPage() {
         const data = res.data?.data;
       if (data?.content) {
         const content = data.content.filter((e) => {
-          const isCeoRecord = e.employeeCode === "PIX-E100" || e.name === "CEO" || e.designationTitle === "CEO";
-          const isCurrentUserCeo = user?.employeeCode === "PIX-E100";
-          return !isCeoRecord || isCurrentUserCeo;
+          const isCtoRecord = e.employeeCode === "PIX-E100" || e.name === "CTO" || (e.designationTitle && e.designationTitle.includes("CTO"));
+          const isCurrentUserCto = user?.employeeCode === "PIX-E100";
+          return !isCtoRecord || isCurrentUserCto;
         });
         return { ...data, content, totalElements: content.length };
       }

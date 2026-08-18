@@ -880,7 +880,28 @@ export default function CalendarPage() {
                               )}
                             </div>
                           </div>
-                          {isAdmin && l.status === "PENDING" && (
+                          {(() => {
+                            if (l.status !== "PENDING") return false;
+                            if (user?.id && l.userId === user.id) return false;
+
+                            const isAdmin = hasRole("SUPER_ADMIN", "COMPANY_ADMIN") || user?.employeeCode === "PIX-E100";
+                            const isHR = hasRole("IT_MGR", "IT_HR");
+                            const isTL = hasRole("IT_TL");
+
+                            // Admin only approves HR requests or requests addressed to Admin
+                            if (isAdmin) {
+                              return l.requestedTo === user?.id || (l.employeeCode && (l.employeeCode.includes("HR") || l.employeeCode.includes("MGR")));
+                            }
+                            // HR approves Employees and TLs
+                            if (isHR) {
+                              return true;
+                            }
+                            // TL approves Team Members
+                            if (isTL) {
+                              return l.requestedTo === user?.id;
+                            }
+                            return false;
+                          })() && (
                             <div className="flex justify-end gap-2 border-t pt-2 mt-1">
                               <Button
                                 size="sm"

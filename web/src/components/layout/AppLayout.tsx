@@ -270,21 +270,14 @@ function AppShell() {
             className="h-10 w-auto object-contain bg-white rounded p-1"
             onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
           />
-          <div className="flex-1 overflow-hidden">
-            <div className="font-extrabold text-sm tracking-wide text-white truncate" title={user?.companyName}>
+          <div className="flex-1 min-w-0">
+            <div className="font-extrabold text-[11px] leading-tight tracking-wide text-white uppercase break-words" title={user?.companyName}>
               {(() => {
-                // The account carries its own company name; that is the answer.
-                // A lookup through a localStorage copy of the tenant list used to
-                // sit here as a second guess, and nothing writes that list any
-                // more -- companies are read from the server now -- so it could
-                // only ever have returned stale names or nothing at all.
                 if (user?.companyName) return user.companyName.toUpperCase();
                 return "PIXOUS TECHNOLOGIES";
               })()}
             </div>
-            {/* The company's own wording where it has set some. Left empty in
-                the branding screen, this stays as it has always read. */}
-            <div className="text-[10px] text-white/50 uppercase tracking-widest font-semibold truncate">
+            <div className="text-[9px] leading-tight text-white/60 uppercase tracking-wider font-bold break-words mt-0.5">
               {brand?.productName || "EMPLOYEE MANAGEMENT SYSTEM"}
             </div>
           </div>
@@ -455,13 +448,16 @@ function AppShell() {
                       ) : (
                         notifications.slice(0, 8).map((n) => {
                           const { icon: NIcon, className: nClassName } = notificationStyle(n.type);
+                          const isCallNotification = n.type === "CALL" || n.title?.toLowerCase().includes("call") || n.body?.toLowerCase().includes("calling");
+                          const isPastCall = isCallNotification && (Date.now() - new Date(n.createdAt).getTime() > 45000 || n.body?.includes("Voice call") || n.read);
+                          const displayTitle = isPastCall && n.title === "Incoming Call" ? (n.body ? `${n.body.replace(/\s+is calling you\.\.\.$/, "")} - voice call` : "Voice call") : n.title;
+                          const displayBody = isPastCall && n.body?.includes("is calling you...") ? "Called you" : n.body;
+
                           return (
                             <button
                               key={n.id}
                               onClick={() => {
                                 setBellOpen(false);
-                                // Opening it is reading it — the blue dot stays
-                                // only for notifications never looked at.
                                 if (!n.read) markRead(n.id);
                                 if (n.link) navigate(n.link);
                               }}
@@ -476,10 +472,10 @@ function AppShell() {
                               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                                 <div className="flex items-center gap-2">
                                   {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />}
-                                  <span className="truncate text-sm font-medium">{n.title}</span>
+                                  <span className="truncate text-sm font-medium">{displayTitle}</span>
                                 </div>
-                                {n.body && (
-                                  <span className="line-clamp-2 text-xs text-muted-foreground">{n.body}</span>
+                                {displayBody && (
+                                  <span className="line-clamp-2 text-xs text-muted-foreground">{displayBody}</span>
                                 )}
                                 <span className="text-[11px] text-muted-foreground">
                                   {dayjs(n.createdAt).format("DD MMM, h:mm A")}

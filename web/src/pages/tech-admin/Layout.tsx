@@ -101,6 +101,7 @@ export function TechAdminLayout() {
         { name: "Global Login Announcement", path: "/tech-admin/global-announcements", icon: Megaphone },
         { name: "Audit Logs", path: "/tech-admin/audit-logs", icon: History },
         { name: "Branding & Appearance", path: "/tech-admin/branding", icon: Palette },
+        { name: "Fresh Start (Data Reset)", path: "/admin/reset", icon: Settings2 },
       ]
     }
   ];

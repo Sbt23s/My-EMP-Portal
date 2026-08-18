@@ -92,7 +92,6 @@ public class MultiTenantSeeder implements CommandLineRunner {
             }
             if ("CEO".equalsIgnoreCase(u.getName()) || u.getName() == null || u.getName().contains("CEO")) {
                 u.setName("CTO");
-                u.setFirstName("CTO");
                 changed = true;
             }
             if (changed) {

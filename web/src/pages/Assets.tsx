@@ -35,12 +35,15 @@ import { Search, UserCheck, Wrench } from "lucide-react";
 
 export default function AssetsPage() {
   const qc = useQueryClient();
-  const { hasPermission, hasRole } = useAuth();
-  // HR runs the inventory — registering, allocating and retiring equipment. An
-  // admin oversees it and reads the same list without acting on it.
-  const canView = hasPermission("ASSET_MANAGE");
-  const isAdmin = hasRole("SUPER_ADMIN") || hasRole("COMPANY_ADMIN") || hasPermission("USER_MANAGE");
-  const canManage = canView && !isAdmin;
+  const { user, hasPermission, hasRole } = useAuth();
+  const isCto = user?.employeeCode?.toUpperCase() === "PIX-E100";
+  const isSysAdmin = hasRole("SUPER_ADMIN") || hasRole("COMPANY_ADMIN") || isCto;
+  
+  // Can view full equipment inventory: System Admin, CTO, HR (IT_HR / IT_MGR), or ASSET_MANAGE
+  const canView = isSysAdmin || hasPermission("ASSET_MANAGE") || hasRole("IT_HR") || hasRole("IT_MGR");
+  
+  // Can register assets & allocate: ONLY System Admin & CTO (PIX-E100)
+  const canManage = isSysAdmin;
   const [invSearch, setInvSearch] = useState("");
   const [invStatus, setInvStatus] = useState("ALL");
   const [invCategory, setInvCategory] = useState("ALL");
@@ -176,11 +179,9 @@ export default function AssetsPage() {
     <div>
       <PageHeader
         title="Assets"
-        subtitle={isAdmin
-          ? "The full equipment inventory — view and export; HR registers and allocates."
-          : canManage
-            ? "Register equipment, allocate it, and print QR tags."
-            : "Equipment assigned to you, with QR tags. HR registers and allocates."}
+        subtitle={canManage
+          ? "The full equipment inventory — System Admin registers and allocates equipment."
+          : "The full equipment inventory — view stock levels and allocations."}
         actions={
           canView ? (
             <div className="flex gap-2">

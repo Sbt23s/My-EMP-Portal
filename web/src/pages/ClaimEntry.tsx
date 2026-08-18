@@ -423,7 +423,7 @@ export default function ClaimEntryPage() {
                     <Field
                       label="Hills KM"
                       hint={totals.totalKm <= 0
-                        ? "Enter the odometer readings first"
+                        ? undefined
                         : `Rate ₹${totals.hillsRate}/km · up to ${hillsCap} KM`}
                     >
                       <Input type="number" min="0" max={hillsCap} value={form.hillsKm}
@@ -433,7 +433,7 @@ export default function ClaimEntryPage() {
                     <Field
                       label="Plains KM"
                       hint={totals.totalKm <= 0
-                        ? "Enter the odometer readings first"
+                        ? undefined
                         : `Rate ₹${totals.plainsRate}/km · up to ${plainsCap} KM`}
                     >
                       <Input type="number" min="0" max={plainsCap} value={form.plainsKm}

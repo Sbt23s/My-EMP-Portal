@@ -99,15 +99,8 @@ const NAV: NavEntry[] = [
   // them has a route, so switching the module on put a link in the sidebar that
   // led to the not-found page. Their entries in the tech-admin module list have
   // gone too; bring a link back at the same time as its page, not before.
-  // Audit log is for Admins
-  // "/audit", not "/audit-log" -- the route is registered as the former, so the
-  // link went to the not-found page for everyone allowed to use it.
   { to: "/audit", label: "Audit Log", icon: History, moduleCode: "AUDIT_LOG", onlyRole: ["SUPER_ADMIN", "COMPANY_ADMIN"] },
-  // Emptying the portal is not part of running it, so HR never sees this.
-  // Fresh Start removed from the sidebar on request. The page and the API are
-  // untouched — /admin/reset still exists, still requires SUPER_ADMIN and still
-  // makes you type RESET — so putting it back is this one line, nothing more.
-  // { to: "/admin/reset", label: "Fresh Start", icon: Eraser, onlyRole: ["SUPER_ADMIN"] }
+  { to: "/admin/reset", label: "Fresh Start", icon: Eraser, onlyRole: ["SUPER_ADMIN", "COMPANY_ADMIN"] }
 ];
 
 /**
@@ -261,7 +254,8 @@ function AppShell() {
   const isNavGroup = (grp: NavEntry): grp is NavGroup =>
     "type" in grp && grp.type === "group";
 
-  const userName = (user as any)?.name || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : "User");
+  const rawName = (user as any)?.name || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : "User");
+  const userName = isPIXE100 ? (rawName.toUpperCase().includes("CEO") ? "CTO" : rawName) : rawName;
   const roleLabel = isPIXE100 ? "CTO" : getRoleDisplayName(user?.roles);
 
   return (

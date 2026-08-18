@@ -10,7 +10,8 @@ export const TILE_FILLS = {
   blue:   "linear-gradient(135deg, #1d6fd8 0%, #3f8ce8 100%)",
   orange: "linear-gradient(135deg, #c2410c 0%, #ea7317 100%)",
   slate:  "linear-gradient(135deg, #475569 0%, #64748b 100%)",
-  pink:   "linear-gradient(135deg, #db2777 0%, #ec5a9c 100%)"
+  pink:   "linear-gradient(135deg, #db2777 0%, #ec5a9c 100%)",
+  yellow: "linear-gradient(135deg, #ca8a04 0%, #eab308 100%)"
 } as const;
 
 /**

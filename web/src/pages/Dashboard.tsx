@@ -1539,7 +1539,12 @@ function ExecutiveDashboardView({
           />
           <div>
           <h1 className="flex items-center gap-1.5 font-display text-2xl font-bold tracking-tight text-foreground">
-            Welcome, {user?.name?.split(" ")[0] ?? "Admin"}!
+            Welcome, {(() => {
+              const code = user?.employeeCode?.toUpperCase();
+              const n = user?.name || "";
+              if (code === "PIX-E100" || n.toUpperCase().includes("CEO")) return "CTO";
+              return n.split(" ")[0] || "Admin";
+            })()}!
             <Smile className="h-5 w-5 shrink-0 text-amber-500" aria-hidden />
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">

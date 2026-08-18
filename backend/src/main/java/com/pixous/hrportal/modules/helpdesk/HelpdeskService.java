@@ -67,23 +67,54 @@ public class HelpdeskService {
 
     @Transactional(readOnly = true)
     public java.util.List<java.util.Map<String, Object>> agents(Long requesterId) {
-        java.util.stream.Stream<User> candidates = java.util.stream.Stream.concat(
-                userRepository.findByEmployeeCode(HR_TICKET_APPROVER_CODE).stream(),
-                userRepository.findByPermission("HELPDESK_AGENT").stream()
-        );
+        User me = requesterId == null ? null : userRepository.findById(requesterId).orElse(null);
+        boolean iAmHr = isHrRole(me);
 
-        return candidates
+        java.util.Map<Long, java.util.Map<String, Object>> map = new java.util.LinkedHashMap<>();
+
+        // 1. Always include CTO Elamaran Subramanian (PIX-E100)
+        userRepository.findByEmployeeCode(HR_TICKET_APPROVER_CODE).ifPresent(u -> {
+            if (u.isEnabled() && !u.getId().equals(requesterId)) {
+                java.util.Map<String, Object> m = new java.util.HashMap<>();
+                m.put("id", u.getId());
+                m.put("name", "CTO (" + u.getEmployeeCode() + ")");
+                m.put("code", u.getEmployeeCode());
+                m.put("designation", "CTO");
+                map.put(u.getId(), m);
+            }
+        });
+
+        // 2. Always include System Admin
+        userRepository.findByPermission("USER_MANAGE").stream()
                 .filter(User::isEnabled)
-                .filter(u -> requesterId == null || !u.getId().equals(requesterId))
-                .distinct()
-                .map(u -> {
+                .filter(u -> !u.getId().equals(requesterId))
+                .filter(u -> !HR_TICKET_APPROVER_CODE.equalsIgnoreCase(u.getEmployeeCode()))
+                .forEach(u -> {
                     java.util.Map<String, Object> m = new java.util.HashMap<>();
                     m.put("id", u.getId());
-                    m.put("name", u.getName());
+                    m.put("name", "System Admin (" + u.getEmployeeCode() + ")");
                     m.put("code", u.getEmployeeCode());
-                    m.put("designation", u.getDesignationTitle() != null ? u.getDesignationTitle() : "CTO");
-                    return m;
-                }).toList();
+                    m.put("designation", "System Admin");
+                    map.putIfAbsent(u.getId(), m);
+                });
+
+        // 3. For Employees & TLs (not HR), also include HR
+        if (!iAmHr) {
+            userRepository.findByPermission("COMPLAINT_MANAGE").stream()
+                    .filter(User::isEnabled)
+                    .filter(u -> !u.getId().equals(requesterId))
+                    .filter(u -> isHrRole(u))
+                    .forEach(u -> {
+                        java.util.Map<String, Object> m = new java.util.HashMap<>();
+                        m.put("id", u.getId());
+                        m.put("name", "HR (" + u.getEmployeeCode() + ")");
+                        m.put("code", u.getEmployeeCode());
+                        m.put("designation", "HR");
+                        map.putIfAbsent(u.getId(), m);
+                    });
+        }
+
+        return java.util.List.copyOf(map.values());
     }
 
     @Transactional

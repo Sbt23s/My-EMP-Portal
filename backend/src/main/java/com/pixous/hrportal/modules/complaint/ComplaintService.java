@@ -109,33 +109,54 @@ public class ComplaintService {
      */
     @Transactional(readOnly = true)
     public java.util.List<java.util.Map<String, Object>> recipients(Long requesterId) {
-        java.util.Map<Long, java.util.Map<String, Object>> byId = new java.util.LinkedHashMap<>();
-        java.util.function.BiConsumer<User, String> add = (u, role) -> {
-            if (!u.isEnabled()) return;
-            java.util.Map<String, Object> m = byId.computeIfAbsent(u.getId(), k -> {
-                java.util.Map<String, Object> row = new java.util.HashMap<>();
-                row.put("id", u.getId());
-                row.put("name", u.getName());
-                row.put("code", u.getEmployeeCode());
-                return row;
-            });
-            m.put("role", role);
-        };
+        User me = requesterId == null ? null : userRepository.findById(requesterId).orElse(null);
+        boolean iAmHr = isHrRole(me);
 
-        // Always add CTO Elamaran Subramanian (PIX-E100)
-        userRepository.findByEmployeeCode(HR_COMPLAINT_APPROVER_CODE)
-                .ifPresent(u -> add.accept(u, "CTO"));
+        java.util.Map<Long, java.util.Map<String, Object>> map = new java.util.LinkedHashMap<>();
 
-        // Always add HR and System Admin
-        userRepository.findByPermission("COMPLAINT_MANAGE").stream()
-                .filter(ComplaintService::isHrRole)
-                .forEach(u -> add.accept(u, "HR"));
+        // 1. Always include CTO Elamaran Subramanian (PIX-E100)
+        userRepository.findByEmployeeCode(HR_COMPLAINT_APPROVER_CODE).ifPresent(u -> {
+            if (u.isEnabled() && !u.getId().equals(requesterId)) {
+                java.util.Map<String, Object> m = new java.util.HashMap<>();
+                m.put("id", u.getId());
+                m.put("name", "CTO (" + u.getEmployeeCode() + ")");
+                m.put("code", u.getEmployeeCode());
+                m.put("role", "CTO");
+                map.put(u.getId(), m);
+            }
+        });
+
+        // 2. Always include System Admin
         userRepository.findByPermission("USER_MANAGE").stream()
-                .filter(u -> !HR_COMPLAINT_APPROVER_CODE.equals(u.getEmployeeCode()))
-                .forEach(u -> add.accept(u, "Admin"));
+                .filter(User::isEnabled)
+                .filter(u -> !u.getId().equals(requesterId))
+                .filter(u -> !HR_COMPLAINT_APPROVER_CODE.equalsIgnoreCase(u.getEmployeeCode()))
+                .forEach(u -> {
+                    java.util.Map<String, Object> m = new java.util.HashMap<>();
+                    m.put("id", u.getId());
+                    m.put("name", "System Admin (" + u.getEmployeeCode() + ")");
+                    m.put("code", u.getEmployeeCode());
+                    m.put("role", "Admin");
+                    map.putIfAbsent(u.getId(), m);
+                });
 
-        if (requesterId != null) byId.remove(requesterId);
-        return java.util.List.copyOf(byId.values());
+        // 3. For Employees & TLs (not HR), also include HR
+        if (!iAmHr) {
+            userRepository.findByPermission("COMPLAINT_MANAGE").stream()
+                    .filter(User::isEnabled)
+                    .filter(u -> !u.getId().equals(requesterId))
+                    .filter(u -> isHrRole(u))
+                    .forEach(u -> {
+                        java.util.Map<String, Object> m = new java.util.HashMap<>();
+                        m.put("id", u.getId());
+                        m.put("name", "HR (" + u.getEmployeeCode() + ")");
+                        m.put("code", u.getEmployeeCode());
+                        m.put("role", "HR");
+                        map.putIfAbsent(u.getId(), m);
+                    });
+        }
+
+        return java.util.List.copyOf(map.values());
     }
 
     @Transactional(readOnly = true)

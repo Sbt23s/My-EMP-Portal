@@ -22,7 +22,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/admin/reset")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('SUPER_ADMIN')")
+@PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('COMPANY_ADMIN')")
 public class DataResetController {
 
     private final DataResetService service;

@@ -115,6 +115,13 @@ export default function TaExpensesPage() {
     [taList.data]
   );
 
+  // Total gross sum of all claims (for HR/Admin: company total; for Employee/TL: personal/team total)
+  const totalGrossAmount = useMemo(
+    () => (taList.data ?? [])
+      .reduce((s: number, r: any) => s + (Number(r.grossTotal) || 0), 0),
+    [taList.data]
+  );
+
   return (
     <div>
       <PageHeader
@@ -155,7 +162,7 @@ export default function TaExpensesPage() {
       )}
 
       {/* Counts for whichever list is open — each tile is also its filter. */}
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <StatTile
               label="All claims" value={counts.ALL} icon={Map} fill={TILE_FILLS.violet}
               hint={canApprove ? "Across every team"
@@ -175,8 +182,12 @@ export default function TaExpensesPage() {
             <StatTile
               label="Rejected" value={counts.REJECTED} icon={X} fill={TILE_FILLS.red}
               hint="Turned down" active={statusTab === "REJECTED"}
-          onClick={() => setStatusTab("REJECTED")}
-        />
+              onClick={() => setStatusTab("REJECTED")}
+            />
+            <StatTile
+              label="Total Claims Amount" value={inr(totalGrossAmount)} icon={Map} fill={TILE_FILLS.yellow}
+              hint={canApprove ? "Total gross sum across all claims" : "Total gross sum of your claims"}
+            />
       </div>
 
       <Card>

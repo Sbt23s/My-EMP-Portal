@@ -82,10 +82,21 @@ export default function DataResetPage() {
         title="Fresh Start"
         subtitle="Clear the day-to-day records and begin again. Employee records are never touched."
         actions={
-          <Button variant="outline" onClick={() => areas.refetch()}>
-            <RefreshCw className={cn("h-4 w-4", areas.isFetching && "animate-spin")} />
-            Refresh counts
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (chosen.size === rows.length) setChosen(new Set());
+                else setChosen(new Set(rows.map((r) => r.area)));
+              }}
+            >
+              {chosen.size === rows.length ? "Deselect All" : "Select All Test Data"}
+            </Button>
+            <Button variant="outline" onClick={() => areas.refetch()}>
+              <RefreshCw className={cn("h-4 w-4", areas.isFetching && "animate-spin")} />
+              Refresh counts
+            </Button>
+          </div>
         }
       />
 

@@ -197,14 +197,87 @@ class CallService {
     };
 
     pc.onConnectionState = (s) {
-      // A connection that drops mid-call must not leave the call screen up over
-      // nothing. Only failed and closed end it: disconnected is transient on a
-      // phone (one bar, a tunnel, a handover) and WebRTC recovers on its own.
-      if (s == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
-          s == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
-        if (_state != CallState.idle) hangUp(notify: false);
+      if (_state == CallState.idle) return;
+
+      switch (s) {
+        // Closed is final — the connection object itself is gone and there is
+        // nothing left to recover.
+        case RTCPeerConnectionState.RTCPeerConnectionStateClosed:
+          hangUp(notify: false);
+
+        // Failed is not final, and treating it as final is what ended calls
+        // that had every chance of carrying on.
+        //
+        // ICE fails whenever the path it negotiated stops working: wifi handing
+        // over to mobile data, a carrier rotating the NAT binding, a tunnel. The
+        // remedy WebRTC provides is an ICE restart — gather fresh candidates and
+        // renegotiate over the connection that is already open. Hanging up
+        // instead threw away a call that a two-second restart would have saved,
+        // and to the two people on it that is indistinguishable from the app
+        // being broken.
+        case RTCPeerConnectionState.RTCPeerConnectionStateFailed:
+          _restartIce();
+
+        // Disconnected is transient on a phone — one bar, a lift, a handover —
+        // and recovers on its own within a few seconds. Acting on it would end
+        // calls that were never actually in trouble.
+        default:
+          break;
       }
     };
+  }
+
+  /// Rebuild the connection path without dropping the call.
+  ///
+  /// Only the caller may do this. An ICE restart is a new offer, and both ends
+  /// generating one at the same moment is glare — the two offers collide and
+  /// neither is applied, leaving a call that is more broken than before. The
+  /// answerer waits for the offer that arrives.
+  ///
+  /// Bounded to two attempts. If a fresh set of candidates cannot find a path
+  /// twice over, there is no path to find — the network is genuinely blocking
+  /// it — and retrying forever leaves two people staring at a call that will
+  /// never connect instead of telling them it is over.
+  int _iceRestarts = 0;
+  bool _restarting = false;
+
+  Future<void> _restartIce() async {
+    final pc = _pc;
+    final to = _peer?.id;
+
+    if (pc == null || to == null || _restarting) return;
+
+    // The answerer sits still and lets the caller drive.
+    if (!_isCaller) return;
+
+    if (_iceRestarts >= 2) {
+      await hangUp(notify: true);
+      return;
+    }
+
+    _restarting = true;
+    _iceRestarts++;
+
+    try {
+      // iceRestart forces fresh candidates rather than reusing the ones that
+      // just failed, which is the whole point — reoffering the same pair would
+      // fail the same way.
+      final offer = await pc.createOffer({'iceRestart': true});
+      await pc.setLocalDescription(offer);
+      await _send(to, 'offer', {
+        'sdp': offer.sdp,
+        'type': offer.type,
+        'video': _isVideo,
+        // Marks it as a repair of the existing call rather than a new one, so
+        // the other end renegotiates instead of ringing again.
+        'iceRestart': true,
+      });
+    } catch (_) {
+      // A restart that cannot even be offered is a connection past saving.
+      await hangUp(notify: false);
+    } finally {
+      _restarting = false;
+    }
   }
 
   Future<void> _openMedia({required bool video}) async {

@@ -91,6 +91,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const pendingCandidatesRef = useRef<any[]>([]);
   /** True on the side that placed the call, which is the side that offers. */
   const isCallerRef = useRef(false);
+  /// Guards against two restarts overlapping, and caps how many are attempted.
+  const restartingRef = useRef(false);
+  const restartCountRef = useRef(0);
   /** Guards against sending a second offer if "ringing" arrives twice. */
   const offerSentRef = useRef(false);
 
@@ -240,17 +243,59 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       if (event.candidate) sendSignal(partnerId, "candidate", { candidate: event.candidate });
     };
 
-    pc.oniceconnectionstatechange = () => {
-      if (pc.iceConnectionState === "failed") {
-        try {
-          pc.restartIce();
-        } catch (e) {}
+    /*
+     * Rebuild the path when ICE fails, rather than only asking for one.
+     *
+     * This called pc.restartIce() on its own. That does not restart anything by
+     * itself — it marks the connection as needing fresh candidates and fires
+     * negotiationneeded, and something has to answer that by creating an offer
+     * and sending it. There was no negotiationneeded handler, so the flag was
+     * set and nothing ever followed: the restart never happened, the three
+     * second timer below expired, and the call ended with "The connection
+     * dropped."
+     *
+     * ICE fails routinely mid-call — wifi handing over to mobile, a carrier
+     * rotating its NAT binding, a laptop waking up. Every one of those was
+     * ending the call outright when a restart would have carried it through.
+     */
+    const restartIceProperly = async () => {
+      const conn = pcRef.current;
+      if (!conn || restartingRef.current) return;
+
+      // Only the caller renegotiates. Both sides offering at the same moment is
+      // glare: the offers collide, neither applies, and the call ends up worse
+      // off than the failure that prompted them.
+      if (!isCallerRef.current) return;
+
+      // Twice. If two fresh sets of candidates cannot find a path, there is no
+      // path — the network is blocking it — and retrying forever leaves two
+      // people watching a call that will never come back.
+      if (restartCountRef.current >= 2) return;
+
+      restartingRef.current = true;
+      restartCountRef.current += 1;
+      try {
+        const offer = await conn.createOffer({ iceRestart: true });
+        await conn.setLocalDescription(offer);
+        sendSignal(partnerId, "offer", { sdp: offer, iceRestart: true });
+      } catch (e) {
+        // Past saving; the timer below will close it.
+      } finally {
+        restartingRef.current = false;
       }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      if (pc.iceConnectionState === "failed") void restartIceProperly();
     };
 
     pc.onconnectionstatechange = () => {
       if (pc.connectionState === "failed") {
-        // Give ICE restart 3 seconds to recover before tearing down call
+        void restartIceProperly();
+        // Eight seconds, not three. A restart has to gather candidates, reach
+        // the TURN server and complete a round trip through the other client —
+        // on a slow mobile connection three seconds cut off restarts that were
+        // still in progress and would have succeeded.
         setTimeout(() => {
           if (pcRef.current && (pcRef.current.connectionState === "failed" || pcRef.current.connectionState === "closed")) {
             if (callStateRef.current === "connected" || callStateRef.current === "connecting" || callStateRef.current === "ringing") {
@@ -258,8 +303,11 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
               cleanupCall();
             }
           }
-        }, 3000);
+        }, 8000);
       }
+      // Recovered. Clear the budget so a later, unrelated failure gets its own
+      // two attempts instead of inheriting a spent counter from an hour ago.
+      if (pc.connectionState === "connected") restartCountRef.current = 0;
     };
     return pc;
   }, [sendSignal, cleanupCall, getIceServersConfig]);

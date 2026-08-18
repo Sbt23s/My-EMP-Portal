@@ -60,7 +60,14 @@ public class CallController {
             // base64(HMAC-SHA1(secret, username)). Expiry ten minutes out, so a
             // call that takes a while to connect is never cut off by its own ICE
             // configuration.
-            long expires = System.currentTimeMillis() / 1000 + 600;
+            // Twelve hours, not ten minutes.
+            //
+            // coturn ties a relay allocation to the lifetime of the credential
+            // that created it. At ten minutes, any call still running after ten
+            // minutes lost its relay and died mid-sentence — which is a "the
+            // connection dropped" that only ever happens to the longest and
+            // most important calls, and never in testing.
+            long expires = System.currentTimeMillis() / 1000 + 43_200;
             String username = expires + ":mobile";
             try {
                 javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA1");
@@ -69,8 +76,25 @@ public class CallController {
                 String credential = java.util.Base64.getEncoder().encodeToString(
                         mac.doFinal(username.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
                 servers.add(Map.of(
+                        // All three transports, in the order a client should try
+                        // them: UDP first because it is the cheapest relay, TCP
+                        // next, TLS last.
+                        //
+                        // The TCP entry was missing and 3478/TCP has been open
+                        // all along. That gap is what dropped calls on any
+                        // network blocking UDP — plenty of corporate wifi and
+                        // some mobile carriers — because the only relay offered
+                        // was one they could not reach. ICE then failed with no
+                        // path at all, which reads as the call dropping rather
+                        // than as a firewall.
+                        //
+                        // 5349 stays listed although it is currently closed: a
+                        // client that cannot reach a candidate simply skips it,
+                        // and leaving it here means opening that port later
+                        // needs no code change.
                         "urls", java.util.List.of(
                                 "turn:" + domain + ":3478?transport=udp",
+                                "turn:" + domain + ":3478?transport=tcp",
                                 "turns:" + domain + ":5349?transport=tcp"),
                         "username", username,
                         "credential", credential));

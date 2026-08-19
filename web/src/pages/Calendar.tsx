@@ -19,7 +19,7 @@ import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { todayIso } from "@/lib/dates";
+import { todayIso, DATE_MIN, DATE_MAX } from "@/lib/dates";
 
 interface Holiday {
   id: number;
@@ -523,6 +523,8 @@ export default function CalendarPage() {
               </select>
               <input
                 type="date"
+                min={DATE_MIN}
+                max={DATE_MAX}
                 aria-label="Go to date"
                 className="h-8 rounded-md border border-input bg-background px-2 text-sm"
                 value={selected}
@@ -1285,6 +1287,8 @@ export default function CalendarPage() {
               <Input
                 id="ev-date"
                 type="date"
+                min={DATE_MIN}
+                max={DATE_MAX}
                 value={eventDate}
                 onChange={(e) => setEventDate(e.target.value)}
               />
@@ -1304,6 +1308,7 @@ export default function CalendarPage() {
                 <Input
                   id="ev-end"
                   type="date"
+                  max={DATE_MAX}
                   min={eventDate || undefined}
                   value={eventEndDate}
                   onChange={(e) => setEventEndDate(e.target.value)}

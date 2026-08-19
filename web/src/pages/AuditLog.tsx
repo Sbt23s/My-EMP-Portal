@@ -24,6 +24,7 @@ import {
 import { TablePagination } from "@/components/ui/table-pagination";
 import { cn } from "@/lib/utils";
 import type { ApiEnvelope } from "@/types";
+import { DATE_MIN } from "@/lib/dates";
 
 interface AuditRow {
   id: number;
@@ -299,7 +300,7 @@ export default function AuditLogPage() {
           <div className="flex flex-wrap items-end gap-3 border-b p-4">
             <div className="flex flex-col">
               <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">From</label>
-              <Input type="date" value={from} max={to}
+              <Input type="date" min={DATE_MIN} value={from} max={to}
                 onChange={(e) => { setFrom(e.target.value); setPage(0); }}
                 className="h-[38px] w-[9.5rem]" />
             </div>

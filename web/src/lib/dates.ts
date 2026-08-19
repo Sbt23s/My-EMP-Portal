@@ -32,3 +32,22 @@ export function to12Hour(hhmm?: string | null) {
   const shown = hour % 12 === 0 ? 12 : hour % 12;
   return `${shown}:${(m ?? "00").padStart(2, "0")} ${suffix}`;
 }
+
+/**
+ * The range every date field accepts.
+ *
+ * A bare `<input type="date">` will take any year at all, so a slipped keypress
+ * produces 8888 and the request is filed eight thousand years out. The browser
+ * shows nothing wrong: the field is a valid date, just an absurd one.
+ *
+ * Bounding it makes the browser refuse the value itself, which is the only
+ * check that runs before the form is submitted. Both years are four digits and
+ * begin with 2, so a year can never be typed short or wild.
+ *
+ * Wide on purpose: a date of birth reaches decades back and a probation end
+ * date reaches forward, so this is the outer edge of plausible rather than an
+ * opinion about any one field. A field wanting a tighter rule -- no past dates
+ * for leave, say -- still sets its own min on top of this.
+ */
+export const DATE_MIN = "2000-01-01";
+export const DATE_MAX = "2099-12-31";

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
-import { todayIso } from "@/lib/dates";
+import { todayIso, DATE_MIN, DATE_MAX } from "@/lib/dates";
 import { useAuth } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
@@ -752,11 +752,11 @@ function RegisterDialog({ onClose }: { onClose: () => void }) {
           <div className="space-y-1.5">
             <Label htmlFor="purchaseDate">Date of purchase</Label>
             {/* Bought in the past, so today is the latest it can be. */}
-            <Input id="purchaseDate" type="date" max={todayIso()} {...register("purchaseDate")} />
+            <Input id="purchaseDate" type="date" min={DATE_MIN} max={todayIso()} {...register("purchaseDate")} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="warrantyExpiry">Warranty until</Label>
-            <Input id="warrantyExpiry" type="date" {...register("warrantyExpiry")} />
+            <Input id="warrantyExpiry" type="date" min={DATE_MIN} max={DATE_MAX} {...register("warrantyExpiry")} />
             <p className="text-[11px] text-muted-foreground">
               The date cover runs out. Whoever holds the asset sees how long is left.
             </p>
@@ -859,11 +859,11 @@ function ExportDialog({ inventoryData, onClose }: { inventoryData: Asset[]; onCl
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="startDate">Start Date</Label>
-              <Input id="startDate" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+              <Input id="startDate" type="date" min={DATE_MIN} max={DATE_MAX} value={startDate} onChange={e => setStartDate(e.target.value)} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="endDate">End Date</Label>
-              <Input id="endDate" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+              <Input id="endDate" type="date" min={DATE_MIN} max={DATE_MAX} value={endDate} onChange={e => setEndDate(e.target.value)} />
             </div>
           </div>
         ) : (

@@ -30,6 +30,7 @@ import { FacePunchDialog } from "@/components/ui/FacePunchDialog";
 import { FaceTrainDialog } from "@/components/ui/FaceTrainDialog";
 import type { ApiEnvelope, AttendanceRecord } from "@/types";
 import { useAttendanceLive } from "@/hooks/useAttendanceLive";
+import { DATE_MIN } from "@/lib/dates";
 
 const ANALYTICS_BASE = import.meta.env.VITE_ANALYTICS_URL || "http://localhost:8082";
 
@@ -573,6 +574,7 @@ export default function AttendancePage() {
               <label className="text-[10px] font-semibold uppercase text-muted-foreground">Exact date</label>
               <Input
                 type="date"
+                min={DATE_MIN}
                 className="h-9 w-[10.5rem]"
                 max={dayjs().format("YYYY-MM-DD")}
                 value={exactDay}

@@ -26,7 +26,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend
 } from "recharts";
 import { TimePicker12 } from "@/components/ui/time-picker";
-import { todayIso, to12Hour } from "@/lib/dates";
+import { todayIso, to12Hour, DATE_MAX } from "@/lib/dates";
 
 interface PermissionRow {
   id: number;
@@ -892,7 +892,7 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
       <div className="mt-3 space-y-3">
         <div className="space-y-1.5">
           <Label htmlFor="pdate">Date<Req /></Label>
-          <Input id="pdate" type="date" min={todayIso()} value={requestDate}
+          <Input id="pdate" type="date" max={DATE_MAX} min={todayIso()} value={requestDate}
                  onChange={(e) => setRequestDate(e.target.value)} />
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -916,7 +916,7 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
             <option value="">{approvers.isLoading ? "Loading…" : "Select approver"}</option>
             {(approvers.data ?? []).map((a: any) => (
               <option key={a.id} value={a.id}>
-                {a.code === "PIX-E100" || a.name?.toUpperCase().includes("CEO") ? "CTO" : a.name} ({a.code})
+                {a.role ? `${a.role} - ${a.name}` : a.name} ({a.code})
               </option>
             ))}
           </select>

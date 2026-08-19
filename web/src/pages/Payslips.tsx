@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatMoney, monthName } from "@/lib/utils";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
-import { cn } from "@/lib/utils";
+import { StatTile, TILE_FILLS } from "@/components/ui/stat-tile";
 import type { ApiEnvelope, PayslipSummary } from "@/types";
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -22,7 +22,7 @@ const YEARS = [CUR_YEAR, CUR_YEAR - 1, CUR_YEAR - 2, CUR_YEAR - 3];
 export default function PayslipsPage() {
   const [downloading, setDownloading] = useState<number | null>(null);
   const [fMonth, setFMonth] = useState<string>("all");
-  const [fYear, setFYear] = useState<string>(String(CUR_YEAR));
+  const [fYear, setFYear] = useState<string>("all");
 
   const payslips = useQuery({
     queryKey: ["payslips"],
@@ -168,51 +168,41 @@ export default function PayslipsPage() {
       {payslips.isLoading ? (
         <Skeleton className="h-32 w-full rounded-xl" />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <StatCard
-            title="Total CTC (Annual)"
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <StatTile
+            label="Total CTC (Annual)"
             value={formatMoney(metrics.ctc)}
-            subtitle="View details →"
+            hint="Annual Total"
             icon={Users}
-            color="text-violet-600"
-            bg="bg-violet-100"
-            titleColor="text-violet-600"
+            fill={TILE_FILLS.violet}
           />
-          <StatCard
-            title="Net Salary (This Month)"
+          <StatTile
+            label="Net Salary"
             value={formatMoney(metrics.net)}
-            subtitle={metrics.latestLabel}
+            hint={metrics.latestLabel || "This Month"}
             icon={Banknote}
-            color="text-green-600"
-            bg="bg-green-100"
-            titleColor="text-green-600"
+            fill={TILE_FILLS.green}
           />
-          <StatCard
-            title="Gross Salary (This Month)"
+          <StatTile
+            label="Gross Salary"
             value={formatMoney(metrics.gross)}
-            subtitle={metrics.latestLabel}
+            hint={metrics.latestLabel || "This Month"}
             icon={WalletCards}
-            color="text-blue-600"
-            bg="bg-blue-100"
-            titleColor="text-blue-600"
+            fill={TILE_FILLS.blue}
           />
-          <StatCard
-            title="Deductions (This Month)"
+          <StatTile
+            label="Deductions"
             value={formatMoney(metrics.deductions)}
-            subtitle={metrics.latestLabel}
+            hint={metrics.latestLabel || "This Month"}
             icon={ReceiptText}
-            color="text-rose-600"
-            bg="bg-rose-100"
-            titleColor="text-foreground"
+            fill={TILE_FILLS.red}
           />
-          <StatCard
-            title="Year to Date Earnings"
+          <StatTile
+            label="YTD Earnings"
             value={formatMoney(metrics.ytd)}
-            subtitle={CUR_YEAR.toString()}
+            hint={CUR_YEAR.toString()}
             icon={Wallet}
-            color="text-orange-600"
-            bg="bg-orange-100"
-            titleColor="text-foreground"
+            fill={TILE_FILLS.amber}
           />
         </div>
       )}
@@ -259,37 +249,40 @@ export default function PayslipsPage() {
                       <td className="font-bold tabular-nums">
                         {formatMoney(p.grossSalary)}
                       </td>
-                      <td className="font-bold tabular-nums">
+                      <td className="font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
                         {formatMoney(p.netPay)}
                       </td>
                       <td>
-                        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
+                        <span className="inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                           Paid
                         </span>
                       </td>
                       <td className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border text-muted-foreground hover:bg-muted/50 transition-colors"
-                            onClick={() => viewPdf(p.id)}
-                            title="Preview Payslip"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border text-violet-600 hover:bg-violet-50 transition-colors"
-                            onClick={() => download(p.id, label)}
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            className="h-8 gap-1.5 px-2.5 text-xs text-muted-foreground hover:text-foreground"
                             disabled={downloading === p.id}
-                            title="Download PDF"
+                            onClick={() => viewPdf(p.id)}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            View
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            className="h-8 gap-1.5 px-2.5 text-xs text-primary border-primary/20 hover:bg-primary/5"
+                            disabled={downloading === p.id}
+                            onClick={() => download(p.id, label)}
                           >
                             {downloading === p.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             ) : (
-                              <Download className="h-4 w-4" />
+                              <Download className="h-3.5 w-3.5" />
                             )}
-                          </button>
+                            Download
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -314,33 +307,6 @@ export default function PayslipsPage() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function StatCard({
-  title, value, subtitle, icon: Icon, color, bg, titleColor
-}: {
-  title: string;
-  value: string;
-  subtitle: string;
-  icon: any;
-  color: string;
-  bg: string;
-  titleColor: string;
-}) {
-  return (
-    <div className="rounded-xl border bg-card p-5 shadow-sm flex items-center justify-between gap-4 transition-all hover:shadow-md">
-      <div className="space-y-2">
-        <h4 className={cn("text-xs font-bold uppercase tracking-wider", titleColor)}>{title}</h4>
-        <div className="text-xl font-bold tabular-nums tracking-tight">{value}</div>
-        <div className={cn("text-[11px] font-semibold", titleColor.includes('text-foreground') ? 'text-muted-foreground' : titleColor)}>
-          {subtitle}
-        </div>
-      </div>
-      <div className={cn("grid h-12 w-12 shrink-0 place-items-center rounded-full", bg)}>
-        <Icon className={cn("h-5 w-5", color)} />
-      </div>
     </div>
   );
 }

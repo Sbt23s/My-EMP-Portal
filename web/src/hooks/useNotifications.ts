@@ -266,7 +266,8 @@ export function useNotifications(userId?: number) {
   ).map((n) => ({
     ...n,
     title: n.title ? n.title.replace(/\bCEO\b/g, "CTO").replace(/CEO -/g, "CTO -").replace(/CEO ·/g, "CTO ·") : n.title,
-    message: n.message ? n.message.replace(/\bCEO\b/g, "CTO") : n.message
+    body: n.body ? n.body.replace(/\bCEO\b/g, "CTO") : n.body,
+    message: (n.message || n.body) ? (n.message || n.body)?.replace(/\bCEO\b/g, "CTO") : (n.message || n.body)
   }));
 
   return {

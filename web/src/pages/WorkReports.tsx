@@ -33,7 +33,7 @@ import { cn } from "@/lib/utils";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import type { ApiEnvelope, PageEnvelope, WorkReport, EmployeeWorkList, UserSummary, TaskItem } from "@/types";
-import { todayIso } from "@/lib/dates";
+import { todayIso, DATE_MIN, DATE_MAX } from "@/lib/dates";
 
 interface DraftRow {
   workDate: string;
@@ -263,11 +263,11 @@ export default function WorkReportsPage() {
 
       <div className={cn("flex flex-col", canSeeAll && period !== "RANGE" && "hidden")}>
         <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">From</label>
-        <input type="date" className="h-[38px] rounded-md border border-input bg-background px-3 text-sm shadow-sm" value={fromDate} max={toDate} onChange={(e) => setFromDate(e.target.value)} />
+        <input type="date" min={DATE_MIN} className="h-[38px] rounded-md border border-input bg-background px-3 text-sm shadow-sm" value={fromDate} max={toDate} onChange={(e) => setFromDate(e.target.value)} />
       </div>
       <div className={cn("flex flex-col", canSeeAll && period !== "RANGE" && "hidden")}>
         <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">To</label>
-        <input type="date" className="h-[38px] rounded-md border border-input bg-background px-3 text-sm shadow-sm" value={toDate} min={fromDate} onChange={(e) => setToDate(e.target.value)} />
+        <input type="date" max={DATE_MAX} className="h-[38px] rounded-md border border-input bg-background px-3 text-sm shadow-sm" value={toDate} min={fromDate} onChange={(e) => setToDate(e.target.value)} />
       </div>
       <Button
         onClick={exportRangeExcel}
@@ -767,6 +767,8 @@ function MyWorkReports({
               <label className="text-[10px] font-semibold uppercase text-muted-foreground">Date</label>
               <Input
                 type="date"
+                min={DATE_MIN}
+                max={DATE_MAX}
                 value={draft.workDate}
                 onChange={(e) => setDraft({ ...draft, workDate: e.target.value })}
               />
@@ -1037,7 +1039,7 @@ function EditEntry({ row, saving, onClose, onSave }: {
           <Label htmlFor="we-date">Date<Star /></Label>
           {/* A work log records what has already been done, so past dates stay
               open here -- only the days ahead are closed off. */}
-          <Input id="we-date" type="date" max={todayIso()} value={form.workDate ?? ""}
+          <Input id="we-date" type="date" min={DATE_MIN} max={todayIso()} value={form.workDate ?? ""}
                  onChange={(e) => set("workDate", e.target.value)} />
         </div>
         <div className="space-y-1.5">
@@ -1415,6 +1417,7 @@ function ReminderCard() {
             </label>
             <Input
               type="date"
+              min={DATE_MIN}
               max={todayIso()}
               value={date}
               onChange={(e) => setDate(e.target.value)}

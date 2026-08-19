@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ApiEnvelope, LeaveType, HolidayResponse } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
-import { todayIso } from "@/lib/dates";
+import { todayIso, DATE_MIN, DATE_MAX } from "@/lib/dates";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
 
 export default function LeavePoliciesPage() {
@@ -473,7 +473,7 @@ function CreateHolidayDialog({ onClose }: { onClose: () => void }) {
       <form onSubmit={handleSubmit((d) => createMutation.mutate(d))} className="space-y-4 mt-2">
         <div>
           <Label htmlFor="date">Date</Label>
-          <Input id="date" type="date" {...register("date", { required: true })} />
+          <Input id="date" type="date" min={DATE_MIN} max={DATE_MAX} {...register("date", { required: true })} />
         </div>
         <div>
           <Label htmlFor="name">Holiday Name</Label>

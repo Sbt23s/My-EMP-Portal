@@ -26,6 +26,7 @@ import { usePagedRows, TablePagination } from "@/components/ui/table-pagination"
 import { StatTile, TILE_FILLS } from "@/components/ui/stat-tile";
 import type { ApiEnvelope, PageEnvelope, ComplaintNeed } from "@/types";
 import dayjs from "dayjs";
+import { DATE_MIN, DATE_MAX } from "@/lib/dates";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -208,7 +209,7 @@ function MySubmissions() {
         </div>
         <div className="space-y-1">
           <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Exact date</label>
-          <Input type="date" value={day} onChange={(e) => { setDay(e.target.value); paged.setPage(0); }} className="w-40" />
+          <Input type="date" min={DATE_MIN} max={DATE_MAX} value={day} onChange={(e) => { setDay(e.target.value); paged.setPage(0); }} className="w-40" />
         </div>
         {filtersOn && (
           <Button
@@ -401,7 +402,7 @@ function AllComplaints() {
         </div>
         <div className="space-y-1">
           <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Exact date</label>
-          <Input type="date" value={day} onChange={(e) => { setDay(e.target.value); paged.setPage(0); }} className="w-40" />
+          <Input type="date" min={DATE_MIN} max={DATE_MAX} value={day} onChange={(e) => { setDay(e.target.value); paged.setPage(0); }} className="w-40" />
         </div>
         {filtersOn && (
           <Button

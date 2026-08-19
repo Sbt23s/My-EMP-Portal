@@ -33,7 +33,7 @@ import { minutesToHours, cn } from "@/lib/utils";
 import { notificationAllowed } from "@/lib/notificationModules";
 import type { ApiEnvelope, EmployeeDashboard, ExecutiveDashboard, UserSummary, PageEnvelope, PayslipRequest, LeaveRequest, Ticket, AttendanceRecord, EmployeeTaskGroup, TaskItem } from "@/types";
 import toast from "react-hot-toast";
-import { todayIso } from "@/lib/dates";
+import { todayIso, DATE_MIN, DATE_MAX } from "@/lib/dates";
 import { roleCodeLabel } from "@/lib/roles";
 import { useAttendanceLive } from "@/hooks/useAttendanceLive";
 
@@ -471,7 +471,7 @@ function PayslipApprovalsDialog({
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Pay date</Label>
-                <Input type="date" value={form.payDate} onChange={(e) => set("payDate", e.target.value)} />
+                <Input type="date" min={DATE_MIN} max={DATE_MAX} value={form.payDate} onChange={(e) => set("payDate", e.target.value)} />
               </div>
             </div>
             <div className="space-y-1">
@@ -1022,7 +1022,7 @@ function TasksQuickCard() {
         <Textarea rows={2} placeholder="Description (optional)" value={desc} onChange={(e) => setDesc(e.target.value)} />
         <div className="space-y-1">
           <Label className="text-[11px] text-muted-foreground">Due date (optional)</Label>
-          <Input type="date" min={todayIso()} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          <Input type="date" max={DATE_MAX} min={todayIso()} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
         </div>
         <Button className="w-full" disabled={!canSubmit || assign.isPending}
           onClick={() => assign.mutate()}>

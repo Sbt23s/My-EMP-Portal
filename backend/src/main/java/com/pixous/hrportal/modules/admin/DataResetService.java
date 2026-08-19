@@ -42,8 +42,8 @@ public class DataResetService {
         PERMISSION("Permission (short-leave) requests", ""),
         WORK_REPORTS("Work reports and their attachments", ""),
         TASKS("Tasks and every task discussion", ""),
-        PAYROLL("Payslips, payroll runs, payslip requests, month-wise basic pay",
-                "Salary structures and bank details stay"),
+        PAYROLL("Payslips, payroll runs, payslip requests, month-wise basic pay, salary structures",
+                "Bank details stay"),
         CHAT("Chat messages, reactions, read marks and poll votes",
                 "The rooms themselves and who is in them stay"),
         HELPDESK("Support tickets and their comments", ""),
@@ -78,6 +78,7 @@ public class DataResetService {
     private final com.pixous.hrportal.modules.payroll.PayrollRunRepository payrollRunRepository;
     private final com.pixous.hrportal.modules.payroll.PayslipRequestRepository payslipRequestRepository;
     private final com.pixous.hrportal.modules.payroll.SalaryMonthRepository salaryMonthRepository;
+    private final com.pixous.hrportal.modules.payroll.SalaryStructureRepository salaryStructureRepository;
     private final com.pixous.hrportal.modules.community.CommunityMessageRepository communityMessageRepository;
     private final com.pixous.hrportal.modules.community.MessageReactionRepository messageReactionRepository;
     private final com.pixous.hrportal.modules.community.MessageReadRepository messageReadRepository;
@@ -157,7 +158,7 @@ public class DataResetService {
             case WORK_REPORTS -> workReportRepository.count();
             case TASKS -> taskRepository.count();
             case PAYROLL -> payslipRepository.count() + payslipRequestRepository.count()
-                    + salaryMonthRepository.count();
+                    + salaryMonthRepository.count() + salaryStructureRepository.count();
             case CHAT -> communityMessageRepository.count();
             case HELPDESK -> ticketRepository.count();
             case COMPLAINTS -> complaintNeedRepository.count();
@@ -199,6 +200,23 @@ public class DataResetService {
                 payslipRepository.deleteAllInBatch();
                 payrollRunRepository.deleteAllInBatch();
                 salaryMonthRepository.deleteAllInBatch();
+
+                /*
+                 * Salary structures go too.
+                 *
+                 * They used to survive a reset, and the payroll page adds them
+                 * up into its gross, deduction and net totals -- so a Fresh
+                 * Start cleared every payslip and left the three big numbers at
+                 * the top reading exactly what they read before. Nothing was
+                 * wrong with the reset; it simply had not touched the rows those
+                 * totals come from, which is indistinguishable from a reset that
+                 * did not work.
+                 *
+                 * Bank details are still kept: an account number is a fact about
+                 * a person, not payroll data, and re-entering them for everybody
+                 * is not something a clear-the-numbers button should cause.
+                 */
+                salaryStructureRepository.deleteAllInBatch();
             }
 
             case CHAT -> {

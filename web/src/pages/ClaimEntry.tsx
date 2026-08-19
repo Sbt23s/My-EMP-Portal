@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { resolvePhotoUrl } from "@/components/ui/avatar";
 import { PhotoLightbox } from "@/components/PhotoLightbox";
 import { cn } from "@/lib/utils";
+import { DATE_MIN, DATE_MAX } from "@/lib/dates";
 
 /**
  * What each claim type asks for. Petrol is the only distance-based one; the
@@ -387,7 +388,7 @@ export default function ClaimEntryPage() {
           <CardContent className="space-y-5 p-5">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Field label="Date of expense *">
-                <Input type="date" value={form.date} onChange={(e) => set("date", e.target.value)} />
+                <Input type="date" min={DATE_MIN} max={DATE_MAX} value={form.date} onChange={(e) => set("date", e.target.value)} />
               </Field>
               <Field label="Claim type *">
                 <Select value={form.category} onChange={(e) => set("category", e.target.value as ClaimType)}>

@@ -611,37 +611,83 @@ public class LeaveService {
         boolean iAmHr = leaveHasRole(me, "IT_MGR") || leaveHasRole(me, "IT_HR") || leaveHasRole(me, "CV_HR");
         boolean iAmTl = leaveHasRole(me, "IT_TL") || leaveHasRole(me, "CV_SUP");
 
+        /*
+         * One rung up the ladder, and only one.
+         *
+         *   employee, up to 3 days  ->  their Team Leader
+         *   employee, over 3 days   ->  HR
+         *   team leader             ->  HR
+         *   HR                      ->  the CTO
+         *
+         * The lists used to include the CTO and every administrator alongside
+         * the right approver at nearly every rung, so an employee asking for
+         * four days was offered HR, the CTO and anyone holding an admin role. A
+         * chain that offers a choice is not a chain: requests skip the person
+         * who actually knows whether the team can spare them.
+         *
+         * Each rung is now exactly one kind of person.
+         */
+        java.util.function.Predicate<User> isCto =
+                u -> "PIX-E100".equalsIgnoreCase(u.getEmployeeCode());
+        java.util.function.Predicate<User> isHr =
+                u -> leaveHasRole(u, "IT_MGR") || leaveHasRole(u, "IT_HR") || leaveHasRole(u, "CV_HR");
+        java.util.function.Predicate<User> isTl =
+                u -> leaveHasRole(u, "IT_TL") || leaveHasRole(u, "CV_SUP");
+
         java.util.function.Predicate<User> allowed;
         if (iAmHr) {
-            // HR leave request -> ONLY CTO Elamaran Subramanian (PIX-E100) or System Admin
-            allowed = u -> "PIX-E100".equalsIgnoreCase(u.getEmployeeCode())
-                    || leaveHasRole(u, "SUPER_ADMIN") || leaveHasRole(u, "COMPANY_ADMIN");
+            allowed = isCto;
         } else if (iAmTl) {
-            // TL leave request -> HR and CTO Elamaran Subramanian (PIX-E100)
-            allowed = u -> "PIX-E100".equalsIgnoreCase(u.getEmployeeCode())
-                    || leaveHasRole(u, "IT_MGR") || leaveHasRole(u, "IT_HR") || leaveHasRole(u, "SUPER_ADMIN") || leaveHasRole(u, "COMPANY_ADMIN");
+            allowed = isHr;
+        } else if (days <= 3) {
+            allowed = isTl;
         } else {
-            // Employee leave request -> <=3 days goes to TL; >3 days goes to HR & CTO
-            if (days <= 3) {
-                allowed = u -> leaveHasRole(u, "IT_TL")
-                        && (u.getDepartmentId() != null && u.getDepartmentId().equals(me.getDepartmentId()));
-            } else {
-                allowed = u -> "PIX-E100".equalsIgnoreCase(u.getEmployeeCode())
-                        || leaveHasRole(u, "IT_MGR") || leaveHasRole(u, "IT_HR") || leaveHasRole(u, "SUPER_ADMIN") || leaveHasRole(u, "COMPANY_ADMIN");
-            }
+            allowed = isHr;
         }
 
-        return userRepository.findByEnabledTrue().stream()
+        List<User> pool = userRepository.findByEnabledTrue().stream()
                 .filter(u -> !u.getId().equals(userId))
                 .filter(allowed)
+                .toList();
+
+        // For a short leave, prefer the team leader of the applicant's own
+        // department - that is who knows the roster. Widened to any team leader
+        // when the department has none, because an empty list is a form that
+        // cannot be submitted at all, and being sent to the wrong team leader is
+        // recoverable in a way that being unable to ask for leave is not.
+        if (!iAmHr && !iAmTl && days <= 3 && me.getDepartmentId() != null) {
+            List<User> sameDept = pool.stream()
+                    .filter(u -> me.getDepartmentId().equals(u.getDepartmentId()))
+                    .toList();
+            if (!sameDept.isEmpty()) pool = sameDept;
+        }
+
+        return pool.stream()
                 .map(u -> {
                     Map<String, Object> m = new java.util.HashMap<>();
                     m.put("id", u.getId());
+
+                    // What they are to the applicant, so the dropdown can say
+                    // "TL - Priya" rather than a bare name the applicant has to
+                    // recognise.
+                    String label;
+                    if (isCto.test(u)) label = "CTO";
+                    else if (isHr.test(u)) label = "HR";
+                    else if (isTl.test(u)) label = "TL";
+                    else label = "Approver";
+
                     String name = u.getName();
-                    if ("PIX-E100".equalsIgnoreCase(u.getEmployeeCode()) || "CEO".equalsIgnoreCase(name) || (name != null && name.contains("CEO"))) {
-                        name = "CTO";
+                    if (isCto.test(u)) {
+                        // The account is stored as "CEO". The company calls the
+                        // post CTO, and the person by name, so the dropdown says
+                        // both rather than a title nobody uses.
+                        boolean placeholder = name == null || name.isBlank()
+                                || "CEO".equalsIgnoreCase(name) || "CTO".equalsIgnoreCase(name);
+                        name = placeholder ? "Elamaran Subramaniyan" : name;
                     }
+
                     m.put("name", name);
+                    m.put("role", label);
                     m.put("code", u.getEmployeeCode());
                     return m;
                 }).toList();

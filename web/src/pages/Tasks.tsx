@@ -31,7 +31,7 @@ import { MonthlySummaryCard } from "@/components/MonthlySummaryCard";
 import { useAuth } from "@/hooks/useAuth";
 import { useTaskChat } from "@/hooks/useTaskChat";
 import { cn } from "@/lib/utils";
-import { todayIso } from "@/lib/dates";
+import { todayIso, DATE_MIN, DATE_MAX } from "@/lib/dates";
 import type {
   ApiEnvelope, PageEnvelope, UserSummary, TaskItem, EmployeeTaskGroup
 } from "@/types";
@@ -2073,11 +2073,11 @@ function ExportDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="exp-from">From</Label>
-              <Input id="exp-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+              <Input id="exp-from" type="date" min={DATE_MIN} max={DATE_MAX} value={from} onChange={(e) => setFrom(e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label htmlFor="exp-to">To</Label>
-              <Input id="exp-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+              <Input id="exp-to" type="date" min={DATE_MIN} max={DATE_MAX} value={to} onChange={(e) => setTo(e.target.value)} />
             </div>
           </div>
         )}
@@ -2164,7 +2164,7 @@ function EditTaskDialog({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="et-due">Due date<Req /></Label>
-            <Input id="et-due" type="date" min={todayIso()} value={dueDate}
+            <Input id="et-due" type="date" max={DATE_MAX} min={todayIso()} value={dueDate}
               onChange={(e) => setDueDate(e.target.value)} />
           </div>
         </div>
@@ -2678,6 +2678,7 @@ function AssignTaskDialog({
             <Input
               id="task-due"
               type="date"
+              max={DATE_MAX}
               min={todayStr}
               value={form.dueDate}
               onChange={(e) => set("dueDate", e.target.value)}

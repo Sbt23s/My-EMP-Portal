@@ -35,6 +35,7 @@ import { useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { roleCodeLabel } from "@/lib/roles";
+import { DATE_MIN, DATE_MAX } from "@/lib/dates";
 
 const column = createColumnHelper<UserSummary>();
 
@@ -1993,7 +1994,7 @@ function EmployeeDetail({ id, onClose }: { id: number | null; onClose: () => voi
                   <div className="grid gap-2 text-sm">
                     <div>
                       <label className="mb-1 block text-xs text-muted-foreground">Relieving Date</label>
-                      <Input type="date" value={relievingDate} onChange={e => setRelievingDate(e.target.value)} />
+                      <Input type="date" min={DATE_MIN} max={DATE_MAX} value={relievingDate} onChange={e => setRelievingDate(e.target.value)} />
                     </div>
                     <div>
                       <label className="mb-1 block text-xs text-muted-foreground">Reason</label>
@@ -2622,7 +2623,7 @@ function AddEmployeeDialog({ onClose, defaultIndustry }: { onClose: () => void; 
             </div>
             <div className="space-y-1">
               <Label htmlFor="ne-dob">Date of birth<Req /></Label>
-              <Input id="ne-dob" type="date" className={bad("dob")} value={form.dob}
+              <Input id="ne-dob" type="date" min={DATE_MIN} max={DATE_MAX} className={bad("dob")} value={form.dob}
                 onChange={(e) => set("dob", e.target.value)} />
               <Bad name="dob" />
             </div>
@@ -2700,7 +2701,7 @@ function AddEmployeeDialog({ onClose, defaultIndustry }: { onClose: () => void; 
             </div>
             <div className="space-y-1">
               <Label htmlFor="ne-doj">Date of joining<Req /></Label>
-              <Input id="ne-doj" type="date" className={bad("dateOfJoining")} value={form.dateOfJoining}
+              <Input id="ne-doj" type="date" min={DATE_MIN} max={DATE_MAX} className={bad("dateOfJoining")} value={form.dateOfJoining}
                 onChange={(e) => set("dateOfJoining", e.target.value)} />
               <Bad name="dateOfJoining" />
             </div>
@@ -3281,7 +3282,7 @@ function EditEmployeeDialog({ id, onClose }: { id: number; onClose: () => void }
             </div>
             <div className="space-y-1">
               <Label htmlFor="ee-dob">Date of birth</Label>
-              <Input id="ee-dob" type="date" value={form.dob}
+              <Input id="ee-dob" type="date" min={DATE_MIN} max={DATE_MAX} value={form.dob}
                 onChange={(e) => set("dob", e.target.value)} />
             </div>
           </div>
@@ -3373,7 +3374,7 @@ function EditEmployeeDialog({ id, onClose }: { id: number; onClose: () => void }
             </div>
             <div className="space-y-1">
               <Label htmlFor="ee-doj">Date of joining</Label>
-              <Input id="ee-doj" type="date" value={form.dateOfJoining}
+              <Input id="ee-doj" type="date" min={DATE_MIN} max={DATE_MAX} value={form.dateOfJoining}
                 onChange={(e) => set("dateOfJoining", e.target.value)} />
             </div>
             <div className="space-y-1">

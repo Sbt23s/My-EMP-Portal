@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { StatTile, TILE_FILLS } from "@/components/ui/stat-tile";
 import { cn } from "@/lib/utils";
+import { DATE_MIN, DATE_MAX } from "@/lib/dates";
 import type {
   ApiEnvelope, AttendanceRecord, EmployeeWorkList, EmployeeTaskGroup, LeaveRequest, UserSummary
 } from "@/types";
@@ -428,11 +429,11 @@ export default function TeamReportsPage({ orgWide = false }: { orgWide?: boolean
               <>
                 <div className="space-y-1">
                   <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">From</label>
-                  <Input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className="w-40" />
+                  <Input type="date" min={DATE_MIN} value={from} max={to} onChange={(e) => setFrom(e.target.value)} className="w-40" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">To</label>
-                  <Input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className="w-40" />
+                  <Input type="date" max={DATE_MAX} value={to} min={from} onChange={(e) => setTo(e.target.value)} className="w-40" />
                 </div>
               </>
             )}

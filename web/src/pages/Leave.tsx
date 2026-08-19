@@ -26,7 +26,7 @@ import {
 import type { ApiEnvelope, PageEnvelope, LeaveType, LeaveBalance, LeaveRequest } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
-import { todayIso } from "@/lib/dates";
+import { todayIso, DATE_MAX } from "@/lib/dates";
 
 /** Red asterisk shown on every field that must be filled. */
 function Req() {
@@ -438,14 +438,14 @@ export default function LeavePage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="fromDate">From<Req /></Label>
-              <Input id="fromDate" type="date" min={todayIso()} {...register("fromDate")} />
+              <Input id="fromDate" type="date" max={DATE_MAX} min={todayIso()} {...register("fromDate")} />
               {errors.fromDate && (
                 <p className="text-xs text-destructive">{errors.fromDate.message}</p>
               )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="toDate">To<Req /></Label>
-              <Input id="toDate" type="date" min={watch("fromDate") || todayIso()} {...register("toDate")} />
+              <Input id="toDate" type="date" max={DATE_MAX} min={watch("fromDate") || todayIso()} {...register("toDate")} />
               {errors.toDate && (
                 <p className="text-xs text-destructive">{errors.toDate.message}</p>
               )}
@@ -457,7 +457,11 @@ export default function LeavePage() {
               <option value="">{approvers.isLoading ? "Loading…" : "Select approver"}</option>
               {(approvers.data ?? []).map((a: any) => (
                 <option key={a.id} value={a.id}>
-                  {a.code === "PIX-E100" || a.name?.toUpperCase().includes("CEO") ? "CTO" : a.name} ({a.code})
+                  {/* "TL - Priya Raman" rather than a bare name: the applicant
+                      knows which rung they are sending it to, not only who. The
+                      server decides the rung and sends the label, so this does
+                      not have to work it out from a role list it cannot see. */}
+                  {a.role ? `${a.role} - ${a.name}` : a.name} ({a.code})
                 </option>
               ))}
             </Select>

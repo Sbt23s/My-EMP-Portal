@@ -21,6 +21,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
 import { useAttendanceLive } from "@/hooks/useAttendanceLive";
+import { DATE_MIN, DATE_MAX } from "@/lib/dates";
 
 type RangeRecord = AttendanceRecord & { _date: string };
 // A displayed row is either a real punch record or a synthesised ABSENT marker.
@@ -801,6 +802,7 @@ export default function TeamAttendancePage() {
           <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">From Date</label>
           <input
             type="date"
+            min={DATE_MIN}
             className="h-9 w-36 rounded-lg border bg-background px-2.5 text-xs focus:ring-1 focus:ring-primary focus:outline-none"
             value={fromDate}
             max={toDate}
@@ -812,6 +814,7 @@ export default function TeamAttendancePage() {
           <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">To Date</label>
           <input
             type="date"
+            max={DATE_MAX}
             className="h-9 w-36 rounded-lg border bg-background px-2.5 text-xs focus:ring-1 focus:ring-primary focus:outline-none"
             value={toDate}
             min={fromDate}

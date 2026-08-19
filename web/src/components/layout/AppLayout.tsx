@@ -48,7 +48,18 @@ type NavEntry = NavItem | NavGroup;
 
 const NAV: NavEntry[] = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/employees", label: "Employees", icon: Users, anyPermission: ["USER_MANAGE", "ATTENDANCE_TEAM", "REPORT_VIEW"], excludeRole: ["IT_TL"] },
+  // Decided by role, not by permission.
+  //
+  // This asked for USER_MANAGE, ATTENDANCE_TEAM or REPORT_VIEW. The CTO holds
+  // SUPER_ADMIN, which the seed grants every permission, so on paper it should
+  // always have shown -- and it did not. Rather than keep guessing at which
+  // link in that chain is dropping, the entry now names the roles that must not
+  // see it and lets everyone else through: an administrator's own account is
+  // the last place a permission lookup should be able to hide a page from them.
+  //
+  // Same people as before, arrived at the other way round: employees and team
+  // leaders do not get the staff directory, everyone above them does.
+  { to: "/employees", label: "Employees", icon: Users, excludeRole: ["IT_TL", "CV_SUP", "IT_EMP", "CV_EMP", "EMPLOYEE", "TEAM_LEAD"] },
   { to: "/attendance", label: "Attendance", icon: Clock, excludeRole: ["SUPER_ADMIN", "COMPANY_ADMIN"], moduleCode: "ATTENDANCE" },
   { to: "/team-attendance", label: "    Employee Attendance      ", icon: Users, anyPermission: ["ATTENDANCE_TEAM"], moduleCode: "ATTENDANCE" },
   // ─── Leave Management (collapsible group) ───────────────────────────────────

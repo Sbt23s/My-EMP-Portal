@@ -1730,7 +1730,10 @@ function ExecutiveDashboardView({
           hint={(ins?.newJoineesToday ?? 0) > 0 ? `${ins?.newJoineesToday} today` : "This month"}
           onClick={() => setPeopleList({
             title: "New joinees this month",
-            people: ins?.newJoineeList ?? [],
+            people: (ins?.newJoineeList ?? []).filter((p: any) =>
+              p.code !== "PIX-E100" && p.code !== "HR0001" && p.code !== "ADM0001" &&
+              !p.name?.toUpperCase().includes("CEO") && p.name?.toUpperCase() !== "HR" && p.name?.toUpperCase() !== "CTO"
+            ),
             dateLabel: "joined"
           })}
         />

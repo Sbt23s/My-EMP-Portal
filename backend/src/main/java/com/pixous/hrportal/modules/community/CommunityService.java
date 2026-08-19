@@ -411,16 +411,20 @@ public class CommunityService {
      * sender's name for a 1:1, otherwise the channel it was posted in.
      */
     private String chatTitle(CommunityGroup group, User sender) {
+        String name = sender.getName();
+        if ("CEO".equalsIgnoreCase(name) || "PIX-E100".equalsIgnoreCase(sender.getEmployeeCode())) {
+            name = "CTO";
+        }
         if (isDirectRoom(group)) {
-            return sender.getName() + " · new personal message";
+            return name + " · new personal message";
         }
         if (isTeamRoom(group)) {
-            return sender.getName() + " · new message in your team chat";
+            return name + " · new message in your team chat";
         }
         if (group.isAnnouncement()) {
-            return sender.getName() + " · new announcement in " + group.getName();
+            return name + " · new announcement in " + group.getName();
         }
-        return sender.getName() + " · new message in " + group.getName();
+        return name + " · new message in " + group.getName();
     }
 
     /** True for the hidden 2-member rooms that back private 1:1 chats. */

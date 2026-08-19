@@ -263,7 +263,11 @@ export function useNotifications(userId?: number) {
   // exists. A count of nine over an empty list is its own bug.
   const visible = (feed.data?.content ?? []).filter((n) =>
     notificationAllowed(n.type, hasModule)
-  );
+  ).map((n) => ({
+    ...n,
+    title: n.title ? n.title.replace(/\bCEO\b/g, "CTO").replace(/CEO -/g, "CTO -").replace(/CEO ·/g, "CTO ·") : n.title,
+    message: n.message ? n.message.replace(/\bCEO\b/g, "CTO") : n.message
+  }));
 
   return {
     notifications: visible,

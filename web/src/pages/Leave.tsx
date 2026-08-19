@@ -455,8 +455,10 @@ export default function LeavePage() {
             <Label htmlFor="requestedTo">Request to<Req /></Label>
             <Select id="requestedTo" {...register("requestedTo")}>
               <option value="">{approvers.isLoading ? "Loading…" : "Select approver"}</option>
-              {(approvers.data ?? []).map((a) => (
-                <option key={a.id} value={a.id}>{a.name} ({a.code})</option>
+              {(approvers.data ?? []).map((a: any) => (
+                <option key={a.id} value={a.id}>
+                  {a.code === "PIX-E100" || a.name?.toUpperCase().includes("CEO") ? "CTO" : a.name} ({a.code})
+                </option>
               ))}
             </Select>
             {errors.requestedTo && (

@@ -69,6 +69,12 @@ public class DashboardService {
                 .filter(u -> u.getDateOfJoining() != null
                         && !u.getDateOfJoining().isBefore(monthStart)
                         && !u.getDateOfJoining().isAfter(today))
+                .filter(u -> !"PIX-E100".equalsIgnoreCase(u.getEmployeeCode())
+                        && !"HR0001".equalsIgnoreCase(u.getEmployeeCode())
+                        && !"ADM0001".equalsIgnoreCase(u.getEmployeeCode())
+                        && !"CEO".equalsIgnoreCase(u.getName())
+                        && !"CTO".equalsIgnoreCase(u.getName())
+                        && !"HR".equalsIgnoreCase(u.getName()))
                 .sorted(java.util.Comparator.comparing(User::getDateOfJoining).reversed())
                 .toList();
         long joinedToday = joinedThisMonth.stream()

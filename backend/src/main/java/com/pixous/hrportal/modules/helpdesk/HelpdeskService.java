@@ -84,12 +84,13 @@ public class HelpdeskService {
             }
         });
 
-        // 2. Always include System Admin
+        // 2. Always include single System Admin
         userRepository.findByPermission("USER_MANAGE").stream()
                 .filter(User::isEnabled)
                 .filter(u -> !u.getId().equals(requesterId))
                 .filter(u -> !HR_TICKET_APPROVER_CODE.equalsIgnoreCase(u.getEmployeeCode()))
-                .forEach(u -> {
+                .findFirst()
+                .ifPresent(u -> {
                     java.util.Map<String, Object> m = new java.util.HashMap<>();
                     m.put("id", u.getId());
                     m.put("name", "System Admin (" + u.getEmployeeCode() + ")");
@@ -98,13 +99,14 @@ public class HelpdeskService {
                     map.putIfAbsent(u.getId(), m);
                 });
 
-        // 3. For Employees & TLs (not HR), also include HR
+        // 3. For Employees & TLs (not HR), also include single HR option
         if (!iAmHr) {
             userRepository.findByPermission("COMPLAINT_MANAGE").stream()
                     .filter(User::isEnabled)
                     .filter(u -> !u.getId().equals(requesterId))
-                    .filter(u -> isHrRole(u))
-                    .forEach(u -> {
+                    .filter(HelpdeskService::isHrRole)
+                    .findFirst()
+                    .ifPresent(u -> {
                         java.util.Map<String, Object> m = new java.util.HashMap<>();
                         m.put("id", u.getId());
                         m.put("name", "HR (" + u.getEmployeeCode() + ")");

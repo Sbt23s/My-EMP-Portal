@@ -232,6 +232,8 @@ function AppShell() {
     return onlyRoles.some((r) => hasRole(r));
   };
 
+  const isSupAdminOrPIXE100 = isSupAdmin || isPIXE100 || hasRole("COMPANY_ADMIN");
+
   // Build visible nav — handle group entries inline
   const visibleNav = NAV.filter((entry) => {
     if (!("type" in entry) && entry.to === "/" && !hasDashboard()) return false;
@@ -243,7 +245,7 @@ function AppShell() {
         (c) =>
           !isExcluded(c.excludeRole) &&
           isOnlyRoleAllowed(c.onlyRole) &&
-          (!c.anyPermission || hasPermission(...c.anyPermission) || isSupAdmin) &&
+          (!c.anyPermission || hasPermission(...c.anyPermission) || isSupAdminOrPIXE100) &&
           (!c.moduleCode || hasModule(c.moduleCode))
       );
       if (visibleChildren.length === 0) return null;
@@ -252,7 +254,7 @@ function AppShell() {
     const item = entry as NavItem;
     if (isExcluded(item.excludeRole)) return null;
     if (!isOnlyRoleAllowed(item.onlyRole)) return null;
-    if (!item.anyPermission || hasPermission(...item.anyPermission) || isSupAdmin) {
+    if (!item.anyPermission || hasPermission(...item.anyPermission) || isSupAdminOrPIXE100) {
       if (item.to === "/team-attendance") {
         const tl = hasRole("IT_TL") && !hasRole("IT_MGR") && !hasRole("SUPER_ADMIN") && !isPIXE100;
         return { ...item, label: tl ? "Team Attendance" : "Employee Attendance" };

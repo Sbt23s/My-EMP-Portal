@@ -608,14 +608,40 @@ public class LeaveService {
     @Transactional(readOnly = true)
     public List<Map<String, Object>> leaveApprovers(Long userId, double days) {
         User me = userRepository.findById(userId).orElseThrow(() -> ApiException.notFound("User"));
-        java.math.BigDecimal wd = java.math.BigDecimal.valueOf(days);
+        boolean iAmHr = leaveHasRole(me, "IT_MGR") || leaveHasRole(me, "IT_HR") || leaveHasRole(me, "CV_HR");
+        boolean iAmTl = leaveHasRole(me, "IT_TL") || leaveHasRole(me, "CV_SUP");
+
+        java.util.function.Predicate<User> allowed;
+        if (iAmHr) {
+            // HR leave request -> ONLY CTO Elamaran Subramanian (PIX-E100) or System Admin
+            allowed = u -> "PIX-E100".equalsIgnoreCase(u.getEmployeeCode())
+                    || leaveHasRole(u, "SUPER_ADMIN") || leaveHasRole(u, "COMPANY_ADMIN");
+        } else if (iAmTl) {
+            // TL leave request -> HR and CTO Elamaran Subramanian (PIX-E100)
+            allowed = u -> "PIX-E100".equalsIgnoreCase(u.getEmployeeCode())
+                    || leaveHasRole(u, "IT_MGR") || leaveHasRole(u, "IT_HR") || leaveHasRole(u, "SUPER_ADMIN") || leaveHasRole(u, "COMPANY_ADMIN");
+        } else {
+            // Employee leave request -> <=3 days goes to TL; >3 days goes to HR & CTO
+            if (days <= 3) {
+                allowed = u -> leaveHasRole(u, "IT_TL")
+                        && (u.getDepartmentId() != null && u.getDepartmentId().equals(me.getDepartmentId()));
+            } else {
+                allowed = u -> "PIX-E100".equalsIgnoreCase(u.getEmployeeCode())
+                        || leaveHasRole(u, "IT_MGR") || leaveHasRole(u, "IT_HR") || leaveHasRole(u, "SUPER_ADMIN") || leaveHasRole(u, "COMPANY_ADMIN");
+            }
+        }
+
         return userRepository.findByEnabledTrue().stream()
                 .filter(u -> !u.getId().equals(userId))
-                .filter(u -> "PIX-E100".equalsIgnoreCase(u.getEmployeeCode()) || leaveHasRole(u, "SUPER_ADMIN") || leaveHasRole(u, "COMPANY_ADMIN") || canActOnLeave(u, me, wd))
+                .filter(allowed)
                 .map(u -> {
                     Map<String, Object> m = new java.util.HashMap<>();
                     m.put("id", u.getId());
-                    m.put("name", u.getName());
+                    String name = u.getName();
+                    if ("PIX-E100".equalsIgnoreCase(u.getEmployeeCode()) || "CEO".equalsIgnoreCase(name) || (name != null && name.contains("CEO"))) {
+                        name = "CTO";
+                    }
+                    m.put("name", name);
                     m.put("code", u.getEmployeeCode());
                     return m;
                 }).toList();

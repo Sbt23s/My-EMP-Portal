@@ -103,18 +103,38 @@ public class PermissionService {
      */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> approvers(Long requesterId) {
+        User me = requesterId == null ? null : userRepository.findById(requesterId).orElse(null);
+        if (me == null) return List.of();
+
+        boolean iAmHr = hasRole(me, "IT_MGR") || hasRole(me, "IT_HR") || hasRole(me, "CV_HR");
+        boolean iAmTl = hasRole(me, "IT_TL") || hasRole(me, "CV_SUP");
+
+        java.util.function.Predicate<User> allowed;
+        if (iAmHr) {
+            // HR permission request -> ONLY CTO Elamaran Subramanian (PIX-E100) or System Admin
+            allowed = u -> "PIX-E100".equalsIgnoreCase(u.getEmployeeCode())
+                    || hasRole(u, "SUPER_ADMIN") || hasRole(u, "COMPANY_ADMIN");
+        } else if (iAmTl) {
+            // TL permission request -> HR and CTO Elamaran Subramanian (PIX-E100)
+            allowed = u -> "PIX-E100".equalsIgnoreCase(u.getEmployeeCode())
+                    || hasRole(u, "IT_MGR") || hasRole(u, "IT_HR") || hasRole(u, "SUPER_ADMIN") || hasRole(u, "COMPANY_ADMIN");
+        } else {
+            // Employee permission request -> ONLY their team TL
+            allowed = u -> hasRole(u, "IT_TL")
+                    && (u.getDepartmentId() != null && u.getDepartmentId().equals(me.getDepartmentId()));
+        }
+
         return userRepository.findByEnabledTrue().stream()
-                .filter(u -> requesterId == null || !u.getId().equals(requesterId))
-                .filter(u -> HR_APPROVER_CODE.equalsIgnoreCase(u.getEmployeeCode())
-                        || hasRole(u, "SUPER_ADMIN")
-                        || hasRole(u, "COMPANY_ADMIN")
-                        || hasRole(u, "IT_MGR")
-                        || hasRole(u, "IT_HR")
-                        || hasRole(u, "IT_TL"))
+                .filter(u -> !u.getId().equals(requesterId))
+                .filter(allowed)
                 .map(u -> {
                     Map<String, Object> m = new java.util.HashMap<>();
                     m.put("id", u.getId());
-                    m.put("name", u.getName());
+                    String name = u.getName();
+                    if ("PIX-E100".equalsIgnoreCase(u.getEmployeeCode()) || "CEO".equalsIgnoreCase(name) || (name != null && name.contains("CEO"))) {
+                        name = "CTO";
+                    }
+                    m.put("name", name);
                     m.put("code", u.getEmployeeCode());
                     return m;
                 }).toList();

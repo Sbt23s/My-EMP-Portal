@@ -914,8 +914,10 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
             onChange={(e) => setRequestedTo(e.target.value)}
           >
             <option value="">{approvers.isLoading ? "Loading…" : "Select approver"}</option>
-            {(approvers.data ?? []).map((a) => (
-              <option key={a.id} value={a.id}>{a.name} ({a.code})</option>
+            {(approvers.data ?? []).map((a: any) => (
+              <option key={a.id} value={a.id}>
+                {a.code === "PIX-E100" || a.name?.toUpperCase().includes("CEO") ? "CTO" : a.name} ({a.code})
+              </option>
             ))}
           </select>
           <p className="text-[11px] text-muted-foreground">The request goes only to this person for approval.</p>

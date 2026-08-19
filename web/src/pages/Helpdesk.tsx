@@ -199,7 +199,6 @@ export default function HelpdeskPage() {
         {TICKET_TILES.map((t) => (
           <StatTile
             key={t.key}
-            compact
             label={t.label}
             value={statusCounts[t.key] ?? 0}
             hint={t.hint}

@@ -30,7 +30,7 @@ export function usePagedRows<T>(rows: T[], pageSize = 15, deps: unknown[] = []) 
   };
 }
 
-const PAGE_SIZES = [10, 25, 50, 100];
+const PAGE_SIZES = [10, 25, 50, 100, 150, 200, 250, 500, 1000];
 
 function pageWindow(page: number, totalPages: number): (number | "gap")[] {
   if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i);
@@ -67,6 +67,11 @@ export function TablePagination({
   const from = showing && total > 0 ? page * pageSize + 1 : 0;
   const to = showing ? Math.min((page + 1) * pageSize, total) : 0;
 
+  const allSizes = useMemo(
+    () => Array.from(new Set([...PAGE_SIZES, ...(pageSize ? [pageSize] : [])])).sort((a, b) => a - b),
+    [pageSize]
+  );
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 px-4 pr-20 sm:pr-24 py-3 text-sm">
       {onPageSizeChange && (
@@ -76,7 +81,7 @@ export function TablePagination({
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
           >
-            {PAGE_SIZES.map((n) => <option key={n} value={n}>{n}</option>)}
+            {allSizes.map((n) => <option key={n} value={n}>{n}</option>)}
           </select>
           <span className="whitespace-nowrap text-xs font-medium text-slate-500 dark:text-slate-400">Rows per page</span>
         </div>

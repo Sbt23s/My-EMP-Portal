@@ -2447,8 +2447,10 @@ export default function DashboardPage() {
                   rather than as a feature the company does not use. */}
               {[
                 { to: "/leave", label: "Apply Leave", icon: CalendarCheck, tint: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/30 dark:text-emerald-300", sub: "Time off", module: "LEAVE" },
-                { to: "/helpdesk", label: "Raise Ticket", icon: LifeBuoy, tint: "bg-sky-100 text-sky-600 dark:bg-sky-500/30 dark:text-sky-300", sub: "Get help", module: "HELPDESK" },
-                { to: "/leave", label: "My Requests", icon: ListTodo, tint: "bg-amber-100 text-amber-600 dark:bg-amber-500/30 dark:text-amber-300", sub: "Track status", module: "LEAVE" }
+                { to: "/helpdesk", label: "Raise Ticket", icon: LifeBuoy, tint: "bg-sky-100 text-sky-600 dark:bg-sky-500/30 dark:text-sky-300", sub: "Get help", module: "HELPDESK" }
+                // "My Requests" used to sit here. It pointed at /leave, the same
+                // page as "Apply Leave" beside it, so the row offered the same
+                // destination twice under two names.
               ].filter((a) => hasModule(a.module)).map((a) => (
                 <Link
                   key={a.label}

@@ -21,8 +21,8 @@ app:
     # Dev-only fallback so `mvn spring-boot:run` works with zero setup. Never
     # used in prod: application.yml requires APP_JWT_SECRET with no default,
     # and this profile isn't active there (SPRING_PROFILES_ACTIVE=prod).
-    secret: Y2hhbmdlLXRoaXMtc2VjcmV0LWluLXByb2R1Y3Rpb24tcGxlYXNlLTEyMzQ1Njc4OTA=
-  twilio:
+#     secret: Y2hhbmdlLXRoaXMtc2VjcmV0LWluLXByb2R1Y3Rpb24tcGxlYXNlLTEyMzQ1Njc4OTA=
+#   twilio:
     # Off unless you supply credentials. These used to be written out in full
     # here, which put a live account SID and auth token into git history where
     # rotating the file cannot remove them. Set TWILIO_* in your shell (or your

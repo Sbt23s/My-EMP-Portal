@@ -95,7 +95,12 @@ echo "--- clearing leftovers from an interrupted deploy ---"
 # otherwise fine. Compose recreates running containers correctly on its own;
 # what it cannot clean up is the half-renamed container an interrupted run
 # leaves behind, named like 3fa1c2d4e5f6_hrportal-backend. Remove only those.
-for id in $(sudo docker ps -a --format '{{.ID}} {{.Names}}' | grep -E '[0-9a-f]{8,}_hrportal-' | awk '{print $1}'); do
+#
+# --status=exited --status=created, never a running one. A retry once left the
+# live backend carrying the renamed form of its own name, and a cleanup that
+# matched on the name alone would have force-removed the running service on the
+# next deploy -- causing the very Create race this is here to avoid.
+for id in $(sudo docker ps -a --status=exited --status=created --status=dead             --format '{{.ID}} {{.Names}}' | grep -E '[0-9a-f]{8,}_hrportal-' | awk '{print $1}'); do
   echo "    removing leftover: $id"
   sudo docker rm -f "$id" >/dev/null 2>&1 || true
 done
@@ -138,7 +143,7 @@ echo "--- rebuilding: $SERVICES ---"
 # seconds. A deploy whose images built fine should not need a human for that.
 if ! sudo docker compose -f docker-compose.prod.yml up -d --build $SERVICES; then
   echo "--- up failed; clearing leftovers and retrying once ---"
-  for id in $(sudo docker ps -a --format '{{.ID}} {{.Names}}' | grep -E '[0-9a-f]{8,}_hrportal-' | awk '{print $1}'); do
+  for id in $(sudo docker ps -a --status=exited --status=created --status=dead               --format '{{.ID}} {{.Names}}' | grep -E '[0-9a-f]{8,}_hrportal-' | awk '{print $1}'); do
     sudo docker rm -f "$id" >/dev/null 2>&1 || true
   done
   sleep 5

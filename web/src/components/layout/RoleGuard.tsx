@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 export function RoleGuard({
   permission,
   role,
+  denyEmployeeCodes,
   children
 }: {
   permission?: string;
@@ -17,9 +18,18 @@ export function RoleGuard({
    * permission grant does not open a door meant for one role only.
    */
   role?: string;
+  /**
+   * Named accounts refused even when the role check passes.
+   *
+   * Fresh Start needs this: it asks for SUPER_ADMIN, and the CTO holds
+   * SUPER_ADMIN, so hiding the sidebar link left the page reachable by typing
+   * the address -- on a screen that empties company data. Nothing else uses it,
+   * and leaving it unset keeps the previous behaviour exactly.
+   */
+  denyEmployeeCodes?: string[];
   children: React.ReactNode;
 }) {
-  const { hasPermission, hasRole, hasRoleExact } = useAuth();
+  const { user, hasPermission, hasRole, hasRoleExact } = useAuth();
   const perms = (permission ?? "").split(",").map((p) => p.trim()).filter(Boolean);
 
   // SUPER_ADMIN and COMPANY_ADMIN bypass all permission gates.
@@ -28,9 +38,13 @@ export function RoleGuard({
   // for one named role and nothing else — Fresh Start, which empties a portal —
   // and the aliasing that makes a company administrator equal to a super admin
   // everywhere else must not quietly hand that button to more people.
-  const allowed = role
+  const denied = (denyEmployeeCodes ?? []).some(
+    (code) => code.toUpperCase() === (user?.employeeCode ?? "").toUpperCase()
+  );
+
+  const allowed = !denied && (role
     ? hasRoleExact(role)
-    : hasRole("SUPER_ADMIN") || hasPermission(...perms);
+    : hasRole("SUPER_ADMIN") || hasPermission(...perms));
 
   if (!allowed) {
     return (

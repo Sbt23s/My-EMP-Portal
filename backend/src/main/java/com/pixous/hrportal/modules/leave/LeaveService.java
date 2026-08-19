@@ -634,21 +634,46 @@ public class LeaveService {
         java.util.function.Predicate<User> isTl =
                 u -> leaveHasRole(u, "IT_TL") || leaveHasRole(u, "CV_SUP");
 
+        /*
+         * The people whose job is actually HR.
+         *
+         * isHr above also counts IT_MGR, which is the manager role, so the HR
+         * rung offered three names: HR itself plus two managers who hold
+         * IT_MGR. A leave request should reach HR, not whoever happens to sit
+         * near them on the role list.
+         */
+        java.util.function.Predicate<User> isRealHr =
+                u -> leaveHasRole(u, "IT_HR") || leaveHasRole(u, "CV_HR");
+
         java.util.function.Predicate<User> allowed;
+        boolean hrRung = false;
         if (iAmHr) {
             allowed = isCto;
         } else if (iAmTl) {
             allowed = isHr;
+            hrRung = true;
         } else if (days <= 3) {
             allowed = isTl;
         } else {
             allowed = isHr;
+            hrRung = true;
         }
 
         List<User> pool = userRepository.findByEnabledTrue().stream()
                 .filter(u -> !u.getId().equals(userId))
                 .filter(allowed)
                 .toList();
+
+        // On the HR rung, narrow to the real HR accounts.
+        //
+        // Left as a preference rather than a hard filter for the same reason as
+        // the team narrowing below: if a company has nobody holding IT_HR or
+        // CV_HR, an empty list is a form that cannot be submitted at all, and a
+        // manager approving a leave is recoverable where that is not.
+        if (hrRung) {
+            List<User> realHr = pool.stream().filter(isRealHr).toList();
+            if (!realHr.isEmpty()) pool = realHr;
+        }
 
         // For a short leave, only the applicant's own team leader - that is who
         // knows the roster, and offering every team leader in the company means

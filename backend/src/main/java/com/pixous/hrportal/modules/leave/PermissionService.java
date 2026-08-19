@@ -134,6 +134,19 @@ public class PermissionService {
                 .filter(allowed)
                 .toList();
 
+        // A team leader's request goes to HR, so narrow to the people whose job
+        // that actually is. The branch above also admits IT_MGR, the manager
+        // role, along with administrators -- which listed two managers beside HR
+        // and offered a choice where the chain is meant to have one rung. Kept a
+        // preference, not a hard filter: with nobody holding IT_HR or CV_HR an
+        // empty dropdown would make the form unsubmittable.
+        if (iAmTl) {
+            List<User> realHr = pool.stream()
+                    .filter(u -> hasRole(u, "IT_HR") || hasRole(u, "CV_HR"))
+                    .toList();
+            if (!realHr.isEmpty()) pool = realHr;
+        }
+
         // Falling back to any team leader beats an empty dropdown, for the same
         // reason as in LeaveService: a request that reaches the wrong approver
         // can be redirected, a form that cannot be submitted cannot.

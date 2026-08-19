@@ -263,6 +263,30 @@ function AppShell() {
       return { ...entry, children: visibleChildren };
     }
     const item = entry as NavItem;
+
+    /*
+     * Employees: decided by what the viewer is, not by what they are not.
+     *
+     * The entry lists the roles that must not see it, and the CTO account holds
+     * an employee role as well as its administrative ones -- so the exclusion
+     * matched and the staff directory stayed missing from the CTO's sidebar
+     * however the permissions were arranged. Named positively, an administrator,
+     * the CTO or HR gets it and nobody else does, and holding an extra role can
+     * no longer take it away.
+     */
+    if (item.to === "/employees") {
+      return (isSupAdminOrPIXE100 || hasRole("IT_MGR", "IT_HR", "CV_HR")) ? item : null;
+    }
+
+    /*
+     * Fresh Start belongs to the System Admin alone.
+     *
+     * It wipes company data, so the CTO is deliberately not offered it. The
+     * entry asks for SUPER_ADMIN, which the CTO answers through the PIX-E100
+     * allowance below -- hence the explicit exception here.
+     */
+    if (item.to === "/admin/reset" && isPIXE100) return null;
+
     if (isExcluded(item.excludeRole)) return null;
     if (!isOnlyRoleAllowed(item.onlyRole)) return null;
     if (!item.anyPermission || hasPermission(...item.anyPermission) || isSupAdminOrPIXE100) {

@@ -319,7 +319,7 @@ export const router = createBrowserRouter([
         // place HR does not reach even holding every permission.
         path: "admin/reset",
         element: page(
-          <RoleGuard role="SUPER_ADMIN">
+          <RoleGuard role="SUPER_ADMIN" denyEmployeeCodes={["PIX-E100"]}>
             <DataResetPage />
           </RoleGuard>
         )

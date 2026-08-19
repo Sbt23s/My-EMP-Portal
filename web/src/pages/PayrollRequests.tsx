@@ -96,6 +96,7 @@ async function downloadPayslipPdf(id: number, name: string) {
 }
 
 import { useNavigate } from "react-router-dom";
+import { displayPersonName } from "@/lib/people";
 
 export default function PayrollPage() {
   const navigate = useNavigate();
@@ -465,7 +466,7 @@ export default function PayrollPage() {
                   return (
                     <tr key={e.id} className="hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3 font-medium whitespace-nowrap">
-                        {e.name} {e.id === user?.id && <span className="ml-1 text-[10px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded-full">(You)</span>}
+                        {displayPersonName(e.name, e.employeeCode)} {e.id === user?.id && <span className="ml-1 text-[10px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded-full">(You)</span>}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground font-mono text-xs">
                         {e.employeeCode || "—"}

@@ -25,6 +25,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { cn } from "@/lib/utils";
 import type { ApiEnvelope } from "@/types";
 import { DATE_MIN } from "@/lib/dates";
+import { displayPersonName } from "@/lib/people";
 
 interface AuditRow {
   id: number;
@@ -163,14 +164,14 @@ export default function AuditLogPage() {
     const body = tab === "actions"
       ? (rows as AuditRow[]).map((r, i) => [
           i + 1, dayjs(r.at).format("DD MMM YYYY HH:mm:ss"),
-          r.name ?? "—", r.employeeCode ?? "", catOf(r.category).label,
+          displayPersonName(r.name, r.employeeCode) ?? "—", r.employeeCode ?? "", catOf(r.category).label,
           r.summary ?? r.action, r.succeeded ? "Yes" : "Refused",
           r.method ?? "", r.path ?? "", r.status ?? "",
           r.ipAddress ?? "", r.client ?? "", r.durationMs ?? ""
         ])
       : (rows as LoginRow[]).map((r, i) => [
           i + 1, dayjs(r.at).format("DD MMM YYYY HH:mm:ss"),
-          r.name ?? "—", r.employeeCode ?? "", r.username ?? "",
+          displayPersonName(r.name, r.employeeCode) ?? "—", r.employeeCode ?? "", r.username ?? "",
           r.success ? "Signed in" : "Failed", r.ipAddress ?? "", r.client ?? ""
         ]);
     const headers = tab === "actions"
@@ -232,7 +233,7 @@ export default function AuditLogPage() {
         />
         <SummaryTile
           label="Busiest" icon={Users}
-          value={summary.data?.busiest?.[0]?.name ?? "—"}
+          value={displayPersonName(summary.data?.busiest?.[0]?.name, summary.data?.busiest?.[0]?.employeeCode) ?? "—"}
           hint={summary.data?.busiest?.[0]
             ? `${summary.data.busiest[0].count} actions`
             : "No activity yet"}
@@ -392,7 +393,7 @@ export default function AuditLogPage() {
                             </div>
                           </TableCell>
                           <TableCell className="align-top">
-                            <div className="text-sm font-medium">{r.name ?? "Not signed in"}</div>
+                            <div className="text-sm font-medium">{displayPersonName(r.name, r.employeeCode) ?? "Not signed in"}</div>
                             <div className="code-chip text-[11px] text-muted-foreground">
                               {r.employeeCode ?? "—"}
                             </div>
@@ -476,7 +477,7 @@ export default function AuditLogPage() {
                           {dayjs(r.at).format("DD MMM, HH:mm:ss")}
                         </TableCell>
                         <TableCell>
-                          <div className="text-sm font-medium">{r.name ?? "Unknown account"}</div>
+                          <div className="text-sm font-medium">{displayPersonName(r.name, r.employeeCode) ?? "Unknown account"}</div>
                           <div className="code-chip text-[11px] text-muted-foreground">
                             {r.employeeCode ?? "—"}
                           </div>
@@ -602,7 +603,7 @@ function AuditDetailDialog({ row, onClose }: { row: AuditRow; onClose: () => voi
         </div>
 
         <div className="grid gap-x-4 gap-y-2 rounded-lg border bg-muted/30 p-3 sm:grid-cols-2">
-          <Field label="Who">{row.name ?? "Not signed in"}</Field>
+          <Field label="Who">{displayPersonName(row.name, row.employeeCode) ?? "Not signed in"}</Field>
           <Field label="Employee ID">{row.employeeCode ?? "—"}</Field>
           <Field label="Roles">{row.roles ?? "—"}</Field>
           <Field label="IP address">{row.ipAddress ?? "—"}</Field>

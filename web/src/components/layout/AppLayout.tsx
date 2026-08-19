@@ -21,6 +21,7 @@ import { CustomLoader } from "@/components/ui/custom-loader";
 import { ChatBotWidget } from "@/components/ChatBotWidget";
 import { GlobalLoginAnnouncementModal } from "@/components/GlobalLoginAnnouncementModal";
 import { CallProvider } from "@/hooks/useCalls";
+import { displayPersonName } from "@/lib/people";
 
 interface NavItem {
   to: string;
@@ -305,7 +306,7 @@ function AppShell() {
     "type" in grp && grp.type === "group";
 
   const rawName = (user as any)?.name || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : "User");
-  const userName = isPIXE100 ? (rawName.toUpperCase().includes("CEO") ? "CTO" : rawName) : rawName;
+  const userName = displayPersonName(rawName, user?.employeeCode) ?? rawName;
   const roleLabel = isPIXE100 ? "CTO" : getRoleDisplayName(user?.roles);
 
   return (

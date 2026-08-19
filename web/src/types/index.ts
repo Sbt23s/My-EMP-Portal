@@ -408,6 +408,7 @@ export interface AppNotification {
   id: number;
   title: string;
   body?: string;
+  message?: string;
   type?: string;
   link?: string;
   read: boolean;
@@ -537,6 +538,8 @@ export interface ComplaintNeed {
   description: string;
   priority: string; // LOW | MEDIUM | HIGH
   status: string; // OPEN | IN_REVIEW | RESOLVED | REJECTED
+  targetRoleName?: string;
+  resolutionNotes?: string;
   hrResponse?: string;
   handledBy?: number;
   handledByName?: string;

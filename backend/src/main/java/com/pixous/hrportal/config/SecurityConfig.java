@@ -69,7 +69,13 @@ public class SecurityConfig {
                                 "/api/auth/**",
                                 "/api/public/**",
                                 "/api/technical-admin/auth/**",
-                                "/api/tech-admin/**",
+                                // "/api/tech-admin/**" was here. It made the whole
+                                // technical-admin announcement API public -- upload,
+                                // publish and delete included -- to anyone who knew
+                                // the URL. Those endpoints now authenticate like
+                                // every other technical-admin route; the read-only
+                                // endpoint employees use lives at
+                                // /api/global-announcements and is unaffected.
                                 "/api/files/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",

@@ -5,6 +5,8 @@ import '../../providers/app_providers.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/states.dart';
 
+/// Employee profile with all available info: name, username, email, phone,
+/// employee code, company, designation, industry, roles, and team.
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -26,8 +28,6 @@ class ProfileScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Profile'),
         actions: [
-          // The portal keeps this in its top bar; on a phone the top bar of the
-          // page somebody's own settings live on is the equivalent place.
           Builder(
             builder: (context) {
               final mode = ref.watch(themeModeProvider);
@@ -52,6 +52,7 @@ class ProfileScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Avatar + name card
           Card(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -74,23 +75,21 @@ class ProfileScreen extends ConsumerWidget {
                     user.name,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                          fontWeight: FontWeight.w700,
+                        ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '@${user.username}',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                          color: scheme.onSurfaceVariant,
+                        ),
                   ),
                   if (user.employeeCode?.isNotEmpty == true) ...[
                     const SizedBox(height: 10),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 5,
-                      ),
+                          horizontal: 12, vertical: 5),
                       decoration: BoxDecoration(
                         color: scheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(20),
@@ -109,6 +108,8 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
+
+          // Contact info card
           Card(
             child: Column(
               children: [
@@ -126,26 +127,66 @@ class ProfileScreen extends ConsumerWidget {
                     value: user.phone!,
                   ),
                 ],
-                if (user.companyName?.isNotEmpty == true) ...[
-                  const Divider(height: 1),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Company info card
+          Card(
+            child: Column(
+              children: [
+                if (user.companyName?.isNotEmpty == true)
                   _Row(
                     icon: Icons.apartment_rounded,
                     label: 'Company',
                     value: user.companyName!,
                   ),
-                ],
-                if (user.roles.isNotEmpty) ...[
+                if (user.designation?.isNotEmpty == true) ...[
                   const Divider(height: 1),
                   _Row(
-                    icon: Icons.badge_outlined,
-                    label: 'Role',
-                    value: user.roles.join(', '),
+                    icon: Icons.work_outline_rounded,
+                    label: 'Designation',
+                    value: user.designation!,
+                  ),
+                ],
+                if (user.industry?.isNotEmpty == true) ...[
+                  const Divider(height: 1),
+                  _Row(
+                    icon: Icons.category_outlined,
+                    label: 'Industry',
+                    value: user.industry!,
+                  ),
+                ],
+                if (user.team?.isNotEmpty == true) ...[
+                  const Divider(height: 1),
+                  _Row(
+                    icon: Icons.groups_outlined,
+                    label: 'Team',
+                    value: user.team!,
                   ),
                 ],
               ],
             ),
           ),
+          const SizedBox(height: 12),
+
+          // Roles card
+          Card(
+            child: Column(
+              children: [
+                if (user.roles.isNotEmpty)
+                  _Row(
+                    icon: Icons.badge_outlined,
+                    label: 'Role${user.roles.length > 1 ? 's' : ''}',
+                    value: user.roles.join(', '),
+                  ),
+              ],
+            ),
+          ),
           const SizedBox(height: 24),
+
+          // Sign out button
           OutlinedButton.icon(
             onPressed: () async {
               final confirmed = await showDialog<bool>(
@@ -191,8 +232,8 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListTile(
-    leading: Icon(icon, size: 20),
-    title: Text(label, style: Theme.of(context).textTheme.bodySmall),
-    subtitle: Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
-  );
+        leading: Icon(icon, size: 20),
+        title: Text(label, style: Theme.of(context).textTheme.bodySmall),
+        subtitle: Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+      );
 }

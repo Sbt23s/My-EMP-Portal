@@ -3,6 +3,7 @@ package com.pixous.hrportal.modules.announcement;
 import com.pixous.hrportal.common.ApiResponse;
 import com.pixous.hrportal.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -10,8 +11,25 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Managing the announcement every user sees at sign-in: create, publish, retire.
+ *
+ * <p>Restricted to the technical administrator, matching every sibling
+ * controller under {@code /api/technical-admin/**}. This one was reachable
+ * without signing in at all -- it sits under {@code /api/tech-admin/**}, a
+ * prefix the security chain listed as public, and it carried no method-level
+ * guard of its own to make up for it. Anyone who found the URL could upload a
+ * file, publish an announcement onto the login screen of every user in every
+ * company, or delete the ones already there.
+ *
+ * <p>The announcement employees actually see is served by
+ * {@link GlobalLoginAnnouncementController} at {@code /api/global-announcements},
+ * which is a separate, read-only endpoint. Locking this one down therefore
+ * changes nothing for them.
+ */
 @RestController
 @RequestMapping("/api/tech-admin/global-announcements")
+@PreAuthorize("hasRole('TECHNICAL_ADMIN')")
 @RequiredArgsConstructor
 public class TechAdminGlobalAnnouncementController {
 

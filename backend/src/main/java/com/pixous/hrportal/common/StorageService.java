@@ -110,7 +110,7 @@ public class StorageService {
 
         // Fallback to local filesystem for older files
         try {
-            Path target = root.resolve(relativePath).normalize();
+            Path target = safeResolve(relativePath);
             if (Files.exists(target)) {
                 return Files.readAllBytes(target);
             }
@@ -122,6 +122,27 @@ public class StorageService {
     }
 
     public Path resolve(String relativePath) {
-        return root.resolve(relativePath).normalize();
+        return safeResolve(relativePath);
+    }
+
+    /**
+     * Resolves a stored path and refuses anything that escapes the storage root.
+     *
+     * <p>The traversal check lived only in {@code FileController}, which rejects a
+     * path containing "..". That covers the one route serving files today, but it
+     * puts the guarantee in the caller rather than in the thing being guarded --
+     * so the next caller of {@code read} or {@code resolve} inherits nothing. A
+     * path that normalises outside the root is refused here, whoever asked.
+     *
+     * <p>Purely defensive: legitimate paths are UUID-based names under the root
+     * and are unaffected.
+     */
+    private Path safeResolve(String relativePath) {
+        Path target = root.resolve(relativePath).normalize();
+        if (!target.startsWith(root)) {
+            log.warn("Refused a storage path that escapes the root: {}", relativePath);
+            throw ApiException.notFound("File");
+        }
+        return target;
     }
 }

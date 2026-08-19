@@ -17,6 +17,8 @@ class AuthUser {
     this.industry,
     this.photoPath,
     this.companyName,
+    this.designation,
+    this.team,
   });
 
   final int id;
@@ -30,6 +32,8 @@ class AuthUser {
   final String? industry;
   final String? photoPath;
   final String? companyName;
+  final String? designation;
+  final String? team;
 
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
     id: (json['id'] as num?)?.toInt() ?? 0,
@@ -43,6 +47,8 @@ class AuthUser {
     industry: json['industry']?.toString(),
     photoPath: json['photoPath']?.toString(),
     companyName: json['companyName']?.toString(),
+    designation: json['designation']?.toString() ?? json['designationTitle']?.toString(),
+    team: json['team']?.toString() ?? json['teamName']?.toString(),
   );
 
   Map<String, dynamic> toJson() => {
@@ -57,6 +63,8 @@ class AuthUser {
     'industry': industry,
     'photoPath': photoPath,
     'companyName': companyName,
+    'designation': designation,
+    'team': team,
   };
 
   /// Authorisation is decided by the server; these only decide what to draw. A

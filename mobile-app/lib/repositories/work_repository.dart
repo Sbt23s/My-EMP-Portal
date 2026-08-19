@@ -212,6 +212,8 @@ class WorkRepository {
     required String description,
     String? type,
     String? priority,
+    String? category,
+    String? attachments,
   }) async {
     final data = await _api.post(
       '/tickets',
@@ -220,6 +222,8 @@ class WorkRepository {
         'description': description.trim(),
         if (type != null) 'type': type,
         if (priority != null) 'priority': priority,
+        if (category != null && category.trim().isNotEmpty) 'category': category.trim(),
+        if (attachments != null && attachments.isNotEmpty) 'attachments': attachments,
       },
     );
     if (data is! Map<String, dynamic>) throw StateError('ticket');
@@ -248,6 +252,14 @@ class WorkRepository {
     int? totalKm,
     num? totalAmount,
     String? remarks,
+    int? startingKm,
+    int? endingKm,
+    int? hillsKm,
+    int? plainsKm,
+    num? busFare,
+    num? others,
+    String? petrolSlipPath,
+    String? photos,
   }) async {
     final data = await _api.post(
       '/ta-expenses',
@@ -264,6 +276,15 @@ class WorkRepository {
         if (totalAmount != null) 'grossTotal': totalAmount,
         if (remarks != null && remarks.trim().isNotEmpty)
           'remarks': remarks.trim(),
+        if (startingKm != null) 'startingKm': startingKm,
+        if (endingKm != null) 'endingKm': endingKm,
+        if (hillsKm != null) 'hillsKm': hillsKm,
+        if (plainsKm != null) 'plainsKm': plainsKm,
+        if (busFare != null) 'busFare': busFare,
+        if (others != null) 'others': others,
+        if (petrolSlipPath != null && petrolSlipPath.isNotEmpty)
+          'petrolSlipPath': petrolSlipPath,
+        if (photos != null && photos.isNotEmpty) 'photos': photos,
       },
     );
     if (data is! Map<String, dynamic>) throw StateError('claim');

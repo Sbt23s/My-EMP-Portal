@@ -266,11 +266,30 @@ public class DashboardService {
                         u -> u.getIndustry() == null ? "" : u.getIndustry(),
                         (a, b) -> a));
 
-        // Does a record's owner fall inside the selected industry (Overall = all)?
+        /*
+         * Does this record belong to someone in this company, and in the selected
+         * industry?
+         *
+         * Both halves matter, and the company half was missing. The predicate used
+         * to answer "yes" to everything whenever no industry was selected -- which
+         * is the default "Overall" view. The counts below then ran over
+         * findAll() results from tables that carry no company_id at all
+         * (leave_requests, tickets, payslips), so an administrator of one company
+         * was shown pending approvals, open tickets, leave utilisation and monthly
+         * payroll cost totalled across every company on the installation.
+         *
+         * industryByUser is built from userRepository.findAll(), and User carries
+         * the tenant filter, so the map contains this company's people and nobody
+         * else's. Requiring the owner to be in that map is therefore the company
+         * check, and it costs nothing extra.
+         *
+         * For a single-company installation the numbers are unchanged -- every
+         * record already belongs to the only company there is.
+         */
         java.util.function.Predicate<Long> inFilter = userId -> {
-            if (filterVal == null) return true;
             String ind = industryByUser.get(userId);
-            return ind != null && filterVal.equalsIgnoreCase(ind);
+            if (ind == null) return false;
+            return filterVal == null || filterVal.equalsIgnoreCase(ind);
         };
 
         // Currently-working headcount: exclude offboarded staff so "Total" and the

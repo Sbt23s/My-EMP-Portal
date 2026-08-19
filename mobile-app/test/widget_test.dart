@@ -125,15 +125,20 @@ void main() {
   });
 
   group('SubmitClaimSheet', () {
-    Future<void> pumpSheet(WidgetTester tester) => tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(home: Scaffold(body: SubmitClaimSheet())),
-      ),
-    );
+    Future<void> pumpSheet(WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(home: Scaffold(body: SingleChildScrollView(child: SubmitClaimSheet()))),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
 
     testWidgets('will not submit without a destination', (tester) async {
       await pumpSheet(tester);
 
+      await tester.ensureVisible(find.widgetWithText(FilledButton, 'Submit claim'));
       await tester.tap(find.widgetWithText(FilledButton, 'Submit claim'));
       await tester.pump();
 
@@ -141,50 +146,54 @@ void main() {
       // here because the repository would otherwise be reached with no
       // configured server and throw an unrelated error.
       expect(
-        find.text('Whoever approves this needs to know where'),
+        find.text('Where was this expense?'),
         findsOneWidget,
       );
     });
 
-    testWidgets('rejects a non-numeric amount', (tester) async {
+    testWidgets('rejects a non-numeric starting km', (tester) async {
       await pumpSheet(tester);
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Where to'),
+        find.widgetWithText(TextFormField, 'Location / city'),
         'Coimbatore',
       );
+      await tester.ensureVisible(find.widgetWithText(TextFormField, 'Starting KM'));
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Amount'),
-        'about five hundred',
+        find.widgetWithText(TextFormField, 'Starting KM'),
+        'abc',
       );
+      await tester.ensureVisible(find.widgetWithText(FilledButton, 'Submit claim'));
       await tester.tap(find.widgetWithText(FilledButton, 'Submit claim'));
       await tester.pump();
 
       expect(find.text('Numbers only'), findsOneWidget);
     });
 
-    testWidgets('rejects a zero claim', (tester) async {
+    testWidgets('rejects a zero starting km', (tester) async {
       await pumpSheet(tester);
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Where to'),
+        find.widgetWithText(TextFormField, 'Location / city'),
         'Coimbatore',
       );
+      await tester.ensureVisible(find.widgetWithText(TextFormField, 'Starting KM'));
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Amount'),
+        find.widgetWithText(TextFormField, 'Starting KM'),
         '0',
       );
+      await tester.ensureVisible(find.widgetWithText(FilledButton, 'Submit claim'));
       await tester.tap(find.widgetWithText(FilledButton, 'Submit claim'));
       await tester.pump();
 
-      expect(find.text('A claim of zero is not worth claiming'), findsOneWidget);
+      expect(find.text('Must be more than zero'), findsOneWidget);
     });
 
     testWidgets('accepts a blank amount, since it is optional', (tester) async {
       await pumpSheet(tester);
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Where to'),
+        find.widgetWithText(TextFormField, 'Location / city'),
         'Coimbatore',
       );
       // Validating the form directly rather than tapping the button. A tap

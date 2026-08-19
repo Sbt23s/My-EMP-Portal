@@ -251,7 +251,7 @@ export default function EmployeesPage() {
       const ROLE_LABEL: Record<string, string> = {
         SUPER_ADMIN: "Admin", IT_HR: "HR Head", IT_MGR: "HR", IT_TL: "Team Leader",
         IT_EMP: "Employee", CV_EMP: "Field Employee", CV_SUP: "Site Supervisor",
-        CV_HR: "HR", IT_FIN: "Finance", IT_CEO: "CEO", IT_AST: "Asset Manager",
+        CV_HR: "HR", IT_FIN: "Finance", IT_CEO: "CTO", IT_AST: "Asset Manager",
         CV_ADM: "Facilities Admin"
       };
       const label = (roles?: string[]) =>

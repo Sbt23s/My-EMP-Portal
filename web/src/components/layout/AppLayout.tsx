@@ -216,10 +216,24 @@ function AppShell() {
   const toggleGroup = (key: string) =>
     setGroupOpen((prev) => ({ ...prev, [key]: !prev[key] }));
 
+  const isExcluded = (excludeRoles?: string[]) => {
+    if (!excludeRoles) return false;
+    if (isPIXE100 && (excludeRoles.includes("SUPER_ADMIN") || excludeRoles.includes("COMPANY_ADMIN"))) {
+      return true;
+    }
+    return excludeRoles.some((r) => hasRole(r));
+  };
+
+  const isOnlyRoleAllowed = (onlyRoles?: string[]) => {
+    if (!onlyRoles) return true;
+    if (isPIXE100 && (onlyRoles.includes("SUPER_ADMIN") || onlyRoles.includes("COMPANY_ADMIN"))) {
+      return true;
+    }
+    return onlyRoles.some((r) => hasRole(r));
+  };
+
   // Build visible nav — handle group entries inline
   const visibleNav = NAV.filter((entry) => {
-    // The dashboard asks hasDashboard rather than hasModule: a company that
-    // has never configured its modules must keep it, so unknown means on.
     if (!("type" in entry) && entry.to === "/" && !hasDashboard()) return false;
     if (entry.moduleCode && !hasModule(entry.moduleCode)) return false;
     return true;
@@ -227,7 +241,8 @@ function AppShell() {
     if ("type" in entry && entry.type === "group") {
       const visibleChildren = entry.children.filter(
         (c) =>
-          !(isPIXE100 ? false : c.excludeRole?.some((r) => hasRole(r))) &&
+          !isExcluded(c.excludeRole) &&
+          isOnlyRoleAllowed(c.onlyRole) &&
           (!c.anyPermission || hasPermission(...c.anyPermission) || isSupAdmin) &&
           (!c.moduleCode || hasModule(c.moduleCode))
       );
@@ -235,11 +250,9 @@ function AppShell() {
       return { ...entry, children: visibleChildren };
     }
     const item = entry as NavItem;
-    if (!isPIXE100 && item.excludeRole?.some((r) => hasRole(r))) return null;
-    // A role-only entry ignores the Super Admin shortcut below on purpose.
-    if (item.onlyRole && !isPIXE100 && !item.onlyRole.some((r) => hasRole(r))) return null;
+    if (isExcluded(item.excludeRole)) return null;
+    if (!isOnlyRoleAllowed(item.onlyRole)) return null;
     if (!item.anyPermission || hasPermission(...item.anyPermission) || isSupAdmin) {
-      // Team Leaders (not HR/admins) see this as "Team Attendance".
       if (item.to === "/team-attendance") {
         const tl = hasRole("IT_TL") && !hasRole("IT_MGR") && !hasRole("SUPER_ADMIN") && !isPIXE100;
         return { ...item, label: tl ? "Team Attendance" : "Employee Attendance" };

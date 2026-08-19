@@ -243,4 +243,213 @@ public class ChatbotOrgContext {
         sb.append("\n");
         return sb.toString();
     }
+
+    // ------------------------------------------------------------------
+    // Answering without a language model
+    //
+    // With no LLM key configured the assistant replied with one fixed sentence
+    // -- "ask me about leave, attendance, payslips or assets (the AI service is
+    // temporarily unavailable)" -- to a CTO who had just asked which employees
+    // were absent today. That number was sitting in the database the whole time.
+    //
+    // The questions an administrator actually asks are therefore answered here,
+    // from live data, whether or not a model is reachable. With a key configured
+    // the model still answers everything and phrases it freely; this is the
+    // floor, not a replacement for it.
+    //
+    // Read-only throughout, and only ever reached for HR and administrators.
+    // ------------------------------------------------------------------
+
+    /**
+     * A real answer to an administrator's question, or null when the question is
+     * not one these rules cover.
+     *
+     * Returning null is the important part: it lets the caller fall through to
+     * the ordinary reply instead of confidently answering a different question.
+     */
+    @Transactional(readOnly = true)
+    public String directAnswer(String question, String lang) {
+        if (question == null || question.isBlank()) return null;
+        String q = question.toLowerCase();
+        boolean ta = "ta".equals(lang);
+
+        try {
+            // A named person outranks every topic below: "is Priya in today" is
+            // a question about Priya, not about attendance in general.
+            String person = peopleMentioned(question);
+            if (person != null && !person.isBlank()) {
+                return (ta ? "இவர்களைப் பற்றிய தற்போதைய தகவல்:\n\n"
+                           : "Here are their current records:\n\n") + person.trim();
+            }
+
+            if (asksAbsent(q)) return absentAnswer(ta);
+            if (asksPresent(q)) return presentAnswer(ta);
+            if (asksHeadcount(q)) return headcountAnswer(ta);
+            if (asksPendingLeave(q)) return pendingLeaveAnswer(ta);
+            if (asksTickets(q)) return ticketAnswer(ta);
+            if (asksComplaints(q)) return complaintAnswer(ta);
+            if (asksTeams(q)) return teamAnswer(ta);
+            return null;
+        } catch (Exception e) {
+            // A data error must leave the chat working, not turn a question
+            // into an error message.
+            return null;
+        }
+    }
+
+    private boolean asksAbsent(String q) {
+        return q.contains("absent") || q.contains("not present") || q.contains("who is out")
+                || q.contains("வரவில்லை") || q.contains("இல்லாத") || q.contains("வராத");
+    }
+
+    private boolean asksPresent(String q) {
+        return q.contains("present") || q.contains("punched in") || q.contains("who is in")
+                || q.contains("attendance today")
+                || q.contains("வந்த") || q.contains("வருகை");
+    }
+
+    private boolean asksHeadcount(String q) {
+        return q.contains("how many employee") || q.contains("headcount")
+                || q.contains("total employee") || q.contains("staff strength")
+                || q.contains("மொத்த ஊழிய");
+    }
+
+    private boolean asksPendingLeave(String q) {
+        return (q.contains("leave") || q.contains("விடுப்ப"))
+                && (q.contains("pending") || q.contains("approv") || q.contains("நிலுவை"));
+    }
+
+    private boolean asksTickets(String q) {
+        return q.contains("ticket") || q.contains("support") || q.contains("helpdesk")
+                || q.contains("ஆதரவு");
+    }
+
+    private boolean asksComplaints(String q) {
+        return q.contains("complaint") || q.contains("குறை");
+    }
+
+    private boolean asksTeams(String q) {
+        return q.contains("team") || q.contains("designation") || q.contains("குழு");
+    }
+
+    private Set<Long> presentIdsToday() {
+        return attendanceRepository.findByWorkDate(LocalDate.now()).stream()
+                .filter(a -> a.getPunchInAt() != null)
+                .map(Attendance::getUserId)
+                .collect(Collectors.toSet());
+    }
+
+    /**
+     * Names, capped.
+     *
+     * The count is the answer; the names are the detail. A whole company marked
+     * absent on a public holiday would otherwise return thirty-odd lines into a
+     * chat bubble.
+     */
+    private void appendNames(StringBuilder sb, List<User> people, boolean ta, boolean withTeam) {
+        people.stream().limit(25).forEach(u -> {
+            sb.append("\n- ").append(u.getName());
+            if (u.getEmployeeCode() != null) sb.append(" (").append(u.getEmployeeCode()).append(")");
+            if (withTeam && u.getDesignationTitle() != null && !u.getDesignationTitle().isBlank()) {
+                sb.append(" - ").append(u.getDesignationTitle());
+            }
+        });
+        if (people.size() > 25) {
+            int rest = people.size() - 25;
+            sb.append(ta ? "\n\n...மற்றும் " + rest + " பேர்." : "\n\n...and " + rest + " more.");
+        }
+    }
+
+    private String absentAnswer(boolean ta) {
+        List<User> active = userRepository.findByEnabledTrue();
+        Set<Long> present = presentIdsToday();
+        List<User> absent = active.stream().filter(u -> !present.contains(u.getId())).toList();
+
+        if (absent.isEmpty()) {
+            return ta ? "இன்று அனைவரும் வருகை பதிவு செய்துள்ளனர்." : "Everyone has punched in today.";
+        }
+
+        StringBuilder sb = new StringBuilder(ta
+                ? "இன்று " + absent.size() + " பேர் வரவில்லை (மொத்தம் " + active.size() + "):"
+                : "Absent today: " + absent.size() + " of " + active.size() + ".");
+        appendNames(sb, absent, ta, true);
+        sb.append(ta ? "\n\n(முழு விவரம் Employee Attendance பக்கத்தில்.)"
+                     : "\n\n(Full detail on the Employee Attendance page.)");
+        return sb.toString();
+    }
+
+    private String presentAnswer(boolean ta) {
+        List<User> active = userRepository.findByEnabledTrue();
+        Set<Long> present = presentIdsToday();
+        List<User> in = active.stream().filter(u -> present.contains(u.getId())).toList();
+
+        if (in.isEmpty()) {
+            return ta ? "இன்று இதுவரை யாரும் வருகை பதிவு செய்யவில்லை."
+                      : "Nobody has punched in yet today.";
+        }
+        StringBuilder sb = new StringBuilder(ta
+                ? "இன்று " + in.size() + "/" + active.size() + " பேர் வந்துள்ளனர்:"
+                : "Present today: " + in.size() + " of " + active.size() + ".");
+        appendNames(sb, in, ta, false);
+        return sb.toString();
+    }
+
+    private String headcountAnswer(boolean ta) {
+        List<User> active = userRepository.findByEnabledTrue();
+        Set<Long> present = presentIdsToday();
+        long in = active.stream().filter(u -> present.contains(u.getId())).count();
+        return ta
+                ? "மொத்த செயல்படும் ஊழியர்கள்: " + active.size() + ". இன்று வந்தவர்கள்: " + in + "."
+                : "Active employees: " + active.size() + ". Present today: " + in + ".";
+    }
+
+    private String pendingLeaveAnswer(boolean ta) {
+        long pending = safeCount(() -> leaveRequestRepository.countByStatus("PENDING"));
+        if (pending == 0) {
+            return ta ? "நிலுவையில் விடுப்பு விண்ணப்பங்கள் இல்லை."
+                      : "No leave requests are pending. All caught up.";
+        }
+        return ta
+                ? pending + " விடுப்பு விண்ணப்பம் அனுமதிக்காக காத்திருக்கிறது. (Leave Management > Approvals)"
+                : pending + " leave request" + (pending == 1 ? "" : "s")
+                    + " awaiting approval. See Leave Management > Approvals.";
+    }
+
+    private String ticketAnswer(boolean ta) {
+        long open = safeCount(() -> ticketRepository.countByStatusNot("CLOSED"));
+        if (open == 0) {
+            return ta ? "திறந்த ஆதரவு கோரிக்கைகள் இல்லை." : "No open support tickets.";
+        }
+        return ta
+                ? open + " திறந்த ஆதரவு கோரிக்கை உள்ளது. (Supports பக்கம்)"
+                : open + " open support ticket" + (open == 1 ? "" : "s") + ". See the Supports page.";
+    }
+
+    private String complaintAnswer(boolean ta) {
+        long total = safeCount(() -> (long) complaintRepository.findAll().size());
+        if (total == 0) {
+            return ta ? "இதுவரை குறைகள் பதிவாகவில்லை." : "No complaints have been raised.";
+        }
+        return ta
+                ? total + " குறை பதிவாகியுள்ளது. (Complaints பக்கம்)"
+                : total + " complaint" + (total == 1 ? "" : "s") + " on record. See the Complaints page.";
+    }
+
+    private String teamAnswer(boolean ta) {
+        List<User> active = userRepository.findByEnabledTrue();
+        Map<Long, List<User>> byDesignation = active.stream()
+                .filter(u -> u.getDesignationId() != null)
+                .collect(Collectors.groupingBy(User::getDesignationId));
+
+        StringBuilder sb = new StringBuilder();
+        for (Designation d : designationRepository.findByActiveTrueOrderByNameAsc()) {
+            List<User> members = byDesignation.getOrDefault(d.getId(), List.of());
+            if (members.isEmpty()) continue;
+            sb.append("\n- ").append(d.getName()).append(" (").append(members.size()).append("): ")
+              .append(members.stream().map(User::getName).collect(Collectors.joining(", ")));
+        }
+        // No teams recorded is not an answer; let the caller fall through.
+        if (sb.length() == 0) return null;
+        return (ta ? "குழுக்கள்:" : "Teams:") + sb;
+    }
 }

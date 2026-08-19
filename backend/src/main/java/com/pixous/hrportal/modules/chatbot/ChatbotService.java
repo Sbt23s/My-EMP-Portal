@@ -137,7 +137,13 @@ public class ChatbotService {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "Message is required");
         }
         if (!settings.enabled()) {
-            return new ChatResponse(localFallback(message, lang), "disabled", lang);
+            // Even switched off, an administrator's question about live data has
+            // a real answer; only the language model is unavailable, not the
+            // database behind it.
+            String direct = privileged ? orgContext.directAnswer(message, lang) : null;
+            return direct != null
+                    ? new ChatResponse(direct, "live-data", lang)
+                    : new ChatResponse(localFallback(message, lang), "disabled", lang);
         }
 
         String system = systemPrompt(lang);
@@ -174,6 +180,21 @@ public class ChatbotService {
                 }
             } catch (Exception e) {
                 log.warn("Chatbot provider {} failed: {}", p, e.getMessage());
+            }
+        }
+        /*
+         * No key configured, or every provider failed.
+         *
+         * Before falling back to a fixed sentence, answer from the database if
+         * the question is one an administrator asks about live data -- who is
+         * absent, what is pending, or a named employee's record. A CTO asking
+         * "which absent today" was previously told the AI service was
+         * unavailable, while the answer sat one query away.
+         */
+        if (privileged) {
+            String direct = orgContext.directAnswer(message, lang);
+            if (direct != null) {
+                return new ChatResponse(direct, "live-data", lang);
             }
         }
         return new ChatResponse(localFallback(message, lang), "local", lang);

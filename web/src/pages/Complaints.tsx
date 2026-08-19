@@ -522,13 +522,15 @@ function SubmitDialog({ onClose }: { onClose: () => void }) {
     }
   });
 
+  const selectedTargetRoleId = targetRoleId || (recs.data && recs.data.length > 0 ? String(recs.data[0].id) : "");
+
   const submit = useMutation({
     mutationFn: async () => {
       const body = {
         subject,
         category,
         priority,
-        targetRoleId: targetRoleId ? Number(targetRoleId) : undefined,
+        targetRoleId: selectedTargetRoleId ? Number(selectedTargetRoleId) : undefined,
         description,
         isAnonymous: anonymous
       };
@@ -576,8 +578,7 @@ function SubmitDialog({ onClose }: { onClose: () => void }) {
         </div>
         <div className="space-y-1">
           <Label htmlFor="tgt">Send to</Label>
-          <Select id="tgt" value={targetRoleId} onChange={(e) => setTargetRoleId(e.target.value)}>
-            <option value="">Default (HR & System Admin)</option>
+          <Select id="tgt" value={selectedTargetRoleId} onChange={(e) => setTargetRoleId(e.target.value)}>
             {(recs.data ?? []).map((r) => (
               <option key={r.id} value={r.id}>
                 {r.name}

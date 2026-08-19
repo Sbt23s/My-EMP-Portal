@@ -156,6 +156,8 @@ export default function TicketEntryPage() {
   const removeFile = (path: string) =>
     set("attachments", files.filter((p) => p !== path).join(","));
 
+  const selectedAssignedTo = form.assignedTo || (filteredAgents.length > 0 ? String(filteredAgents[0].id) : "");
+
   const create = useMutation({
     mutationFn: async () =>
       api.post("/tickets", {
@@ -163,7 +165,7 @@ export default function TicketEntryPage() {
         type: form.type,
         category: form.category || undefined,
         priority: form.priority,
-        assignedTo: Number(form.assignedTo),
+        assignedTo: selectedAssignedTo ? Number(selectedAssignedTo) : undefined,
         // The affected module matters to whoever picks this up, so it travels
         // with the description rather than being dropped.
         description: [
@@ -185,8 +187,8 @@ export default function TicketEntryPage() {
     if (!form.category) { toast.error("Please choose a category"); return; }
     if (!form.type) { toast.error("Please choose a type"); return; }
     if (!form.priority) { toast.error("Please set a priority"); return; }
-    if (!form.assignedTo) { toast.error("Please choose the HR this should go to"); return; }
-    if (!form.description.trim()) { toast.error("Please describe the issue"); return; }
+    if (!selectedAssignedTo) { toast.error("Please pick who to send this ticket to"); return; }
+    if (!form.description.trim()) { toast.error("A detailed description helps resolve the request faster"); return; }
     create.mutate();
   };
 
@@ -259,12 +261,7 @@ export default function TicketEntryPage() {
               </Select>
             </Field>
             <Field label="Request to" required icon={UserRound}>
-              <Select value={form.assignedTo} onChange={(e) => set("assignedTo", e.target.value)}>
-                <option value="">
-                  {hrUsers.isLoading ? "Loading…"
-                    : filteredAgents.length === 0 ? "No HR available yet"
-                      : "Select"}
-                </option>
+              <Select value={selectedAssignedTo} onChange={(e) => set("assignedTo", e.target.value)}>
                 {filteredAgents.map((u) => (
                   <option key={u.id} value={u.id}>{u.name}{u.code ? ` (${u.code})` : ""}</option>
                 ))}

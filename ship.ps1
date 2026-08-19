@@ -96,11 +96,11 @@ echo "--- clearing leftovers from an interrupted deploy ---"
 # what it cannot clean up is the half-renamed container an interrupted run
 # leaves behind, named like 3fa1c2d4e5f6_hrportal-backend. Remove only those.
 #
-# --status=exited --status=created, never a running one. A retry once left the
+# Exited, created or dead only -- never a running one. A retry once left the
 # live backend carrying the renamed form of its own name, and a cleanup that
 # matched on the name alone would have force-removed the running service on the
 # next deploy -- causing the very Create race this is here to avoid.
-for id in $(sudo docker ps -a --status=exited --status=created --status=dead             --format '{{.ID}} {{.Names}}' | grep -E '[0-9a-f]{8,}_hrportal-' | awk '{print $1}'); do
+for id in $(sudo docker ps -a --filter status=exited --filter status=created --filter status=dead             --format '{{.ID}} {{.Names}}' | grep -E '[0-9a-f]{8,}_hrportal-' | awk '{print $1}'); do
   echo "    removing leftover: $id"
   sudo docker rm -f "$id" >/dev/null 2>&1 || true
 done
@@ -143,7 +143,7 @@ echo "--- rebuilding: $SERVICES ---"
 # seconds. A deploy whose images built fine should not need a human for that.
 if ! sudo docker compose -f docker-compose.prod.yml up -d --build $SERVICES; then
   echo "--- up failed; clearing leftovers and retrying once ---"
-  for id in $(sudo docker ps -a --status=exited --status=created --status=dead               --format '{{.ID}} {{.Names}}' | grep -E '[0-9a-f]{8,}_hrportal-' | awk '{print $1}'); do
+  for id in $(sudo docker ps -a --filter status=exited --filter status=created --filter status=dead               --format '{{.ID}} {{.Names}}' | grep -E '[0-9a-f]{8,}_hrportal-' | awk '{print $1}'); do
     sudo docker rm -f "$id" >/dev/null 2>&1 || true
   done
   sleep 5
@@ -196,19 +196,25 @@ if ($LASTEXITCODE -ne 0) { Die "The deploy failed. Read the output above." }
 
 Step "Checking the live site"
 $domain = "https://pixoushrportal.pixous.info"
-try {
-  $site = (Invoke-WebRequest -Uri "$domain/" -Method Head -TimeoutSec 20 -SkipHttpErrorCheck).StatusCode
-} catch { $site = "unreachable" }
-try {
-  $login = (Invoke-WebRequest -Uri "$domain/api/auth/login" -Method Post -TimeoutSec 20 `
-            -Headers @{ "Content-Type" = "application/json"; "Origin" = $domain } `
-            -Body '{"username":"__probe__","password":"__probe__"}' -SkipHttpErrorCheck).StatusCode
-} catch { $login = "unreachable" }
+# Probed with curl.exe rather than Invoke-WebRequest.
+#
+# The check used -SkipHttpErrorCheck, which only exists in PowerShell 7. On 5.1
+# the parameter failed to bind, the call threw before any request went out, and
+# both probes reported "unreachable" on every deploy -- including the healthy
+# ones, which is worse than no check at all. curl reports a 401 as a result
+# rather than an error, so the answer we expect needs no special handling.
+$curl = Join-Path $env:SystemRoot "System32\curl.exe"
+$site = (& $curl -s -o NUL -w "%{http_code}" --max-time 20 "$domain/")
+$login = (& $curl -s -o NUL -w "%{http_code}" --max-time 20 -X POST "$domain/api/auth/login" `
+          -H "Content-Type: application/json" -H "Origin: $domain" `
+          -d '{\"username\":\"__probe__\",\"password\":\"__probe__\"}')
+if (-not $site)  { $site = "unreachable" }
+if (-not $login) { $login = "unreachable" }
 
 Write-Host "    site  : $site    (want 200)"
 Write-Host "    login : $login   (want 401 - reached the endpoint)"
 
-if ($site -eq 200 -and $login -eq 401) {
+if ("$site" -eq "200" -and "$login" -eq "401") {
   Write-Host "`nDeployed and healthy.  $domain`n" -ForegroundColor Green
 } else {
   Write-Host "`nDeployed, but the checks above are not what they should be.`n" -ForegroundColor Yellow

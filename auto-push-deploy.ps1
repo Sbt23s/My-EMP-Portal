@@ -64,15 +64,18 @@ if [ ! -f /etc/turn-secret ]; then
     chmod +x setup-turn.sh 2>/dev/null || true
     ./setup-turn.sh || true
 fi
-echo '--- Removing leftover container conflicts ---'
+echo '--- Removing leftover container conflicts and freeing server disk space ---'
 sudo docker rm -f hrportal-mysql hrportal-backend hrportal-web hrportal-redis hrportal-analytics 2>/dev/null || true
 sudo docker ps -aq | xargs -r sudo docker rm -f 2>/dev/null || true
 sudo docker container prune -f 2>/dev/null || true
 sudo docker network prune -f 2>/dev/null || true
-sudo docker compose -f docker-compose.prod.yml --profile analytics down --volumes --remove-orphans 2>/dev/null || true
+sudo docker image prune -af 2>/dev/null || true
+sudo docker builder prune -af 2>/dev/null || true
+sudo docker system prune -af 2>/dev/null || true
+sudo docker compose -f docker-compose.prod.yml down --volumes --remove-orphans 2>/dev/null || true
 sleep 3
 echo '--- Rebuilding and starting production services ---'
-sudo docker compose -f docker-compose.prod.yml --profile analytics up -d --build
+sudo docker compose -f docker-compose.prod.yml up -d --build
 echo '--- Waiting for backend service to become ready ---'
 for i in $(seq 1 30); do
     if sudo docker exec hrportal-backend curl -s http://localhost:8080/actuator/health | grep -q 'UP'; then

@@ -100,6 +100,14 @@ import { useNavigate } from "react-router-dom";
 export default function PayrollPage() {
   const navigate = useNavigate();
   const { user, hasRole, hasPermission } = useAuth();
+
+  /**
+   * The two accounts that draw no salary here: the System Admin and the CTO.
+   * Used to hide "My Payslips", which has nothing to show either of them.
+   */
+  const isSystemAdminOrCto = hasRole("SUPER_ADMIN", "COMPANY_ADMIN")
+    || user?.employeeCode === "ADM0001"
+    || user?.employeeCode === "PIX-E100";
   const canRun = hasRole("IT_MGR", "IT_HR", "CV_HR", "SUPER_ADMIN", "COMPANY_ADMIN")
     || hasPermission("PAYROLL_RUN", "USER_MANAGE")
     || user?.employeeCode === "PIX-E100";
@@ -312,7 +320,18 @@ export default function PayrollPage() {
           <Input type="date" min="2020-01-01" max="2099-12-31" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-9 w-36 bg-background text-xs" />
         </div>
         <div className="ml-auto flex items-center gap-2">
-          {!((hasRole("SUPER_ADMIN", "COMPANY_ADMIN") || user?.employeeCode === "ADM0001") && !hasRole("IT_MGR", "IT_HR", "CV_HR")) && (
+          {/*
+            * Hidden for the System Admin and the CTO, who have no payslips of
+            * their own to look at.
+            *
+            * This used to re-show the button whenever the viewer also held an
+            * HR role -- which the CTO account does, since it carries full
+            * administrative access -- so the exception swallowed the rule and
+            * the button came back for exactly the two accounts meant to be
+            * excluded. Being a system administrator or the CTO now settles it.
+            * An HR user who is not one of those two keeps the button.
+            */}
+          {!isSystemAdminOrCto && (
             <Button
               type="button"
               variant="outline"

@@ -650,16 +650,23 @@ public class LeaveService {
                 .filter(allowed)
                 .toList();
 
-        // For a short leave, prefer the team leader of the applicant's own
-        // department - that is who knows the roster. Widened to any team leader
-        // when the department has none, because an empty list is a form that
-        // cannot be submitted at all, and being sent to the wrong team leader is
-        // recoverable in a way that being unable to ask for leave is not.
-        if (!iAmHr && !iAmTl && days <= 3 && me.getDepartmentId() != null) {
-            List<User> sameDept = pool.stream()
-                    .filter(u -> me.getDepartmentId().equals(u.getDepartmentId()))
+        // For a short leave, only the applicant's own team leader - that is who
+        // knows the roster, and offering every team leader in the company means
+        // requests land with someone who cannot judge them.
+        //
+        // Narrowed by team, not by department. Department was the wrong field
+        // and nearly nobody has one, so this silently matched no one and the
+        // applicant was shown all five team leaders. See TeamMates.
+        //
+        // Still widened to any team leader when their own team genuinely has
+        // none: an empty list is a form that cannot be submitted at all, and
+        // reaching the wrong team leader is recoverable in a way that being
+        // unable to ask for leave is not.
+        if (!iAmHr && !iAmTl && days <= 3 && TeamMates.hasTeam(me)) {
+            List<User> myTeam = pool.stream()
+                    .filter(u -> TeamMates.sameTeam(me, u))
                     .toList();
-            if (!sameDept.isEmpty()) pool = sameDept;
+            if (!myTeam.isEmpty()) pool = myTeam;
         }
 
         return pool.stream()

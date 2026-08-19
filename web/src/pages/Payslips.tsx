@@ -1,4 +1,5 @@
 import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import type { ComponentType } from "react";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Download, Wallet, Eye, Users, Banknote, WalletCards, ReceiptText } from "lucide-react";
@@ -9,9 +10,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatMoney, monthName } from "@/lib/utils";
+import { cn, formatMoney, monthName } from "@/lib/utils";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
-import { StatTile, TILE_FILLS } from "@/components/ui/stat-tile";
 import type { ApiEnvelope, PayslipSummary } from "@/types";
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -168,41 +168,41 @@ export default function PayslipsPage() {
       {payslips.isLoading ? (
         <Skeleton className="h-32 w-full rounded-xl" />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <StatTile
-            label="Total CTC (Annual)"
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <SlipCard
+            title="Total CTC (Annual)"
             value={formatMoney(metrics.ctc)}
-            hint="Annual Total"
+            subtitle="Annual Total"
             icon={Users}
-            fill={TILE_FILLS.violet}
+            tone="violet"
           />
-          <StatTile
-            label="Net Salary"
+          <SlipCard
+            title="Net Salary"
             value={formatMoney(metrics.net)}
-            hint={metrics.latestLabel || "This Month"}
+            subtitle={metrics.latestLabel || "This Month"}
             icon={Banknote}
-            fill={TILE_FILLS.green}
+            tone="green"
           />
-          <StatTile
-            label="Gross Salary"
+          <SlipCard
+            title="Gross Salary"
             value={formatMoney(metrics.gross)}
-            hint={metrics.latestLabel || "This Month"}
+            subtitle={metrics.latestLabel || "This Month"}
             icon={WalletCards}
-            fill={TILE_FILLS.blue}
+            tone="blue"
           />
-          <StatTile
-            label="Deductions"
+          <SlipCard
+            title="Deductions"
             value={formatMoney(metrics.deductions)}
-            hint={metrics.latestLabel || "This Month"}
+            subtitle={metrics.latestLabel || "This Month"}
             icon={ReceiptText}
-            fill={TILE_FILLS.red}
+            tone="rose"
           />
-          <StatTile
-            label="YTD Earnings"
+          <SlipCard
+            title="YTD Earnings"
             value={formatMoney(metrics.ytd)}
-            hint={CUR_YEAR.toString()}
+            subtitle={CUR_YEAR.toString()}
             icon={Wallet}
-            fill={TILE_FILLS.amber}
+            tone="amber"
           />
         </div>
       )}
@@ -307,6 +307,54 @@ export default function PayslipsPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * The tones a payslip figure can carry, named for what it is rather than for a
+ * colour, so the set stays consistent if the palette is ever retuned.
+ */
+const SLIP_TONES = {
+  violet: { text: "text-violet-600", badge: "bg-violet-100" },
+  green: { text: "text-green-600", badge: "bg-green-100" },
+  blue: { text: "text-blue-600", badge: "bg-blue-100" },
+  rose: { text: "text-rose-600", badge: "bg-rose-100" },
+  amber: { text: "text-amber-600", badge: "bg-amber-100" }
+} as const;
+
+/**
+ * A single figure at the top of the payslips page.
+ *
+ * The same quiet card the payroll screens use: a light surface, the label in
+ * small coloured caps, the amount large, and the colour carried by a round
+ * icon badge instead of a saturated fill. Written here rather than by reaching
+ * for the shared filled StatTile, or by editing it, because that tile is used
+ * across the product and restyling it would change pages this request did not
+ * ask about -- payroll included.
+ */
+function SlipCard({
+  title, value, subtitle, icon: Icon, tone
+}: {
+  title: string;
+  value: string;
+  subtitle: string;
+  icon: ComponentType<{ className?: string }>;
+  tone: keyof typeof SLIP_TONES;
+}) {
+  const { text, badge } = SLIP_TONES[tone];
+  return (
+    <div className="flex flex-col justify-center gap-3 rounded-xl border bg-card p-5 shadow-sm transition-all hover:shadow-md">
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-1.5">
+          <h4 className={cn("text-[11px] font-bold uppercase tracking-wider", text)}>{title}</h4>
+          <div className="text-xl font-bold tabular-nums tracking-tight">{value}</div>
+        </div>
+        <div className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-full", badge)}>
+          <Icon className={cn("h-4 w-4", text)} />
+        </div>
+      </div>
+      <div className={cn("text-[11px] font-semibold", text)}>{subtitle}</div>
     </div>
   );
 }

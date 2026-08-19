@@ -41,8 +41,20 @@ if (-not $DeployOnly) {
     if (-not $Message) {
       $Message = "Update " + (Get-Date -Format "yyyy-MM-dd HH:mm")
     }
-    git commit -m $Message | Out-Null
-    Ok "committed: $Message"
+    # Message through a file, never through the command line.
+    #
+    # PowerShell 5.1 rebuilds the argument string when it calls a native exe,
+    # and a message containing quotes or newlines comes out the other side as
+    # several arguments -- so a perfectly good commit failed with
+    # "pathspec did not match any file(s)" and the deploy went on to push and
+    # rebuild nothing. -F takes the message verbatim, with nothing to mangle.
+    $msgFile = Join-Path ([System.IO.Path]::GetTempPath()) ("ship-msg-" + [guid]::NewGuid().ToString('N') + ".txt")
+    [System.IO.File]::WriteAllText($msgFile, $Message, (New-Object System.Text.UTF8Encoding($false)))
+    git commit -F $msgFile | Out-Null
+    $committed = ($LASTEXITCODE -eq 0)
+    Remove-Item $msgFile -Force -ErrorAction SilentlyContinue
+    if (-not $committed) { Die "Commit failed. Nothing was pushed or deployed." }
+    Ok "committed: $($Message -split "`n" | Select-Object -First 1)"
   }
 
   Step "Pushing"
@@ -73,11 +85,19 @@ set -e
 cd ~/hr-portal 2>/dev/null || cd ~/hr-port
 echo "--- pulling ---"
 git pull --ff-only
-echo "--- clearing any half-recreated containers ---"
-for n in hrportal-backend hrportal-web hrportal-analytics; do
-  for id in $(sudo docker ps -a --format '{{.ID}} {{.Names}}' | awk -v n="$n" '$2 ~ n"$" {print $1}'); do
-    sudo docker rm -f "$id" >/dev/null 2>&1 || true
-  done
+echo "--- clearing leftovers from an interrupted deploy ---"
+# Only the renamed corpses, never a healthy container.
+#
+# This used to force-remove hrportal-backend and hrportal-web outright. That
+# turned every deploy into a Create rather than a Recreate, and Docker holds a
+# name reservation for a moment after a removal -- so compose raced it and
+# failed with "the container name is already in use" on a deploy that was
+# otherwise fine. Compose recreates running containers correctly on its own;
+# what it cannot clean up is the half-renamed container an interrupted run
+# leaves behind, named like 3fa1c2d4e5f6_hrportal-backend. Remove only those.
+for id in $(sudo docker ps -a --format '{{.ID}} {{.Names}}' | grep -E '[0-9a-f]{8,}_hrportal-' | awk '{print $1}'); do
+  echo "    removing leftover: $id"
+  sudo docker rm -f "$id" >/dev/null 2>&1 || true
 done
 echo "--- deciding what to rebuild ---"
 # Rebuild only the images whose source actually moved.
@@ -114,7 +134,16 @@ if [ -z "$SERVICES" ]; then
 fi
 
 echo "--- rebuilding: $SERVICES ---"
-sudo docker compose -f docker-compose.prod.yml up -d --build $SERVICES
+# One retry, because a name reservation that has not yet expired clears in
+# seconds. A deploy whose images built fine should not need a human for that.
+if ! sudo docker compose -f docker-compose.prod.yml up -d --build $SERVICES; then
+  echo "--- up failed; clearing leftovers and retrying once ---"
+  for id in $(sudo docker ps -a --format '{{.ID}} {{.Names}}' | grep -E '[0-9a-f]{8,}_hrportal-' | awk '{print $1}'); do
+    sudo docker rm -f "$id" >/dev/null 2>&1 || true
+  done
+  sleep 5
+  sudo docker compose -f docker-compose.prod.yml up -d --build $SERVICES
+fi
 
 # Only wait on the backend if it was actually one of them.
 case "$SERVICES" in

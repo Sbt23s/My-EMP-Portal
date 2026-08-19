@@ -119,22 +119,53 @@ public class PermissionService {
             allowed = u -> "PIX-E100".equalsIgnoreCase(u.getEmployeeCode())
                     || hasRole(u, "IT_MGR") || hasRole(u, "IT_HR") || hasRole(u, "SUPER_ADMIN") || hasRole(u, "COMPANY_ADMIN");
         } else {
-            // Employee permission request -> ONLY their team TL
-            allowed = u -> hasRole(u, "IT_TL")
-                    && (u.getDepartmentId() != null && u.getDepartmentId().equals(me.getDepartmentId()));
+            // Employee permission request -> only their own team's TL.
+            //
+            // This matched on departmentId, which is not how a team is defined
+            // here and is unset for most records, so the dropdown came up empty
+            // and the form could not be submitted at all. Teams are
+            // designations - see TeamMates.
+            allowed = u -> (hasRole(u, "IT_TL") || hasRole(u, "CV_SUP"))
+                    && TeamMates.sameTeam(me, u);
         }
 
-        return userRepository.findByEnabledTrue().stream()
+        List<User> pool = userRepository.findByEnabledTrue().stream()
                 .filter(u -> !u.getId().equals(requesterId))
                 .filter(allowed)
+                .toList();
+
+        // Falling back to any team leader beats an empty dropdown, for the same
+        // reason as in LeaveService: a request that reaches the wrong approver
+        // can be redirected, a form that cannot be submitted cannot.
+        if (pool.isEmpty() && !iAmHr && !iAmTl) {
+            pool = userRepository.findByEnabledTrue().stream()
+                    .filter(u -> !u.getId().equals(requesterId))
+                    .filter(u -> hasRole(u, "IT_TL") || hasRole(u, "CV_SUP"))
+                    .toList();
+        }
+
+        return pool.stream()
                 .map(u -> {
                     Map<String, Object> m = new java.util.HashMap<>();
                     m.put("id", u.getId());
                     String name = u.getName();
-                    if ("PIX-E100".equalsIgnoreCase(u.getEmployeeCode()) || "CEO".equalsIgnoreCase(name) || (name != null && name.contains("CEO"))) {
-                        name = "CTO";
+                    if ("PIX-E100".equalsIgnoreCase(u.getEmployeeCode())
+                            && (name == null || name.isBlank()
+                                || "CEO".equalsIgnoreCase(name) || "CTO".equalsIgnoreCase(name))) {
+                        // Stored as "CEO"; the company calls the post CTO and
+                        // the person by name, so say the name and let the role
+                        // label above supply the title.
+                        name = "Elamaran Subramaniyan";
                     }
                     m.put("name", name);
+                    // What they are to the requester, so this dropdown reads
+                    // "TL - Harish C" like the leave one rather than a bare name.
+                    String label;
+                    if ("PIX-E100".equalsIgnoreCase(u.getEmployeeCode())) label = "CTO";
+                    else if (hasRole(u, "IT_MGR") || hasRole(u, "IT_HR") || hasRole(u, "CV_HR")) label = "HR";
+                    else if (hasRole(u, "IT_TL") || hasRole(u, "CV_SUP")) label = "TL";
+                    else label = "Approver";
+                    m.put("role", label);
                     m.put("code", u.getEmployeeCode());
                     return m;
                 }).toList();

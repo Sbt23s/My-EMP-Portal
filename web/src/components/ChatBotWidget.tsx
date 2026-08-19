@@ -88,6 +88,26 @@ const SUGGESTIONS: { module: string; en: string; ta: string }[] = [
   { module: "PAYROLL", en: "Where are my payslips?", ta: "என் பேஸ்லிப் எங்கே?" }
 ];
 
+/**
+ * Starter questions for HR and administrators.
+ *
+ * The employee list above is the wrong opening for someone who approves leave
+ * rather than requests it: a CTO shown "How do I apply for leave?" learns
+ * nothing about what the assistant can actually do for them. These ask the
+ * questions their role does ask, and the last one demonstrates the part that is
+ * easy to miss -- that naming a person returns that person's real records.
+ *
+ * Not module-gated. Unlike the employee prompts, these track the viewer's
+ * authority rather than a switched-on module, and the same privilege test runs
+ * server-side before any of it is answered.
+ */
+const ADMIN_SUGGESTIONS: { en: string; ta: string }[] = [
+  { en: "Who is absent today?", ta: "இன்று யார் வரலை?" },
+  { en: "Which leave requests are pending my approval?", ta: "என் அனுமதிக்காக காதிருக்கும் விடுப்புகள்?" },
+  { en: "Show open support tickets and complaints", ta: "நிலுவையில் உள்ள ஆதரவு கோரிக்கைகள்" },
+  { en: "Type an employee name for their attendance and leave", ta: "ஒரு பணியாளர் பெயரைட்டால் அவர் விவரம் வரும்" }
+];
+
 const PLACEHOLDER: Record<Lang, string> = {
   en: "Type your message…",
   ta: "தமிழில் தட்டச்சு செய்யவும்…"
@@ -174,7 +194,12 @@ function BotAvatar({ className = "" }: { className?: string }) {
 // ---- widget ---------------------------------------------------------------
 
 export function ChatBotWidget() {
-  const { user, hasModule } = useAuth();
+  const { user, hasModule, hasPermission } = useAuth();
+
+  // The same test the server applies before it will attach anyone's records.
+  // Kept identical on purpose: prompts that offer more than the backend will
+  // answer are worse than no prompts at all.
+  const privileged = hasPermission("USER_MANAGE") || hasPermission("DASHBOARD_EXEC");
   const location = useLocation();
 
   const [config, setConfig] = useState<ChatbotConfig | null>(null);
@@ -658,7 +683,10 @@ export function ChatBotWidget() {
             {/* Quick suggestions */}
             {showSuggestions && (
               <div className="flex flex-wrap gap-2 pt-1">
-                {SUGGESTIONS.filter((s) => hasModule(s.module)).map((item) => item[lang]).map((s) => (
+                {(privileged
+                  ? ADMIN_SUGGESTIONS
+                  : SUGGESTIONS.filter((s) => hasModule(s.module))
+                ).map((item) => item[lang]).map((s) => (
                   <button
                     key={s}
                     onClick={() => void handleSend(s)}

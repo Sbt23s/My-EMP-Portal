@@ -148,6 +148,13 @@ public class ChatbotService {
             if (live != null && !live.isBlank()) {
                 system = system + live;
             }
+            // Whoever this question names, with their real records. Adds nothing
+            // when no one is named, so an ordinary "how many are in today" costs
+            // no extra prompt.
+            String people = orgContext.peopleMentioned(message);
+            if (people != null && !people.isBlank()) {
+                system = system + people;
+            }
         }
         List<ChatTurn> history = req.history() == null ? List.of() : req.history();
         String provider = settings.get(ChatbotSettingsService.LLM_PROVIDER, "groq");

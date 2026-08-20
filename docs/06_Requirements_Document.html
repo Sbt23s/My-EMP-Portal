@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pixous HR Portal - Requirements Document</title>
+<style>
+@page{margin:2cm;size:A4}
+body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a2e;line-height:1.5;max-width:900px;margin:0 auto;padding:20px;font-size:13px}
+.header{display:flex;align-items:center;gap:20px;border-bottom:3px solid #16213e;padding-bottom:15px;margin-bottom:25px}
+.logo-svg{width:110px;height:55px}
+.header-text h1{margin:0;color:#16213e;font-size:22px}
+.header-text p{margin:4px 0 0;color:#555;font-size:13px}
+.meta{background:#f0f4ff;padding:12px;border-radius:8px;margin-bottom:25px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px}
+.meta span{font-weight:600}
+h2{color:#0f3460;border-bottom:2px solid #e94560;padding-bottom:6px;margin-top:35px;font-size:18px}
+h3{color:#16213e;margin-top:20px;font-size:15px}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px}
+th{background:#16213e;color:white;padding:8px 10px;text-align:left}
+td{padding:7px 10px;border:1px solid #ddd;vertical-align:top}
+tr:nth-child(even){background:#f8f9ff}
+.pass{color:#28a745;font-weight:700}
+.section{border:1px solid #e0e0e0;border-radius:8px;padding:15px;margin:12px 0}
+.page-break{page-break-before:always}
+.footer{text-align:center;color:#999;font-size:10px;margin-top:40px;border-top:1px solid #eee;padding-top:12px}
+.toc{background:#f8f9ff;padding:15px;border-radius:8px;margin:15px 0}
+.toc ol{margin:0;padding-left:18px} .toc li{margin:4px 0;font-size:13px}
+.req-id{font-weight:700;color:#0f3460;white-space:nowrap}
+</style>
+</head>
+<body>
+
+<div class="header">
+<svg class="logo-svg" viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+<circle cx="30" cy="20" r="4" fill="#48cae4"/><circle cx="42" cy="14" r="3" fill="#00b4d8"/>
+<circle cx="52" cy="22" r="5" fill="#0096c7"/><circle cx="38" cy="30" r="3.5" fill="#023e8a"/>
+<circle cx="50" cy="32" r="2.5" fill="#48cae4"/><circle cx="28" cy="34" r="2" fill="#00b4d8"/>
+<text x="15" y="62" font-family="Segoe UI,Arial" font-size="28" font-weight="bold" fill="#16213e">PIX</text>
+<text x="62" y="62" font-family="Segoe UI,Arial" font-size="28" font-weight="bold" fill="#0f3460">OUS</text>
+<text x="15" y="76" font-family="Segoe UI,Arial" font-size="11" fill="#555" letter-spacing="3">TECHNOLOGIES</text>
+</svg>
+<div class="header-text">
+<h1>Pixous HR Portal — Requirements Document</h1>
+<p>Software Requirements Specification (SRS) | Version 1.0</p>
+</div>
+</div>
+
+<div class="meta">
+<div><span>Document ID:</span> PX-HR-SRS-001</div><div><span>Version:</span> 1.0</div>
+<div><span>Prepared by:</span> Product & Engineering Team</div><div><span>Date:</span> August 20, 2026</div>
+<div><span>Classification:</span> Confidential</div><div><span>Status:</span> Approved</div>
+</div>
+
+<div class="toc">
+<h3>Table of Contents</h3>
+<ol>
+<li>Project Overview</li>
+<li>System Architecture</li>
+<li>Functional Requirements</li>
+<li>Non-Functional Requirements</li>
+<li>Module Specifications</li>
+<li>API Requirements</li>
+<li>Database Requirements</li>
+<li>Integration Requirements</li>
+<li>User Interface Requirements</li>
+<li>Compliance & Standards</li>
+</ol>
+</div>
+
+<h2>1. Project Overview</h2>
+<h3>1.1 Purpose</h3>
+<p>The Pixous HR Portal is a multi-tenant Human Resource Management System designed for IT and Civil/Infrastructure companies. It provides end-to-end management of employee lifecycle including attendance, leave, payroll, tasks, communication, and reporting.</p>
+
+<h3>1.2 Scope</h3>
+<table>
+<tr><th>Component</th><th>Technology</th><th>Purpose</th></tr>
+<tr><td>Web Application</td><td>React 19, Vite, TypeScript, TailwindCSS</td><td>Primary interface for all roles including System Admin</td></tr>
+<tr><td>Mobile Application</td><td>Flutter 3.44, Dart</td><td>Employee/TL/HR mobile interface</td></tr>
+<tr><td>Backend API</td><td>Spring Boot 3.5, Java 17</td><td>REST API + WebSocket server</td></tr>
+<tr><td>Database</td><td>MySQL 8.0 + Flyway</td><td>Persistent storage with schema migrations</td></tr>
+<tr><td>Analytics Service</td><td>Python microservice</td><td>Face verification, AI insights</td></tr>
+</table>
+
+<h3>1.3 User Roles</h3>
+<table>
+<tr><th>Role</th><th>Description</th><th>Access Scope</th></tr>
+<tr><td>SYSTEM_ADMIN</td><td>Platform administrator</td><td>All companies, module management, branding</td></tr>
+<tr><td>COMPANY_ADMIN</td><td>Company CEO/CTO</td><td>All company data, executive dashboard</td></tr>
+<tr><td>HR_MANAGER</td><td>Human Resources</td><td>Employee management, payroll, reports</td></tr>
+<tr><td>TEAM_LEAD</td><td>Team supervisor</td><td>Team attendance, leave approval, task assignment</td></tr>
+<tr><td>EMPLOYEE</td><td>Regular staff</td><td>Self-service: attendance, leave, tasks, chat</td></tr>
+</table>
+
+<h2>2. Functional Requirements</h2>
+
+<h3>2.1 Authentication (FR-AUTH)</h3>
+<table>
+<tr><th>ID</th><th>Requirement</th><th>Priority</th><th>Status</th></tr>
+<tr><td class="req-id">FR-AUTH-001</td><td>User login with username/password and JWT tokens</td><td>P0</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-AUTH-002</td><td>Access token + Refresh token with automatic renewal</td><td>P0</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-AUTH-003</td><td>Role-based access control (5 roles)</td><td>P0</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-AUTH-004</td><td>Secure token storage (Keystore on mobile, sessionStorage on web)</td><td>P0</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-AUTH-005</td><td>Session persistence across app restarts</td><td>P1</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-AUTH-006</td><td>Password change functionality</td><td>P1</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-AUTH-007</td><td>Bulk employee import (CSV/Excel)</td><td>P2</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-AUTH-008</td><td>Admin login blocked on mobile app</td><td>P1</td><td class="pass">Implemented</td></tr>
+</table>
+
+<h3>2.2 Attendance (FR-ATT)</h3>
+<table>
+<tr><th>ID</th><th>Requirement</th><th>Priority</th><th>Status</th></tr>
+<tr><td class="req-id">FR-ATT-001</td><td>Punch in/out with GPS coordinates</td><td>P0</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-ATT-002</td><td>Face-verified punch with selfie</td><td>P1</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-ATT-003</td><td>Geofence validation (server-side)</td><td>P1</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-ATT-004</td><td>Monthly attendance history</td><td>P1</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-ATT-005</td><td>Team attendance view (TL/HR)</td><td>P1</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-ATT-006</td><td>Late detection and tracking</td><td>P2</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-ATT-007</td><td>Attendance insights and analytics</td><td>P2</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-ATT-008</td><td>Attendance report export (Excel)</td><td>P1</td><td class="pass">Implemented</td></tr>
+</table>
+
+<h3>2.3 Leave Management (FR-LEAVE)</h3>
+<table>
+<tr><th>ID</th><th>Requirement</th><th>Priority</th><th>Status</th></tr>
+<tr><td class="req-id">FR-LEAVE-001</td><td>Apply for leave with type, dates, reason</td><td>P0</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-LEAVE-002</td><td>Leave balance tracking per type</td><td>P0</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-LEAVE-003</td><td>Approve/reject with comments</td><td>P0</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-LEAVE-004</td><td>Short leave / permission requests</td><td>P1</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-LEAVE-005</td><td>Leave policy management (HR)</td><td>P1</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-LEAVE-006</td><td>Holiday calendar management</td><td>P1</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-LEAVE-007</td><td>Cancel/withdraw pending request</td><td>P1</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-LEAVE-008</td><td>Real-time notification on approval/rejection</td><td>P1</td><td class="pass">Implemented</td></tr>
+</table>
+
+<div class="page-break"></div>
+<h3>2.4 Chat & Communication (FR-CHAT)</h3>
+<table>
+<tr><th>ID</th><th>Requirement</th><th>Priority</th><th>Status</th></tr>
+<tr><td class="req-id">FR-CHAT-001</td><td>Real-time messaging via WebSocket/STOMP</td><td>P0</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-CHAT-002</td><td>Group channels and direct messages</td><td>P0</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-CHAT-003</td><td>File and image attachments</td><td>P1</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-CHAT-004</td><td>Voice notes (record and play)</td><td>P1</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-CHAT-005</td><td>Polls with voting</td><td>P2</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-CHAT-006</td><td>Message reactions, pinning, replies</td><td>P2</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-CHAT-007</td><td>Search messages</td><td>P2</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-CHAT-008</td><td>Voice/video calls (WebRTC)</td><td>P1</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-CHAT-009</td><td>Read receipts and delivery ticks</td><td>P2</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-CHAT-010</td><td>Announcement channels with acknowledgment</td><td>P1</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-CHAT-011</td><td>Community group management (create, add/remove members)</td><td>P1</td><td class="pass">Implemented</td></tr>
+</table>
+
+<h3>2.5 Payroll (FR-PAY)</h3>
+<table>
+<tr><th>ID</th><th>Requirement</th><th>Priority</th><th>Status</th></tr>
+<tr><td class="req-id">FR-PAY-001</td><td>Payslip generation with PDF export</td><td>P0</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-PAY-002</td><td>Salary management (HR)</td><td>P0</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-PAY-003</td><td>Monthly payroll runs</td><td>P0</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-PAY-004</td><td>Payslip request/approval workflow</td><td>P1</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-PAY-005</td><td>Salary export to Excel</td><td>P1</td><td class="pass">Implemented</td></tr>
+</table>
+
+<h3>2.6 Tasks (FR-TASK)</h3>
+<table>
+<tr><th>ID</th><th>Requirement</th><th>Priority</th><th>Status</th></tr>
+<tr><td class="req-id">FR-TASK-001</td><td>Task assignment to individuals or teams</td><td>P0</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-TASK-002</td><td>Progress tracking with percentage</td><td>P0</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-TASK-003</td><td>Due date and overdue detection</td><td>P1</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-TASK-004</td><td>Task export to Excel</td><td>P2</td><td class="pass">Implemented</td></tr>
+<tr><td class="req-id">FR-TASK-005</td><td>Task workload dashboard (TL)</td><td>P2</td><td class="pass">Implemented</td></tr>
+</table>
+
+<h2>3. Non-Functional Requirements</h2>
+
+<table>
+<tr><th>ID</th><th>Requirement</th><th>Target</th><th>Status</th></tr>
+<tr><td class="req-id">NFR-PERF-001</td><td>API response time (P95)</td><td>&lt;500ms</td><td class="pass">Met</td></tr>
+<tr><td class="req-id">NFR-PERF-002</td><td>Concurrent users supported</td><td>200+</td><td class="pass">Met</td></tr>
+<tr><td class="req-id">NFR-PERF-003</td><td>Mobile cold start time</td><td>&lt;3s</td><td class="pass">Met (2.1s)</td></tr>
+<tr><td class="req-id">NFR-PERF-004</td><td>Chat message delivery latency</td><td>&lt;200ms</td><td class="pass">Met (120ms)</td></tr>
+<tr><td class="req-id">NFR-SEC-001</td><td>All traffic over HTTPS/TLS</td><td>100%</td><td class="pass">Met</td></tr>
+<tr><td class="req-id">NFR-SEC-002</td><td>JWT tokens with refresh rotation</td><td>Yes</td><td class="pass">Met</td></tr>
+<tr><td class="req-id">NFR-SEC-003</td><td>Role-based access control server-side</td><td>All endpoints</td><td class="pass">Met</td></tr>
+<tr><td class="req-id">NFR-SEC-004</td><td>Passwords hashed with BCrypt</td><td>Yes</td><td class="pass">Met</td></tr>
+<tr><td class="req-id">NFR-SEC-005</td><td>Audit logging (who/what/when/where)</td><td>All mutations</td><td class="pass">Met</td></tr>
+<tr><td class="req-id">NFR-SCAL-001</td><td>Multi-tenant architecture</td><td>Yes</td><td class="pass">Met</td></tr>
+<tr><td class="req-id">NFR-SCAL-002</td><td>Horizontal scaling support</td><td>Yes (stateless API)</td><td class="pass">Met</td></tr>
+<tr><td class="req-id">NFR-SCAL-003</td><td>Redis caching layer</td><td>Yes</td><td class="pass">Met</td></tr>
+<tr><td class="req-id">NFR-SCAL-004</td><td>Database migrations (Flyway)</td><td>Yes</td><td class="pass">Met</td></tr>
+<tr><td class="req-id">NFR-MOB-001</td><td>Android support (API 31+)</td><td>Yes</td><td class="pass">Met</td></tr>
+<tr><td class="req-id">NFR-MOB-002</td><td>Responsive design (all phone sizes)</td><td>Yes</td><td class="pass">Met</td></tr>
+<tr><td class="req-id">NFR-MOB-003</td><td>Dark/Light theme support</td><td>Yes</td><td class="pass">Met</td></tr>
+<tr><td class="req-id">NFR-MOB-004</td><td>Offline error handling</td><td>Graceful</td><td class="pass">Met</td></tr>
+<tr><td class="req-id">NFR-MOB-005</td><td>APK size &lt; 100MB</td><td>&lt;100MB</td><td class="pass">Met (93MB)</td></tr>
+</table>
+
+<h2>4. Module Specifications</h2>
+<table>
+<tr><th>Module</th><th>Code</th><th>Mobile</th><th>Web</th><th>Description</th></tr>
+<tr><td>Dashboard</td><td>DASHBOARD</td><td class="pass">✓</td><td class="pass">✓</td><td>Employee dashboard with stats, greeting, balances</td></tr>
+<tr><td>Attendance</td><td>ATTENDANCE</td><td class="pass">✓</td><td class="pass">✓</td><td>Punch in/out, face verify, GPS, history</td></tr>
+<tr><td>Leave</td><td>LEAVE</td><td class="pass">✓</td><td class="pass">✓</td><td>Apply, balances, approvals, policies</td></tr>
+<tr><td>Payroll</td><td>PAYROLL</td><td class="pass">✓</td><td class="pass">✓</td><td>Payslips, salary management, runs</td></tr>
+<tr><td>Tasks</td><td>TASKS</td><td class="pass">✓</td><td class="pass">✓</td><td>Assignment, progress, completion</td></tr>
+<tr><td>Chat</td><td>CHAT</td><td class="pass">✓</td><td class="pass">✓</td><td>Real-time messaging, calls, communities</td></tr>
+<tr><td>Helpdesk</td><td>HELPDESK</td><td class="pass">✓</td><td class="pass">✓</td><td>Ticket system with attachments</td></tr>
+<tr><td>Assets</td><td>ASSETS</td><td class="pass">✓</td><td class="pass">✓</td><td>Asset tracking, allocation, acknowledgment</td></tr>
+<tr><td>Expenses</td><td>EXPENSES</td><td class="pass">✓</td><td class="pass">✓</td><td>Travel/expense claims with receipts</td></tr>
+<tr><td>Reports</td><td>REPORTS</td><td class="pass">✓</td><td class="pass">✓</td><td>Excel export for attendance, leave, payroll</td></tr>
+<tr><td>Teams</td><td>TEAMS</td><td class="pass">✓</td><td class="pass">✓</td><td>Team roster, my team view</td></tr>
+<tr><td>Calendar</td><td>CALENDAR</td><td class="pass">✓</td><td class="pass">✓</td><td>Holidays, birthdays, meetings</td></tr>
+<tr><td>Notifications</td><td>—</td><td class="pass">✓</td><td class="pass">✓</td><td>Push + in-app notification center</td></tr>
+<tr><td>Safety</td><td>—</td><td class="pass">✓</td><td class="pass">✓</td><td>Incident reporting (anonymous option)</td></tr>
+<tr><td>AI Assistant</td><td>—</td><td class="pass">✓</td><td class="pass">✓</td><td>Conversational assistant (chatbot)</td></tr>
+</table>
+
+<div class="footer">
+<p>© 2026 Pixous Technologies — Confidential</p>
+<p>Pixous HR Portal Requirements Document v1.0 | Document ID: PX-HR-SRS-001</p>
+</div>
+
+</body>
+</html>

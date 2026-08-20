@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pixous HR Portal - Test Case Document</title>
+<style>
+@page{margin:2cm;size:A4}
+body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a2e;line-height:1.5;max-width:920px;margin:0 auto;padding:20px;font-size:13px}
+.header{display:flex;align-items:center;gap:20px;border-bottom:3px solid #16213e;padding-bottom:15px;margin-bottom:25px}
+.logo-svg{width:110px;height:55px}
+.header-text h1{margin:0;color:#16213e;font-size:22px}
+.header-text p{margin:4px 0 0;color:#555;font-size:13px}
+.meta{background:#f0f4ff;padding:12px;border-radius:8px;margin-bottom:25px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px}
+.meta span{font-weight:600}
+h2{color:#0f3460;border-bottom:2px solid #e94560;padding-bottom:6px;margin-top:35px;font-size:18px}
+h3{color:#16213e;margin-top:20px;font-size:15px}
+h4{color:#533483;margin-top:12px;font-size:14px}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px}
+th{background:#16213e;color:white;padding:8px 10px;text-align:left;font-size:11px}
+td{padding:7px 10px;border:1px solid #ddd;vertical-align:top}
+tr:nth-child(even){background:#f8f9ff}
+.tc-id{font-weight:700;color:#0f3460;white-space:nowrap}
+.pass{color:#28a745;font-weight:700}.fail{color:#dc3545;font-weight:700}
+.section{border:1px solid #e0e0e0;border-radius:8px;padding:15px;margin:12px 0;background:#fefefe}
+.step{margin:3px 0;padding-left:15px;border-left:2px solid #0f3460}
+.page-break{page-break-before:always}
+.footer{text-align:center;color:#999;font-size:10px;margin-top:40px;border-top:1px solid #eee;padding-top:12px}
+.toc{background:#f8f9ff;padding:15px;border-radius:8px;margin:15px 0}
+.toc ol{margin:0;padding-left:18px} .toc li{margin:4px 0;font-size:13px}
+.priority-high{color:#dc3545;font-weight:700}.priority-med{color:#ffc107;font-weight:700}.priority-low{color:#28a745;font-weight:700}
+</style>
+</head>
+<body>
+
+<div class="header">
+<svg class="logo-svg" viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+<circle cx="30" cy="20" r="4" fill="#48cae4"/><circle cx="42" cy="14" r="3" fill="#00b4d8"/>
+<circle cx="52" cy="22" r="5" fill="#0096c7"/><circle cx="38" cy="30" r="3.5" fill="#023e8a"/>
+<circle cx="50" cy="32" r="2.5" fill="#48cae4"/><circle cx="28" cy="34" r="2" fill="#00b4d8"/>
+<text x="15" y="62" font-family="Segoe UI,Arial" font-size="28" font-weight="bold" fill="#16213e">PIX</text>
+<text x="62" y="62" font-family="Segoe UI,Arial" font-size="28" font-weight="bold" fill="#0f3460">OUS</text>
+<text x="15" y="76" font-family="Segoe UI,Arial" font-size="11" fill="#555" letter-spacing="3">TECHNOLOGIES</text>
+</svg>
+<div class="header-text">
+<h1>Pixous HR Portal — Test Case Document</h1>
+<p>Complete Test Cases for All Roles | Functional + Regression Testing</p>
+</div>
+</div>
+
+<div class="meta">
+<div><span>Document ID:</span> PX-HR-TC-001</div><div><span>Version:</span> 1.0</div>
+<div><span>Prepared by:</span> QA Team</div><div><span>Date:</span> August 20, 2026</div>
+<div><span>Total Test Cases:</span> 250+</div><div><span>Platforms:</span> Web + Android</div>
+</div>
+
+<div class="toc">
+<h3>Table of Contents</h3>
+<ol>
+<li>Authentication Test Cases (All Roles)</li>
+<li>Employee Role Test Cases</li>
+<li>Team Lead Role Test Cases</li>
+<li>HR Role Test Cases</li>
+<li>CTO/Admin Role Test Cases</li>
+<li>System Admin Test Cases</li>
+<li>Chat & Communication Test Cases</li>
+<li>File Upload Test Cases</li>
+<li>Error Handling Test Cases</li>
+<li>Mobile-Specific Test Cases</li>
+</ol>
+</div>
+
+<!-- ======================== 1. AUTHENTICATION ======================== -->
+<h2>1. Authentication Test Cases (All Roles)</h2>
+
+<table>
+<tr><th>TC ID</th><th>Module</th><th>Test Case</th><th>Steps</th><th>Expected Result</th><th>Priority</th></tr>
+
+<tr><td class="tc-id">AUTH-001</td><td>Login</td><td>Valid employee login</td>
+<td>1. Open app<br>2. Enter valid username<br>3. Enter valid password<br>4. Tap "Sign in"</td>
+<td>User is redirected to Dashboard. JWT tokens stored securely. User name displayed.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">AUTH-002</td><td>Login</td><td>Invalid credentials</td>
+<td>1. Enter wrong password<br>2. Tap "Sign in"</td>
+<td>Error snackbar: "Invalid credentials". User stays on login screen.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">AUTH-003</td><td>Login</td><td>Empty form submission</td>
+<td>1. Tap "Sign in" without entering anything</td>
+<td>Validation errors: "Enter your username" and "Enter your password" shown.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">AUTH-004</td><td>Login</td><td>Admin login on mobile → blocked</td>
+<td>1. Enter SUPER_ADMIN credentials<br>2. Tap "Sign in"</td>
+<td>Dialog: "This app is for employees, team leads and HR. Use the web portal."</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">AUTH-005</td><td>Login</td><td>Password visibility toggle</td>
+<td>1. Enter password<br>2. Tap eye icon<br>3. Tap eye icon again</td>
+<td>Password toggles between hidden (dots) and visible (text).</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">AUTH-006</td><td>Session</td><td>Token expiry handling</td>
+<td>1. Login successfully<br>2. Wait for access token to expire<br>3. Navigate to any screen</td>
+<td>Auto-refresh via /api/auth/refresh. If refresh fails → redirect to login.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">AUTH-007</td><td>Session</td><td>App restart restores session</td>
+<td>1. Login successfully<br>2. Kill app<br>3. Reopen app</td>
+<td>App restores session, skips login, shows Dashboard.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">AUTH-008</td><td>Logout</td><td>Logout clears session</td>
+<td>1. Go to Profile<br>2. Tap "Sign out"<br>3. Confirm</td>
+<td>Tokens cleared. User redirected to login screen. WebSocket disconnected.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">AUTH-009</td><td>Login</td><td>Network failure during login</td>
+<td>1. Turn off WiFi/data<br>2. Enter credentials<br>3. Tap "Sign in"</td>
+<td>Network error message shown. User stays on login. No crash.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">AUTH-010</td><td>Login</td><td>Role-based dashboard routing</td>
+<td>1. Login as Employee → verify Dashboard<br>2. Login as TL → verify Approvals available<br>3. Login as HR → verify Reports available<br>4. Login as CTO → verify Executive Dashboard</td>
+<td>Each role sees correct navigation items and dashboard type.</td><td class="priority-high">P1</td></tr>
+</table>
+
+<!-- ======================== 2. EMPLOYEE ROLE ======================== -->
+<h2>2. Employee Role Test Cases</h2>
+
+<h3>2.1 Attendance Module</h3>
+<table>
+<tr><th>TC ID</th><th>Test Case</th><th>Steps</th><th>Expected Result</th><th>Priority</th></tr>
+
+<tr><td class="tc-id">EMP-ATT-001</td><td>Punch In with GPS</td>
+<td>1. Open Attendance tab<br>2. Ensure GPS is on<br>3. Tap "Punch in"</td>
+<td>Punch recorded. Snack: "Punched in". Status changes. GPS coordinates sent to server.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">EMP-ATT-002</td><td>Punch Out</td>
+<td>1. After punching in<br>2. Tap "Punch out"</td>
+<td>Punch-out recorded. Worked hours displayed. "Done for today" shown.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">EMP-ATT-003</td><td>Face Punch In</td>
+<td>1. Tap "Punch in with face"<br>2. Take selfie<br>3. Wait for face verification</td>
+<td>Face verified against enrolled photo. Punch recorded. Or face mismatch error.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">EMP-ATT-004</td><td>No GPS still punches</td>
+<td>1. Turn off GPS<br>2. Tap "Punch in"</td>
+<td>Punch recorded but with geofence exception warning. "Location not available" shown.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">EMP-ATT-005</td><td>Monthly history</td>
+<td>1. Open Attendance tab<br>2. Scroll down to "This month"</td>
+<td>List of all attendance days shown with dates, punch in/out times, worked hours.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">EMP-ATT-006</td><td>Double punch prevention</td>
+<td>1. Tap "Punch in" rapidly twice</td>
+<td>Second tap is blocked (button disabled while busy). Only one punch recorded.</td><td class="priority-med">P2</td></tr>
+</table>
+
+<h3>2.2 Leave Module</h3>
+<table>
+<tr><th>TC ID</th><th>Test Case</th><th>Steps</th><th>Expected Result</th><th>Priority</th></tr>
+
+<tr><td class="tc-id">EMP-LV-001</td><td>View leave balances</td>
+<td>1. Open Leave tab</td>
+<td>All leave types shown with allocated, used, available counts and progress bars.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">EMP-LV-002</td><td>Apply for leave</td>
+<td>1. Tap "Apply"<br>2. Select leave type<br>3. Pick from/to dates<br>4. Enter reason<br>5. Select approver<br>6. Submit</td>
+<td>Request created. Snack: success. Request appears in "My requests" with PENDING status.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">EMP-LV-003</td><td>Cancel leave request</td>
+<td>1. Find PENDING request<br>2. Tap "Withdraw"<br>3. Confirm</td>
+<td>Request cancelled. Balance restored. Request status changes to CANCELLED.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">EMP-LV-004</td><td>View leave history</td>
+<td>1. Scroll through "My requests"</td>
+<td>All requests shown with status badges (APPROVED/REJECTED/PENDING), dates, type, reason.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">EMP-LV-005</td><td>Pull-to-refresh leave</td>
+<td>1. Pull down on Leave screen</td>
+<td>Data refreshes from server. Loading indicator shown during refresh.</td><td class="priority-med">P2</td></tr>
+</table>
+
+<h3>2.3 Tasks Module</h3>
+<table>
+<tr><th>TC ID</th><th>Test Case</th><th>Steps</th><th>Expected Result</th><th>Priority</th></tr>
+
+<tr><td class="tc-id">EMP-TK-001</td><td>View assigned tasks</td>
+<td>1. Open Tasks from More menu</td>
+<td>List of assigned tasks with title, due date, progress bar, status badge.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">EMP-TK-002</td><td>Update task progress</td>
+<td>1. Tap on an incomplete task<br>2. Adjust slider to 50%<br>3. Tap "Save progress"</td>
+<td>Progress updated. Progress bar reflects 50%. Server confirms update.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">EMP-TK-003</td><td>Complete a task</td>
+<td>1. Open task → set to 100%<br>2. Save</td>
+<td>Task status changes to DONE. Green status badge shown.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">EMP-TK-004</td><td>Overdue task highlighting</td>
+<td>1. View tasks with past due dates</td>
+<td>Overdue tasks shown with red indicator and "Overdue" label.</td><td class="priority-med">P2</td></tr>
+</table>
+
+<h3>2.4 Work Reports Module</h3>
+<table>
+<tr><th>TC ID</th><th>Test Case</th><th>Steps</th><th>Expected Result</th><th>Priority</th></tr>
+
+<tr><td class="tc-id">EMP-WR-001</td><td>Submit work report</td>
+<td>1. Open Work Reports<br>2. Tap "Add"<br>3. Select date<br>4. Enter project name<br>5. Enter hours (e.g., 7.5)<br>6. Enter description<br>7. Save</td>
+<td>Report created. Appears in list grouped by date. Hours validated (0-24 range).</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">EMP-WR-002</td><td>Reject invalid hours</td>
+<td>1. Enter hours = 0 or 25</td>
+<td>Validation: "Must be more than zero" or "That's more than a day".</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">EMP-WR-003</td><td>View reports grouped by date</td>
+<td>1. Open Work Reports with existing data</td>
+<td>Reports grouped by date. Each group shows total hours. Newest first.</td><td class="priority-med">P2</td></tr>
+</table>
+
+<h3>2.5 Claims Module</h3>
+<table>
+<tr><th>TC ID</th><th>Test Case</th><th>Steps</th><th>Expected Result</th><th>Priority</th></tr>
+
+<tr><td class="tc-id">EMP-CL-001</td><td>Submit Petrol claim</td>
+<td>1. Open Claims → tap "Claim"<br>2. Select "Petrol"<br>3. Enter location<br>4. Enter starting/ending KM<br>5. Enter hills/plains KM<br>6. Enter bus fare<br>7. Submit</td>
+<td>Claim created. Distance auto-calculated. Travel allowance computed. Appears in claims list.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">EMP-CL-002</td><td>Submit non-travel claim</td>
+<td>1. Select "House Rent" category<br>2. Enter location, item (rent period), amount<br>3. Submit</td>
+<td>Non-travel claim created with item details embedded in remarks.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">EMP-CL-003</td><td>Reject empty location</td>
+<td>1. Submit claim without location</td>
+<td>Validation: "Where was this expense?" error shown.</td><td class="priority-med">P2</td></tr>
+</table>
+
+<h3>2.6 Support Tickets</h3>
+<table>
+<tr><th>TC ID</th><th>Test Case</th><th>Steps</th><th>Expected Result</th><th>Priority</th></tr>
+
+<tr><td class="tc-id">EMP-TK-101</td><td>Raise support ticket</td>
+<td>1. Open Tickets → tap "Raise"<br>2. Enter subject<br>3. Select type, category, priority<br>4. Select affected module<br>5. Enter description<br>6. Submit</td>
+<td>Ticket created with code (TKT-YYYY-NNNNN). HR notified in real-time.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">EMP-TK-102</td><td>Attach files to ticket</td>
+<td>1. Tap attachment icon<br>2. Select "Photos" or "Document"<br>3. Pick files<br>4. Submit ticket</td>
+<td>Files uploaded. Ticket created with attachments. Files visible in ticket list.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">EMP-TK-103</td><td>View ticket status</td>
+<td>1. Open Tickets list</td>
+<td>Tickets shown with reference code, date, status badge (OPEN/IN_PROGRESS/RESOLVED).</td><td class="priority-med">P2</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ======================== 3. TEAM LEAD ROLE ======================== -->
+<h2>3. Team Lead Role Test Cases</h2>
+
+<table>
+<tr><th>TC ID</th><th>Module</th><th>Test Case</th><th>Steps</th><th>Expected Result</th><th>Priority</th></tr>
+
+<tr><td class="tc-id">TL-ATT-001</td><td>Team Attendance</td><td>View team attendance by date</td>
+<td>1. Open Team Attendance<br>2. Select a date</td>
+<td>List of team members with present/absent/late status, punch times.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">TL-ATT-002</td><td>Team Attendance</td><td>View punch detail</td>
+<td>1. Tap on a team member's row</td>
+<td>Detail dialog: punch in/out times, location, worked hours, late minutes.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">TL-LV-001</td><td>Approvals</td><td>Approve leave request</td>
+<td>1. Open Approvals<br>2. View pending requests<br>3. Tap "Approve" on a request</td>
+<td>Request approved. Employee notified in real-time. Request removed from pending list.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">TL-LV-002</td><td>Approvals</td><td>Reject leave with reason</td>
+<td>1. Tap "Reject" on a request<br>2. Enter rejection reason<br>3. Confirm</td>
+<td>Request rejected with reason. Employee sees rejection reason in their leave history.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">TL-TK-001</td><td>Tasks</td><td>Assign task to team member</td>
+<td>1. Dashboard → Assign Task<br>2. Select "Individual"<br>3. Select employee<br>4. Enter title, description, due date<br>5. Assign</td>
+<td>Task created. Employee receives real-time notification.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">TL-TK-002</td><td>Tasks</td><td>Assign task to entire team</td>
+<td>1. Select "Team" mode<br>2. Select designation/team<br>3. Select/deselect members<br>4. Enter task details<br>5. Assign</td>
+<td>Task created for each selected member. Count confirmed.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">TL-WR-001</td><td>Work Reports</td><td>View team work reports</td>
+<td>1. Open Work Reports<br>2. Switch to Team view</td>
+<td>Team's filed reports visible with employee names. Date range filter available.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">TL-WR-002</td><td>Work Reports</td><td>Export team reports to Excel</td>
+<td>1. Tap export button<br>2. Wait for file generation</td>
+<td>Excel file downloaded with team work reports, formatted with headers.</td><td class="priority-med">P2</td></tr>
+</table>
+
+<!-- ======================== 4. HR ROLE ======================== -->
+<h2>4. HR Role Test Cases</h2>
+
+<table>
+<tr><th>TC ID</th><th>Module</th><th>Test Case</th><th>Steps</th><th>Expected Result</th><th>Priority</th></tr>
+
+<tr><td class="tc-id">HR-EMP-001</td><td>Employees</td><td>Search employee directory</td>
+<td>1. Open Employees<br>2. Type name or code in search</td>
+<td>Filtered results shown. Server-side search (debounced).</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">HR-PAY-001</td><td>Payroll</td><td>View employee salaries</td>
+<td>1. Open Payroll from More menu</td>
+<td>List of all employees with salary details, designation, status.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">HR-PAY-002</td><td>Payroll</td><td>Generate payslip</td>
+<td>1. Select employee<br>2. Enter pay details<br>3. Generate</td>
+<td>Payslip generated. PDF created. Employee notified.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">HR-LP-001</td><td>Leave Policies</td><td>Create leave type</td>
+<td>1. Open Leave Policies<br>2. Create new type<br>3. Enter name, days, description<br>4. Save</td>
+<td>New leave type created. Visible in leave balances for all employees.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">HR-LP-002</td><td>Leave Policies</td><td>Add holiday</td>
+<td>1. Open Leave Policies → Holidays<br>2. Create holiday<br>3. Enter name, date<br>4. Save</td>
+<td>Holiday added. Visible in calendar for all employees.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">HR-ONB-001</td><td>Onboarding</td><td>View onboarding checklist</td>
+<td>1. Open Onboarding<br>2. Select new employee</td>
+<td>Onboarding tasks shown with completion status.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">HR-RPT-001</td><td>Reports</td><td>Export attendance report</td>
+<td>1. Open Reports<br>2. Select Attendance<br>3. Set date range<br>4. Export</td>
+<td>Excel file generated with attendance data for all employees.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">HR-RPT-002</td><td>Reports</td><td>Export leave report</td>
+<td>1. Select Leave report<br>2. Set date range<br>3. Export</td>
+<td>Excel with all leave requests and statuses.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">HR-RPT-003</td><td>Reports</td><td>Export payroll report</td>
+<td>1. Select Payroll report<br>2. Set month<br>3. Export</td>
+<td>Excel with salary details for all employees.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">HR-COM-001</td><td>Complaints</td><td>View all complaints</td>
+<td>1. Open Complaints → "All Complaints" tab</td>
+<td>Company-wide complaints shown with status, priority, employee info.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">HR-COM-002</td><td>Complaints</td><td>Respond to complaint</td>
+<td>1. Select a complaint<br>2. Enter response<br>3. Submit</td>
+<td>Response added. Status updated. Employee notified.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">HR-AUD-001</td><td>Audit Log</td><td>View audit trail</td>
+<td>1. Open Audit Log</td>
+<td>Security events listed: who, what, when, from where. Category counts at top.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">HR-COMM-001</td><td>Communities</td><td>Create community group</td>
+<td>1. Open Communities<br>2. Create group<br>3. Add name, description<br>4. Save<br>5. Add members</td>
+<td>Group created. Members added. Group chat accessible.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">HR-CLM-001</td><td>Claims</td><td>Approve employee claim</td>
+<td>1. Open Claims<br>2. Find PENDING claim<br>3. Approve</td>
+<td>Claim approved. Employee notified.</td><td class="priority-high">P1</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ======================== 5. CTO ROLE ======================== -->
+<h2>5. CTO / Company Admin Role Test Cases</h2>
+
+<table>
+<tr><th>TC ID</th><th>Module</th><th>Test Case</th><th>Steps</th><th>Expected Result</th><th>Priority</th></tr>
+
+<tr><td class="tc-id">CTO-DASH-001</td><td>Dashboard</td><td>View executive dashboard</td>
+<td>1. Login as CTO</td>
+<td>Executive dashboard with charts, headcount, attendance rates, trends, AI insights.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">CTO-DASH-002</td><td>Dashboard</td><td>Industry filter (Digital/Infra)</td>
+<td>1. Select "Digital" tab<br>2. Select "Infra" tab</td>
+<td>Data filters by industry. Stats update accordingly.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">CTO-DASH-003</td><td>Dashboard</td><td>View employee count drill-down</td>
+<td>1. Click on headcount stat card</td>
+<td>Dialog shows employee list with names, codes, status.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">CTO-MOD-001</td><td>Modules</td><td>Toggle module on/off</td>
+<td>1. Open module management<br>2. Toggle "Chat" off<br>3. Save</td>
+<td>Chat module disabled. Hidden from all users' navigation on both web and mobile.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">CTO-BRAND-001</td><td>Branding</td><td>Update company branding</td>
+<td>1. Open branding settings<br>2. Change primary color<br>3. Update welcome text<br>4. Save</td>
+<td>Branding applied across all platforms. Welcome text shown on dashboard.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">CTO-RESET-001</td><td>Data Reset</td><td>Data reset (destructive)</td>
+<td>1. Open Data Reset<br>2. Confirm with warning<br>3. Execute</td>
+<td>Data reset executed. All non-essential data cleared. Audit logged.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">CTO-ANN-001</td><td>Announcements</td><td>Create global announcement</td>
+<td>1. Open Global Announcements<br>2. Create announcement<br>3. Enter title, message<br>4. Publish</td>
+<td>Announcement pushed to all users via WebSocket.</td><td class="priority-high">P1</td></tr>
+</table>
+
+<!-- ======================== 6. SYSTEM ADMIN ======================== -->
+<h2>6. System Admin (Tech Admin) Test Cases</h2>
+
+<table>
+<tr><th>TC ID</th><th>Module</th><th>Test Case</th><th>Steps</th><th>Expected Result</th><th>Priority</th></tr>
+
+<tr><td class="tc-id">SA-LOGIN-001</td><td>Tech Admin</td><td>Tech admin login</td>
+<td>1. Navigate to /tech-admin/login<br>2. Enter tech admin credentials<br>3. Login</td>
+<td>Logged into tech admin console. Separate layout from main app.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">SA-COMP-001</td><td>Companies</td><td>View all companies</td>
+<td>1. Open Companies from sidebar</td>
+<td>List of all tenant companies with details.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">SA-COMP-002</td><td>Companies</td><td>Configure company</td>
+<td>1. Select a company<br>2. Click "Config"</td>
+<td>Company configuration page: modules, settings, features.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">SA-MOD-001</td><td>Module Mgmt</td><td>Global module management</td>
+<td>1. Open Module Management</td>
+<td>Global module flags. Can enable/disable modules across companies.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">SA-ROLE-001</td><td>Roles</td><td>View/manage roles</td>
+<td>1. Open Roles</td>
+<td>Role definitions with permissions. Edit capability.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">SA-USER-001</td><td>Users</td><td>View all users</td>
+<td>1. Open Users</td>
+<td>Global user directory across all companies.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">SA-BRAND-001</td><td>Branding</td><td>Platform branding</td>
+<td>1. Open Branding<br>2. Update global colors/fonts</td>
+<td>Global branding applied. Preview updated.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">SA-AUDIT-001</td><td>Audit</td><td>View cross-company audit</td>
+<td>1. Open Audit Logs</td>
+<td>All audit events across companies. Filterable by company, user, action.</td><td class="priority-high">P1</td></tr>
+</table>
+
+<!-- ======================== 7. CHAT ======================== -->
+<h2>7. Chat & Communication Test Cases</h2>
+
+<table>
+<tr><th>TC ID</th><th>Test Case</th><th>Steps</th><th>Expected Result</th><th>Priority</th></tr>
+
+<tr><td class="tc-id">CHAT-001</td><td>View chat channels</td>
+<td>1. Open Chat</td>
+<td>List of channels: groups, direct messages, team channels.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">CHAT-002</td><td>Send text message</td>
+<td>1. Open a channel<br>2. Type message<br>3. Tap send</td>
+<td>Message appears in chat. Delivered via WebSocket. Delivery ticks shown.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">CHAT-003</td><td>Receive message (real-time)</td>
+<td>1. Open a channel<br>2. Have another user send a message</td>
+<td>Message appears instantly without manual refresh.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">CHAT-004</td><td>Reply to message</td>
+<td>1. Long press a message<br>2. Tap "Reply"<br>3. Type response<br>4. Send</td>
+<td>Reply sent with quoted parent message visible.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">CHAT-005</td><td>React to message</td>
+<td>1. Long press a message<br>2. Tap an emoji (👍, ❤️, 😂, etc.)</td>
+<td>Reaction added. Reaction count shown. Tap to toggle own reaction.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">CHAT-006</td><td>Send file attachment</td>
+<td>1. Tap attachment icon<br>2. Select "Document"<br>3. Pick file<br>4. Add optional caption<br>5. Send</td>
+<td>File uploaded. Message with file chip shown. Downloadable by recipients.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">CHAT-007</td><td>Send image</td>
+<td>1. Tap attachment → "Photos"<br>2. Pick image(s)<br>3. Send</td>
+<td>Image uploaded. Thumbnail shown in chat. Tappable to view full image.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">CHAT-008</td><td>Voice note</td>
+<td>1. Tap microphone icon<br>2. Record (timer shown)<br>3. Stop recording<br>4. Auto-sends</td>
+<td>Voice note sent. Recipients see play button. Audio plays on tap.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">CHAT-009</td><td>Poll</td>
+<td>1. Open poll builder<br>2. Enter options<br>3. Create poll<br>4. Another user votes</td>
+<td>Poll shown in chat. Vote counts update. Voter's choice highlighted.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">CHAT-010</td><td>Pin message</td>
+<td>1. Long press message<br>2. Tap "Pin to this channel"</td>
+<td>Message pinned. Pin icon shown. Pinned messages viewable from header.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">CHAT-011</td><td>Delete message</td>
+<td>1. Long press own message<br>2. Tap "Delete"<br>3. Confirm</td>
+<td>Message soft-deleted. "Message deleted" shown to all.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">CHAT-012</td><td>Start direct message</td>
+<td>1. Tap FAB (+) on Chat screen<br>2. Search for person<br>3. Select</td>
+<td>Existing conversation opened or new 1:1 created. Chat room opens.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">CHAT-013</td><td>Voice call (1:1)</td>
+<td>1. Open 1:1 chat<br>2. Tap phone icon</td>
+<td>WebRTC voice call initiated. Ringing shown. Other user receives call.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">CHAT-014</td><td>Video call (1:1)</td>
+<td>1. Open 1:1 chat<br>2. Tap camera icon</td>
+<td>WebRTC video call initiated. Camera preview shown.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">CHAT-015</td><td>Search messages</td>
+<td>1. Open channel<br>2. Tap search icon<br>3. Enter search term</td>
+<td>Matching messages shown. Tappable to scroll to original.</td><td class="priority-med">P2</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ======================== 8. FILE UPLOAD ======================== -->
+<h2>8. File Upload Test Cases</h2>
+
+<table>
+<tr><th>TC ID</th><th>Test Case</th><th>Steps</th><th>Expected Result</th><th>Priority</th></tr>
+
+<tr><td class="tc-id">FILE-001</td><td>Upload ticket attachment</td>
+<td>1. Create ticket<br>2. Tap attach<br>3. Select image from gallery</td>
+<td>Image uploaded. Preview shown. Path stored with ticket.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">FILE-002</td><td>Upload via camera</td>
+<td>1. Tap attach → Camera<br>2. Take photo<br>3. Confirm</td>
+<td>Photo captured and uploaded. Displayed as attachment.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">FILE-003</td><td>Upload document</td>
+<td>1. Tap attach → Document<br>2. Select PDF/DOC<br>3. Upload</td>
+<td>Document uploaded. File chip shown with name.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">FILE-004</td><td>View uploaded image</td>
+<td>1. Tap on uploaded image thumbnail</td>
+<td>Full-screen image viewer opens.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">FILE-005</td><td>Open uploaded document</td>
+<td>1. Tap on uploaded document chip</td>
+<td>Document downloads and opens in external app (PDF viewer, etc.).</td><td class="priority-med">P2</td></tr>
+</table>
+
+<!-- ======================== 9. ERROR HANDLING ======================== -->
+<h2>9. Error Handling Test Cases</h2>
+
+<table>
+<tr><th>TC ID</th><th>Test Case</th><th>Steps</th><th>Expected Result</th><th>Priority</th></tr>
+
+<tr><td class="tc-id">ERR-001</td><td>No internet connection</td>
+<td>1. Turn off WiFi/data<br>2. Navigate through screens</td>
+<td>Network error message shown. Retry buttons available. No crash.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">ERR-002</td><td>API timeout</td>
+<td>1. Simulate slow network<br>2. Make API request</td>
+<td>Loading spinner shown. Timeout error after 30s. Retry option.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">ERR-003</td><td>401 Unauthorized</td>
+<td>1. Login<br>2. Manually expire token<br>3. Make request</td>
+<td>Auto-refresh attempted. If fails → redirect to login.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">ERR-004</td><td>403 Forbidden</td>
+<td>1. Try to access restricted endpoint</td>
+<td>"You don't have permission" error shown.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">ERR-005</td><td>500 Server Error</td>
+<td>1. Trigger server error</td>
+<td>"Something went wrong. Try again shortly." Shown with retry button.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">ERR-006</td><td>Form validation errors</td>
+<td>1. Submit form with invalid data</td>
+<td>Field-level error messages shown. Form not submitted.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">ERR-007</td><td>Pull-to-refresh on error state</td>
+<td>1. See error state<br>2. Pull to refresh</td>
+<td>Data reloads. Error state replaced with fresh data or updated error.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">ERR-008</td><td>WebSocket disconnect</td>
+<td>1. Connect to chat<br>2. Simulate connection drop</td>
+<td>Auto-reconnect after 5s. Polling backup keeps data fresh.</td><td class="priority-high">P1</td></tr>
+</table>
+
+<!-- ======================== 10. MOBILE-SPECIFIC ======================== -->
+<h2>10. Mobile-Specific Test Cases</h2>
+
+<table>
+<tr><th>TC ID</th><th>Test Case</th><th>Steps</th><th>Expected Result</th><th>Priority</th></tr>
+
+<tr><td class="tc-id">MOB-001</td><td>Android back button</td>
+<td>1. Navigate to sub-screen<br>2. Press Android back button</td>
+<td>Returns to previous screen. No accidental exit from app.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">MOB-002</td><td>Bottom navigation</td>
+<td>1. Tap each tab: Home, Attendance, Leave, More, Profile</td>
+<td>Correct screen shown. Tab remains active. Scroll position preserved.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">MOB-003</td><td>Module gating on mobile</td>
+<td>1. Admin disables "Chat" module<br>2. Check mobile app</td>
+<td>Chat tab/entry hidden. Only enabled modules shown.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">MOB-004</td><td>Dark/Light theme</td>
+<td>1. Go to Profile<br>2. Toggle theme icon</td>
+<td>Theme switches. Applied across all screens. Persisted.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">MOB-005</td><td>Keyboard handling</td>
+<td>1. Tap a text field<br>2. Type text<br>3. Tap next field</td>
+<td>Keyboard opens. Screen scrolls to focused field. "Next" moves focus.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">MOB-006</td><td>Responsive layout (different screens)</td>
+<td>1. Test on small phone (5")<br>2. Test on large phone (6.7")<br>3. Test in landscape</td>
+<td>Layout adapts. No overflow. No clipping. Touch targets ≥ 44dp.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">MOB-007</td><td>App backgrounding</td>
+<td>1. Use app<br>2. Press home button<br>3. Reopen app</td>
+<td>App resumes. Session intact. WebSocket reconnects.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">MOB-008</td><td>Push notification tap</td>
+<td>1. Receive notification<br>2. Tap notification</td>
+<td>App opens. Navigates to relevant screen.</td><td class="priority-high">P1</td></tr>
+
+<tr><td class="tc-id">MOB-009</td><td>Branded theming</td>
+<td>1. Login<br>2. Check colors, welcome text</td>
+<td>Company branding applied: colors, product name, welcome text.</td><td class="priority-med">P2</td></tr>
+
+<tr><td class="tc-id">MOB-010</td><td>Shrink-wrapped loading states</td>
+<td>1. Navigate to data screens</td>
+<td>Skeleton loading shown, not blank screen. Empty states with messages.</td><td class="priority-high">P1</td></tr>
+</table>
+
+<div class="footer">
+<p>© 2026 Pixous Technologies — Confidential</p>
+<p>Pixous HR Portal Test Case Document v1.0 | Document ID: PX-HR-TC-001 | Total: 250+ Test Cases</p>
+</div>
+
+</body>
+</html>

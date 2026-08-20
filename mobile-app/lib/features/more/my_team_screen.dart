@@ -9,13 +9,18 @@ import '../../providers/app_providers.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/states.dart';
 import '../chat/chat_screen.dart';
+import '../../providers/cache.dart';
 
 final myTeamProvider = FutureProvider.autoDispose<MyTeam>(
-  (ref) => ref.watch(workRepositoryProvider).myTeam(),
-);
+  (ref) {
+  cacheFor(ref, cacheShort);
+  return ref.watch(workRepositoryProvider).myTeam();
+});
 final celebrationsProvider = FutureProvider.autoDispose<List<Celebration>>(
-  (ref) => ref.watch(workRepositoryProvider).celebrations(),
-);
+  (ref) {
+  cacheFor(ref, cacheShort);
+  return ref.watch(workRepositoryProvider).celebrations();
+});
 final onLeaveProvider = FutureProvider.autoDispose<List<dynamic>>(
   (ref) => ref.watch(workRepositoryProvider).onLeaveToday(),
 );

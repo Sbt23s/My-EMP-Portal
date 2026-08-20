@@ -10,11 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useCalls } from "@/hooks/useCalls";
+import { describeCallNotification } from "@/lib/callNotifications";
 
 export default function NotificationsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { notifications, unreadCount, loading, failed, retry, markAllRead, markRead } = useNotifications(user?.id);
+  const { callState, activeCallPartner } = useCalls();
+  const liveCallerName = callState !== "idle" ? (activeCallPartner?.name ?? null) : null;
 
   return (
     <div>
@@ -59,10 +63,8 @@ export default function NotificationsPage() {
       ) : (
         <div className="space-y-2">
           {notifications.map((n) => {
-            const isCallNotification = n.type === "CALL" || n.title?.toLowerCase().includes("call") || n.body?.toLowerCase().includes("calling");
-            const isPastCall = isCallNotification && (Date.now() - new Date(n.createdAt).getTime() > 45000 || n.body?.includes("Voice call") || n.read);
-            const displayTitle = isPastCall && n.title === "Incoming Call" ? (n.body ? `${n.body.replace(/\s+is calling you\.\.\.$/, "")} - voice call` : "Voice call") : n.title;
-            const displayBody = isPastCall && n.body?.includes("is calling you...") ? "Called you" : n.body;
+            const { title: displayTitle, body: displayBody } =
+              describeCallNotification(n, liveCallerName);
 
             return (
               <Card

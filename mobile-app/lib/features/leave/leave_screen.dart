@@ -8,6 +8,7 @@ import '../../providers/app_providers.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/states.dart';
 import 'apply_leave_sheet.dart';
+import '../../providers/cache.dart';
 
 final myLeaveProvider = FutureProvider.autoDispose<Paged<LeaveRequest>>(
   (ref) => ref.watch(workRepositoryProvider).myLeave(),
@@ -19,8 +20,10 @@ final leaveBalancesProvider = FutureProvider.autoDispose<List<LeaveBalance>>(
 
 /// The leave types this company has, whether or not anybody holds a balance.
 final leaveTypesForBalanceProvider = FutureProvider.autoDispose<List<LeaveType>>(
-  (ref) => ref.watch(workRepositoryProvider).leaveTypes(),
-);
+  (ref) {
+  cacheFor(ref, cacheLong);
+  return ref.watch(workRepositoryProvider).leaveTypes();
+});
 
 class LeaveScreen extends ConsumerWidget {
   const LeaveScreen({super.key});

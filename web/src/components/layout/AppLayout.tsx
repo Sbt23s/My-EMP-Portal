@@ -20,7 +20,8 @@ import { useIsFetching } from "@tanstack/react-query";
 import { CustomLoader } from "@/components/ui/custom-loader";
 import { ChatBotWidget } from "@/components/ChatBotWidget";
 import { GlobalLoginAnnouncementModal } from "@/components/GlobalLoginAnnouncementModal";
-import { CallProvider } from "@/hooks/useCalls";
+import { CallProvider, useCalls } from "@/hooks/useCalls";
+import { describeCallNotification } from "@/lib/callNotifications";
 import { displayPersonName } from "@/lib/people";
 
 interface NavItem {
@@ -189,6 +190,11 @@ function notificationStyle(type?: string) {
 function AppShell() {
   const isFetching = useIsFetching();
   const { user, loading, logout, hasPermission, hasRole, hasModule, hasDashboard } = useAuth();
+
+  // Who is on a call right now, if anyone. A call notification reads "is
+  // calling you" only while it matches this; otherwise it reads "called you".
+  const { callState, activeCallPartner } = useCalls();
+  const liveCallerName = callState !== "idle" ? (activeCallPartner?.name ?? null) : null;
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -504,10 +510,9 @@ function AppShell() {
                       ) : (
                         notifications.slice(0, 8).map((n) => {
                           const { icon: NIcon, className: nClassName } = notificationStyle(n.type);
-                          const isCallNotification = n.type === "CALL" || n.title?.toLowerCase().includes("call") || n.body?.toLowerCase().includes("calling");
-                          const isPastCall = isCallNotification && (Date.now() - new Date(n.createdAt).getTime() > 45000 || n.body?.includes("Voice call") || n.read);
-                          const displayTitle = isPastCall && n.title === "Incoming Call" ? (n.body ? `${n.body.replace(/\s+is calling you\.\.\.$/, "")} - voice call` : "Voice call") : n.title;
-                          const displayBody = isPastCall && n.body?.includes("is calling you...") ? "Called you" : n.body;
+                          // Present tense only while that call is actually live.
+                          const { title: displayTitle, body: displayBody } =
+                            describeCallNotification(n, liveCallerName);
 
                           return (
                             <button

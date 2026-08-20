@@ -7,11 +7,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/directory_person.dart';
 import '../../providers/app_providers.dart';
 import '../../widgets/states.dart';
+import '../../providers/cache.dart';
 
 final employeesProvider =
     FutureProvider.autoDispose.family<List<DirectoryPerson>, String?>(
-  (ref, query) =>
-      ref.watch(workRepositoryProvider).directory(query: query, size: 500),
+  (ref, query) {
+    // Held briefly so going into a colleague's card and back does not refetch
+    // the whole list over a slow connection.
+    cacheFor(ref, cacheShort);
+    // A page, not the company. Two hundred rows is more than anyone scrolls;
+    // the search box narrows on the server, which is what keeps this screen
+    // usable when the directory grows past a few hundred people.
+    return ref.watch(workRepositoryProvider).directory(query: query, size: 200);
+  },
 );
 
 /// The company directory: every active person, searchable.

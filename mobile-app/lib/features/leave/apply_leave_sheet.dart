@@ -4,10 +4,13 @@ import 'package:intl/intl.dart';
 
 import '../../models/leave.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/cache.dart';
 
 final leaveTypesProvider = FutureProvider.autoDispose<List<LeaveType>>(
-  (ref) => ref.watch(workRepositoryProvider).leaveTypes(),
-);
+  (ref) {
+  cacheFor(ref, cacheLong);
+  return ref.watch(workRepositoryProvider).leaveTypes();
+});
 
 final approversProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>(

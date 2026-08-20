@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../core/config/app_config.dart';
 import '../../providers/app_providers.dart';
 
 /// Raise a support ticket. Pops `true` when one was actually created.
@@ -256,7 +255,7 @@ class _RaiseTicketSheetState extends ConsumerState<RaiseTicketSheet> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _type,
+                      initialValue: _type,
                       decoration: const InputDecoration(labelText: 'Type *'),
                       items: [
                         for (final t in _types)
@@ -270,7 +269,7 @@ class _RaiseTicketSheetState extends ConsumerState<RaiseTicketSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _priority,
+                      initialValue: _priority,
                       decoration: const InputDecoration(labelText: 'Priority *'),
                       items: [
                         for (final p in _priorities)
@@ -290,7 +289,7 @@ class _RaiseTicketSheetState extends ConsumerState<RaiseTicketSheet> {
 
               // Category
               DropdownButtonFormField<String>(
-                value: _category,
+                initialValue: _category,
                 decoration: const InputDecoration(labelText: 'Category *'),
                 items: [
                   for (final c in _categories)
@@ -304,7 +303,7 @@ class _RaiseTicketSheetState extends ConsumerState<RaiseTicketSheet> {
 
               // Affected module
               DropdownButtonFormField<String>(
-                value: _module,
+                initialValue: _module,
                 decoration: const InputDecoration(
                   labelText: 'Affected module (optional)',
                 ),

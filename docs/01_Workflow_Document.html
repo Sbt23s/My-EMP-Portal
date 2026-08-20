@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pixous HR Portal - Application Workflow Document</title>
+<style>
+  @page { margin: 2cm; size: A4; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a2e; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; }
+  .header { display: flex; align-items: center; gap: 20px; border-bottom: 3px solid #16213e; padding-bottom: 20px; margin-bottom: 30px; }
+  .logo-container { flex-shrink: 0; }
+  .logo-svg { width: 120px; height: 60px; }
+  .header-text { flex: 1; }
+  .header-text h1 { margin: 0; color: #16213e; font-size: 24px; }
+  .header-text p { margin: 5px 0 0; color: #555; font-size: 14px; }
+  .meta { background: #f0f4ff; padding: 15px; border-radius: 8px; margin-bottom: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; }
+  .meta span { font-weight: 600; }
+  h2 { color: #0f3460; border-bottom: 2px solid #e94560; padding-bottom: 8px; margin-top: 40px; font-size: 20px; }
+  h3 { color: #16213e; margin-top: 25px; font-size: 17px; }
+  h4 { color: #533483; margin-top: 15px; }
+  table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 13px; }
+  th { background: #16213e; color: white; padding: 10px 12px; text-align: left; }
+  td { padding: 8px 12px; border-bottom: 1px solid #e0e0e0; }
+  tr:nth-child(even) { background: #f8f9ff; }
+  .role-card { border: 1px solid #ddd; border-radius: 10px; padding: 20px; margin: 15px 0; background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%); }
+  .role-card h3 { margin-top: 0; color: #0f3460; }
+  .flow-step { display: flex; align-items: flex-start; gap: 12px; margin: 8px 0; }
+  .flow-num { background: #e94560; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .tech-stack { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 15px 0; }
+  .tech-item { background: #f0f4ff; padding: 12px; border-radius: 8px; text-align: center; }
+  .tech-item strong { display: block; color: #0f3460; margin-bottom: 4px; }
+  .toc { background: #f8f9ff; padding: 20px; border-radius: 10px; margin: 20px 0; }
+  .toc ol { margin: 0; padding-left: 20px; }
+  .toc li { margin: 5px 0; font-size: 14px; }
+  ul { padding-left: 20px; }
+  li { margin: 4px 0; }
+  .page-break { page-break-before: always; }
+  .footer { text-align: center; color: #999; font-size: 11px; margin-top: 50px; border-top: 1px solid #eee; padding-top: 15px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo-container">
+    <svg class="logo-svg" viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#00b4d8;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#0077b6;stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      <circle cx="30" cy="20" r="4" fill="#48cae4"/>
+      <circle cx="42" cy="14" r="3" fill="#00b4d8"/>
+      <circle cx="52" cy="22" r="5" fill="#0096c7"/>
+      <circle cx="38" cy="30" r="3.5" fill="#023e8a"/>
+      <circle cx="50" cy="32" r="2.5" fill="#48cae4"/>
+      <circle cx="28" cy="34" r="2" fill="#00b4d8"/>
+      <text x="15" y="62" font-family="Segoe UI,Arial" font-size="28" font-weight="bold" fill="#16213e">PIX</text>
+      <text x="62" y="62" font-family="Segoe UI,Arial" font-size="28" font-weight="bold" fill="#0f3460">OUS</text>
+      <text x="15" y="76" font-family="Segoe UI,Arial" font-size="11" fill="#555" letter-spacing="3">TECHNOLOGIES</text>
+    </svg>
+  </div>
+  <div class="header-text">
+    <h1>Pixous HR Portal</h1>
+    <p>Application Workflow Document — Complete Role-Based Analysis</p>
+  </div>
+</div>
+
+<div class="meta">
+  <div><span>Document ID:</span> PX-HR-WF-001</div>
+  <div><span>Version:</span> 1.0</div>
+  <div><span>Prepared by:</span> Pixous Technologies QA Team</div>
+  <div><span>Date:</span> August 20, 2026</div>
+  <div><span>Classification:</span> Confidential</div>
+  <div><span>Status:</span> Approved</div>
+</div>
+
+<div class="toc">
+  <h3>Table of Contents</h3>
+  <ol>
+    <li>Executive Summary</li>
+    <li>Technology Stack</li>
+    <li>User Roles & Access Matrix</li>
+    <li>Authentication Workflow</li>
+    <li>Employee Role Workflow</li>
+    <li>Team Lead Role Workflow</li>
+    <li>HR Role Workflow</li>
+    <li>CTO/Company Admin Role Workflow</li>
+    <li>System Admin (Tech Admin) Role Workflow</li>
+    <li>Real-Time Communication Flow</li>
+    <li>API Architecture</li>
+    <li>Data Flow Diagrams</li>
+  </ol>
+</div>
+
+<h2>1. Executive Summary</h2>
+<p>The Pixous HR Portal is a comprehensive Human Resource Management System serving IT and Civil/Infrastructure industries. The system provides end-to-end management of employee lifecycle including attendance tracking, leave management, payroll processing, task management, chat communication, and reporting.</p>
+
+<p>The application is accessible through three platforms: <strong>Web Application</strong> (React + TypeScript), <strong>Android Mobile App</strong> (Flutter/Dart), and <strong>Backend API</strong> (Spring Boot + Java 17). All platforms share the same backend, database, and real-time services.</p>
+
+<h2>2. Technology Stack</h2>
+<div class="tech-stack">
+  <div class="tech-item"><strong>Frontend (Web)</strong>React 19, Vite, TypeScript, TailwindCSS</div>
+  <div class="tech-item"><strong>Mobile App</strong>Flutter 3.44, Dart, Riverpod, STOMP</div>
+  <div class="tech-item"><strong>Backend API</strong>Spring Boot 3.5, Java 17, JWT</div>
+  <div class="tech-item"><strong>Database</strong>MySQL + Flyway Migrations</div>
+  <div class="tech-item"><strong>Real-Time</strong>WebSocket (STOMP over SockJS)</div>
+  <div class="tech-item"><strong>Cache</strong>Redis (Lettuce connection pool)</div>
+  <div class="tech-item"><strong>Messaging</strong>Apache Kafka</div>
+  <div class="tech-item"><strong>AI/ML</strong>Python Analytics Microservice</div>
+  <div class="tech-item"><strong>Notifications</strong>Push (FCM) + In-App + Email</div>
+</div>
+
+<h2>3. User Roles & Access Matrix</h2>
+
+<table>
+  <tr><th>Role</th><th>Access Level</th><th>Platform</th><th>Key Permissions</th></tr>
+  <tr><td><strong>SYSTEM_ADMIN</strong></td><td>Platform-wide</td><td>Web (Tech Admin Console)</td><td>Company management, module config, branding, role management, global announcements</td></tr>
+  <tr><td><strong>COMPANY_ADMIN / CTO</strong></td><td>Company-wide</td><td>Web + Mobile</td><td>Full dashboard (executive), payroll approval, all reports, user management, module configuration</td></tr>
+  <tr><td><strong>HR Manager</strong></td><td>Department-wide</td><td>Web + Mobile</td><td>Employee management, leave approval, payroll runs, reports, onboarding, audit log</td></tr>
+  <tr><td><strong>Team Lead (TL)</strong></td><td>Team-level</td><td>Web + Mobile</td><td>Team attendance, leave approval for team, task assignment, work report review</td></tr>
+  <tr><td><strong>Employee</strong></td><td>Personal</td><td>Web + Mobile</td><td>Self-service: attendance, leave, tasks, chat, claims, work reports, profile</td></tr>
+</table>
+
+<h2>4. Authentication Workflow</h2>
+
+<div class="role-card">
+<h3>Login Flow</h3>
+<div class="flow-step"><div class="flow-num">1</div><div>User enters username and password on Login screen</div></div>
+<div class="flow-step"><div class="flow-num">2</div><div>Frontend sends POST /api/auth/login with credentials</div></div>
+<div class="flow-step"><div class="flow-num">3</div><div>Backend validates credentials against MySQL database via Spring Security</div></div>
+<div class="flow-step"><div class="flow-num">4</div><div>Backend generates JWT Access Token + Refresh Token</div></div>
+<div class="flow-step"><div class="flow-num">5</div><div>Tokens stored in Secure Storage (Keychain/Keystore on mobile, sessionStorage on web)</div></div>
+<div class="flow-step"><div class="flow-num">6</div><div>GET /api/auth/me called to fetch user profile + roles + permissions</div></div>
+<div class="flow-step"><div class="flow-num">7</div><div>GET /api/my-modules called to determine which modules are enabled</div></div>
+<div class="flow-step"><div class="flow-num">8</div><div>Role-based routing: Employee → Dashboard, Admin → Executive Dashboard, Tech Admin → Tech Console</div></div>
+<div class="flow-step"><div class="flow-num">9</div><div>WebSocket connection established for real-time features</div></div>
+</div>
+
+<h2>5. Employee Role Workflow</h2>
+
+<h3>5.1 Daily Attendance</h3>
+<div class="role-card">
+<div class="flow-step"><div class="flow-num">1</div><div>Employee opens Attendance tab</div></div>
+<div class="flow-step"><div class="flow-num">2</div><div>Taps "Punch In" → GPS coordinates captured → POST /api/attendance/punch-in</div></div>
+<div class="flow-step"><div class="flow-num">3</div><div>Alternative: "Punch In with Face" → Camera selfie → Face verification via Python analytics service</div></div>
+<div class="flow-step"><div class="flow-num">4</div><div>Server records punch with timestamp, GPS, geofence check</div></div>
+<div class="flow-step"><div class="flow-num">5</div><div>End of day: taps "Punch Out" → POST /api/attendance/punch-out</div></div>
+<div class="flow-step"><div class="flow-num">6</div><div>Dashboard shows worked hours, status, monthly history</div></div>
+</div>
+
+<h3>5.2 Leave Management</h3>
+<div class="role-card">
+<div class="flow-step"><div class="flow-num">1</div><div>Employee opens Leave tab → views leave balances (all types)</div></div>
+<div class="flow-step"><div class="flow-num">2</div><div>Taps "Apply" → selects leave type, dates, reason, approver</div></div>
+<div class="flow-step"><div class="flow-num">3</div><div>POST /api/leave/apply → notification sent to approver in real-time</div></div>
+<div class="flow-step"><div class="flow-num">4</div><div>Employee monitors status: Pending → Approved/Rejected</div></div>
+<div class="flow-step"><div class="flow-num">5</div><div>Can withdraw pending request via POST /api/leave/{id}/cancel</div></div>
+</div>
+
+<h3>5.3 Chat & Communication</h3>
+<div class="role-card">
+<div class="flow-step"><div class="flow-num">1</div><div>Employee opens Chat from More menu</div></div>
+<div class="flow-step"><div class="flow-num">2</div><div>Views channels: groups, direct messages, team chat</div></div>
+<div class="flow-step"><div class="flow-num">3</div><div>Messages sent via POST /api/communities/{id}/messages</div></div>
+<div class="flow-step"><div class="flow-num">4</div><div>Real-time delivery via STOMP WebSocket: /topic/community/{channelId}</div></div>
+<div class="flow-step"><div class="flow-num">5</div><div>Features: reactions, polls, voice notes, file attachments, pinning, replies</div></div>
+<div class="flow-step"><div class="flow-num">6</div><div>1:1 calls: voice call (WebRTC) and video call (WebRTC)</div></div>
+</div>
+
+<h3>5.4 Other Employee Features</h3>
+<ul>
+  <li><strong>Tasks:</strong> View assigned tasks, update progress, mark complete</li>
+  <li><strong>Work Reports:</strong> Log daily work (project, hours, description)</li>
+  <li><strong>Claims:</strong> Submit travel/expense claims with receipts</li>
+  <li><strong>Support Tickets:</strong> Raise IT/facility tickets with attachments</li>
+  <li><strong>Complaints:</strong> Raise HR complaints confidentially</li>
+  <li><strong>Payslips:</strong> View monthly payslip details</li>
+  <li><strong>Profile:</strong> View/edit personal info, dark/light theme</li>
+  <li><strong>Calendar:</strong> View holidays, birthdays, meetings</li>
+  <li><strong>Safety:</strong> Report safety incidents (anonymous option)</li>
+  <li><strong>AI Assistant:</strong> Ask about policies, leave, payroll</li>
+</ul>
+
+<div class="page-break"></div>
+<h2>6. Team Lead Role Workflow</h2>
+
+<div class="role-card">
+<h3>Additional TL Capabilities (beyond Employee)</h3>
+<h4>Team Attendance</h4>
+<div class="flow-step"><div class="flow-num">1</div><div>TL opens Team Attendance from More menu</div></div>
+<div class="flow-step"><div class="flow-num">2</div><div>Selects a date → GET /api/attendance/team?date=YYYY-MM-DD</div></div>
+<div class="flow-step"><div class="flow-num">3</div><div>Views all team members: present, absent, late, on leave</div></div>
+<div class="flow-step"><div class="flow-num">4</div><div>Clicks individual to see punch details, location, work hours</div></div>
+
+<h4>Leave Approval</h4>
+<div class="flow-step"><div class="flow-num">1</div><div>TL opens Approvals from More menu</div></div>
+<div class="flow-step"><div class="flow-num">2</div><div>GET /api/leave/pending → shows pending requests from team</div></div>
+<div class="flow-step"><div class="flow-num">3</div><div>Approve: POST /api/leave/{id}/decision { decision: "APPROVED" }</div></div>
+<div class="flow-step"><div class="flow-num">4</div><div>Reject: POST /api/leave/{id}/decision { decision: "REJECTED", comment: "reason" }</div></div>
+<div class="flow-step"><div class="flow-num">5</div><div>Employee notified in real-time via WebSocket</div></div>
+
+<h4>Work Report Review</h4>
+<div class="flow-step"><div class="flow-num">1</div><div>GET /api/work-reports/team → views team's filed reports</div></div>
+<div class="flow-step"><div class="flow-num">2</div><div>Can export to Excel, filter by date range</div></div>
+
+<h4>Task Assignment</h4>
+<div class="flow-step"><div class="flow-num">1</div><div>Dashboard → Assign Task card → select team member or team group</div></div>
+<div class="flow-step"><div class="flow-num">2</div><div>POST /api/tasks → task created with title, description, due date</div></div>
+<div class="flow-step"><div class="flow-num">3</div><div>Assigned employee receives real-time notification</div></div>
+</div>
+
+<h2>7. HR Role Workflow</h2>
+
+<div class="role-card">
+<h3>Additional HR Capabilities (beyond TL)</h3>
+<h4>Employee Directory & Management</h4>
+<ul>
+  <li>Full employee directory with search, filter by industry (IT/Civil)</li>
+  <li>Onboarding new employees with checklist completion tracking</li>
+  <li>Offboarding employees</li>
+  <li>Managing employee credentials, designations, bank details</li>
+</ul>
+
+<h4>Payroll Management</h4>
+<ul>
+  <li>View all employee salaries</li>
+  <li>Run monthly payroll</li>
+  <li>Generate payslips with PDF export</li>
+  <li>Approve payslip requests from employees</li>
+  <li>Export salary details to Excel</li>
+</ul>
+
+<h4>Leave Policy Management</h4>
+<ul>
+  <li>Create/edit/delete leave types (CL, SL, EL, etc.)</li>
+  <li>Manage holiday calendar</li>
+  <li>View company-wide leave balances</li>
+</ul>
+
+<h4>Reports</h4>
+<ul>
+  <li>Attendance reports (exportable to Excel)</li>
+  <li>Leave reports</li>
+  <li>Payroll reports</li>
+  <li>Work reports across teams</li>
+</ul>
+
+<h4>Audit Log</h4>
+<ul>
+  <li>Security trail: who did what, when, from where</li>
+  <li>Category-wise summary dashboard</li>
+  <li>Export to Excel</li>
+</ul>
+
+<h4>Claims Management</h4>
+<ul>
+  <li>View all employee claims</li>
+  <li>Approve/reject claims</li>
+  <li>Manage TA expense settings</li>
+</ul>
+
+<h4>Communities</h4>
+<ul>
+  <li>Create company-wide or departmental chat groups</li>
+  <li>Manage group members</li>
+  <li>Create announcement channels</li>
+</ul>
+</div>
+
+<div class="page-break"></div>
+<h2>8. CTO / Company Admin Workflow</h2>
+
+<div class="role-card">
+<h3>Executive Dashboard</h3>
+<ul>
+  <li>Organization-wide overview with charts and KPIs</li>
+  <li>Headcount trends, attendance rates, leave utilization</li>
+  <li>Industry-wise breakdown (Digital/Infra)</li>
+  <li>AI-powered insights from Python analytics microservice</li>
+</ul>
+
+<h4>All HR + TL Functions</h4>
+<ul>
+  <li>Full access to all HR capabilities</li>
+  <li>Data reset capabilities (with safeguards)</li>
+  <li>Module configuration (enable/disable features)</li>
+  <li>Global announcements management</li>
+</ul>
+
+<h4>System Configuration</h4>
+<ul>
+  <li>Module management: toggle features on/off for the company</li>
+  <li>Branding: custom colors, fonts, welcome text, product name</li>
+  <li>Company settings and policies</li>
+</ul>
+</div>
+
+<h2>9. System Admin (Tech Admin) Workflow</h2>
+
+<div class="role-card">
+<p>The System Admin operates through a separate <strong>Tech Admin Console</strong> at /tech-admin, with its own authentication and layout.</p>
+
+<h4>Company Management</h4>
+<ul>
+  <li>Create/manage tenant companies</li>
+  <li>Configure per-company settings</li>
+</ul>
+
+<h4>Module Management</h4>
+<ul>
+  <li>Global module enable/disable across companies</li>
+  <li>Feature flag management</li>
+</ul>
+
+<h4>User & Role Management</h4>
+<ul>
+  <li>Global user directory</li>
+  <li>Role and permission configuration</li>
+  <li>Assignment of users to companies</li>
+</ul>
+
+<h4>Branding & Configuration</h4>
+<ul>
+  <li>Platform-wide branding</li>
+  <li>Global announcements</li>
+  <li>Integration settings</li>
+  <li>Security settings</li>
+</ul>
+
+<h4>Audit & Monitoring</h4>
+<ul>
+  <li>Cross-company audit logs</li>
+  <li>System health monitoring</li>
+</ul>
+</div>
+
+<h2>10. Real-Time Communication Flow</h2>
+
+<table>
+  <tr><th>Feature</th><th>Channel</th><th>Publisher</th><th>Subscribers</th></tr>
+  <tr><td>Chat Messages</td><td>/topic/community/{channelId}</td><td>Any member</td><td>All channel members</td></tr>
+  <tr><td>Notifications</td><td>/topic/notifications/{userId}</td><td>Server (Kafka-backed)</td><td>Specific user</td></tr>
+  <tr><td>Task Updates</td><td>/topic/tasks/{userId}</td><td>Server</td><td>Assigned employee</td></tr>
+  <tr><td>Call Signaling</td><td>/topic/calls/{userId}</td><td>WebRTC peer</td><td>Call participant</td></tr>
+  <tr><td>Presence</td><td>/topic/presence</td><td>Connected clients</td><td>All connected</td></tr>
+</table>
+
+<h2>11. API Architecture</h2>
+<p>Backend exposes <strong>200+ REST API endpoints</strong> organized by module:</p>
+
+<table>
+  <tr><th>Module</th><th>Endpoints</th><th>Key Operations</th></tr>
+  <tr><td>Auth</td><td>12</td><td>login, signup, refresh, change-password, bulk-import</td></tr>
+  <tr><td>Attendance</td><td>12</td><td>punch-in/out, face-punch, today, team, insights</td></tr>
+  <tr><td>Leave</td><td>14</td><td>types, balances, apply, cancel, pending, decision</td></tr>
+  <tr><td>Permissions</td><td>8</td><td>apply, cancel, approvers, decision</td></tr>
+  <tr><td>Payroll</td><td>16</td><td>salary, payslips, runs, generate, PDF export</td></tr>
+  <tr><td>Tasks</td><td>12</td><td>CRUD, progress, complete, workload, export</td></tr>
+  <tr><td>Helpdesk</td><td>10</td><td>raise, upload, agents, comments, rating</td></tr>
+  <tr><td>Community/Chat</td><td>16</td><td>channels, messages, search, pin, reactions</td></tr>
+  <tr><td>Complaints</td><td>6</td><td>raise, recipients, respond</td></tr>
+  <tr><td>Claims</td><td>8</td><td>CRUD, upload, approve/reject</td></tr>
+  <tr><td>Work Reports</td><td>12</td><td>CRUD, team, export, reminders</td></tr>
+  <tr><td>Assets</td><td>10</td><td>allocate, acknowledge, return, QR</td></tr>
+  <tr><td>Safety</td><td>5</td><td>report, mine, all, resolve</td></tr>
+  <tr><td>Calendar</td><td>4</td><td>events CRUD</td></tr>
+  <tr><td>Audit</td><td>4</td><td>log, summary, logins, entity</td></tr>
+  <tr><td>Chatbot/AI</td><td>8</td><td>chat, translate, TTS, STT, knowledge</td></tr>
+  <tr><td>Reports</td><td>3</td><td>attendance, leave, payroll Excel export</td></tr>
+  <tr><td>Dashboard</td><td>2</td><td>me, celebrations</td></tr>
+  <tr><td>Users</td><td>14</td><td>CRUD, photo, bank, documents, offboarding</td></tr>
+  <tr><td>Calls</td><td>3</td><td>ICE servers, signaling, logging</td></tr>
+  <tr><td>File</td><td>1</td><td>Serve uploaded files</td></tr>
+</table>
+
+<div class="page-break"></div>
+<h2>12. Data Flow Diagrams</h2>
+
+<h3>Employee Attendance Flow</h3>
+<table>
+  <tr><th>Step</th><th>Actor</th><th>Action</th><th>System</th></tr>
+  <tr><td>1</td><td>Employee</td><td>Tap "Punch In"</td><td>Mobile/Web captures GPS</td></tr>
+  <tr><td>2</td><td>Mobile App</td><td>POST /api/attendance/punch-in {latitude, longitude, mode: "MOBILE"}</td><td>Backend validates geofence</td></tr>
+  <tr><td>3</td><td>Backend</td><td>Create AttendanceRecord, calculate geofence status</td><td>MySQL INSERT</td></tr>
+  <tr><td>4</td><td>Backend</td><td>Push notification via Kafka → WebSocket</td><td>TL/HR notified</td></tr>
+  <tr><td>5</td><td>Employee</td><td>Tap "Punch Out"</td><td>Mobile captures GPS</td></tr>
+  <tr><td>6</td><td>Backend</td><td>Update record with punch-out time, calculate worked hours</td><td>MySQL UPDATE</td></tr>
+</table>
+
+<h3>Leave Request Flow</h3>
+<table>
+  <tr><th>Step</th><th>Actor</th><th>Action</th><th>System</th></tr>
+  <tr><td>1</td><td>Employee</td><td>Open Leave → tap "Apply" → fill form</td><td>GET /leave/types, /leave/balances, /leave/approvers</td></tr>
+  <tr><td>2</td><td>Employee</td><td>Submit leave request</td><td>POST /api/leave/apply</td></tr>
+  <tr><td>3</td><td>Backend</td><td>Create LeaveRequest (status: PENDING)</td><td>MySQL INSERT + Kafka event</td></tr>
+  <tr><td>4</td><td>Backend</td><td>Real-time notification to approver</td><td>WebSocket push</td></tr>
+  <tr><td>5</td><td>Approver</td><td>Approve/Reject with optional comment</td><td>POST /api/leave/{id}/decision</td></tr>
+  <tr><td>6</td><td>Backend</td><td>Update status, adjust balances</td><td>MySQL UPDATE + Kafka event</td></tr>
+  <tr><td>7</td><td>Backend</td><td>Notify employee of decision</td><td>WebSocket push + email</td></tr>
+</table>
+
+<div class="footer">
+  <p>© 2026 Pixous Technologies — Confidential</p>
+  <p>Pixous HR Portal Workflow Document v1.0 | Document ID: PX-HR-WF-001</p>
+</div>
+
+</body>
+</html>

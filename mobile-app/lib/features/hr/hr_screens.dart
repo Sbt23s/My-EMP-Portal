@@ -11,6 +11,7 @@ import '../../core/config/app_config.dart';
 import '../../models/leave.dart';
 import '../../providers/app_providers.dart';
 import '../../widgets/states.dart';
+import '../../providers/cache.dart';
 
 /// The screens HR and team leads reach that an employee does not.
 ///
@@ -23,8 +24,10 @@ import '../../widgets/states.dart';
 // ---------------------------------------------------------------------------
 
 final leaveTypesProvider = FutureProvider.autoDispose<List<LeaveType>>(
-  (ref) => ref.watch(workRepositoryProvider).allLeaveTypes(),
-);
+  (ref) {
+  cacheFor(ref, cacheLong);
+  return ref.watch(workRepositoryProvider).allLeaveTypes();
+});
 
 final holidaysProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>(

@@ -7,14 +7,19 @@ import '../../models/directory_person.dart';
 import '../../providers/app_providers.dart';
 import '../../widgets/states.dart';
 import '../chat/chat_screen.dart';
+import '../../providers/cache.dart';
 
 final communitiesProvider = FutureProvider.autoDispose<List<ChatChannel>>(
   (ref) => ref.watch(workRepositoryProvider).communityGroups(),
 );
 
 final directoryPeopleProvider = FutureProvider.autoDispose<List<DirectoryPerson>>(
-  (ref) => ref.watch(workRepositoryProvider).directory(size: 1000),
-);
+  (ref) {
+  cacheFor(ref, cacheShort);
+  // The picker searches on the server; fetching a thousand rows to filter
+  // them on the phone was the slowest request in the app.
+  return ref.watch(workRepositoryProvider).directory(size: 200);
+});
 
 /// Community groups: who is in each, who can be added, and creating new ones.
 ///

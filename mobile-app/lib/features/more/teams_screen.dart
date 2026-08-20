@@ -2,15 +2,58 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/error/failures.dart';
 import '../../models/directory_person.dart';
 import '../../providers/app_providers.dart';
 import '../../widgets/states.dart';
+import '../../providers/cache.dart';
+
+/// Permissions the server requires before it will return the staff directory.
+///
+/// `GET /users` is guarded by USER_MANAGE, ATTENDANCE_TEAM or DASHBOARD_EXEC.
+/// An ordinary employee holds none of them.
+const _directoryPermissions = <String>[
+  'USER_MANAGE',
+  'ATTENDANCE_TEAM',
+  'DASHBOARD_EXEC',
+];
 
 final teamsPeopleProvider =
-    FutureProvider.autoDispose<List<DirectoryPerson>>(
-  // The whole active staff list, which is what teams are grouped out of.
-  (ref) => ref.watch(workRepositoryProvider).directory(size: 500),
-);
+    FutureProvider.autoDispose<List<DirectoryPerson>>((ref) async {
+  cacheFor(ref, cacheShort);
+  final repo = ref.watch(workRepositoryProvider);
+  final user = ref.watch(currentUserProvider);
+
+  /*
+   * Ask for what this person is allowed to see.
+   *
+   * The screen always fetched the whole staff directory, and the tile that
+   * opens it is shown to everyone. An employee has none of the permissions
+   * that endpoint requires, so opening Teams answered 403 and the screen
+   * showed an error -- the page was simply broken for the largest group of
+   * users in the company.
+   *
+   * A team leader, HR or an administrator still gets the full directory and
+   * therefore every team. An employee gets their own team from
+   * `/users/my-team`, which needs no special permission and returns the same
+   * row type, so the grouping below is unchanged.
+   */
+  final mayReadDirectory =
+      user != null && _directoryPermissions.any(user.can);
+
+  if (!mayReadDirectory) {
+    return (await repo.myTeam()).members;
+  }
+
+  try {
+    return await repo.directory(size: 500);
+  } on ForbiddenFailure {
+    // Belt and braces: if the permission list and the server ever disagree,
+    // fall back rather than show an error page for a screen that has
+    // something useful to display.
+    return (await repo.myTeam()).members;
+  }
+});
 
 /// Who is on which team.
 ///

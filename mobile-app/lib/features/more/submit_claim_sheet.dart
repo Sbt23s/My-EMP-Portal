@@ -221,7 +221,7 @@ class _SubmitClaimSheetState extends ConsumerState<SubmitClaimSheet> {
 
               // Claim type
               DropdownButtonFormField<String>(
-                value: _category,
+                initialValue: _category,
                 decoration: const InputDecoration(labelText: 'Claim type *'),
                 items: [
                   for (final c in _categories)

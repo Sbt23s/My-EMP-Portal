@@ -127,7 +127,10 @@ void main() {
   group('SubmitClaimSheet', () {
     Future<void> pumpSheet(WidgetTester tester) async {
       await tester.binding.setSurfaceSize(const Size(800, 1200));
-      tester.pumpWidget(
+      // Awaited: pumpWidget is a guarded API, and calling pumpAndSettle before
+      // it finished threw "Guarded function conflict" -- which failed all four
+      // claim-sheet tests for a reason that had nothing to do with the sheet.
+      await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(home: Scaffold(body: SingleChildScrollView(child: SubmitClaimSheet()))),
         ),
@@ -155,7 +158,7 @@ void main() {
       await pumpSheet(tester);
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Location / city'),
+        find.widgetWithText(TextFormField, 'Location / city *'),
         'Coimbatore',
       );
       await tester.ensureVisible(find.widgetWithText(TextFormField, 'Starting KM'));
@@ -174,7 +177,7 @@ void main() {
       await pumpSheet(tester);
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Location / city'),
+        find.widgetWithText(TextFormField, 'Location / city *'),
         'Coimbatore',
       );
       await tester.ensureVisible(find.widgetWithText(TextFormField, 'Starting KM'));
@@ -193,7 +196,7 @@ void main() {
       await pumpSheet(tester);
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Location / city'),
+        find.widgetWithText(TextFormField, 'Location / city *'),
         'Coimbatore',
       );
       // Validating the form directly rather than tapping the button. A tap

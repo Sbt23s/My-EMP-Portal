@@ -2139,6 +2139,24 @@ const ROLE_OPTIONS = [
  * typed, so a wrong character never lands; `check` runs on the finished value
  * and produces the message shown under the box.
  */
+/**
+ * A usable email address.
+ *
+ * The domain ending is two letters **or more**. It previously required exactly
+ * two, which rejected every ordinary address: .com, .info and .org all have
+ * three or four, so "name@gmail.com" was refused by a rule whose own error
+ * message offered "name@gmail.com" as the example to follow. Only two-letter
+ * endings such as .in or .co were accepted, which is why the form appeared to
+ * reject whatever was typed.
+ *
+ * Deliberately permissive about the rest. Addresses legitimately contain plus
+ * signs, dots and subdomains, and a stricter expression rejects real addresses
+ * far more often than it catches typing mistakes. The server validates it
+ * again, and a wrong-but-well-formed address can only be caught by sending mail
+ * to it.
+ */
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
+
 const FIELD_RULES: Record<string, {
   keep?: (raw: string) => string;
   check: (value: string) => string;
@@ -2153,13 +2171,13 @@ const FIELD_RULES: Record<string, {
   },
   email: {
     check: (v) => !v.trim() ? "Email is required"
-      : /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2}$/.test(v.trim()) ? ""
+      : EMAIL_PATTERN.test(v.trim()) ? ""
         : "Enter a full email address, like name@gmail.com"
   },
   // Optional — but if one is given it has to be a real address.
   personalEmail: {
     check: (v) => !v.trim() ? ""
-      : /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2}$/.test(v.trim()) ? ""
+      : EMAIL_PATTERN.test(v.trim()) ? ""
         : "Enter a full email address, like name@gmail.com"
   },
   // A mobile number is ten digits and nothing else.

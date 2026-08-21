@@ -860,7 +860,9 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
           <Input id="pdate" type="date" max={DATE_MAX} min={todayIso()} value={requestDate}
                  onChange={(e) => setRequestDate(e.target.value)} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        {/* Stacked until there is room for two. Side by side on a narrow
+            dialog gave each time picker half the width it needs. */}
+        <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="pfrom">From<Req /></Label>
             <TimePicker12 id="pfrom" value={fromTime} onChange={setFromTime} />

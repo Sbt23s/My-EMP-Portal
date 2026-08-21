@@ -47,19 +47,53 @@ public class WorkReportController {
 
     // ---- Attachments on a report: screenshots, documents, sheets, video ----
 
+    /**
+     * Attaches files, links, or both to one of the caller's own reports.
+     *
+     * <p>Links are stored beside uploaded files because that is what people
+     * already do with them: a recording, a board, a shared document that lives
+     * somewhere else and should not be copied into this system to be attached
+     * to a day's work. The stored value is the address itself, and the reader
+     * resolves anything beginning with http as-is rather than as a stored path.
+     *
+     * <p>Both parameters are optional so either can be sent alone; sending
+     * neither is the one case that is refused.
+     */
     @PostMapping("/{id}/attachments")
     public ApiResponse<WorkReportResponse> addAttachments(
             @PathVariable Long id,
-            @RequestParam("files") org.springframework.web.multipart.MultipartFile[] files) {
+            @RequestParam(value = "files", required = false)
+            org.springframework.web.multipart.MultipartFile[] files,
+            @RequestParam(value = "links", required = false) List<String> links) {
         List<String> paths = new java.util.ArrayList<>();
-        for (org.springframework.web.multipart.MultipartFile file : files) {
-            if (file != null && !file.isEmpty()) {
-                paths.add(storageService.store(file, "work-reports"));
+        if (files != null) {
+            for (org.springframework.web.multipart.MultipartFile file : files) {
+                if (file != null && !file.isEmpty()) {
+                    paths.add(storageService.store(file, "work-reports"));
+                }
             }
         }
+        if (links != null) {
+            for (String link : links) {
+                if (link == null || link.isBlank()) continue;
+                String trimmed = link.trim();
+                // http and https only. Anything else -- javascript:, data:, a
+                // bare word -- would be stored and later rendered as a link,
+                // so it is refused here rather than at the point it is clicked.
+                if (!trimmed.regionMatches(true, 0, "http://", 0, 7)
+                        && !trimmed.regionMatches(true, 0, "https://", 0, 8)) {
+                    throw com.pixous.hrportal.common.ApiException.business(
+                            "A link must start with http:// or https://");
+                }
+                // A comma is the separator these are stored with, so a link
+                // containing one would split into two broken halves.
+                paths.add(trimmed.replace(",", "%2C"));
+            }
+        }
+        int count = paths.size();
         return ApiResponse.ok(
                 service.addAttachments(SecurityUtils.currentUserId(), id, paths),
-                paths.size() == 1 ? "File attached" : paths.size() + " files attached");
+                count == 1 ? "Attached" : count + " items attached");
     }
 
     @DeleteMapping("/{id}/attachments")

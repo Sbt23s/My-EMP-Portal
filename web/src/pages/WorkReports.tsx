@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, ClipboardList, Search, ChevronDown, Save, FileSpreadsheet, Eye, Pencil,
   Clock, FolderKanban, ListChecks, TrendingUp, Sparkles, Lightbulb, AlertTriangle, Volume2, Square,
-  Users, Paperclip, Upload, X, FileText, Film, Sheet, Image as ImageIcon, BellRing
+  Users, Paperclip, X, FileText, Film, Sheet, Image as ImageIcon, BellRing, Link as LinkIcon
 } from "lucide-react";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
@@ -906,35 +906,24 @@ function MyWorkReports({
                 <table className="w-full text-sm border-collapse">
                   <thead>
                     <tr className="border-b border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90 text-left text-xs font-semibold text-slate-800 dark:text-slate-200 [&>th]:px-3.5 [&>th]:py-3 [&>th]:border-r [&>th]:border-slate-300 dark:[&>th]:border-slate-700 last:[&>th]:border-r-0">
+                      {/* S.No, then Action. The controls sat at the far right
+                          of seven columns, which put them off-screen on a laptop
+                          the moment the task note ran long. */}
                       <th className="w-14 px-4 py-2.5">S.No</th>
+                      <th className="w-44 px-4 py-2.5">Action</th>
                       <th className="px-4 py-2.5">Date</th>
                       <th className="px-4 py-2.5">Project</th>
                       <th className="px-4 py-2.5">Hours</th>
                       <th className="px-4 py-2.5">Task / Module</th>
                       <th className="w-24 px-4 py-2.5">Files</th>
-                      <th className="w-44 px-4 py-2.5 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pageRows.map((r, i) => (
                       <tr key={r.id} className="border-b border-slate-200 dark:border-slate-800 align-top last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors [&>td]:px-3.5 [&>td]:py-3 [&>td]:border-r [&>td]:border-b [&>td]:border-slate-200 dark:[&>td]:border-slate-800 last:[&>td]:border-r-0">
                         <td className="px-4 py-2.5 text-muted-foreground">{rows.length - (pageSafe * PAGE_SIZE + i)}</td>
-                        <td className="whitespace-nowrap px-4 py-2.5">{dayjs(r.workDate).format("DD MMM YYYY")}</td>
-                        <td className="px-4 py-2.5 font-medium">{r.projectName}</td>
-                        <td className="whitespace-nowrap px-4 py-2.5">{r.workHours}h</td>
-                        <td className="whitespace-pre-wrap px-4 py-2.5 text-muted-foreground">{r.taskDescription}</td>
                         <td className="px-4 py-2.5">
-                          {attachmentPaths(r.attachments).length > 0 ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                              <Paperclip className="h-3 w-3" />
-                              {attachmentPaths(r.attachments).length}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          <div className="flex items-center justify-end gap-1">
+                          <div className="flex items-center gap-1">
                             <Button variant="ghost" size="sm" onClick={() => setViewing(r)}>
                               <Eye className="h-3.5 w-3.5" /> View
                             </Button>
@@ -950,6 +939,20 @@ function MyWorkReports({
                               <Pencil className="h-3.5 w-3.5 text-primary" /> Edit
                             </Button>
                           </div>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-2.5">{dayjs(r.workDate).format("DD MMM YYYY")}</td>
+                        <td className="px-4 py-2.5 font-medium">{r.projectName}</td>
+                        <td className="whitespace-nowrap px-4 py-2.5">{r.workHours}h</td>
+                        <td className="whitespace-pre-wrap px-4 py-2.5 text-muted-foreground">{r.taskDescription}</td>
+                        <td className="px-4 py-2.5">
+                          {attachmentPaths(r.attachments).length > 0 ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                              <Paperclip className="h-3 w-3" />
+                              {attachmentPaths(r.attachments).length}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -1093,11 +1096,26 @@ const WORK_SHEET_RE = /\.(xlsx?|csv)$/i;
 const attachmentPaths = (raw?: string) =>
   String(raw || "").split(",").map((p) => p.trim()).filter(Boolean);
 
-const attachmentName = (path: string) =>
-  decodeURIComponent(path.split("/").pop() || "file");
+const isLink = (path: string) => /^https?:\/\//i.test(path);
+
+const attachmentName = (path: string) => {
+  if (isLink(path)) {
+    // The host, plus the last part of the path when there is one, so several
+    // links to the same site are still tellable apart.
+    try {
+      const u = new URL(path);
+      const tail = u.pathname.split("/").filter(Boolean).pop();
+      return tail ? `${u.hostname}/${decodeURIComponent(tail)}` : u.hostname;
+    } catch {
+      return path;
+    }
+  }
+  return decodeURIComponent(path.split("/").pop() || "file");
+};
 
 /** The icon that says what kind of file this is without opening it. */
 function AttachmentIcon({ path }: { path: string }) {
+  if (isLink(path)) return <LinkIcon className="h-3.5 w-3.5 shrink-0 text-blue-600" />;
   if (WORK_IMAGE_RE.test(path)) return <ImageIcon className="h-3.5 w-3.5 shrink-0 text-sky-600" />;
   if (WORK_VIDEO_RE.test(path)) return <Film className="h-3.5 w-3.5 shrink-0 text-violet-600" />;
   if (WORK_SHEET_RE.test(path)) return <Sheet className="h-3.5 w-3.5 shrink-0 text-emerald-600" />;
@@ -1161,15 +1179,23 @@ function AttachmentsDialog({
 }) {
   const qc = useQueryClient();
   const [current, setCurrent] = useState<string | undefined>(row.attachments);
-  const [staged, setStaged] = useState<File[]>([]);
+  const [link, setLink] = useState("");
   const picker = useRef<HTMLInputElement>(null);
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["work-reports"] });
 
+  /*
+   * Sends whatever it is handed: files, a link, or both.
+   *
+   * Choosing a file used to stage it and wait for a second press on Upload,
+   * which is a step nobody wants -- the intent was already expressed by
+   * choosing the file. The picker now calls this directly.
+   */
   const upload = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ files, link }: { files?: File[]; link?: string }) => {
       const fd = new FormData();
-      staged.forEach((f) => fd.append("files", f, f.name));
+      (files ?? []).forEach((f) => fd.append("files", f, f.name));
+      if (link) fd.append("links", link);
       const res = await api.post<ApiEnvelope<WorkReport>>(
         `/work-reports/${row.id}/attachments`, fd,
         { headers: { "Content-Type": "multipart/form-data" } }
@@ -1178,11 +1204,11 @@ function AttachmentsDialog({
     },
     onSuccess: (updated) => {
       setCurrent(updated.attachments);
-      setStaged([]);
+      setLink("");
       refresh();
-      toast.success(staged.length === 1 ? "File attached" : `${staged.length} files attached`);
+      toast.success("Attached");
     },
-    onError: (err) => toast.error(apiMessage(err, "Could not attach the files"))
+    onError: (err) => toast.error(apiMessage(err, "Could not attach that"))
   });
 
   const remove = useMutation({
@@ -1237,49 +1263,61 @@ function AttachmentsDialog({
               if (tooBig.length) {
                 toast.error(`${tooBig.length} file(s) are too large and were skipped`);
               }
-              setStaged((prev) => [...prev, ...picked.filter((f) => f.size <= MAX_WORK_FILE_MB * 1024 * 1024)]);
+              const ok = picked.filter((f) => f.size <= MAX_WORK_FILE_MB * 1024 * 1024);
+              // Straight up, no second press.
+              if (ok.length) upload.mutate({ files: ok });
             }}
           />
 
-          {staged.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {staged.map((f, i) => (
-                <span
-                  key={`${f.name}-${i}`}
-                  className="flex items-center gap-1.5 rounded-lg border bg-background px-2 py-1 text-xs"
-                >
-                  <AttachmentIcon path={f.name} />
-                  <span className="max-w-[160px] truncate font-medium">{f.name}</span>
-                  <span className="text-muted-foreground">
-                    {f.size / 1024 / 1024 >= 1024
-                      ? `${(f.size / 1024 / 1024 / 1024).toFixed(2)}GB`
-                      : `${(f.size / 1024 / 1024).toFixed(1)}MB`}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setStaged((prev) => prev.filter((_, j) => j !== i))}
-                    aria-label={`Remove ${f.name}`}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" onClick={() => picker.current?.click()}>
-              <Paperclip className="h-4 w-4" /> Choose files
-            </Button>
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
-              disabled={staged.length === 0 || upload.isPending}
-              onClick={() => upload.mutate()}
+              variant="outline"
+              disabled={upload.isPending}
+              onClick={() => picker.current?.click()}
             >
-              {upload.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              Upload {staged.length > 0 && `(${staged.length})`}
+              {upload.isPending
+                ? <Loader2 className="h-4 w-4 animate-spin" />
+                : <Paperclip className="h-4 w-4" />}
+              Choose files
             </Button>
+            <span className="text-xs text-muted-foreground">
+              Uploads as soon as you choose.
+            </span>
+          </div>
+
+          {/* A link, for work that lives somewhere else. */}
+          <div className="space-y-1.5 border-t pt-3">
+            <Label htmlFor="attach-link">Or add a link</Label>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                id="attach-link"
+                type="url"
+                inputMode="url"
+                placeholder="https://…"
+                className="max-w-xs"
+                value={link}
+                disabled={upload.isPending}
+                onChange={(e) => setLink(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (link.trim()) upload.mutate({ link: link.trim() });
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!link.trim() || upload.isPending}
+                onClick={() => upload.mutate({ link: link.trim() })}
+              >
+                <LinkIcon className="h-4 w-4" /> Add link
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              A recording, a board or a shared document. Must start with http:// or https://
+            </p>
           </div>
         </div>
 

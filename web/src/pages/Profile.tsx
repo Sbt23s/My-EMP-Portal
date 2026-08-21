@@ -1,6 +1,7 @@
 import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
+import { nameRules, emailRules } from "@/lib/validation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Save, Plus, Trash2, Landmark, BadgeCheck, Camera, Download
 } from "lucide-react";
@@ -121,7 +122,7 @@ export default function ProfilePage() {
     )).data.data
   });
 
-  const { register, handleSubmit, reset } = useForm<ProfileForm>();
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<ProfileForm>({ mode: "onBlur" });
 
   useEffect(() => {
     if (profile.data) {
@@ -362,11 +363,19 @@ export default function ProfilePage() {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label htmlFor="name">Full name</Label>
-                      <Input id="name" {...register("name")} />
+                      {/* Letters only. The field accepted anything at all,
+                          including a name typed as digits. */}
+                      <Input id="name" {...register("name", nameRules)} />
+                      {errors.name && (
+                        <p className="text-xs text-destructive">{errors.name.message}</p>
+                      )}
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" {...register("email")} />
+                      <Input id="email" type="email" {...register("email", emailRules)} />
+                      {errors.email && (
+                        <p className="text-xs text-destructive">{errors.email.message}</p>
+                      )}
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="gender">Gender</Label>

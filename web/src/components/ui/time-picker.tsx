@@ -70,11 +70,11 @@ export function TimePicker12({
   };
 
   return (
-    <div className="flex items-center gap-1 w-full">
+    <div className="flex w-full items-center gap-1.5">
       <Select
         id={id}
         aria-label="Hour"
-        className="h-9 flex-1 bg-white px-1 text-center font-medium"
+        className="h-9 min-w-[3.75rem] flex-1 bg-white px-2 text-center font-medium"
         disabled={disabled}
         value={hour}
         onChange={(e) => { setHour(e.target.value); emit(e.target.value, minute || "00", period); if (!minute) setMinute("00"); }}
@@ -87,7 +87,7 @@ export function TimePicker12({
       <span className="text-muted-foreground font-bold">:</span>
       <Select
         aria-label="Minute"
-        className="h-9 flex-1 bg-white px-1 text-center font-medium"
+        className="h-9 min-w-[3.75rem] flex-1 bg-white px-2 text-center font-medium"
         disabled={disabled}
         value={minute}
         onChange={(e) => { setMinute(e.target.value); emit(hour, e.target.value, period); }}
@@ -99,7 +99,7 @@ export function TimePicker12({
       </Select>
       <Select
         aria-label="AM or PM"
-        className="h-9 flex-1 bg-white px-1 text-center font-medium"
+        className="h-9 min-w-[4.25rem] flex-1 bg-white px-2 text-center font-medium"
         disabled={disabled}
         value={period}
         onChange={(e) => { setPeriod(e.target.value); emit(hour, minute, e.target.value); }}

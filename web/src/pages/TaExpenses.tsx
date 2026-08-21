@@ -115,9 +115,18 @@ export default function TaExpensesPage() {
     [taList.data]
   );
 
-  // Total gross sum of all claims (for HR/Admin: company total; for Employee/TL: personal/team total)
+  /*
+   * What the company has actually agreed to pay.
+   *
+   * This summed every claim regardless of its outcome, so a rejected claim
+   * still added its amount to the headline total -- the tile read 433 rupees
+   * while the only claim behind it had been turned down. A rejected claim is
+   * money that will not be paid, and a pending one is money not yet agreed, so
+   * neither belongs in a figure labelled as the total.
+   */
   const totalGrossAmount = useMemo(
     () => (taList.data ?? [])
+      .filter((r: any) => r.status === "APPROVED")
       .reduce((s: number, r: any) => s + (Number(r.grossTotal) || 0), 0),
     [taList.data]
   );
@@ -186,7 +195,7 @@ export default function TaExpensesPage() {
             />
             <StatTile
               label="Total Claims Amount" value={inr(totalGrossAmount)} icon={Map} fill={TILE_FILLS.yellow}
-              hint={canApprove ? "Total gross sum across all claims" : "Total gross sum of your claims"}
+              hint={canApprove ? "Approved claims across the company" : "Your approved claims"}
             />
       </div>
 
@@ -242,6 +251,10 @@ export default function TaExpensesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {/* Named, and first. The action column carried no heading at
+                      all, so the control at the end of ten columns had nothing
+                      above it to say what it was. */}
+                  <TableHead>Action</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Employee</TableHead>
                   <TableHead>Category</TableHead>
@@ -251,12 +264,33 @@ export default function TaExpensesPage() {
                   <TableHead>Gross</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Decided by</TableHead>
-                  <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paged.pageRows.map((row: any) => (
                   <TableRow key={row.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" variant="ghost" className="text-primary hover:bg-primary/10" onClick={() => setViewRow(row)}>
+                          <Eye className="mr-1 h-4 w-4" /> View
+                        </Button>
+                        {canApprove && row.status === "PENDING" && (
+                          <Button size="sm" variant="outline" onClick={() => setDecideRow(row)}>
+                            Review
+                          </Button>
+                        )}
+                        {/* Claims can only be edited while PENDING, by HR or the creator */}
+                        {(row.status === "PENDING" && (canEditAnyClaim || (!canApprove && scope === "MINE"))) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => navigate(`/ta-expenses/${row.id}/edit`)}
+                          >
+                            <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="whitespace-nowrap">{dayjs(row.date).format("DD.MM.YYYY")}</TableCell>
                     <TableCell>
                       <div className="font-medium">{row.userName}</div>
@@ -289,28 +323,6 @@ export default function TaExpensesPage() {
                       {row.decidedAt && (
                         <div className="text-[10px]">{dayjs(row.decidedAt).format("DD MMM, h:mm A")}</div>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button size="sm" variant="ghost" className="text-primary hover:bg-primary/10" onClick={() => setViewRow(row)}>
-                          <Eye className="mr-1 h-4 w-4" /> View
-                        </Button>
-                        {canApprove && row.status === "PENDING" && (
-                          <Button size="sm" variant="outline" onClick={() => setDecideRow(row)}>
-                            Review
-                          </Button>
-                        )}
-                        {/* Claims can only be edited while PENDING, by HR or the creator */}
-                        {(row.status === "PENDING" && (canEditAnyClaim || (!canApprove && scope === "MINE"))) && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => navigate(`/ta-expenses/${row.id}/edit`)}
-                          >
-                            <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
-                          </Button>
-                        )}
-                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

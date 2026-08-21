@@ -33,6 +33,7 @@ import {
 import dayjs from "dayjs";
 import { useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { EMAIL_PATTERN } from "@/lib/validation";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { roleCodeLabel } from "@/lib/roles";
 import { DATE_MIN, DATE_MAX } from "@/lib/dates";
@@ -2155,8 +2156,6 @@ const ROLE_OPTIONS = [
  * again, and a wrong-but-well-formed address can only be caught by sending mail
  * to it.
  */
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
-
 const FIELD_RULES: Record<string, {
   keep?: (raw: string) => string;
   check: (value: string) => string;

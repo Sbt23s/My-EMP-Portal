@@ -265,34 +265,70 @@ export default function TeamsPage() {
                     {members.length === 0 ? (
                       <p className="p-4 text-sm text-muted-foreground">No employees in this team yet.</p>
                     ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                      <div className="w-full min-w-0 overflow-x-auto">
+                        {/* A floor width, so columns keep a sensible size and the
+                            scroller takes the overflow rather than the columns
+                            being squeezed to nothing. */}
+                        <table className="w-full min-w-[62rem] table-fixed text-sm">
+                          <colgroup>
+                            <col className="w-12" />
+                            {d.assignable && canManage && <col className="w-40" />}
+                            <col className="w-56" />
+                            <col className="w-28" />
+                            <col className="w-56" />
+                            <col className="w-32" />
+                            <col className="w-52" />
+                            {d.assignable && canManage && <col className="w-32" />}
+                          </colgroup>
                           <thead>
                             <tr className="border-b text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                              <th className="px-4 py-2 font-medium">#</th>
-                              <th className="px-4 py-2 font-medium">Employee</th>
-                              <th className="px-4 py-2 font-medium">Emp ID</th>
-                              <th className="px-4 py-2 font-medium">Email</th>
-                              <th className="px-4 py-2 font-medium">Contact</th>
-                              <th className="px-4 py-2 font-medium">Tech Stack</th>
-                              {d.assignable && canManage && <th className="px-4 py-2 font-medium">Team Lead</th>}
-                              {d.assignable && canManage && <th className="px-4 py-2 text-right font-medium">Action</th>}
+                              <th className="whitespace-nowrap px-4 py-2 font-medium">#</th>
+                              {d.assignable && canManage && <th className="whitespace-nowrap px-4 py-2 font-medium">Action</th>}
+                              <th className="whitespace-nowrap px-4 py-2 font-medium">Employee</th>
+                              <th className="whitespace-nowrap px-4 py-2 font-medium">Emp ID</th>
+                              <th className="whitespace-nowrap px-4 py-2 font-medium">Email</th>
+                              <th className="whitespace-nowrap px-4 py-2 font-medium">Contact</th>
+                              <th className="whitespace-nowrap px-4 py-2 font-medium">Tech Stack</th>
+                              {d.assignable && canManage && <th className="whitespace-nowrap px-4 py-2 font-medium">Team Lead</th>}
                             </tr>
                           </thead>
                           <tbody>
                             {members.map((m, i) => (
                               <tr key={m.id} className="border-b last:border-0 hover:bg-muted/40">
                                 <td className="px-4 py-2 align-middle text-muted-foreground">{i + 1}</td>
+                                {d.assignable && canManage && (
+                                  <td className="px-4 py-2 text-right align-middle">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
+                                      disabled={removeFromTeam.isPending}
+                                      onClick={() => {
+                                        if (confirm(`Remove ${m.name} from ${d.label}?`)) {
+                                          removeFromTeam.mutate(m.id);
+                                        }
+                                      }}
+                                    >
+                                      <X className="mr-1 h-3.5 w-3.5" /> Remove
+                                    </Button>
+                                  </td>
+                                )}
                                 <td className="px-4 py-2 align-middle">
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex min-w-0 items-center gap-2">
                                     <Avatar name={m.name} />
-                                    <span className="font-medium">{m.name}</span>
+                                    <span className="truncate font-medium" title={m.name}>{m.name}</span>
                                   </div>
                                 </td>
                                 <td className="px-4 py-2 align-middle code-chip text-xs text-muted-foreground">{m.employeeCode}</td>
-                                <td className="px-4 py-2 align-middle text-xs">
+                                <td className="max-w-0 px-4 py-2 align-middle text-xs">
                                   {m.email ? (
-                                    <a href={`mailto:${m.email}`} className="text-primary hover:underline">{m.email}</a>
+                                    <a
+                                      href={`mailto:${m.email}`}
+                                      title={m.email}
+                                      className="block truncate text-primary hover:underline"
+                                    >
+                                      {m.email}
+                                    </a>
                                   ) : <span className="text-muted-foreground">—</span>}
                                 </td>
                                 <td className="px-4 py-2 align-middle whitespace-nowrap text-xs">
@@ -330,23 +366,6 @@ export default function TeamsPage() {
                                         <Star className="mr-1 h-3.5 w-3.5" /> Make TL
                                       </Button>
                                     )}
-                                  </td>
-                                )}
-                                {d.assignable && canManage && (
-                                  <td className="px-4 py-2 text-right align-middle">
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
-                                      disabled={removeFromTeam.isPending}
-                                      onClick={() => {
-                                        if (confirm(`Remove ${m.name} from ${d.label}?`)) {
-                                          removeFromTeam.mutate(m.id);
-                                        }
-                                      }}
-                                    >
-                                      <X className="mr-1 h-3.5 w-3.5" /> Remove
-                                    </Button>
                                   </td>
                                 )}
                               </tr>

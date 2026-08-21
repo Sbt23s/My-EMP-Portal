@@ -43,6 +43,9 @@ interface CallApi {
   rejectCall: () => void;
   hangUp: () => void;
   toggleTrack: (kind: "audio" | "video") => boolean;
+  /** True while the screen is being sent instead of the camera. */
+  sharingScreen: boolean;
+  toggleScreenShare: () => Promise<void>;
 
   /*
     The three below exist so a group call can be built on this connection
@@ -214,6 +217,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     */
     restartCountRef.current = 0;
     restartingRef.current = false;
+    cameraTrackRef.current?.stop();
+    cameraTrackRef.current = null;
+    setSharingScreen(false);
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
       localStreamRef.current = null;
@@ -229,6 +235,69 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     setMuted(false);
     setCameraOff(false);
   }, []);
+
+  const [sharingScreen, setSharingScreen] = useState(false);
+  /*
+    The camera track is kept alive while the screen is being shared rather
+    than stopped. Stopping it turns the light off, but it also means the
+    camera has to be reopened to come back -- which is slow, and on some
+    machines asks for permission again in the middle of a call.
+  */
+  const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
+
+  /**
+   * Send the screen instead of the camera, and back again.
+   *
+   * replaceTrack rather than a renegotiation: it swaps what the existing
+   * sender is sending without a new offer, so the other side's picture
+   * changes over without the call visibly reconnecting.
+   */
+  const toggleScreenShare = useCallback(async () => {
+    const pc = pcRef.current;
+    if (!pc) return;
+    const sender = pc.getSenders().find((sn) => sn.track?.kind === "video");
+    if (!sender) {
+      toast.error("Screen sharing needs a video call.");
+      return;
+    }
+
+    if (sharingScreen) {
+      const camera = cameraTrackRef.current;
+      if (camera) {
+        await sender.replaceTrack(camera);
+        const shown = localStreamRef.current?.getVideoTracks()[0];
+        if (shown && shown !== camera) {
+          shown.stop();
+          localStreamRef.current?.removeTrack(shown);
+          localStreamRef.current?.addTrack(camera);
+        }
+      }
+      setSharingScreen(false);
+      return;
+    }
+
+    try {
+      const display = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const track = display.getVideoTracks()[0];
+      if (!track) return;
+
+      if (!cameraTrackRef.current) {
+        cameraTrackRef.current = localStreamRef.current?.getVideoTracks()[0] ?? null;
+      }
+      await sender.replaceTrack(track);
+
+      const old = localStreamRef.current?.getVideoTracks()[0];
+      if (old) localStreamRef.current?.removeTrack(old);
+      localStreamRef.current?.addTrack(track);
+      setSharingScreen(true);
+
+      // The browser's own "Stop sharing" bar never touches our button, so the
+      // camera has to be restored from the track ending as well.
+      track.onended = () => { void toggleScreenShare(); };
+    } catch {
+      // The picker was dismissed; not worth a message.
+    }
+  }, [sharingScreen]);
 
   /** When the conversation started, so a call log can say how long it ran. */
   const connectedAtRef = useRef<number | null>(null);
@@ -823,10 +892,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<CallApi>(() => ({
     callState, activeCallPartner, callIsVideo, localStream, remoteStream,
     startCall, acceptCall, rejectCall, hangUp, toggleTrack,
-    sendSignal, addSignalListener, getIceServers: getIceServersConfig
+    sendSignal, addSignalListener, getIceServers: getIceServersConfig,
+    sharingScreen, toggleScreenShare
   }), [callState, activeCallPartner, callIsVideo, localStream, remoteStream,
     startCall, acceptCall, rejectCall, hangUp, toggleTrack,
-    sendSignal, addSignalListener, getIceServersConfig]);
+    sendSignal, addSignalListener, getIceServersConfig,
+    sharingScreen, toggleScreenShare]);
 
   return (
     <CallContext.Provider value={value}>
@@ -846,6 +917,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           onHangUp={hangUp}
           onToggleMute={() => setMuted(!toggleTrack("audio"))}
           onToggleCamera={() => setCameraOff(!toggleTrack("video"))}
+          sharingScreen={sharingScreen}
+          onToggleScreenShare={() => void toggleScreenShare()}
         />
       )}
       {/* Silent when the socket is down, but a call cannot arrive then, so the
@@ -878,5 +951,7 @@ const DORMANT: CallApi = {
   // No socket outside the provider, so these do nothing rather than pretend.
   sendSignal: async () => {},
   addSignalListener: () => () => {},
-  getIceServers: async () => iceServers
+  getIceServers: async () => iceServers,
+  sharingScreen: false,
+  toggleScreenShare: async () => {}
 };

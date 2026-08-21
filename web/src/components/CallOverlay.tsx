@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, MicOff, Phone, PhoneOff, Video, VideoOff } from "lucide-react";
+import { Mic, MicOff, Phone, PhoneOff, Video, VideoOff, MonitorUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,39 @@ function initials(name?: string) {
     .join("");
 }
 
+/** One labelled round button in the call's control bar. */
+function CallControl({
+  icon: Icon, label, active, onClick
+}: {
+  icon: typeof Mic;
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={active}
+      className="group flex w-16 flex-col items-center gap-1.5 focus:outline-none"
+    >
+      <span
+        className={cn(
+          "grid h-12 w-12 place-items-center rounded-full transition-colors",
+          "group-focus-visible:ring-2 group-focus-visible:ring-white/70",
+          active
+            ? "bg-white text-neutral-900"
+            : "bg-white/15 text-white group-hover:bg-white/25"
+        )}
+      >
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="text-[11px] text-white/70">{label}</span>
+    </button>
+  );
+}
+
 export type CallState = "idle" | "calling" | "ringing" | "incoming" | "connecting" | "connected";
 
 /**
@@ -24,7 +57,8 @@ export type CallState = "idle" | "calling" | "ringing" | "incoming" | "connectin
  */
 export function CallOverlay({
   state, partnerName, isVideo, localStream, remoteStream,
-  muted, cameraOff, onAccept, onReject, onHangUp, onToggleMute, onToggleCamera
+  muted, cameraOff, onAccept, onReject, onHangUp, onToggleMute, onToggleCamera,
+  sharingScreen, onToggleScreenShare
 }: {
   state: CallState;
   partnerName: string;
@@ -38,6 +72,8 @@ export function CallOverlay({
   onHangUp: () => void;
   onToggleMute: () => void;
   onToggleCamera: () => void;
+  sharingScreen: boolean;
+  onToggleScreenShare: () => void;
 }) {
   const localVideo = useRef<HTMLVideoElement | null>(null);
   const mainLocalVideo = useRef<HTMLVideoElement | null>(null);
@@ -198,41 +234,39 @@ export function CallOverlay({
           </>
         ) : (
           <>
-            <Button
-              type="button"
-              size="icon"
+            {/* Labelled, because an unlabelled circle of icons makes people
+                guess which one hangs up. The label is also the accessible
+                name, so the control reads the same either way. */}
+            <CallControl
+              icon={muted ? MicOff : Mic}
+              label={muted ? "Unmute" : "Mute"}
+              active={muted}
               onClick={onToggleMute}
-              title={muted ? "Turn the microphone on" : "Mute"}
-              className={cn(
-                "h-12 w-12 rounded-full border-0",
-                muted ? "bg-white text-neutral-900 hover:bg-white/90" : "bg-white/15 text-white hover:bg-white/25"
-              )}
-            >
-              {muted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-            </Button>
+            />
             {isVideo && (
-              <Button
-                type="button"
-                size="icon"
+              <CallControl
+                icon={cameraOff ? VideoOff : Video}
+                label={cameraOff ? "Start Video" : "Stop Video"}
+                active={cameraOff}
                 onClick={onToggleCamera}
-                title={cameraOff ? "Turn the camera on" : "Turn the camera off"}
-                className={cn(
-                  "h-12 w-12 rounded-full border-0",
-                  cameraOff ? "bg-white text-neutral-900 hover:bg-white/90" : "bg-white/15 text-white hover:bg-white/25"
-                )}
-              >
-                {cameraOff ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
-              </Button>
+              />
             )}
-            <Button
+            {isVideo && state === "connected" && (
+              <CallControl
+                icon={MonitorUp}
+                label={sharingScreen ? "Stop Share" : "Share Screen"}
+                active={sharingScreen}
+                onClick={onToggleScreenShare}
+              />
+            )}
+            <button
               type="button"
-              size="icon"
               onClick={onHangUp}
-              title="Hang up"
-              className="h-14 w-14 rounded-full bg-red-500 text-white hover:bg-red-600"
+              className="ml-3 flex items-center gap-2 rounded-full bg-red-500 px-6 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-red-600"
             >
-              <PhoneOff className="h-6 w-6" />
-            </Button>
+              <PhoneOff className="h-4 w-4" />
+              End Call
+            </button>
           </>
         )}
       </div>

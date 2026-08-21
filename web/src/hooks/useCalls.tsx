@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { api, tokenStore } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { CallOverlay, type CallState } from "@/components/CallOverlay";
+import { setLiveCaller } from "@/lib/liveCall";
 
 const BASE = import.meta.env.VITE_API_URL || "";
 
@@ -298,6 +299,17 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       // The picker was dismissed; not worth a message.
     }
   }, [sharingScreen]);
+
+  /*
+    Publish who is on the call so a notification toast can be worded for the
+    moment it is shown rather than the moment it was written. The server
+    writes "X is calling you" once, when the call starts, and never revisits
+    it -- so without this the toast for a call that rang out still says
+    somebody is calling.
+  */
+  useEffect(() => {
+    setLiveCaller(callState !== "idle" ? (activeCallPartner?.name ?? null) : null);
+  }, [callState, activeCallPartner?.name]);
 
   /** When the conversation started, so a call log can say how long it ran. */
   const connectedAtRef = useRef<number | null>(null);

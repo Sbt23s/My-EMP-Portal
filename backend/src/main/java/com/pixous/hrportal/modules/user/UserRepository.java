@@ -146,6 +146,28 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT MAX(u.employeeCode) FROM User u WHERE u.employeeCode LIKE CONCAT(:prefix, '%')")
     String findMaxEmployeeCode(@Param("prefix") String prefix);
 
+    /*
+      Employee IDs are allocated against the table, not against the entity.
+
+      User carries the tenant @Filter, so when that filter is active every
+      query through the entity -- including the two above and below -- hides
+      rows whose company_id does not match, and "company_id = x" is never
+      true of a NULL. The unique index on users.employee_code has no such
+      filter. Allocating from a view that cannot see part of the table, and
+      then writing into an index that can, hands out an ID that already
+      exists: the insert is refused and the person adding the employee gets
+      "Something went wrong" with nothing to act on.
+
+      Native, so what is checked is what the constraint will check.
+    */
+    @Query(value = "SELECT MAX(employee_code) FROM users WHERE employee_code LIKE CONCAT(:prefix, '%')",
+           nativeQuery = true)
+    String findMaxEmployeeCodeAcrossTenants(@Param("prefix") String prefix);
+
+    @Query(value = "SELECT COUNT(*) FROM users WHERE UPPER(employee_code) = UPPER(:code)",
+           nativeQuery = true)
+    long countByEmployeeCodeAcrossTenants(@Param("code") String code);
+
     /** Enabled users who hold the given permission code through any of their roles. */
     @Query("""
             SELECT DISTINCT u FROM User u

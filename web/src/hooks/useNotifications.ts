@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import toast from "react-hot-toast";
+import { describeCallNotification } from "@/lib/callNotifications";
+import { getLiveCaller } from "@/lib/liveCall";
 import { api, tokenStore } from "@/lib/api";
 import { notificationAllowed } from "@/lib/notificationModules";
 import { useAuth } from "@/context/AuthContext";
@@ -76,10 +78,19 @@ export function useNotifications(userId?: number) {
     // the WebSocket and would otherwise pop up for a module that is off.
     if (!notificationAllowed(n.type, hasModule)) return;
 
+    /*
+      A call notification is worded for the moment it is read, not the moment
+      it was written. The server writes "X is calling you" when the call
+      starts and never rewrites it, so a call that rang out or was already
+      finished popped up a toast inviting somebody to answer it. Present
+      tense only while a call with that person is genuinely live.
+    */
+    const { title, body } = describeCallNotification(n, getLiveCaller());
+
     if (typeof Notification !== "undefined" && Notification.permission === "granted" && document.visibilityState === "hidden") {
       try {
-        const notif = new Notification(n.title, {
-          body: n.body || "",
+        const notif = new Notification(title, {
+          body: body || "",
           icon: "/pixous-logo.png",
           tag: `notif-${n.id}`
         });
@@ -110,9 +121,9 @@ export function useNotifications(userId?: number) {
           React.createElement(
             "div",
             { className: "min-w-0 flex-1 pr-6" },
-            React.createElement("div", { className: "text-sm font-semibold text-foreground" }, n.title),
-            n.body
-              ? React.createElement("div", { className: "line-clamp-2 text-xs text-muted-foreground" }, n.body)
+            React.createElement("div", { className: "text-sm font-semibold text-foreground" }, title),
+            body
+              ? React.createElement("div", { className: "line-clamp-2 text-xs text-muted-foreground" }, body)
               : null
           ),
           React.createElement(

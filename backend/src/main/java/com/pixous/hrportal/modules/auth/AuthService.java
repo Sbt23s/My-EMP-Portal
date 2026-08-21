@@ -312,10 +312,15 @@ public class AuthService {
                 .orElseThrow(() -> ApiException.business("Unknown role: " + roleCode));
         user.getRoles().add(role);
 
-        userRepository.save(user);
         // The company's own ID when one was supplied, which an Excel import always
         // has. Generating one instead meant somebody who is PIX-E057 everywhere in
         // the company appeared throughout the portal as EMP0061.
+        //
+        // Set before the row is written rather than after. Saving first and
+        // then updating the code left a moment where a user existed with no
+        // employee ID at all, and made the failure surface as an update to a
+        // row that had just been created, which is a confusing thing to read
+        // in a log.
         user.setEmployeeCode(chooseEmployeeCode(req.employeeCode(), user));
         userRepository.save(user);
         joinAnnouncementsChannel(user);
@@ -333,7 +338,8 @@ public class AuthService {
     private String chooseEmployeeCode(String supplied, User user) {
         String code = supplied == null ? "" : supplied.trim().toUpperCase();
         if (code.isEmpty()) return generateEmployeeCode(user);
-        if (userRepository.existsByEmployeeCodeIgnoreCase(code)) {
+        // Across tenants, because the unique index is across tenants.
+        if (userRepository.countByEmployeeCodeAcrossTenants(code) > 0) {
             throw ApiException.conflict("Employee ID '" + code + "' is already in use");
         }
         return code;
@@ -447,9 +453,25 @@ public class AuthService {
         loginHistoryRepository.save(history);
     }
 
+    /**
+     * The next free generated employee ID.
+     *
+     * <p>Both the highest existing ID and the check for a free one are read
+     * from the table rather than through the User entity, because the entity
+     * carries the tenant filter and the unique index does not. A generator
+     * that cannot see part of the table will eventually hand out something
+     * the index already holds.
+     *
+     * <p>The highest ID is only a starting point. It is walked forward until
+     * a free one is found, which also covers the case the maximum cannot
+     * cover: two people adding an employee at the same moment both read the
+     * same maximum. The loop is bounded, because a generator that cannot
+     * find a free ID in a thousand tries has something wrong with it that
+     * spinning will not fix.
+     */
     private String generateEmployeeCode(User user) {
         String prefix = "EMP";
-        String max = userRepository.findMaxEmployeeCode(prefix);
+        String max = userRepository.findMaxEmployeeCodeAcrossTenants(prefix);
         int next = 1;
         if (max != null && max.length() > prefix.length()) {
             try {
@@ -458,7 +480,15 @@ public class AuthService {
                 next = (int) (userRepository.count() + 1);
             }
         }
-        return prefix + String.format("%04d", next);
+
+        for (int attempt = 0; attempt < 1000; attempt++) {
+            String candidate = prefix + String.format("%04d", next + attempt);
+            if (userRepository.countByEmployeeCodeAcrossTenants(candidate) == 0) {
+                return candidate;
+            }
+        }
+        throw ApiException.business(
+                "Could not allocate an employee ID. Please set one manually.");
     }
 
     private String blankToNull(String s) {

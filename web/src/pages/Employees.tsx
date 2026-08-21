@@ -2156,6 +2156,9 @@ const ROLE_OPTIONS = [
  * again, and a wrong-but-well-formed address can only be caught by sending mail
  * to it.
  */
+/** The eight groups that exist. Nothing else is a blood group. */
+const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+
 const FIELD_RULES: Record<string, {
   keep?: (raw: string) => string;
   check: (value: string) => string;
@@ -2185,9 +2188,15 @@ const FIELD_RULES: Record<string, {
     check: (v) => !v ? "Phone is required"
       : /^\d{10}$/.test(v) ? "" : "Phone must be exactly 10 digits"
   },
+  /*
+    Optional, unlike the main phone. A second number is genuinely useful and
+    often genuinely not known on the day somebody is onboarded, and demanding
+    one only taught people to type the first number again to get past the
+    form. Blank is accepted; anything entered still has to be a real number.
+  */
   alternatePhone: {
     keep: (v) => v.replace(/\D/g, "").slice(0, 10),
-    check: (v) => !v ? "Alternate phone is required"
+    check: (v) => !v ? ""
       : /^\d{10}$/.test(v) ? "" : "Alternate phone must be exactly 10 digits"
   },
   // Aadhaar is twelve digits.
@@ -2196,20 +2205,29 @@ const FIELD_RULES: Record<string, {
     check: (v) => !v ? "Aadhaar is required"
       : /^\d{12}$/.test(v) ? "" : "Aadhaar must be exactly 12 digits"
   },
-  // A blood group is letters with a + or a -, never a digit.
+  /*
+    Chosen from the eight that exist rather than typed. Free text produced
+    "o+", "O positive", "B Positive" and "b+" for the same four groups, which
+    is unusable for the one thing the field is for -- finding a match in a
+    hurry.
+  */
   bloodGroup: {
-    keep: (v) => v.replace(/[0-9]/g, "").slice(0, 10),
+    keep: (v) => v,
     check: (v) => !v.trim() ? "Blood group is required"
-      : /[0-9]/.test(v) ? "Blood group cannot contain numbers"
-        : v.trim().length > 10 ? "Blood group is at most 10 characters" : ""
+      : BLOOD_GROUPS.includes(v.trim()) ? "" : "Choose a blood group from the list"
   },
-  // Whatever reaches this person: a name, a number, or both.
+  /*
+    A number to ring, so it is held to the same shape as any other mobile.
+
+    It used to accept twenty-five characters of mixed letters and digits,
+    which let "94881428199999999999999" through -- a value that looks like a
+    phone number, is not one, and would only be discovered at the moment
+    somebody actually needed to make the call.
+  */
   emergencyContact: {
-    keep: (v) => v.replace(/[^A-Za-z0-9 .+/-]/g, "").slice(0, 25),
-    check: (v) => !v.trim() ? "Emergency contact is required"
-      : v.trim().length > 25 ? "Emergency contact is at most 25 characters"
-        : /^[A-Za-z0-9 .+/-]+$/.test(v.trim()) ? ""
-          : "Use letters and numbers only"
+    keep: (v) => v.replace(/\D/g, "").slice(0, 10),
+    check: (v) => !v ? "Emergency contact is required"
+      : /^\d{10}$/.test(v) ? "" : "Emergency contact must be exactly 10 digits"
   },
   // A relationship is a word: father, mother, spouse.
   emergencyContactRelation: {
@@ -2738,9 +2756,12 @@ function AddEmployeeDialog({ onClose, defaultIndustry }: { onClose: () => void; 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor="ne-blood">Blood group<Req /></Label>
-              <Input id="ne-blood" value={form.bloodGroup} maxLength={10}
+              <Select id="ne-blood" value={form.bloodGroup}
                 className={bad("bloodGroup")}
-                onChange={(e) => setChecked("bloodGroup", e.target.value)} placeholder="e.g. B+" />
+                onChange={(e) => setChecked("bloodGroup", e.target.value)}>
+                <option value="">Select…</option>
+                {BLOOD_GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
+              </Select>
               <Bad name="bloodGroup" />
             </div>
             <div className="space-y-1">
@@ -2759,7 +2780,7 @@ function AddEmployeeDialog({ onClose, defaultIndustry }: { onClose: () => void; 
             </div>
             
             <div className="space-y-1">
-              <Label htmlFor="ne-alt">Alternate phone<Req /></Label>
+              <Label htmlFor="ne-alt">Alternate phone</Label>
               <Input id="ne-alt" value={form.alternatePhone} inputMode="numeric" maxLength={10}
                 className={bad("alternatePhone")}
                 onChange={(e) => setChecked("alternatePhone", e.target.value)} placeholder="10-digit mobile" />
@@ -2774,10 +2795,10 @@ function AddEmployeeDialog({ onClose, defaultIndustry }: { onClose: () => void; 
             </div>
             <div className="space-y-1">
               <Label htmlFor="ne-emc">Emergency contact<Req /></Label>
-              <Input id="ne-emc" value={form.emergencyContact} maxLength={25}
+              <Input id="ne-emc" value={form.emergencyContact} inputMode="numeric" maxLength={10}
                 className={bad("emergencyContact")}
                 onChange={(e) => setChecked("emergencyContact", e.target.value)}
-                placeholder="Name / number (max 25)" />
+                placeholder="10-digit mobile" />
               <Bad name="emergencyContact" />
             </div>
             <div className="space-y-1">
@@ -3418,8 +3439,11 @@ function EditEmployeeDialog({ id, onClose }: { id: number; onClose: () => void }
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor="ee-blood">Blood group</Label>
-              <Input id="ee-blood" value={form.bloodGroup}
-                onChange={(e) => set("bloodGroup", e.target.value)} placeholder="e.g. B+" maxLength={5} />
+              <Select id="ee-blood" value={form.bloodGroup}
+                onChange={(e) => set("bloodGroup", e.target.value)}>
+                <option value="">Select…</option>
+                {BLOOD_GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
+              </Select>
             </div>
             <div className="space-y-1">
               <Label htmlFor="ee-pan">PAN</Label>
@@ -3433,8 +3457,9 @@ function EditEmployeeDialog({ id, onClose }: { id: number; onClose: () => void }
             </div>
             <div className="space-y-1">
               <Label htmlFor="ee-alt">Alternate phone</Label>
-              <Input id="ee-alt" value={form.alternatePhone}
-                onChange={(e) => set("alternatePhone", e.target.value)} placeholder="10-digit mobile" />
+              <Input id="ee-alt" value={form.alternatePhone} inputMode="numeric" maxLength={10}
+                onChange={(e) => set("alternatePhone", e.target.value.replace(/\D/g, "").slice(0, 10))}
+                placeholder="10-digit mobile (optional)" />
             </div>
             <div className="space-y-1">
               <Label htmlFor="ee-pemail">Personal email</Label>

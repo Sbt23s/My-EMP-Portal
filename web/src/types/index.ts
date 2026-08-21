@@ -128,8 +128,17 @@ export interface UserSummary {
   id: number;
   employeeCode: string;
   name: string;
-  /** Login name. Passwords are one-way hashed and never returned. */
+  /** Login name. */
   username?: string;
+  /**
+   * The employee's current password, in the clear.
+   *
+   * The hash cannot be reversed, so a sealed copy is kept beside it purely so
+   * HR can tell somebody what their password is. The server returns it only
+   * to roles allowed to manage users, and it is null when no copy was ever
+   * kept -- an account whose password was set before the vault existed.
+   */
+  password?: string | null;
   email?: string;
   phone?: string;
   industry?: string;

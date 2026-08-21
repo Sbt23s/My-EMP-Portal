@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Clock, CalendarDays, AlertTriangle, Eye, Download, X, Plus, CalendarX2, FileSpreadsheet } from "lucide-react";
+import { CheckCircle2, Clock, CalendarDays, AlertTriangle, Eye, X, Plus, CalendarX2, FileSpreadsheet } from "lucide-react";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
@@ -52,6 +52,8 @@ export default function LeavePage() {
   const { hasRole } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  /** The decided request being read, or null. */
+  const [viewing, setViewing] = useState<LeaveRequest | null>(null);
   // Date range (month granularity): default = start of this year → current month.
   const [fromMonth, setFromMonth] = useState(dayjs().startOf("year").format("YYYY-MM"));
   const [toMonth, setToMonth] = useState(dayjs().format("YYYY-MM"));
@@ -336,6 +338,10 @@ export default function LeavePage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {/* Action first: it is the column people came to use, and at the
+                      far right of nine columns it sat behind a horizontal scroll
+                      on anything narrower than a desktop. */}
+                  <TableHead>Action</TableHead>
                   <TableHead sortable>Type</TableHead>
                   <TableHead sortable>Applied On</TableHead>
                   <TableHead sortable>Leave Dates</TableHead>
@@ -344,12 +350,43 @@ export default function LeavePage() {
                   <TableHead sortable>Requested To</TableHead>
                   <TableHead sortable>Status</TableHead>
                   <TableHead>Remark</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {reqPaged.pageRows.map((r, i) => (
                   <TableRow key={r.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800">
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {r.status === "PENDING" ? (
+                          <Button
+                            variant="outline"
+                            className="h-8 rounded px-2 text-foreground"
+                            disabled={cancel.isPending}
+                            onClick={() => {
+                              if (window.confirm("Cancel this leave request?")) cancel.mutate(r.id);
+                            }}
+                          >
+                            <X className="mr-1 h-3 w-3" /> Cancel
+                          </Button>
+                        ) : (
+                          /* Once it has been decided there is nothing to cancel,
+                             so the action becomes reading the decision. The
+                             download button that used to sit here had no handler
+                             at all -- it looked like it produced a document and
+                             did nothing. */
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 rounded text-primary"
+                            title="View this request"
+                            aria-label="View this request"
+                            onClick={() => setViewing(r)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="font-semibold text-slate-800 dark:text-slate-200">{r.leaveTypeName}</TableCell>
                     <TableCell className="text-xs text-slate-500 tabular-nums">
                       {dayjs(r.createdAt).format("DD MMM YYYY")}
@@ -378,26 +415,6 @@ export default function LeavePage() {
                     <TableCell className="max-w-[160px] truncate text-sm text-muted-foreground" title={r.decisionComment}>
                       {r.status === "REJECTED" ? (r.decisionComment || "—") : "—"}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {r.status === "PENDING" ? (
-                          <Button
-                            variant="outline"
-                            className="h-8 rounded px-2 text-foreground"
-                            disabled={cancel.isPending}
-                            onClick={() => {
-                              if (window.confirm("Cancel this leave request?")) cancel.mutate(r.id);
-                            }}
-                          >
-                            <X className="mr-1 h-3 w-3" /> Cancel
-                          </Button>
-                        ) : r.status === "APPROVED" ? (
-                          <Button variant="outline" size="icon" className="h-8 w-8 rounded text-primary">
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        ) : null}
-                      </div>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -413,6 +430,67 @@ export default function LeavePage() {
           />
         )}
       </Card>
+
+      {/* Reading a decided request. */}
+      {viewing && (
+        <Dialog open onClose={() => setViewing(null)}>
+          <DialogHeader
+            title="Leave request"
+            description={`${viewing.leaveTypeName} · ${dayjs(viewing.fromDate).format("DD MMM YYYY")} – ${dayjs(viewing.toDate).format("DD MMM YYYY")}`}
+          />
+          <div className="mt-3 space-y-3 text-sm">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Status</p>
+                <Badge className={`mt-1 border-0 uppercase tracking-wider text-[10px] font-bold ${
+                  viewing.status === "APPROVED" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                  : viewing.status === "REJECTED" ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"
+                  : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                }`}>
+                  {viewing.status}
+                </Badge>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Working days</p>
+                <p className="mt-1 font-semibold tabular-nums">{viewing.workingDays}</p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Applied on</p>
+                <p className="mt-1 tabular-nums">{dayjs(viewing.createdAt).format("DD MMM YYYY")}</p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Requested to</p>
+                <p className="mt-1">{viewing.requestedToName || "—"}</p>
+              </div>
+              {viewing.decidedByName && (
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Decided by</p>
+                  <p className="mt-1">{viewing.decidedByName}</p>
+                </div>
+              )}
+              {viewing.decidedAt && (
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Decided on</p>
+                  <p className="mt-1 tabular-nums">{dayjs(viewing.decidedAt).format("DD MMM YYYY")}</p>
+                </div>
+              )}
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Reason</p>
+              <p className="mt-1 whitespace-pre-wrap">{viewing.reason || "—"}</p>
+            </div>
+            {viewing.status === "REJECTED" && (
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Remark</p>
+                <p className="mt-1 whitespace-pre-wrap">{viewing.decisionComment || "—"}</p>
+              </div>
+            )}
+          </div>
+          <div className="mt-5 flex justify-end">
+            <Button variant="outline" onClick={() => setViewing(null)}>Close</Button>
+          </div>
+        </Dialog>
+      )}
 
       {/* Apply dialog */}
       <Dialog open={open} onClose={() => setOpen(false)}>

@@ -438,18 +438,23 @@ function AllComplaints() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="pr-6 text-right">Action</TableHead>
                   <TableHead className="pl-6">Reference</TableHead>
                   <TableHead>Raised by</TableHead>
                   <TableHead>Subject</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Priority</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="pr-6 text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((c) => (
                   <TableRow key={c.id}>
+                    <TableCell className="pr-6 text-right">
+                      <Button size="sm" variant="outline" onClick={() => setActingOn(c)}>
+                        Respond
+                      </Button>
+                    </TableCell>
                     <TableCell className="pl-6 font-medium code-chip">{c.referenceCode}</TableCell>
                     <TableCell>
                       <div className="font-medium">{c.raisedByName || "Employee"}</div>
@@ -467,11 +472,6 @@ function AllComplaints() {
                     </TableCell>
                     <TableCell>
                       <Badge variant={statusVariant(c.status)}>{c.status.replace("_", " ")}</Badge>
-                    </TableCell>
-                    <TableCell className="pr-6 text-right">
-                      <Button size="sm" variant="outline" onClick={() => setActingOn(c)}>
-                        Respond
-                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

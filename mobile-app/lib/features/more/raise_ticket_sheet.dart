@@ -255,7 +255,7 @@ class _RaiseTicketSheetState extends ConsumerState<RaiseTicketSheet> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      initialValue: _type,
+                      value: _type,
                       decoration: const InputDecoration(labelText: 'Type *'),
                       items: [
                         for (final t in _types)
@@ -269,7 +269,7 @@ class _RaiseTicketSheetState extends ConsumerState<RaiseTicketSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      initialValue: _priority,
+                      value: _priority,
                       decoration: const InputDecoration(labelText: 'Priority *'),
                       items: [
                         for (final p in _priorities)
@@ -289,7 +289,7 @@ class _RaiseTicketSheetState extends ConsumerState<RaiseTicketSheet> {
 
               // Category
               DropdownButtonFormField<String>(
-                initialValue: _category,
+                value: _category,
                 decoration: const InputDecoration(labelText: 'Category *'),
                 items: [
                   for (final c in _categories)
@@ -303,7 +303,7 @@ class _RaiseTicketSheetState extends ConsumerState<RaiseTicketSheet> {
 
               // Affected module
               DropdownButtonFormField<String>(
-                initialValue: _module,
+                value: _module,
                 decoration: const InputDecoration(
                   labelText: 'Affected module (optional)',
                 ),

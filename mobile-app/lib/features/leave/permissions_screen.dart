@@ -369,7 +369,7 @@ class _RequestPermissionSheetState
                 data: (list) => list.isEmpty
                     ? const SizedBox.shrink()
                     : DropdownButtonFormField<int>(
-                        initialValue: _approver,
+                        value: _approver,
                         decoration: const InputDecoration(
                           labelText: 'Send to (optional)',
                           prefixIcon: Icon(Icons.person_outline_rounded),
@@ -388,7 +388,7 @@ class _RequestPermissionSheetState
               const SizedBox(height: 14),
 
               DropdownButtonFormField<String>(
-                initialValue: _priority,
+                value: _priority,
                 decoration: const InputDecoration(
                   labelText: 'Priority',
                   prefixIcon: Icon(Icons.flag_outlined),

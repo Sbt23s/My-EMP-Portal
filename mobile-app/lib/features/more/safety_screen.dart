@@ -485,7 +485,7 @@ class _ReportIncidentSheetState extends ConsumerState<ReportIncidentSheet> {
               Text('Report an incident', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                initialValue: _type,
+                value: _type,
                 decoration: const InputDecoration(labelText: 'Type'),
                 items: _types
                     .map((t) => DropdownMenuItem(
@@ -515,7 +515,7 @@ class _ReportIncidentSheetState extends ConsumerState<ReportIncidentSheet> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                initialValue: _severity,
+                value: _severity,
                 decoration: const InputDecoration(labelText: 'Severity'),
                 items: _severities
                     .map((s) => DropdownMenuItem(
@@ -622,9 +622,8 @@ class _ResolveSheetState extends ConsumerState<_ResolveSheet> {
               widget.incident.referenceCode ?? 'Incident',
               style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _status,
+            const SizedBox(height: 16),              DropdownButtonFormField<String>(
+              value: _status,
               decoration: const InputDecoration(labelText: 'Status'),
               items: _statuses
                   .map((s) => DropdownMenuItem(value: s, child: Text(s)))

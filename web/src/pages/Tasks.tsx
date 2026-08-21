@@ -910,17 +910,35 @@ function MyTasks() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="text-right pr-4">Action</TableHead>
                       <TableHead className="pl-4">Task</TableHead>
                       <TableHead>Priority</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Due Date</TableHead>
                       <TableHead>Assigned By</TableHead>
-                      <TableHead className="text-right pr-4">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {paged.pageRows.map((t) => (
                   <TableRow key={t.id} className={cn(t.status === "COMPLETED" && "opacity-70")}>
+                    <TableCell className="text-right pr-4">
+                      <div className="flex items-center justify-end gap-1">
+                      <Button variant="outline" size="sm" className="shrink-0" onClick={() => setMyView(t)}>
+                        <Eye className="mr-1 h-3.5 w-3.5" /> View
+                      </Button>
+                      <TaskChatButton
+                        count={myChatCounts.data?.[String(t.id)]}
+                        onClick={() => setChatTask(t)}
+                      />
+                      {/* Completing is done through the Status column, so there
+                          is no second button that means the same thing. */}
+                      {t.status === "COMPLETED" && (
+                        <span className="whitespace-nowrap text-xs text-muted-foreground">
+                          {t.completedAt ? dayjs(t.completedAt).format("DD MMM, h:mm A") : "Done"}
+                        </span>
+                      )}
+                      </div>
+                    </TableCell>
                     <TableCell className="pl-4 max-w-[22rem]">
                       <div className="font-medium text-foreground">{t.title}</div>
                       {t.description && (
@@ -962,24 +980,6 @@ function MyTasks() {
                           <span className="text-muted-foreground">{t.assignerName}</span>
                         </div>
                       ) : <span className="text-muted-foreground">—</span>}
-                    </TableCell>
-                    <TableCell className="text-right pr-4">
-                      <div className="flex items-center justify-end gap-1">
-                      <Button variant="outline" size="sm" className="shrink-0" onClick={() => setMyView(t)}>
-                        <Eye className="mr-1 h-3.5 w-3.5" /> View
-                      </Button>
-                      <TaskChatButton
-                        count={myChatCounts.data?.[String(t.id)]}
-                        onClick={() => setChatTask(t)}
-                      />
-                      {/* Completing is done through the Status column, so there
-                          is no second button that means the same thing. */}
-                      {t.status === "COMPLETED" && (
-                        <span className="whitespace-nowrap text-xs text-muted-foreground">
-                          {t.completedAt ? dayjs(t.completedAt).format("DD MMM, h:mm A") : "Done"}
-                        </span>
-                      )}
-                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -1701,6 +1701,7 @@ function AdminTasks({ isAdmin, assignsToAnyone = false, isHR, isTL = false, canA
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="text-right">Action</TableHead>
                   <TableHead>Employee</TableHead>
                   <TableHead>Team</TableHead>
                   <TableHead>Task</TableHead>
@@ -1708,12 +1709,50 @@ function AdminTasks({ isAdmin, assignsToAnyone = false, isHR, isTL = false, canA
                   <TableHead>Status</TableHead>
                   <TableHead>Due date</TableHead>
                   <TableHead>Assigned</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {pageRows.map((r) => (
                   <TableRow key={r.key} className={cn(r.status === "COMPLETED" && "opacity-70")}>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="outline" size="sm" className="shrink-0" onClick={() => setViewRow(r)}>
+                          <Eye className="mr-1 h-3.5 w-3.5" /> View
+                        </Button>
+                        {/* A discussion belongs to one person's task. A team
+                            assignment is many tasks, so it has no single thread —
+                            expand it and talk to whoever needs talking to. */}
+                        {r.kind === "individual" && (
+                          <TaskChatButton
+                            count={adminChatCounts.data?.[String(r.taskId)]}
+                            onClick={() => setChatFor({
+                              id: r.taskId, title: r.title, who: r.employeeName
+                            })}
+                          />
+                        )}
+                        {/* Whoever assigned it may edit it — a Team Leader or HR over
+                            their own assignments, an admin over any. A finished task
+                            can still be corrected; only progress belongs to the
+                            assignee, and the edit never touches that. */}
+                        {canAssign && (isAdmin || r.assignedBy === user?.id) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="shrink-0"
+                            onClick={() => setEditRow({
+                              taskIds: r.kind === "team" ? r.taskIds : [r.taskId],
+                              title: r.title,
+                              description: r.description,
+                              priority: r.priority,
+                              dueDate: r.dueDate,
+                              status: r.status
+                            })}
+                          >
+                            <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       {r.kind === "team" ? (
                         <div className="flex items-center gap-2.5">
@@ -1773,45 +1812,6 @@ function AdminTasks({ isAdmin, assignsToAnyone = false, isHR, isTL = false, canA
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                       {r.createdAt ? dayjs(r.createdAt).format("DD MMM YYYY") : "—"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="outline" size="sm" className="shrink-0" onClick={() => setViewRow(r)}>
-                          <Eye className="mr-1 h-3.5 w-3.5" /> View
-                        </Button>
-                        {/* A discussion belongs to one person's task. A team
-                            assignment is many tasks, so it has no single thread —
-                            expand it and talk to whoever needs talking to. */}
-                        {r.kind === "individual" && (
-                          <TaskChatButton
-                            count={adminChatCounts.data?.[String(r.taskId)]}
-                            onClick={() => setChatFor({
-                              id: r.taskId, title: r.title, who: r.employeeName
-                            })}
-                          />
-                        )}
-                        {/* Whoever assigned it may edit it — a Team Leader or HR over
-                            their own assignments, an admin over any. A finished task
-                            can still be corrected; only progress belongs to the
-                            assignee, and the edit never touches that. */}
-                        {canAssign && (isAdmin || r.assignedBy === user?.id) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="shrink-0"
-                            onClick={() => setEditRow({
-                              taskIds: r.kind === "team" ? r.taskIds : [r.taskId],
-                              title: r.title,
-                              description: r.description,
-                              priority: r.priority,
-                              dueDate: r.dueDate,
-                              status: r.status
-                            })}
-                          >
-                            <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
-                          </Button>
-                        )}
-                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

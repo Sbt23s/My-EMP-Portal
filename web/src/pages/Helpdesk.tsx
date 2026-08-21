@@ -278,6 +278,7 @@ export default function HelpdeskPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="text-right pr-6">Action</TableHead>
                   <TableHead className="pl-6">Ticket ID</TableHead>
                   <TableHead>Employee ID</TableHead>
                   <TableHead>Employee Name</TableHead>
@@ -288,28 +289,11 @@ export default function HelpdeskPage() {
                   <TableHead>Status</TableHead>
                   <TableHead>Approved By</TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead className="text-right pr-6">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paged.pageRows.map((t) => (
                   <TableRow key={t.id}>
-                    <TableCell className="pl-6 font-medium code-chip">{t.ticketCode}</TableCell>
-                    <TableCell className="code-chip text-xs text-muted-foreground">{t.raisedByCode || "—"}</TableCell>
-                    <TableCell className="font-medium">{t.raisedByName}</TableCell>
-                    <TableCell className="max-w-[200px] truncate font-medium">{t.title}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{t.type}</Badge>
-                    </TableCell>
-                    <TableCell>{t.category || "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant={priorityVariant(t.priority)}>{t.priority}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusVariant(t.status)}>{t.status}</Badge>
-                    </TableCell>
-                    <TableCell>{t.assignedToName || "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">{dayjs(t.createdAt).format("DD MMM YYYY")}</TableCell>
                     <TableCell className="text-right pr-6">
                       {(t.status === "RESOLVED" || t.status === "CLOSED") ? (
                         <Button
@@ -336,6 +320,22 @@ export default function HelpdeskPage() {
                         </Button>
                       )}
                     </TableCell>
+                    <TableCell className="pl-6 font-medium code-chip">{t.ticketCode}</TableCell>
+                    <TableCell className="code-chip text-xs text-muted-foreground">{t.raisedByCode || "—"}</TableCell>
+                    <TableCell className="font-medium">{t.raisedByName}</TableCell>
+                    <TableCell className="max-w-[200px] truncate font-medium">{t.title}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{t.type}</Badge>
+                    </TableCell>
+                    <TableCell>{t.category || "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant={priorityVariant(t.priority)}>{t.priority}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={statusVariant(t.status)}>{t.status}</Badge>
+                    </TableCell>
+                    <TableCell>{t.assignedToName || "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">{dayjs(t.createdAt).format("DD MMM YYYY")}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -356,6 +356,7 @@ export default function HelpdeskPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="text-right pr-6">Action</TableHead>
                   <TableHead className="pl-6">Ticket ID</TableHead>
                   <TableHead>Subject</TableHead>
                   <TableHead>Type</TableHead>
@@ -363,7 +364,6 @@ export default function HelpdeskPage() {
                   <TableHead>Priority</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead className="text-right pr-6">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -373,13 +373,6 @@ export default function HelpdeskPage() {
                     className="cursor-pointer"
                     onClick={() => setOpenId(t.id)}
                   >
-                    <TableCell className="pl-6 font-medium code-chip">{t.ticketCode}</TableCell>
-                    <TableCell className="max-w-[220px] truncate font-medium">{t.title}</TableCell>
-                    <TableCell><Badge variant="secondary">{t.type}</Badge></TableCell>
-                    <TableCell>{t.category || "—"}</TableCell>
-                    <TableCell><Badge variant={priorityVariant(t.priority)}>{t.priority}</Badge></TableCell>
-                    <TableCell><Badge variant={statusVariant(t.status)}>{t.status}</Badge></TableCell>
-                    <TableCell className="text-muted-foreground">{dayjs(t.createdAt).format("DD MMM YYYY")}</TableCell>
                     <TableCell
                       className="text-right pr-6"
                       onClick={(e) => e.stopPropagation()}
@@ -399,6 +392,13 @@ export default function HelpdeskPage() {
                         )}
                       </div>
                     </TableCell>
+                    <TableCell className="pl-6 font-medium code-chip">{t.ticketCode}</TableCell>
+                    <TableCell className="max-w-[220px] truncate font-medium">{t.title}</TableCell>
+                    <TableCell><Badge variant="secondary">{t.type}</Badge></TableCell>
+                    <TableCell>{t.category || "—"}</TableCell>
+                    <TableCell><Badge variant={priorityVariant(t.priority)}>{t.priority}</Badge></TableCell>
+                    <TableCell><Badge variant={statusVariant(t.status)}>{t.status}</Badge></TableCell>
+                    <TableCell className="text-muted-foreground">{dayjs(t.createdAt).format("DD MMM YYYY")}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

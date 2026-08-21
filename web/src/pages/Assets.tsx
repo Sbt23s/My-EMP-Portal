@@ -374,6 +374,7 @@ export default function AssetsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {canManage && <TableHead className="text-right">Action</TableHead>}
                     <TableHead>Code</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Category</TableHead>
@@ -382,12 +383,26 @@ export default function AssetsPage() {
                     <TableHead className="text-right">Stock</TableHead>
                     <TableHead>Warranty</TableHead>
                     <TableHead>Purchased</TableHead>
-                    {canManage && <TableHead className="text-right">Action</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {invPageRows.map((a) => (
                     <TableRow key={a.id}>
+                      {canManage && (
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                            onClick={() => setDeleteTarget(a)}
+                            title="Delete asset"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                      )}
                       <TableCell className="code-chip">{a.assetCode}</TableCell>
                       <TableCell>{a.assetType || "—"}</TableCell>
                       <TableCell>
@@ -414,21 +429,6 @@ export default function AssetsPage() {
                       <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                         {a.purchaseDate ? dayjs(a.purchaseDate).format("DD MMM YYYY") : "—"}
                       </TableCell>
-                      {canManage && (
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
-                            onClick={() => setDeleteTarget(a)}
-                            title="Delete asset"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                      )}
                     </TableRow>
                   ))}
                 </TableBody>

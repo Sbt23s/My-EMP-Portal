@@ -31,7 +31,7 @@ function dateYearAllowed(value: string) {
 }
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
-  ({ className, type, min, max, onChange, ...props }, ref) => {
+  ({ className, type, min, max, onChange, onBlur, ...props }, ref) => {
     const isDate = type === "date" || type === "month";
 
     /*
@@ -61,11 +61,39 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
         }
       : onChange;
 
+    /*
+     * Clear a date the browser itself considers unusable, when the field is
+     * left.
+     *
+     * The change handler above only sees a value once every segment is filled,
+     * because that is when a date input reports one. Type 8888 into the year
+     * alone and the value stays empty, no change fires, and the 8888 sits there
+     * looking entered. The browser knows the field is wrong even then --
+     * `badInput` for an incomplete date, `rangeOverflow` or `rangeUnderflow`
+     * for a year outside the bounds set above -- so this asks it on the way out
+     * and clears what it will not accept.
+     *
+     * Clearing rather than correcting: there is no way to know whether 8888 was
+     * meant to be 2088 or 1988, and quietly inventing an answer is worse than
+     * an empty field the person refills.
+     */
+    const handleBlur = isDate
+      ? (e: React.FocusEvent<HTMLInputElement>) => {
+          const { badInput, rangeOverflow, rangeUnderflow } = e.target.validity;
+          if (badInput || rangeOverflow || rangeUnderflow) {
+            e.target.value = "";
+            onChange?.(e as unknown as React.ChangeEvent<HTMLInputElement>);
+          }
+          onBlur?.(e);
+        }
+      : onBlur;
+
     return (
       <input
         type={type}
         ref={ref}
         onChange={handleChange}
+        onBlur={handleBlur}
         {...bounds}
         className={cn(
           "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",

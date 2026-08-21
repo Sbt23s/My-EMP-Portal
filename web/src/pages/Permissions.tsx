@@ -389,7 +389,7 @@ export default function PermissionsPage() {
       {/* Counts on top, then one view at a time. */}
       {tiled && (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <StatTile
               label="All" value={counts.ALL} icon={Inbox} fill={TILE_FILLS.violet}
               hint={view === "MINE" ? "Requests you raised"
@@ -411,46 +411,11 @@ export default function PermissionsPage() {
               label="Rejected" value={counts.REJECTED} icon={X} fill={TILE_FILLS.red}
               hint="Turned down" active={tab === "REJECTED" && !period} onClick={() => { setTab("REJECTED"); setPeriod(""); }}
             />
-          </div>
-
-          {/* When they were for, what was withdrawn, and the hours actually
-              granted. The three period tiles also narrow the table. */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <StatTile
-              label="Today's requests" value={periodCounts.today} icon={Clock}
-              fill={TILE_FILLS.blue} hint={dayjs().format("DD MMM YYYY")}
-              active={period === "TODAY"}
-              onClick={() => {
-                const next = period === "TODAY" ? "" : "TODAY";
-                setPeriod(next);
-                if (next) setTab("ALL");
-              }}
-            />
-            <StatTile
-              label="This week" value={periodCounts.week} icon={Inbox}
-              fill={TILE_FILLS.violet} hint="Monday to Sunday"
-              active={period === "WEEK"}
-              onClick={() => {
-                const next = period === "WEEK" ? "" : "WEEK";
-                setPeriod(next);
-                if (next) setTab("ALL");
-              }}
-            />
-            <StatTile
-              label="This month" value={periodCounts.month} icon={Inbox}
-              fill={TILE_FILLS.green} hint={dayjs().format("MMMM YYYY")}
-              active={period === "MONTH"}
-              onClick={() => {
-                const next = period === "MONTH" ? "" : "MONTH";
-                setPeriod(next);
-                if (next) setTab("ALL");
-              }}
-            />
-            <StatTile
-              label="Cancelled" value={periodCounts.cancelled} icon={Ban}
-              fill={TILE_FILLS.violet} hint="Withdrawn by the employee"
-              active={tab === "CANCELLED" && !period} onClick={() => { setTab("CANCELLED"); setPeriod(""); }}
-            />
+            {/* Hours actually granted, kept with the other totals.
+                The row that used to sit below this one -- today's requests,
+                this week, this month and cancelled -- was removed: those four
+                were period filters dressed as totals, and they pushed the
+                figures people actually read further down every screen. */}
             <StatTile
               label="Hours approved" value={`${periodCounts.approvedHours.toFixed(2)}h`}
               icon={Timer} fill={TILE_FILLS.amber} hint="Time actually granted"
@@ -514,7 +479,8 @@ export default function PermissionsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50/80 dark:bg-slate-900/80">
-                    <TableHead sortable className="sticky left-0 z-20 bg-slate-50/90 dark:bg-slate-900/90 shadow-[1px_0_0_0_hsl(var(--border))]">Employee</TableHead>
+                    {isApprover && <TableHead className="text-right">Actions</TableHead>}
+                    <TableHead sortable>Employee</TableHead>
                     <TableHead sortable>Team</TableHead>
                     <TableHead sortable>Date</TableHead>
                     <TableHead sortable>Time</TableHead>
@@ -526,13 +492,37 @@ export default function PermissionsPage() {
                     <TableHead sortable>Decided by</TableHead>
                     <TableHead sortable>Decided at</TableHead>
                     <TableHead>Reject reason</TableHead>
-                    {isApprover && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {adminPaged.pageRows.map((r) => (
                     <TableRow key={r.id} className="border-b align-top last:border-0 hover:bg-muted/30 transition-colors [&>td]:px-3 [&>td]:py-4">
-                      <TableCell className="sticky left-0 z-10 bg-inherit font-medium shadow-[1px_0_0_0_hsl(var(--border))]">{r.employeeName}<div className="code-chip text-xs text-muted-foreground">{r.employeeCode}</div></TableCell>
+                      {isApprover && (
+                        <TableCell className="text-right">
+                          {canDecideRow(r) ? (
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={decide.isPending}
+                                onClick={() => { setRejectReason(""); setDecideOn({ row: r, approve: false }); }}
+                              >
+                                <X className="h-4 w-4" /> Reject
+                              </Button>
+                              <Button
+                                size="sm"
+                                disabled={decide.isPending}
+                                onClick={() => setDecideOn({ row: r, approve: true })}
+                              >
+                                <Check className="h-4 w-4" /> Approve
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="whitespace-nowrap text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      )}
+                      <TableCell className="font-medium">{r.employeeName}<div className="code-chip text-xs text-muted-foreground">{r.employeeCode}</div></TableCell>
                       <TableCell>{r.team || "—"}</TableCell>
                       <TableCell>{dayjs(r.requestDate).format("DD MMM YYYY")}</TableCell>
                       <TableCell>{to12Hour(r.fromTime)} – {to12Hour(r.toTime)}</TableCell>
@@ -566,31 +556,6 @@ export default function PermissionsPage() {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
-                      {isApprover && (
-                        <TableCell className="text-right">
-                          {canDecideRow(r) ? (
-                            <div className="flex items-center justify-end gap-1.5">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={decide.isPending}
-                                onClick={() => { setRejectReason(""); setDecideOn({ row: r, approve: false }); }}
-                              >
-                                <X className="h-4 w-4" /> Reject
-                              </Button>
-                              <Button
-                                size="sm"
-                                disabled={decide.isPending}
-                                onClick={() => setDecideOn({ row: r, approve: true })}
-                              >
-                                <Check className="h-4 w-4" /> Approve
-                              </Button>
-                            </div>
-                          ) : (
-                            <span className="whitespace-nowrap text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -651,7 +616,8 @@ export default function PermissionsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50/80 dark:bg-slate-900/80">
-                    <TableHead sortable className="sticky left-0 z-20 bg-slate-50/90 dark:bg-slate-900/90 shadow-[1px_0_0_0_hsl(var(--border))]">Employee</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                    <TableHead sortable>Employee</TableHead>
                     <TableHead sortable>Team</TableHead>
                     <TableHead sortable>Date</TableHead>
                     <TableHead sortable>Time</TableHead>
@@ -659,32 +625,11 @@ export default function PermissionsPage() {
                     <TableHead sortable>Reason</TableHead>
                     <TableHead sortable>Priority</TableHead>
                     <TableHead sortable>Status</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {approverPaged.pageRows.map((r) => (
                     <TableRow key={r.id} className="border-b align-top last:border-0 hover:bg-muted/30 transition-colors [&>td]:px-3 [&>td]:py-4">
-                      <TableCell className="sticky left-0 z-10 bg-inherit font-medium shadow-[1px_0_0_0_hsl(var(--border))]">{r.employeeName}<div className="code-chip text-xs text-muted-foreground">{r.employeeCode}</div></TableCell>
-                      <TableCell>{r.team || "—"}</TableCell>
-                      <TableCell>{dayjs(r.requestDate).format("DD MMM YYYY")}</TableCell>
-                      <TableCell>{to12Hour(r.fromTime)} – {to12Hour(r.toTime)}</TableCell>
-                      <TableCell>{r.hours}h</TableCell>
-                      <TableCell className="max-w-[160px] truncate text-xs" title={r.reason}>{r.reason || "—"}</TableCell>
-                      <TableCell><PriorityBadge priority={r.priority} /></TableCell>
-                      <TableCell>
-                        <div className="flex flex-col items-start gap-1">
-                          <PermissionStatus status={r.status} requestDate={r.requestDate} />
-                          {clashing.has(r.id) && (
-                            <span
-                              className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
-                              title="This employee has another permission request whose hours run into this one on the same day."
-                            >
-                              <AlertTriangle className="h-2.5 w-2.5" /> Overlapping
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
                       <TableCell className="text-right">
                         {isOverdue(r.status, r.requestDate) ? (
                           <span className="text-xs text-muted-foreground">
@@ -706,6 +651,26 @@ export default function PermissionsPage() {
                             {r.status === "REJECTED" && r.decisionComment ? r.decisionComment : "—"}
                           </span>
                         )}
+                      </TableCell>
+                      <TableCell className="font-medium">{r.employeeName}<div className="code-chip text-xs text-muted-foreground">{r.employeeCode}</div></TableCell>
+                      <TableCell>{r.team || "—"}</TableCell>
+                      <TableCell>{dayjs(r.requestDate).format("DD MMM YYYY")}</TableCell>
+                      <TableCell>{to12Hour(r.fromTime)} – {to12Hour(r.toTime)}</TableCell>
+                      <TableCell>{r.hours}h</TableCell>
+                      <TableCell className="max-w-[160px] truncate text-xs" title={r.reason}>{r.reason || "—"}</TableCell>
+                      <TableCell><PriorityBadge priority={r.priority} /></TableCell>
+                      <TableCell>
+                        <div className="flex flex-col items-start gap-1">
+                          <PermissionStatus status={r.status} requestDate={r.requestDate} />
+                          {clashing.has(r.id) && (
+                            <span
+                              className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                              title="This employee has another permission request whose hours run into this one on the same day."
+                            >
+                              <AlertTriangle className="h-2.5 w-2.5" /> Overlapping
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

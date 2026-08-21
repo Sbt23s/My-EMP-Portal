@@ -145,7 +145,7 @@ class _ApplyLeaveSheetState extends ConsumerState<ApplyLeaveSheet> {
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
                 data: (list) => DropdownButtonFormField<int>(
-                  initialValue: _typeId,
+                  value: _typeId,
                   decoration: const InputDecoration(labelText: 'Leave type'),
                   items: [
                     for (final t in list)
@@ -177,7 +177,7 @@ class _ApplyLeaveSheetState extends ConsumerState<ApplyLeaveSheet> {
                 data: (list) => list.isEmpty
                     ? const SizedBox.shrink()
                     : DropdownButtonFormField<int>(
-                        initialValue: _approverId,
+                        value: _approverId,
                         decoration: const InputDecoration(labelText: 'Send to'),
                         items: [
                           for (final a in list)

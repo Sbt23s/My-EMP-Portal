@@ -2200,7 +2200,12 @@ export default function DashboardPage() {
   const myProfile = useQuery({
     queryKey: ["profile", "me", "banner"],
     queryFn: async () =>
-      (await api.get<ApiEnvelope<{ photoPath?: string; coverPhotoPath?: string }>>("/users/me")).data.data,
+      (await api.get<ApiEnvelope<{
+        photoPath?: string;
+        coverPhotoPath?: string;
+        designationTitle?: string;
+        positionTitle?: string;
+      }>>("/users/me")).data.data,
     staleTime: 60_000
   });
 
@@ -2208,6 +2213,24 @@ export default function DashboardPage() {
   const coverUrl = resolvePhotoUrl(myProfile.data?.coverPhotoPath);
   const isCoverVideo = /\.(mp4|webm|mov)$/i.test(myProfile.data?.coverPhotoPath ?? "");
   const myPhoto = resolvePhotoUrl(myProfile.data?.photoPath);
+
+  /*
+    The job title under the greeting, for the people whose role name says
+    nothing useful about what they do. HR and the administrators are left
+    out on purpose: for them the role IS the job, and repeating it here
+    would just be the banner saying "HR" to someone who knows.
+
+    This rides on the query the cover photo already makes, so it costs
+    no extra request.
+  */
+  const showsCoverTitle = ["IT_EMP", "IT_TL", "CV_EMP", "CV_SUP"].some(
+    (r) => user?.roles?.includes(r)
+  );
+  const coverTitle = (
+    myProfile.data?.designationTitle ||
+    myProfile.data?.positionTitle ||
+    ""
+  ).trim();
 
   const refreshBanner = () => {
     queryClient.invalidateQueries({ queryKey: ["profile"] });
@@ -2525,9 +2548,16 @@ export default function DashboardPage() {
               <CalendarCheck className="mr-2 h-3.5 w-3.5" />
               {dayjs().format("dddd, DD MMMM YYYY")}
             </div>
-            <h1 className="font-display text-3xl font-bold tracking-tight">
+            {/* font-display is dropped here deliberately: the condensed
+                identity face is the point, and Space Grotesk would win. */}
+            <h1 className="cover-name text-4xl sm:text-5xl">
               {greeting}, {user?.name?.split(" ")[0] ?? ""} 👋
             </h1>
+            {showsCoverTitle && coverTitle && (
+              <div className="cover-role mt-2">
+                <span>{coverTitle}</span>
+              </div>
+            )}
             {/* The company's own welcome line, where it has written one. Set in
                 the branding screen; absent for everyone who has not. */}
             {branding?.base?.welcomeText?.trim() && (

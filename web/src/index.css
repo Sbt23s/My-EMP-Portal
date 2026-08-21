@@ -242,6 +242,81 @@
     animation: identity-sweep 3.2s linear infinite;
   }
 
+  /*
+    The banner versions of the two. Same faces and the same travelling
+    highlight as the sidebar, scaled up for a heading and given a rule
+    between them, so the greeting and the job title read as one unit
+    rather than two stacked lines.
+  */
+  .cover-name {
+    font-family: var(--font-identity), "Barlow Condensed", sans-serif;
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    /* Over a photograph nobody vetted for contrast, the shadow is what
+       keeps the name legible rather than the overlay alone. */
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.45);
+  }
+
+  .cover-role {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: "Fugaz One", "Space Grotesk", cursive;
+    font-size: 0.9rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+
+  /* The rule grows out from the text once, on arrival, and then stays. It
+     marks the title as deliberate without adding a second thing in motion
+     competing with the sweep. */
+  .cover-role::before {
+    content: "";
+    height: 2px;
+    width: 2.1rem;
+    border-radius: 2px;
+    background: linear-gradient(90deg, transparent, #6ee7b7);
+    transform-origin: left center;
+    animation: cover-rule 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .cover-role > span {
+    background-image: linear-gradient(
+      100deg,
+      #c7d2fe 0%,
+      #c7d2fe 28%,
+      #ffffff 42%,
+      #5eead4 50%,
+      #34d399 58%,
+      #c7d2fe 74%,
+      #c7d2fe 100%
+    );
+    background-size: 320% 100%;
+    background-position: 100% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: identity-sweep 3.2s linear infinite;
+  }
+
+  @keyframes cover-rule {
+    from { transform: scaleX(0); opacity: 0; }
+    to   { transform: scaleX(1); opacity: 1; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cover-role::before { animation: none; }
+    .cover-role > span {
+      animation: none;
+      background-image: none;
+      -webkit-background-clip: border-box;
+      background-clip: border-box;
+      color: #d1fae5;
+    }
+  }
+
   /* A title nobody has filled in yet should not shimmer as if it had. */
   .identity-role-plain {
     font-family: "Fugaz One", "Space Grotesk", cursive;

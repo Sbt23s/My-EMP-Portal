@@ -342,6 +342,30 @@ public class UserService {
     }
 
     /**
+     * Stores the banner image for this person's own dashboard.
+     *
+     * Kept in its own folder rather than beside profile photos, so the two are
+     * distinguishable on disk and a cover can be cleared without any chance of
+     * touching the picture of the person.
+     */
+    @Transactional
+    public String updateCoverPhoto(Long userId, MultipartFile file) {
+        User user = findUser(userId);
+        String path = storageService.store(file, "covers");
+        user.setCoverPhotoPath(path);
+        userRepository.save(user);
+        return path;
+    }
+
+    /** Clears the banner image; the plain colour returns. */
+    @Transactional
+    public void removeCoverPhoto(Long userId) {
+        User user = findUser(userId);
+        user.setCoverPhotoPath(null);
+        userRepository.save(user);
+    }
+
+    /**
      * Records that this employee's face has been registered, keeping one photo of
      * it and who did it.
      *
@@ -609,7 +633,7 @@ public class UserService {
         return new ProfileResponse(
                 u.getId(), u.getEmployeeCode(), u.getUsername(), u.getName(), u.getDob(),
                  u.getGender() != null ? String.valueOf(u.getGender()) : null,
-                u.getAadhar(), u.getPhone(), u.getEmail(), u.getPhotoPath(),
+                u.getAadhar(), u.getPhone(), u.getEmail(), u.getPhotoPath(), u.getCoverPhotoPath(),
                 new ProfileResponse.AddressDto(u.getCareOf(), u.getHouse(), u.getStreet(),
                         u.getLocality(), u.getVtc(), u.getDistrict(), u.getState(),
                         u.getCountry(), u.getPincode(), u.getPostOffice()),

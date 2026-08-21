@@ -73,6 +73,26 @@ public class UserController {
     }
 
     /**
+     * The banner image on the signed-in user's own dashboard.
+     *
+     * Self-service only: the path carries no identifier, so one person cannot
+     * set or clear another's banner.
+     */
+    @PostMapping("/me/cover")
+    @Operation(summary = "Upload / replace the dashboard banner image")
+    public ApiResponse<Map<String, String>> uploadCover(@RequestParam("file") MultipartFile file) {
+        String path = userService.updateCoverPhoto(SecurityUtils.currentUserId(), file);
+        return ApiResponse.ok(Map.of("coverPhotoPath", path), "Cover updated");
+    }
+
+    @DeleteMapping("/me/cover")
+    @Operation(summary = "Remove the dashboard banner image")
+    public ApiResponse<Void> removeCover() {
+        userService.removeCoverPhoto(SecurityUtils.currentUserId());
+        return ApiResponse.message("Cover removed");
+    }
+
+    /**
      * Store one file for an employee's paperwork and return its path. The paths
      * are collected by the caller and saved on the employee as a comma-separated
      * list, the same shape attachments take everywhere else.

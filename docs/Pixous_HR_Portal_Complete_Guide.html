@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pixous HR Portal — Complete Project Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --primary: #4f46e5;
+    --primary-light: #818cf8;
+    --primary-bg: #eef2ff;
+    --success: #059669;
+    --warning: #d97706;
+    --danger: #dc2626;
+    --text: #1e293b;
+    --text-light: #64748b;
+    --bg: #ffffff;
+    --bg-alt: #f8fafc;
+    --border: #e2e8f0;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  /* ── Cover Page ── */
+  .cover {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4f46e5 100%);
+    color: white;
+    text-align: center;
+    padding: 60px 40px;
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: rgba(129, 140, 248, 0.15);
+  }
+  .cover::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: -10%;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: rgba(167, 139, 250, 0.1);
+  }
+  .cover .logo-text {
+    font-size: 14px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    opacity: 0.7;
+    margin-bottom: 30px;
+    font-weight: 600;
+  }
+  .cover h1 {
+    font-size: 52px;
+    font-weight: 900;
+    line-height: 1.15;
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 1;
+  }
+  .cover .subtitle {
+    font-size: 20px;
+    opacity: 0.8;
+    max-width: 600px;
+    line-height: 1.5;
+    position: relative;
+    z-index: 1;
+  }
+  .cover .meta {
+    margin-top: 50px;
+    display: flex;
+    gap: 40px;
+    font-size: 13px;
+    opacity: 0.6;
+    position: relative;
+    z-index: 1;
+  }
+  .cover .version-badge {
+    margin-top: 40px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    padding: 10px 28px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 600;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Content ── */
+  .content {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 50px 40px 80px;
+  }
+
+  h1 { font-size: 36px; font-weight: 800; color: var(--primary); margin: 50px 0 10px; }
+  h2 { font-size: 26px; font-weight: 700; color: var(--text); margin: 44px 0 10px; padding-top: 20px; border-top: 2px solid var(--border); }
+  h3 { font-size: 20px; font-weight: 700; color: var(--primary); margin: 30px 0 8px; }
+  h4 { font-size: 16px; font-weight: 600; color: var(--text); margin: 20px 0 6px; }
+  h5 { font-size: 14px; font-weight: 600; color: var(--text-light); margin: 14px 0 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  p { margin: 8px 0; color: var(--text); }
+  .lead { font-size: 17px; color: var(--text-light); line-height: 1.8; margin: 12px 0 24px; }
+
+  ul, ol { margin: 8px 0 8px 24px; }
+  li { margin: 4px 0; }
+
+  .highlight { background: var(--primary-bg); padding: 20px 24px; border-radius: 12px; border-left: 4px solid var(--primary); margin: 16px 0; }
+  .highlight strong { color: var(--primary); }
+
+  .card {
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 12px 0;
+  }
+  .card-header {
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--primary);
+    margin-bottom: 8px;
+  }
+
+  .role-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    margin: 2px 4px 2px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .role-admin { background: #fee2e2; color: #991b1b; }
+  .role-hr { background: #dbeafe; color: #1e40af; }
+  .role-tl { background: #fef3c7; color: #92400e; }
+  .role-emp { background: #d1fae5; color: #065f46; }
+  .role-cto { background: #ede9fe; color: #5b21b6; }
+
+  .button-tag {
+    display: inline-block;
+    background: var(--primary-bg);
+    color: var(--primary);
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    margin: 2px;
+    border: 1px solid #c7d2fe;
+  }
+
+  .flow-arrow {
+    text-align: center;
+    font-size: 24px;
+    color: var(--primary-light);
+    margin: 4px 0;
+  }
+
+  .flow-box {
+    background: white;
+    border: 2px solid var(--primary);
+    border-radius: 10px;
+    padding: 12px 20px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+    margin: 6px 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 13px;
+  }
+  th {
+    background: var(--primary);
+    color: white;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  tr:nth-child(even) td { background: var(--bg-alt); }
+  tr:hover td { background: var(--primary-bg); }
+
+  .toc {
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 30px 36px;
+    margin: 20px 0 40px;
+  }
+  .toc h3 { margin-top: 0; color: var(--text); }
+  .toc ol { margin-left: 20px; }
+  .toc li { margin: 6px 0; font-size: 15px; }
+  .toc a { color: var(--primary); text-decoration: none; font-weight: 500; }
+  .toc a:hover { text-decoration: underline; }
+
+  .section-divider {
+    text-align: center;
+    padding: 40px 0;
+    page-break-before: always;
+  }
+  .section-divider h1 {
+    font-size: 32px;
+    margin: 0;
+  }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+  .emoji-icon { font-size: 20px; margin-right: 6px; }
+
+  .btn-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--primary);
+    color: white;
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* ── Download PDF Button ── */
+  .pdf-download-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 9999;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: white;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 50px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 30px rgba(79, 70, 229, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+  }
+  .pdf-download-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(79, 70, 229, 0.6);
+  }
+  .pdf-download-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+  .pdf-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .pdf-overlay.show { display: flex; }
+  .pdf-modal {
+    background: white;
+    border-radius: 16px;
+    padding: 40px;
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .pdf-modal h3 {
+    font-size: 20px;
+    margin-bottom: 12px;
+    color: #1e293b;
+  }
+  .pdf-modal p {
+    font-size: 14px;
+    color: #64748b;
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+  .pdf-modal .step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border-radius: 10px;
+    margin: 8px 0;
+    font-size: 13px;
+  }
+  .pdf-modal .step-num {
+    background: #4f46e5;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .pdf-modal .close-btn {
+    margin-top: 20px;
+    background: #4f46e5;
+    color: white;
+    border: none;
+    padding: 12px 32px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  @media print {
+    .pdf-download-btn, .pdf-overlay { display: none !important; }
+    .cover { min-height: 100vh; page-break-after: always; }
+    .section-divider { page-break-before: always; }
+    body { font-size: 12px; background: white; }
+    .content { padding: 20px 30px; }
+    h1 { font-size: 28px; }
+    h2 { font-size: 22px; }
+    h3 { font-size: 17px; }
+    table { font-size: 11px; }
+    th, td { padding: 6px 10px; }
+    .card { border: 1px solid #ccc; }
+    .highlight { border: 1px solid #4f46e5; }
+    a { color: #4f46e5; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════════════ COVER PAGE -->
+<div class="cover">
+  <div class="logo-text">Pixous Technologies</div>
+  <h1>Pixous HR Portal</h1>
+  <div class="subtitle">Complete Project Guide — Every Module, Every Screen, Every Button Explained in Simple English</div>
+  <div class="version-badge">📘 Version 2.0 &nbsp;|&nbsp; August 2026</div>
+  <div class="meta">
+    <span>Confidential</span>
+    <span>For Presentation & Internal Use</span>
+    <span>All Modules Documented</span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════ TOC -->
+<div class="content">
+
+<div class="toc">
+  <h3>📑 Table of Contents</h3>
+  <ol>
+    <li><a href="#overview">Project Overview — What Is This App?</a></li>
+    <li><a href="#roles">User Roles — Who Uses the System?</a></li>
+    <li><a href="#login">Login — Getting Started</a></li>
+    <li><a href="#dashboard">Dashboard — The Home Screen</a></li>
+    <li><a href="#attendance">Attendance — Punch In & Out</a></li>
+    <li><a href="#leave">Leave Management — Applying for Leave</a></li>
+    <li><a href="#permissions">Short Leave (Permissions)</a></li>
+    <li><a href="#approvals">Leave Approvals — Manager's View</a></li>
+    <li><a href="#tasks">Tasks — Work Assignment</a></li>
+    <li><a href="#chat">Chat & Messaging</a></li>
+    <li><a href="#calls">Audio & Video Calls</a></li>
+    <li><a href="#notifications">Notifications — The Bell Icon</a></li>
+    <li><a href="#payroll">Payroll & Payslips</a></li>
+    <li><a href="#claims">Claims & TA Expenses</a></li>
+    <li><a href="#helpdesk">Support / Helpdesk Tickets</a></li>
+    <li><a href="#complaints">Complaints</a></li>
+    <li><a href="#workreports">Work Reports</a></li>
+    <li><a href="#employees">Employee Directory</a></li>
+    <li><a href="#assets">Assets</a></li>
+    <li><a href="#safety">Safety Incidents</a></li>
+    <li><a href="#teams">Teams & My Team</a></li>
+    <li><a href="#calendar">Calendar</a></li>
+    <li><a href="#communities">Communities / Groups</a></li>
+    <li><a href="#profile">Profile — Your Account</a></li>
+    <li><a href="#reports">Reports</a></li>
+    <li><a href="#ai">AI Assistant / Chatbot</a></li>
+    <li><a href="#admin">Tech Admin — System Management</a></li>
+    <li><a href="#mobile">Mobile App Overview</a></li>
+    <li><a href="#summary">Complete Module Summary</a></li>
+  </ol>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════ 1. OVERVIEW -->
+<div class="section-divider" id="overview"><h1>1. Project Overview</h1></div>
+
+<div class="highlight">
+  <strong>In one sentence:</strong> Pixous HR Portal is a complete employee management system where a company can manage attendance, leave, payroll, chat, tasks, assets, and everything related to running its workforce — all from one website and mobile app.
+</div>
+
+<h3>What is the purpose of this project?</h3>
+<p>Every company has employees. Those employees come to work, take leaves, get paid, submit complaints, use company assets, and communicate with each other. Today, most companies use WhatsApp groups, Excel sheets, and paper forms to manage all of this.</p>
+<p>Pixous HR Portal replaces all of that with one single application. It is a website and a mobile app that lets every person in the company — from the newest employee to the CEO — do their daily work digitally.</p>
+
+<h3>What makes it special?</h3>
+<ul>
+  <li><strong>Real-time:</strong> When someone sends a message, it appears instantly. When a manager approves leave, the employee sees it immediately. No refresh button needed.</li>
+  <li><strong>Multi-tenant:</strong> The same system can be used by many different companies. Each company sees only its own data.</li>
+  <li><strong>Role-based:</strong> An employee sees only what an employee should see. An HR manager sees more. The System Admin sees everything. Nobody sees what they should not see.</li>
+  <li><strong>Mobile + Web:</strong> Works on desktop browsers and as an Android mobile app with the same features.</li>
+  <li><strong>Face Verification:</strong> Attendance punching uses your face to confirm it is really you.</li>
+  <li><strong>GPS Tracking:</strong> When you punch in from outside the office, your location is recorded.</li>
+  <li><strong>AI Insights:</strong> A Python-based AI microservice analyzes attendance patterns and gives you smart insights.</li>
+</ul>
+
+<h3>What technology runs behind the scenes? (No code — just the concepts)</h3>
+<table>
+  <tr><th>Layer</th><th>What It Is</th><th>What It Does</th></tr>
+  <tr><td>Website (Frontend)</td><td>React + TypeScript</td><td>The screens and buttons you see in your browser</td></tr>
+  <tr><td>Mobile App</td><td>Flutter (Dart)</td><td>The same screens adapted for Android phones</td></tr>
+  <tr><td>Backend Server</td><td>Java Spring Boot</td><td>Processes all business logic — login, attendance, leave, payroll</td></tr>
+  <tr><td>Database</td><td>MySQL</td><td>Stores all employee data, attendance records, leave requests, etc.</td></tr>
+  <tr><td>Cache</td><td>Redis</td><td>Speeds up repeated queries so the app feels fast</td></tr>
+  <tr><td>Messaging</td><td>Apache Kafka</td><td>Handles real-time notifications and chat messages</td></tr>
+  <tr><td>Chat Engine</td><td>STOMP WebSocket</td><td>Makes chat messages appear instantly without page refresh</td></tr>
+  <tr><td>Video Calls</td><td>WebRTC</td><td>Direct video/audio calls between employees</td></tr>
+  <tr><td>AI Service</td><td>Python FastAPI</td><td>Face recognition, attendance analytics, smart insights</td></tr>
+</table>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 2. ROLES -->
+<div class="section-divider" id="roles"><h1>2. User Roles</h1></div>
+
+<p class="lead">The system has different types of users. Each role has different permissions — what they can see, what they can do, and what pages appear in their sidebar.</p>
+
+<div class="card">
+  <div class="card-header"><span class="role-badge role-emp">Employee</span> — IT Employee / Field Employee</div>
+  <p>An ordinary team member. They can punch in/out, apply for leave, view their payslips, chat with colleagues, see tasks assigned to them, submit support tickets, and view their own profile. They cannot approve leave, manage payroll, or see other employees' attendance.</p>
+</div>
+
+<div class="card">
+  <div class="card-header"><span class="role-badge role-tl">Team Leader</span></div>
+  <p>A team leader has everything an Employee has, <strong>plus</strong>: they can approve leave requests from their team members (up to 3 days), see team attendance, assign tasks to team members, and view team reports.</p>
+</div>
+
+<div class="card">
+  <div class="card-header"><span class="role-badge role-hr">HR / HR Head</span></div>
+  <p>HR has everything a Team Leader has, <strong>plus</strong>: they can approve leave requests of any duration, manage payroll and generate payslips, manage leave policies, manage employee onboarding, see the full employee directory, view all attendance, and manage complaints.</p>
+</div>
+
+<div class="card">
+  <div class="card-header"><span class="role-badge role-cto">CTO (System Admin)</span></div>
+  <p>The highest role. Sees everything. Can manage all modules, all employees, all settings. The CTO account is also the System Admin — full access to every page and every button in the system.</p>
+</div>
+
+<div class="card">
+  <div class="card-header"><span class="role-badge role-admin">System Admin / Super Admin</span></div>
+  <p>The technical administrator. Can manage modules (turn features on/off), manage users, configure branding, view the audit log, and reset company data. This role sits in the "Tech Admin" panel.</p>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 3. LOGIN -->
+<div class="section-divider" id="login"><h1>3. Login — Getting Started</h1></div>
+
+<p class="lead">When you open the Pixous HR Portal, the first screen you see is the Login page. This is the front door to the entire system.</p>
+
+<h3>What you see on the screen</h3>
+<ul>
+  <li>A beautiful background video playing behind a glass-style login card</li>
+  <li>The Pixous Technologies logo in the top-right corner of the card</li>
+  <li>Two input fields: <span class="button-tag">Username</span> and <span class="button-tag">Password</span></li>
+  <li>A <span class="button-tag">Show/Hide Password</span> eye icon button</li>
+  <li>A large <span class="button-tag">Sign In</span> button</li>
+</ul>
+
+<h3>Step-by-step: How login works</h3>
+<ol>
+  <li><strong>Type your username</strong> — this can be your username or your full name</li>
+  <li><strong>Type your password</strong> — the characters are hidden as dots by default</li>
+  <li><strong>Click the eye icon</strong> (👁) to show/hide the password — useful for checking you typed it correctly</li>
+  <li><strong>Click "Sign In"</strong> — the button shows a spinner while it checks your credentials</li>
+  <li><strong>If correct:</strong> You are taken to the Dashboard. A green "Welcome back" message appears briefly.</li>
+  <li><strong>If wrong:</strong> A red error message appears: "Login failed — check your username and password"</li>
+</ol>
+
+<h3>What happens behind the scenes</h3>
+<p>When you click Sign In, the system sends your username and password to the server. The server checks if this combination exists in the database. If yes, it creates a secure access token (like a digital key) and sends it back. This token proves you are logged in for the rest of your session. If you close the browser and come back, the system remembers you and takes you directly to the Dashboard without asking for login again.</p>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 4. DASHBOARD -->
+<div class="section-divider" id="dashboard"><h1>4. Dashboard — The Home Screen</h1></div>
+
+<p class="lead">After logging in, you land on the Dashboard. This is your command centre — it shows everything important at a glance, different for each role.</p>
+
+<h3>What an Employee sees on the Dashboard</h3>
+<div class="two-col">
+  <div class="card">
+    <div class="card-header">📊 Stat Cards (Top Row)</div>
+    <ul>
+      <li><strong>Today's Status</strong> — Shows if you are PRESENT, ABSENT, or ON LEAVE</li>
+      <li><strong>Hours Worked</strong> — How many hours you have worked today</li>
+      <li><strong>Leave Balance</strong> — How many leave days you have left</li>
+      <li><strong>Work Streak</strong> — How many days in a row you have been on time</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-header">📈 Charts</div>
+    <ul>
+      <li><strong>Monthly Attendance Chart</strong> — A bar graph showing your attendance over the current month</li>
+      <li><strong>Leave Usage Chart</strong> — A pie chart showing which types of leave you have used</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">🤖 AI-Powered Insights</div>
+  <p>A special card powered by the Python AI microservice. It shows:</p>
+  <ul>
+    <li><strong>Work Hours Trend</strong> — A line graph of your last 7 days of work hours</li>
+    <li><strong>Punctuality Score</strong> — A percentage like "85%" showing how often you arrive on time</li>
+    <li><strong>Leave Utilization Warning</strong> — If you have used too many or too few leave days</li>
+  </ul>
+</div>
+
+<h3>What a Manager / HR / CTO sees on the Dashboard</h3>
+<p>The executive dashboard is different. It shows company-wide information:</p>
+<ul>
+  <li><strong>Total Employees</strong> — Click this card to see a list of all employees</li>
+  <li><strong>Present Today</strong> — Click to see who has punched in today</li>
+  <li><strong>On Leave Today</strong> — Click to see who is on leave today</li>
+  <li><strong>Absent Today</strong> — Click to see who has not come to work</li>
+  <li><strong>Open Support Tickets</strong> — A card showing all unresolved helpdesk tickets</li>
+  <li><strong>Leave Approvals</strong> — A quick-access card to approve or reject pending leave requests directly from the dashboard</li>
+  <li><strong>Payslip Approvals</strong> — Review pending payslip requests and generate payslips inline</li>
+  <li><strong>Assign Task</strong> — Quickly assign a task to a team member or an individual employee without leaving the dashboard</li>
+  <li><strong>Celebrations</strong> — Upcoming birthdays and work anniversaries</li>
+  <li><strong>AI Organisation Insights</strong> — Department-wise attendance rates and late rates</li>
+</ul>
+
+<h3>Dashboard Buttons and What They Do</h3>
+<table>
+  <tr><th>Button / Card</th><th>What Happens When You Click It</th></tr>
+  <tr><td>Present Today card</td><td>Opens a popup showing a list of all employees who have punched in, with their punch-in time</td></tr>
+  <tr><td>On Leave card</td><td>Opens a popup showing who is on leave, the leave type, and dates</td></tr>
+  <tr><td>"Approve" button (leave)</td><td>Approves the leave request immediately. A green success message appears.</td></tr>
+  <tr><td>"Reject" button (leave)</td><td>Shows a text box where you must type a reason. Then the rejection is confirmed.</td></tr>
+  <tr><td>"Assign Task" button</td><td>Creates a new task with a title, description, and due date for the selected employee or team</td></tr>
+  <tr><td>"Generate" (payslip)</td><td>Opens a payslip form where you enter salary details and generate a payslip PDF</td></tr>
+  <tr><td>Notification Bell 🔔</td><td>Opens a dropdown showing your latest notifications. Click "View all" to go to the full notifications page.</td></tr>
+  <tr><td>Profile avatar (top-right)</td><td>Opens a dropdown with "My profile" and "Sign out" options</td></tr>
+  <tr><td>Theme toggle (sun/moon ☀️🌙)</td><td>Switches between light mode and dark mode</td></tr>
+</table>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 5. ATTENDANCE -->
+<div class="section-divider" id="attendance"><h1>5. Attendance — Punch In & Out</h1></div>
+
+<p class="lead">The Attendance page lets you record when you start and end your work day. It uses your face and GPS location to verify it is really you at the right place.</p>
+
+<h3>What you see on the screen</h3>
+<ul>
+  <li><strong>Today's Card</strong> — Shows your punch-in time, punch-out time, and current status</li>
+  <li><strong>Mode Selector</strong> — Three options: <span class="button-tag">Office</span> <span class="button-tag">Work from Home</span> <span class="button-tag">Site / Field</span></li>
+  <li><strong>Punch In / Punch Out Button</strong> — The main action button</li>
+  <li><strong>Face Status Panel</strong> — Shows if your face is registered, and allows face-based punching</li>
+  <li><strong>Monthly Summary</strong> — A row of 5 stat boxes: Present, WFH, Late, Absent, Overtime</li>
+  <li><strong>Attendance Insights</strong> — AI-generated observations about your team's attendance patterns</li>
+  <li><strong>History Table</strong> — Your past attendance records with pagination</li>
+</ul>
+
+<h3>Step-by-step: How to punch in</h3>
+<ol>
+  <li>Go to the Attendance page from the sidebar</li>
+  <li>Choose your work mode:
+    <ul>
+      <li><strong>Office</strong> — You are working from the office. GPS will be captured.</li>
+      <li><strong>Work from Home</strong> — You are at home. No GPS needed.</li>
+      <li><strong>Site / Field</strong> — You are at a client site or field location. GPS will be captured and checked against the office geofence.</li>
+    </ul>
+  </li>
+  <li>Click <span class="button-tag">Punch in with face</span> — your camera opens</li>
+  <li>Look at the camera — the system matches your face with the registered face photo</li>
+  <li>If the face matches: your punch is recorded with GPS location and time. A success message appears.</li>
+  <li>If no face is registered: a message tells you to ask HR to register your face first (takes 4 quick photos).</li>
+</ol>
+
+<h3>Step-by-step: How to punch out</h3>
+<ol>
+  <li>When your work day is over, go back to the Attendance page</li>
+  <li>Click <span class="button-tag">Punch out with face</span></li>
+  <li>The system records your punch-out time and calculates your total hours worked</li>
+  <li>A green message says: "Day complete — see you tomorrow."</li>
+</ol>
+
+<h3>Attendance History Table</h3>
+<p>Below the punch card, there is a table showing your attendance history. Each row shows:</p>
+<ul>
+  <li><strong>Date</strong> — The day (e.g., "Mon, 18 Aug")</li>
+  <li><strong>Employee ID</strong> — Your employee code</li>
+  <li><strong>In</strong> — What time you punched in</li>
+  <li><strong>Out</strong> — What time you punched out</li>
+  <li><strong>Mode</strong> — Office / WFH / SITE</li>
+  <li><strong>Status</strong> — PRESENT, ABSENT, or LATE badge</li>
+  <li><strong>View button</strong> — Click to see all details for that day (GPS coordinates, hours worked, overtime, etc.)</li>
+</ul>
+
+<h3>Attendance Buttons</h3>
+<table>
+  <tr><th>Button</th><th>What It Does</th></tr>
+  <tr><td><span class="button-tag">Punch in with face</span></td><td>Opens camera, verifies face, records punch-in with GPS and timestamp</td></tr>
+  <tr><td><span class="button-tag">Punch out with face</span></td><td>Opens camera, verifies face, records punch-out with GPS and timestamp</td></tr>
+  <tr><td><span class="button-tag">Export Excel</span></td><td>Downloads an Excel file (.xlsx) with your complete attendance data for the selected month</td></tr>
+  <tr><td><span class="button-tag">View</span> (in history)</td><td>Opens a popup showing complete details: GPS coordinates, late minutes, hours worked, overtime, geofence status</td></tr>
+  <tr><td>Month selector</td><td>Change the month to view past attendance</td></tr>
+  <tr><td>Date selector</td><td>Pick an exact date to see one specific day's record</td></tr>
+</table>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 6. LEAVE -->
+<div class="section-divider" id="leave"><h1>6. Leave Management — Applying for Leave</h1></div>
+
+<p class="lead">The Leave page lets you check how many leave days you have, apply for new leave, and track your requests.</p>
+
+<h3>What you see on the screen</h3>
+<ul>
+  <li><strong>Leave Balance Cards</strong> — A row of cards showing each leave type (Casual Leave, Sick Leave, Earned Leave, etc.) with how many days are available out of total allocated</li>
+  <li><strong>"Apply for leave" button</strong> — The green button to create a new leave request</li>
+  <li><strong>"Export Excel" button</strong> — Downloads your leave history as an Excel file</li>
+  <li><strong>From/To month selectors</strong> — Filter which months to show in the history</li>
+  <li><strong>My Requests Table</strong> — A table of all your leave requests with status, dates, and actions</li>
+</ul>
+
+<h3>Step-by-step: How to apply for leave</h3>
+<ol>
+  <li>Click <span class="button-tag">+ Apply for leave</span> button — a form opens</li>
+  <li><strong>Choose leave type</strong> — Select from the dropdown (Casual Leave, Sick Leave, etc.)</li>
+  <li><strong>Pick start date</strong> — Click the "From" date picker and choose the first day of your leave</li>
+  <li><strong>Pick end date</strong> — Click the "To" date picker and choose the last day of your leave</li>
+  <li><strong>Choose approver</strong> — The system automatically shows the right person:
+    <ul>
+      <li>If your leave is <strong>3 days or less</strong> → it goes to your Team Leader</li>
+      <li>If your leave is <strong>more than 3 days</strong> → it goes to HR</li>
+    </ul>
+  </li>
+  <li><strong>Write a reason</strong> — Explain why you need leave (this is required)</li>
+  <li>Click <span class="button-tag">Submit request</span></li>
+  <li>A green message says: "Leave request submitted"</li>
+  <li>Your request appears in the table with status "PENDING"</li>
+</ol>
+
+<h3>Leave Request Table — Action Buttons</h3>
+<table>
+  <tr><th>Status</th><th>Button</th><th>What Happens</th></tr>
+  <tr><td>PENDING</td><td><span class="button-tag">Cancel</span></td><td>A confirmation popup asks "Cancel this leave request?" — click OK to cancel it</td></tr>
+  <tr><td>APPROVED</td><td><span class="button-tag">👁 View</span></td><td>Opens a popup showing who approved it, when, and any comments</td></tr>
+  <tr><td>REJECTED</td><td><span class="button-tag">👁 View</span></td><td>Opens a popup showing why it was rejected, including the rejection reason</td></tr>
+</table>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 7. PERMISSIONS -->
+<div class="section-divider" id="permissions"><h1>7. Short Leave (Permissions)</h1></div>
+
+<p class="lead">A "Permission" is a short leave — maybe one or two hours for a doctor's appointment, or half a day for personal work. It is different from regular leave because it does not deduct from your leave balance.</p>
+
+<h3>Step-by-step: How to apply for a permission</h3>
+<ol>
+  <li>Go to <strong>Leave Management → Permission</strong> in the sidebar</li>
+  <li>Click <span class="button-tag">Apply for permission</span></li>
+  <li>Choose whether you need <strong>one hour</strong> or <strong>two hours</strong></li>
+  <li>Pick the <strong>date</strong> and <strong>time</strong> you need to leave</li>
+  <li>Write a <strong>reason</strong></li>
+  <li>Choose who should <strong>approve</strong> it</li>
+  <li>Click <span class="button-tag">Submit</span></li>
+</ol>
+
+<h3>What the Manager sees</h3>
+<p>Team Leaders and HR can see all pending permission requests. Each request shows the employee's name, date, duration, and reason. The manager clicks <span class="button-tag">Approve</span> or <span class="button-tag">Reject</span> to decide.</p>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 8. APPROVALS -->
+<div class="section-divider" id="approvals"><h1>8. Leave Approvals — Manager's View</h1></div>
+
+<p class="lead">Team Leaders and HR use this page to review and decide on leave requests from their team members.</p>
+
+<h3>What you see on the screen</h3>
+<p>A table showing all pending leave requests. Each row shows:</p>
+<ul>
+  <li>Employee name and photo</li>
+  <li>Leave type (Casual, Sick, etc.)</li>
+  <li>Dates (from — to)</li>
+  <li>Number of days</li>
+  <li>Reason given by the employee</li>
+  <li>Two action buttons</li>
+</ul>
+
+<h3>Approval Buttons</h3>
+<table>
+  <tr><th>Button</th><th>What Happens</th></tr>
+  <tr><td><span class="button-tag">✅ Approve</span></td><td>The leave is approved instantly. The employee gets a notification. The request moves from "Pending" to "Approved" in their list.</td></tr>
+  <tr><td><span class="button-tag">❌ Reject</span></td><td>A text box appears asking for a rejection reason (this is required). After typing the reason and clicking "Confirm rejection", the leave is rejected. The employee sees the reason.</td></tr>
+</table>
+
+<h3>Who can approve?</h3>
+<ul>
+  <li><strong>Team Leaders</strong> can approve leave up to 3 days for their team members</li>
+  <li><strong>HR</strong> can approve leave of any duration for any employee</li>
+</ul>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 9. TASKS -->
+<div class="section-divider" id="tasks"><h1>9. Tasks — Work Assignment</h1></div>
+
+<p class="lead">The Tasks module lets managers assign work to employees and track its progress. Employees can update their task status and add comments.</p>
+
+<h3>What you see on the screen</h3>
+<ul>
+  <li><strong>Stat Tiles</strong> — Counts of tasks by status: Not Started, In Progress, Completed</li>
+  <li><strong>Monthly Summary Card</strong> — A chart showing task completion trends</li>
+  <li><strong>Task Groups</strong> — Tasks grouped by assigner (who assigned them to you)</li>
+  <li><strong>Search bar</strong> — Search tasks by title</li>
+  <li><strong>Filter buttons</strong> — Filter by "My Tasks" or "Assigned by Me"</li>
+</ul>
+
+<h3>For Managers: How to assign a task</h3>
+<ol>
+  <li>Click <span class="button-tag">+ Assign Task</span> — a form opens</li>
+  <li>Choose <strong>Team mode</strong> or <strong>Individual mode</strong>:
+    <ul>
+      <li><strong>Team mode:</strong> Select a team (designation) → check/uncheck team members → task goes to all selected members</li>
+      <li><strong>Individual mode:</strong> Choose Digital or Infra division → pick one employee</li>
+    </ul>
+  </li>
+  <li>Type the <strong>task title</strong> (required)</li>
+  <li>Type a <strong>description</strong> (optional)</li>
+  <li>Pick a <strong>due date</strong> (optional)</li>
+  <li>Click <span class="button-tag">Assign Task</span></li>
+  <li>Each assigned employee gets a notification</li>
+</ol>
+
+<h3>For Employees: How to update a task</h3>
+<ol>
+  <li>Click on a task to expand it</li>
+  <li>You will see the task title, description, assigner, and due date</li>
+  <li>Click the <strong>Status dropdown</strong> to change:
+    <ul>
+      <li><span class="button-tag">Not started</span> → <span class="button-tag">In progress</span> → <span class="button-tag">Completed</span></li>
+    </ul>
+  </li>
+  <li>You can also add <strong>comments</strong> by typing in the comment box and clicking <span class="button-tag">Send</span></li>
+  <li>You can <strong>attach files</strong> by clicking the paperclip icon 📎</li>
+</ul>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 10. CHAT -->
+<div class="section-divider" id="chat"><h1>10. Chat & Messaging</h1></div>
+
+<p class="lead">The Chat module is a full messaging system — like WhatsApp, but built into the office portal. It supports one-to-one messages, group chats, file sharing, reactions, polls, and voice notes.</p>
+
+<h3>What you see on the screen</h3>
+<div class="two-col">
+  <div class="card">
+    <div class="card-header">Left Panel</div>
+    <ul>
+      <li><strong>Search bar</strong> — Search for a person or group to chat with</li>
+      <li><strong>Chat list</strong> — All your conversations, most recent first</li>
+      <li><strong>Unread badges</strong> — Red numbers showing unread messages</li>
+      <li><strong>"New Chat" button</strong> — Start a new conversation</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-header">Right Panel (Chat Window)</div>
+    <ul>
+      <li><strong>Messages</strong> — All messages in the conversation</li>
+      <li><strong>Message input</strong> — Type a message and click Send</li>
+      <li><strong>Attach button 📎</strong> — Send files, images, documents</li>
+      <li><strong>Emoji picker 😊</strong> — Add emojis to your message</li>
+      <li><strong>Voice note 🎤</strong> — Record and send a voice message</li>
+      <li><strong>Reactions</strong> — React to any message with emojis</li>
+    </ul>
+  </div>
+</div>
+
+<h3>Chat Features</h3>
+<table>
+  <tr><th>Feature</th><th>How It Works</th></tr>
+  <tr><td>Direct Messages</td><td>Click a person's name → start chatting one-on-one</td></tr>
+  <tr><td>Group Chat</td><td>Create a group, add members, and everyone in the group sees all messages</td></tr>
+  <tr><td>File Attachments</td><td>Click 📎 → select a file → it uploads and appears as a downloadable link in the chat</td></tr>
+  <tr><td>Image Preview</td><td>Shared images appear as thumbnails — click to view full size in a lightbox</td></tr>
+  <tr><td>Voice Notes</td><td>Click the microphone 🎤 → record → stop → send. The recipient can play it back.</td></tr>
+  <tr><td>Reactions</td><td>Hover over any message → click to add an emoji reaction. Others see the reaction below the message.</td></tr>
+  <tr><td>Polls</td><td>Create a poll with multiple options. Team members vote. Results update in real-time.</td></tr>
+  <tr><td>Read Receipts</td><td>You can see when your message has been read by the other person</td></tr>
+  <tr><td>Typing Indicator</td><td>When someone is typing, you see "typing..." in the chat</td></tr>
+  <tr><td>Online Status</td><td>Green dot = online, grey = offline</td></tr>
+  <tr><td>Pinned Messages</td><td>Important messages can be pinned to the top of the chat for easy reference</td></tr>
+  <tr><td>Search in Chat</td><td>Search for specific text within a conversation</td></tr>
+  <tr><td>Message History</td><td>Load older messages by scrolling up (pagination loads 50 messages at a time)</td></tr>
+</table>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 11. CALLS -->
+<div class="section-divider" id="calls"><h1>11. Audio & Video Calls</h1></div>
+
+<p class="lead">The system supports real-time audio and video calls between employees, built directly into the chat feature.</p>
+
+<h3>How to start a call</h3>
+<ol>
+  <li>Open a chat conversation with someone</li>
+  <li>Click the <strong>phone icon 📞</strong> for audio call or <strong>video icon 📹</strong> for video call</li>
+  <li>The other person receives a call notification (ring sound + popup)</li>
+  <li>They can <span class="button-tag">Accept</span> or <span class="button-tag">Decline</span></li>
+  <li>If accepted: a call window opens with your camera/microphone</li>
+  <li>Click <span class="button-tag">End Call</span> to hang up</li>
+</ol>
+
+<h3>Call features</h3>
+<ul>
+  <li><strong>Mute/Unmute</strong> — Turn your microphone on or off during the call</li>
+  <li><strong>Camera On/Off</strong> — Turn your video on or off</li>
+  <li><strong>Speaker toggle</strong> — Switch between speaker and earpiece (on mobile)</li>
+  <li><strong>Background ringing</strong> — The call rings even if you are on a different page (e.g., viewing your payslip)</li>
+</ul>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 12. NOTIFICATIONS -->
+<div class="section-divider" id="notifications"><h1>12. Notifications — The Bell Icon</h1></div>
+
+<p class="lead">Notifications keep you informed about everything happening in the system without you having to check each page manually.</p>
+
+<h3>Where to find notifications</h3>
+<ul>
+  <li><strong>Bell icon 🔔</strong> in the top-right corner of every page — shows a red badge with the unread count</li>
+  <li><strong>Click the bell</strong> → a dropdown appears showing the latest 8 notifications</li>
+  <li>Click <span class="button-tag">View all</span> → goes to the full Notifications page</li>
+</ul>
+
+<h3>Types of notifications you will receive</h3>
+<table>
+  <tr><th>Notification Type</th><th>What Triggers It</th><th>What You See</th></tr>
+  <tr><td>Leave</td><td>Someone approves or rejects your leave</td><td>"Your leave request was approved by Priya"</td></tr>
+  <tr><td>Task</td><td>Someone assigns you a task or updates a task</td><td>"Rahul assigned you a new task: Complete API docs"</td></tr>
+  <tr><td>Chat</td><td>Someone sends you a message</td><td>"New message from Sarah"</td></tr>
+  <tr><td>Helpdesk</td><td>Someone responds to your support ticket</td><td>"Your ticket #TKT-042 has been updated"</td></tr>
+  <tr><td>Asset</td><td>An asset is assigned to you or returned</td><td>"MacBook Pro assigned to you"</td></tr>
+  <tr><td>Payslip</td><td>HR generates your payslip</td><td>"Your payslip for July 2026 is ready"</td></tr>
+  <tr><td>Announcement</td><td>Admin posts a company-wide announcement</td><td>"New announcement: Office holiday on Aug 15"</td></tr>
+  <tr><td>Celebration</td><td>It is someone's birthday or work anniversary</td><td>"🎂 Today is Sarah's birthday!"</td></tr>
+  <tr><td>Call</td><td>Someone calls you</td><td>"Incoming call from Rahul"</td></tr>
+</table>
+
+<h3>Notification actions</h3>
+<ul>
+  <li><span class="button-tag">Mark all read</span> — Marks all unread notifications as read (red badge disappears)</li>
+  <li>Click any notification → It takes you to the relevant page (e.g., clicking a leave notification opens the Leave page)</li>
+  <li>Unread notifications have a <strong>blue dot</strong> next to them</li>
+</ul>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 13. PAYROLL -->
+<div class="section-divider" id="payroll"><h1>13. Payroll & Payslips</h1></div>
+
+<p class="lead">The Payroll module handles salary processing and payslip generation. HR generates payslips; employees view and download theirs.</p>
+
+<h3>For HR: Payroll Requests</h3>
+<ol>
+  <li>Go to <strong>Payroll → Payroll</strong> in the sidebar</li>
+  <li>You see a list of employees who have requested their payslip</li>
+  <li>Click <span class="button-tag">Generate</span> next to an employee's name</li>
+  <li>A detailed form opens with:
+    <ul>
+      <li><strong>Earnings section:</strong> Basic salary, HRA, Allowances, Overtime pay</li>
+      <li><strong>Deductions section:</strong> PF, ESI, PT, TDS, Other deductions</li>
+      <li><strong>Working days</strong> and <strong>Pay date</strong></li>
+      <li><strong>Company logo upload</strong> — optional logo that appears on the payslip</li>
+      <li><strong>Net pay</strong> — automatically calculated (Earnings minus Deductions)</li>
+    </ul>
+  </li>
+  <li>Fill in the amounts and click <span class="button-tag">Generate & Send</span></li>
+  <li>The payslip is created and sent to the employee as a notification</li>
+</ol>
+
+<h3>For Employees: Payslips</h3>
+<ol>
+  <li>Go to <strong>Payroll → Payslips</strong> in the sidebar</li>
+  <li>You see a list of all your past payslips</li>
+  <li>Click any payslip to view the full breakdown (earnings, deductions, net pay)</li>
+  <li>Click <span class="button-tag">Download PDF</span> to save a copy</li>
+</ol>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 14. CLAIMS -->
+<div class="section-divider" id="claims"><h1>14. Claims & TA Expenses</h1></div>
+
+<p class="lead">The Claims module lets employees submit expense claims for travel, food, accommodation, and other business-related costs. HR reviews and approves them.</p>
+
+<h3>How to submit a claim</h3>
+<ol>
+  <li>Go to <strong>Claims</strong> in the sidebar</li>
+  <li>Click <span class="button-tag">+ Submit Claim</span></li>
+  <li>Fill in the form:
+    <ul>
+      <li><strong>Claim type</strong> — Travel, Food, Accommodation, Conveyance, Communication, etc.</li>
+      <li><strong>Date</strong> — When the expense was incurred</li>
+      <li><strong>Amount</strong> — How much you spent</li>
+      <li><strong>Description</strong> — What the expense was for</li>
+      <li><strong>Invoice/Bill</strong> — Upload a photo or PDF of the receipt</li>
+    </ul>
+  </li>
+  <li>Click <span class="button-tag">Submit</span></li>
+  <li>HR will review and approve or reject your claim</li>
+</ol>
+
+<h3>For HR: Approving Claims</h3>
+<ul>
+  <li>See all pending claims in a table</li>
+  <li>Click <span class="button-tag">View Invoice</span> to see the uploaded receipt</li>
+  <li>Click <span class="button-tag">Approve</span> or <span class="button-tag">Reject</span></li>
+</ul>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 15. HELPDESK -->
+<div class="section-divider" id="helpdesk"><h1>15. Support / Helpdesk Tickets</h1></div>
+
+<p class="lead">When you have a problem — your laptop is not working, you need software access, or you have an IT issue — you raise a support ticket. The right person picks it up and resolves it.</p>
+
+<h3>How to raise a ticket</h3>
+<ol>
+  <li>Go to <strong>Supports</strong> in the sidebar</li>
+  <li>Click <span class="button-tag">+ Raise Ticket</span></li>
+  <li>Fill in:
+    <ul>
+      <li><strong>Title</strong> — Brief description (e.g., "Laptop not connecting to WiFi")</li>
+      <li><strong>Description</strong> — Detailed explanation of the problem</li>
+      <li><strong>Priority</strong> — Low, Medium, High, or Urgent</li>
+      <li><strong>Category</strong> — IT, HR, Admin, Facilities, etc.</li>
+      <li><strong>Attachment</strong> — Upload a screenshot or file if needed</li>
+    </ul>
+  </li>
+  <li>Click <span class="button-tag">Submit</span></li>
+  <li>You get a ticket code like <strong>TKT-042</strong> — use this to track your ticket</li>
+</ol>
+
+<h3>Ticket lifecycle</h3>
+<div class="flow-box">OPEN</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-box">IN PROGRESS (someone is working on it)</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-box">RESOLVED (problem fixed)</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-box">CLOSED (confirmed fixed)</div>
+
+<h3>Ticket Buttons</h3>
+<table>
+  <tr><th>Button</th><th>Who Can Click It</th><th>What Happens</th></tr>
+  <tr><td><span class="button-tag">Update Status</span></td><td>Support staff</td><td>Changes ticket from Open → In Progress → Resolved → Closed</td></tr>
+  <tr><td><span class="button-tag">Add Comment</span></td><td>Anyone on the ticket</td><td>Adds a message to the ticket conversation</td></tr>
+  <tr><td><span class="button-tag">View</span></td><td>Anyone</td><td>Opens full ticket details including history and comments</td></tr>
+</table>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 16. COMPLAINTS -->
+<div class="section-divider" id="complaints"><h1>16. Complaints</h1></div>
+
+<p class="lead">The Complaints module is similar to the Helpdesk but is specifically for workplace complaints — policy violations, harassment reports, or any concern about the work environment.</p>
+
+<h3>How to file a complaint</h3>
+<ol>
+  <li>Go to <strong>Complaints</strong> in the sidebar</li>
+  <li>Click <span class="button-tag">+ File Complaint</span></li>
+  <li>Choose the <strong>category</strong> (Workplace, Policy, Safety, etc.)</li>
+  <li>Write your complaint in detail</li>
+  <li>Choose whether it should be <strong>confidential</strong> (only HR sees it)</li>
+  <li>Click <span class="button-tag">Submit</span></li>
+</ol>
+
+<p>HR investigates and updates the complaint status. The complainant can track progress.</p>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 17. WORK REPORTS -->
+<div class="section-divider" id="workreports"><h1>17. Work Reports</h1></div>
+
+<p class="lead">Work Reports let employees submit daily or weekly reports of what they worked on. Managers can review them.</p>
+
+<h3>How to submit a work report</h3>
+<ol>
+  <li>Go to <strong>Work Reports</strong> in the sidebar</li>
+  <li>Click <span class="button-tag">+ Submit Report</span></li>
+  <li>Choose the <strong>date</strong> or <strong>week</strong></li>
+  <li>Write what you worked on — tasks completed, hours spent, any blockers</li>
+  <li>Click <span class="button-tag">Submit</span></li>
+</ol>
+
+<h3>For Managers</h3>
+<ul>
+  <li>View all team members' work reports in a table</li>
+  <li>Filter by employee, date range, or status</li>
+  <li>Click <span class="button-tag">View</span> to read the full report</li>
+  <li>Export to Excel using <span class="button-tag">Export Excel</span></li>
+</ul>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 18. EMPLOYEES -->
+<div class="section-divider" id="employees"><h1>18. Employee Directory</h1></div>
+
+<p class="lead">The Employee Directory is a searchable list of all employees in the company. Only HR, Admin, and CTO can access it — regular employees and team leaders cannot.</p>
+
+<h3>What you see</h3>
+<ul>
+  <li>A table with columns: Name, Employee Code, Department, Designation, Email, Phone, Status</li>
+  <li><strong>Search bar</strong> — Search by name, code, or department</li>
+  <li><strong>Filter by status</strong> — Active, Offboarded</li>
+  <li><strong>Click any row</strong> → Opens the employee's full profile with all details</li>
+</ul>
+
+<h3>Employee Actions (HR only)</h3>
+<table>
+  <tr><th>Button</th><th>What It Does</th></tr>
+  <tr><td><span class="button-tag">+ Add Employee</span></td><td>Opens a form to create a new employee account</td></tr>
+  <tr><td><span class="button-tag">Edit</span></td><td>Modify employee details</td></tr>
+  <tr><td><span class="button-tag">Offboard</span></td><td>Mark an employee as leaving the company</td></tr>
+  <tr><td><span class="button-tag">Reset Password</span></td><td>Reset the employee's login password</td></tr>
+</table>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 19. ASSETS -->
+<div class="section-divider" id="assets"><h1>19. Assets</h1></div>
+
+<p class="lead">The Assets module tracks company-owned equipment — laptops, monitors, phones, ID cards, etc. It records who has what and when it was given.</p>
+
+<h3>What you see</h3>
+<ul>
+  <li><strong>Asset list</strong> — All company assets with status (Assigned, Available, Returned)</li>
+  <li><strong>My Assets</strong> — Assets currently assigned to you</li>
+</ul>
+
+<h3>Asset Actions</h3>
+<table>
+  <tr><th>Button</th><th>Who</th><th>What Happens</th></tr>
+  <tr><td><span class="button-tag">+ Add Asset</span></td><td>HR/Admin</td><td>Add a new asset to the system (name, type, serial number)</td></tr>
+  <tr><td><span class="button-tag">Assign</span></td><td>HR/Admin</td><td>Assign an asset to an employee. The employee gets a notification.</td></tr>
+  <tr><td><span class="button-tag">Return</span></td><td>HR/Admin</td><td>Mark an asset as returned by the employee</td></tr>
+  <tr><td><span class="button-tag">View</span></td><td>Anyone</td><td>See full asset details: type, serial number, assignee, dates</td></tr>
+</table>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 20. SAFETY -->
+<div class="section-divider" id="safety"><h1>20. Safety Incidents</h1></div>
+
+<p class="lead">The Safety module is for reporting workplace safety incidents — accidents, near-misses, hazards, or any safety concern. It is especially important for field employees working at construction or industrial sites.</p>
+
+<h3>How to report an incident</h3>
+<ol>
+  <li>Go to <strong>Safety</strong> in the sidebar</li>
+  <li>Click <span class="button-tag">+ Report Incident</span></li>
+  <li>Choose <strong>severity level</strong> — Low, Medium, High, Critical</li>
+  <li>Write what happened, where, and when</li>
+  <li>Upload <strong>photos</strong> of the incident if available</li>
+  <li>Click <span class="button-tag">Submit</span></li>
+</ol>
+
+<p>HR and Safety officers review and investigate. Each incident has a status that updates as it is handled.</p>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 21. TEAMS -->
+<div class="section-divider" id="teams"><h1>21. Teams & My Team</h1></div>
+
+<p class="lead">The Teams module shows the organizational structure — which teams exist, who leads them, and who is in each team.</p>
+
+<h3>Teams Page</h3>
+<ul>
+  <li>Shows all teams in the company as cards</li>
+  <li>Each card shows the team name, leader, and member count</li>
+  <li>Click a team card to see all members</li>
+</ul>
+
+<h3>My Team Page</h3>
+<ul>
+  <li>Shows only <strong>your team</strong> — the people you work directly with</li>
+  <li>Shows each member's name, designation, and current status (present, on leave, etc.)</li>
+  <li>Team Leaders can see team attendance and assign tasks from here</li>
+</ul>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 22. CALENDAR -->
+<div class="section-divider" id="calendar"><h1>22. Calendar</h1></div>
+
+<p class="lead">The Calendar shows a monthly view of company events, holidays, team leaves, and your personal schedule.</p>
+
+<h3>What you see</h3>
+<ul>
+  <li>A month-view calendar grid</li>
+  <li><strong>Holidays</strong> shown in a different colour</li>
+  <li><strong>Leave days</strong> shown when you or your team members are on leave</li>
+  <li><strong>Company events</strong> — meetings, training sessions, celebrations</li>
+  <li><strong>Navigate months</strong> using the arrow buttons (← →)</li>
+  <li>Click any day to see what is happening on that day</li>
+</ul>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 23. COMMUNITIES -->
+<div class="section-divider" id="communities"><h1>23. Communities / Groups</h1></div>
+
+<p class="lead">Communities are like office clubs or interest groups. You can join or create groups for specific topics — Technology, Culture, Sports, Wellness, etc.</p>
+
+<h3>How it works</h3>
+<ul>
+  <li><strong>Browse communities</strong> — See all available groups</li>
+  <li><strong>Join a community</strong> — Click <span class="button-tag">Join</span> to become a member</li>
+  <li><strong>Post messages</strong> — Share updates, ask questions, or start discussions</li>
+  <li><strong>React and comment</strong> — Like or comment on others' posts</li>
+  <li><strong>Create a community</strong> — HR/Admin can create new communities</li>
+</ul>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 24. PROFILE -->
+<div class="section-divider" id="profile"><h1>24. Profile — Your Account</h1></div>
+
+<p class="lead">Your Profile page shows all your personal and work information. You can view and update some details.</p>
+
+<h3>What you see</h3>
+<ul>
+  <li><strong>Profile photo</strong> — Click to upload or change your photo</li>
+  <li><strong>Personal info</strong> — Name, email, phone, date of birth</li>
+  <li><strong>Work info</strong> — Employee code, designation, department, team, date of joining</li>
+  <li><strong>Address</strong> — Your residential address</li>
+  <li><strong>Emergency contact</strong> — Name and phone of your emergency contact</li>
+</ul>
+
+<h3>Profile Actions</h3>
+<table>
+  <tr><th>Button</th><th>What It Does</th></tr>
+  <tr><td><span class="button-tag">Edit Profile</span></td><td>Change your phone number, address, emergency contact, or profile photo</td></tr>
+  <tr><td><span class="button-tag">Change Password</span></td><td>Enter your old password and new password to update it</td></tr>
+  <tr><td>Theme toggle</td><td>Switch between Light Mode and Dark Mode</td></tr>
+  <tr><td><span class="button-tag">Sign Out</span></td><td>Logs you out and takes you to the Login page</td></tr>
+</table>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 25. REPORTS -->
+<div class="section-divider" id="reports"><h1>25. Reports</h1></div>
+
+<p class="lead">The Reports module generates downloadable Excel reports for HR and management analysis.</p>
+
+<h3>Available reports</h3>
+<table>
+  <tr><th>Report</th><th>What It Contains</th><th>Who Can See It</th></tr>
+  <tr><td>Attendance Report</td><td>Complete attendance data for all employees in a date range</td><td>HR, Admin</td></tr>
+  <tr><td>Leave Report</td><td>All leave requests and their statuses</td><td>HR, Admin</td></tr>
+  <tr><td>Payroll Report</td><td>Salary and deduction summaries</td><td>HR, Admin</td></tr>
+  <tr><td>Employee Report</td><td>Employee directory with all details</td><td>HR, Admin</td></tr>
+</table>
+
+<h3>How to generate a report</h3>
+<ol>
+  <li>Go to <strong>Reports</strong> in the sidebar</li>
+  <li>Select the <strong>report type</strong></li>
+  <li>Choose a <strong>date range</strong></li>
+  <li>Click <span class="button-tag">Generate Report</span></li>
+  <li>An Excel file (.xlsx) downloads to your computer</li>
+</ol>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 26. AI ASSISTANT -->
+<div class="section-divider" id="ai"><h1>26. AI Assistant / Chatbot</h1></div>
+
+<p class="lead">A smart AI chatbot widget sits in the bottom-right corner of every page. It can answer questions about your attendance, leave balance, and company policies.</p>
+
+<h3>How to use it</h3>
+<ol>
+  <li>Click the <strong>chatbot icon 💬</strong> in the bottom-right corner of any page</li>
+  <li>Type a question like:
+    <ul>
+      <li>"How many leave days do I have left?"</li>
+      <li>"What is the company policy on work from home?"</li>
+      <li>"How do I apply for sick leave?"</li>
+    </ul>
+  </li>
+  <li>The AI responds instantly with a helpful answer</li>
+  <li>You can also <strong>listen to the answer</strong> — the bot supports text-to-speech</li>
+</ol>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 27. TECH ADMIN -->
+<div class="section-divider" id="admin"><h1>27. Tech Admin — System Management</h1></div>
+
+<p class="lead">The Tech Admin panel is only visible to the System Admin. It is the control centre for the entire system — managing companies, users, modules, branding, and settings.</p>
+
+<h3>Admin Panel Pages</h3>
+<table>
+  <tr><th>Page</th><th>What It Does</th></tr>
+  <tr><td><strong>Dashboard</strong></td><td>Overview of all companies, total users, system health</td></tr>
+  <tr><td><strong>Companies</strong></td><td>Manage multiple companies that use the system. Create new companies, edit details.</td></tr>
+  <tr><td><strong>Users</strong></td><td>View and manage all user accounts across companies. Reset passwords, change roles, deactivate accounts.</td></tr>
+  <tr><td><strong>Roles</strong></td><td>Define what each role can see and do. Create custom roles if needed.</td></tr>
+  <tr><td><strong>Module Management</strong></td><td>Turn entire modules on or off for each company. For example, disable "Assets" if a company does not need it.</td></tr>
+  <tr><td><strong>Branding</strong></td><td>Set the company's logo, colours, and product name. Each company can have its own look.</td></tr>
+  <tr><td><strong>Settings</strong></td><td>System-wide settings: office location for geofencing, working hours, holiday calendar.</td></tr>
+  <tr><td><strong>Global Announcements</strong></td><td>Post announcements that appear for all companies.</td></tr>
+  <tr><td><strong>Audit Logs</strong></td><td>See a complete history of who did what in the system. Every action is logged.</td></tr>
+</table>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 28. MOBILE APP -->
+<div class="section-divider" id="mobile"><h1>28. Mobile App Overview</h1></div>
+
+<p class="lead">The mobile app is an Android application that provides the same features as the website, optimized for phone screens.</p>
+
+<h3>How is the mobile app different from the website?</h3>
+<ul>
+  <li><strong>Bottom navigation</strong> instead of a sidebar — 5 main tabs: Home, Attendance, Chat, More, Profile</li>
+  <li><strong>Touch-friendly</strong> — bigger buttons, swipe gestures, pull-to-refresh</li>
+  <li><strong>Camera access</strong> — directly opens the phone camera for face verification</li>
+  <li><strong>GPS access</strong> — uses the phone's built-in GPS for location during punch-in</li>
+  <li><strong>Push notifications</strong> — alerts appear even when the app is closed</li>
+  <li><strong>Offline handling</strong> — graceful messages when there is no internet connection</li>
+</ul>
+
+<h3>Mobile app navigation</h3>
+<table>
+  <tr><th>Bottom Tab</th><th>What It Shows</th></tr>
+  <tr><td>🏠 Home</td><td>Dashboard — stat cards, charts, quick actions</td></tr>
+  <tr><td>🕐 Attendance</td><td>Quick punch in/out with face verification + GPS</td></tr>
+  <tr><td>💬 Chat</td><td>All your conversations, same as the website</td></tr>
+  <tr><td>📋 More</td><td>All other modules — Leave, Tasks, Claims, Tickets, etc.</td></tr>
+  <tr><td>👤 Profile</td><td>Your profile, settings, sign out</td></tr>
+</table>
+
+
+<!-- ════════════════════════════════════════════════════════════════════ 29. SUMMARY -->
+<div class="section-divider" id="summary"><h1>29. Complete Module Summary</h1></div>
+
+<p class="lead">Here is a bird's-eye view of every module, what it does, and who uses it.</p>
+
+<table>
+  <tr><th>#</th><th>Module</th><th>Purpose</th><th>Employee</th><th>Team Leader</th><th>HR</th><th>CTO / Admin</th></tr>
+  <tr><td>1</td><td>Dashboard</td><td>Overview of your work and company stats</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>2</td><td>Attendance</td><td>Punch in/out with face + GPS</td><td>✅</td><td>✅</td><td>✅</td><td>—</td></tr>
+  <tr><td>3</td><td>Team Attendance</td><td>See who on your team is present/absent</td><td>—</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>4</td><td>Leave</td><td>Check balance and apply for leave</td><td>✅</td><td>✅</td><td>✅</td><td>—</td></tr>
+  <tr><td>5</td><td>Short Leave (Permissions)</td><td>Apply for 1-2 hour breaks</td><td>✅</td><td>✅</td><td>✅</td><td>—</td></tr>
+  <tr><td>6</td><td>Approvals</td><td>Approve/reject leave requests</td><td>—</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>7</td><td>Leave Policies</td><td>Configure leave rules and balances</td><td>—</td><td>—</td><td>✅</td><td>✅</td></tr>
+  <tr><td>8</td><td>Tasks</td><td>Assign and track work tasks</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>9</td><td>Chat</td><td>Real-time messaging with colleagues</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>10</td><td>Audio/Video Calls</td><td>Direct calls through the system</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>11</td><td>Notifications</td><td>Alerts for all activities</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>12</td><td>Payroll</td><td>Generate and manage payslips</td><td>—</td><td>—</td><td>✅</td><td>✅</td></tr>
+  <tr><td>13</td><td>Payslips</td><td>View and download your payslips</td><td>✅</td><td>✅</td><td>—</td><td>—</td></tr>
+  <tr><td>14</td><td>Claims</td><td>Submit and track expense claims</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>15</td><td>Support / Helpdesk</td><td>Raise and track IT/support tickets</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>16</td><td>Complaints</td><td>File workplace complaints</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>17</td><td>Work Reports</td><td>Submit daily/weekly work summaries</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>18</td><td>Employees</td><td>Directory of all employees</td><td>—</td><td>—</td><td>✅</td><td>✅</td></tr>
+  <tr><td>19</td><td>Assets</td><td>Track company equipment assignments</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>20</td><td>Safety</td><td>Report workplace safety incidents</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>21</td><td>Teams</td><td>View organizational team structure</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>22</td><td>My Team</td><td>See your direct team members</td><td>—</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>23</td><td>Calendar</td><td>View holidays, events, leave dates</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>24</td><td>Communities</td><td>Office interest groups and discussions</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>25</td><td>Reports</td><td>Download Excel reports for analysis</td><td>—</td><td>—</td><td>✅</td><td>✅</td></tr>
+  <tr><td>26</td><td>Profile</td><td>View and edit your personal details</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>27</td><td>AI Chatbot</td><td>Get instant answers to HR questions</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  <tr><td>28</td><td>Audit Log</td><td>View system activity history</td><td>—</td><td>—</td><td>—</td><td>✅</td></tr>
+  <tr><td>29</td><td>Fresh Start</td><td>Reset all company data (dangerous!)</td><td>—</td><td>—</td><td>—</td><td>✅</td></tr>
+  <tr><td>30</td><td>Tech Admin Panel</td><td>System configuration and management</td><td>—</td><td>—</td><td>—</td><td>✅</td></tr>
+</table>
+
+<div class="highlight">
+  <strong>Key numbers:</strong>
+  <ul>
+    <li><strong>30 modules</strong> covering every aspect of HR management</li>
+    <li><strong>250+ API endpoints</strong> powering the backend</li>
+    <li><strong>65+ database tables</strong> storing all data</li>
+    <li><strong>5 user roles</strong> with different permission levels</li>
+    <li><strong>2 platforms</strong> — Web + Android Mobile App</li>
+    <li><strong>120 automated tests</strong> ensuring quality</li>
+    <li><strong>Real-time features</strong> — Chat, Notifications, Calls, Task updates</li>
+    <li><strong>AI-powered insights</strong> — Attendance analytics, smart chatbot</li>
+  </ul>
+</div>
+
+<p style="text-align:center; margin-top: 60px; color: var(--text-light); font-size: 13px;">
+  <strong>Pixous Technologies</strong> — Pixous HR Portal Complete Project Guide<br>
+  Prepared for Presentation & Internal Use &nbsp;|&nbsp; August 2026<br>
+  Confidential — Do Not Distribute
+</p>
+
+</div>
+
+<!-- ═══ PDF Download Button ═══ -->
+<button class="pdf-download-btn" onclick="showPdfModal()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="12" y1="18" x2="12" y2="12"/>
+    <polyline points="9 15 12 18 15 15"/>
+  </svg>
+  📄 Download as PDF
+</button>
+
+<!-- ═══ PDF Instructions Modal ═══ -->
+<div class="pdf-overlay" id="pdfModal">
+  <div class="pdf-modal">
+    <div style="font-size:40px;margin-bottom:8px;">📄</div>
+    <h3>Save as PDF</h3>
+    <p>Follow these 3 easy steps to download this document as a PDF file:</p>
+    <div class="step">
+      <span class="step-num">1</span>
+      <span>The print dialog will open automatically</span>
+    </div>
+    <div class="step">
+      <span class="step-num">2</span>
+      <span>Set <strong>Destination</strong> → "Save as PDF"</span>
+    </div>
+    <div class="step">
+      <span class="step-num">3</span>
+      <span>Click <strong>Save</strong> → choose where to save</span>
+    </div>
+    <div style="background:#eef2ff;border-radius:10px;padding:12px 16px;margin-top:16px;font-size:12px;color:#4f46e5;text-align:left;">
+      💡 <strong>Tip:</strong> For the best PDF, set Layout to "Portrait", Margins to "None", and uncheck "Headers and footers".
+    </div>
+    <button class="close-btn" onclick="closePdfModal()">Got it — Open Print Dialog</button>
+  </div>
+</div>
+
+<script>
+function showPdfModal() {
+  document.getElementById('pdfModal').classList.add('show');
+}
+function closePdfModal() {
+  document.getElementById('pdfModal').classList.remove('show');
+  setTimeout(function() { window.print(); }, 300);
+}
+document.getElementById('pdfModal').addEventListener('click', function(e) {
+  if (e.target === this) closePdfModal();
+});
+</script>
+
+</body>
+</html>

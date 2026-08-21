@@ -16,6 +16,8 @@ public record ProfileResponse(
         String phone,
         String email,
         String photoPath,
+        /** Banner image behind the dashboard greeting. Null means the plain colour. */
+        String coverPhotoPath,
         AddressDto address,
         Long departmentId,
         Long designationId,

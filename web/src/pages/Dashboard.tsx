@@ -4,10 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { fetchTtsUrl } from "@/lib/chatbot";
 import {
-  Clock, CalendarCheck, LifeBuoy, Boxes, ArrowRight, Users, TrendingUp, AlertCircle, CheckCircle2, Briefcase, RefreshCw,
-  Plus, Gift, Building2, UserPlus, UserMinus, MoreVertical, Receipt, ChevronLeft,
-  Check, X, Send, ListTodo, Inbox, PartyPopper, Cake, Upload, Image as ImageIcon, Smile,
-  Home, Hourglass, BadgeCheck
+  Clock, CalendarCheck, LifeBuoy, Boxes, ArrowRight, Users, TrendingUp, AlertCircle, CheckCircle2, Briefcase, RefreshCw, Plus, Gift, Building2, UserPlus, UserMinus, MoreVertical, Receipt, ChevronLeft, Check, X, Send, ListTodo, Inbox, PartyPopper, Cake, Upload, Image as ImageIcon, Smile, Home, Hourglass, BadgeCheck, Camera
 } from "lucide-react";
 import { StatTile, TILE_FILLS } from "@/components/ui/stat-tile";
 import {
@@ -2191,6 +2188,48 @@ export default function DashboardPage() {
   const showOrgDashboard = isExec || isHrOrg;
   const [selectedIndustry, setSelectedIndustry] = useState<string>("ALL");
   const queryClient = useQueryClient();
+
+  /*
+   * The banner backdrop and the employee's own photo.
+   *
+   * Read from the profile rather than the sign-in payload, because the sign-in
+   * payload is captured once at sign-in: a photo uploaded afterwards would not
+   * appear until the next sign-in, which is exactly when somebody would decide
+   * the upload had failed.
+   */
+  const myProfile = useQuery({
+    queryKey: ["profile", "me", "banner"],
+    queryFn: async () =>
+      (await api.get<ApiEnvelope<{ photoPath?: string; coverPhotoPath?: string }>>("/users/me")).data.data,
+    staleTime: 60_000
+  });
+
+  const coverPicker = useRef<HTMLInputElement>(null);
+  const coverUrl = resolvePhotoUrl(myProfile.data?.coverPhotoPath);
+  const isCoverVideo = /\.(mp4|webm|mov)$/i.test(myProfile.data?.coverPhotoPath ?? "");
+  const myPhoto = resolvePhotoUrl(myProfile.data?.photoPath);
+
+  const refreshBanner = () => {
+    queryClient.invalidateQueries({ queryKey: ["profile"] });
+  };
+
+  const uploadCover = useMutation({
+    mutationFn: async (file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      await api.post("/users/me/cover", fd, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+    },
+    onSuccess: () => { refreshBanner(); toast.success("Cover updated"); },
+    onError: (err) => toast.error(apiMessage(err, "Could not update the cover"))
+  });
+
+  const removeCover = useMutation({
+    mutationFn: async () => { await api.delete("/users/me/cover"); },
+    onSuccess: () => { refreshBanner(); toast.success("Cover removed"); },
+    onError: (err) => toast.error(apiMessage(err, "Could not remove the cover"))
+  });
   const navigate = useNavigate();
 
   // Small decorative sparkline that eases up to the current value (admin-style).
@@ -2357,11 +2396,87 @@ export default function DashboardPage() {
 
       {/* Dynamic Welcome Banner — the organisation view above already greets HR. */}
       <div className={cn(
-        "relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white p-8 shadow-lg",
+        "group relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white p-8 shadow-lg",
         isHrOrg && "hidden"
       )}>
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+        {/*
+          A chosen backdrop, when there is one.
+          The green gradient stays underneath, so a slow-loading or missing
+          image leaves the banner looking deliberate rather than broken. The
+          dark overlay is what keeps the greeting readable over a photograph
+          nobody vetted for contrast.
+        */}
+        {coverUrl && (
+          <>
+            {isCoverVideo ? (
+              <video
+                key={coverUrl}
+                src={coverUrl}
+                className="absolute inset-0 h-full w-full object-cover"
+                autoPlay
+                muted
+                loop
+                playsInline
+              />
+            ) : (
+              <img
+                src={coverUrl}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/20"></div>
+          </>
+        )}
+        {!coverUrl && (
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+        )}
         <div className="absolute right-0 top-0 -mt-16 -mr-16 h-64 w-64 rounded-full bg-white opacity-10 blur-3xl"></div>
+
+        {/* Change or clear the backdrop. Bottom-right so it never covers the
+            greeting or the industry switch an executive uses. */}
+        <div className="absolute bottom-3 right-3 z-30 flex gap-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+          <input
+            ref={coverPicker}
+            type="file"
+            accept="image/*,video/mp4,video/webm"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (!file) return;
+              if (file.size > 25 * 1024 * 1024) {
+                toast.error("Cover must be under 25 MB");
+                return;
+              }
+              uploadCover.mutate(file);
+            }}
+          />
+          <button
+            type="button"
+            disabled={uploadCover.isPending}
+            onClick={() => coverPicker.current?.click()}
+            className="inline-flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-black/60 disabled:opacity-60"
+            title="Change the banner image"
+          >
+            {uploadCover.isPending
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              : <Camera className="h-3.5 w-3.5" />}
+            {coverUrl ? "Change cover" : "Add cover"}
+          </button>
+          {coverUrl && (
+            <button
+              type="button"
+              disabled={removeCover.isPending}
+              onClick={() => removeCover.mutate()}
+              className="inline-flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-black/60 disabled:opacity-60"
+              title="Remove the banner image"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
 
         {isExec && (
           <div className="absolute top-6 right-8 z-20 flex gap-2.5 bg-white/10 p-1.5 rounded-full border border-white/20 backdrop-blur-md">
@@ -2467,12 +2582,23 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <img
-            src="/welcome.png"
-            alt=""
-            className="hidden h-32 w-32 shrink-0 object-contain lg:block xl:h-40 xl:w-40"
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-          />
+          {/* The employee's own photo when they have uploaded one, and the
+              stock illustration only while they have not. */}
+          {myPhoto ? (
+            <img
+              src={myPhoto}
+              alt=""
+              className="hidden h-28 w-28 shrink-0 rounded-full border-4 border-white/70 object-cover shadow-lg lg:block xl:h-32 xl:w-32"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+            />
+          ) : (
+            <img
+              src="/welcome.png"
+              alt=""
+              className="hidden h-32 w-32 shrink-0 object-contain lg:block xl:h-40 xl:w-40"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+            />
+          )}
         </div>
       </div>
 

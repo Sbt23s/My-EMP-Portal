@@ -66,6 +66,8 @@ export default function TeamReportsPage({ orgWide = false }: { orgWide?: boolean
   const [month, setMonth] = useState(String(dayjs().month() + 1).padStart(2, "0"));
   const [year, setYear] = useState(String(dayjs().year()));
   const [busy, setBusy] = useState(false);
+  /** Employee code to report on, or "" for everyone in scope. */
+  const [employee, setEmployee] = useState("");
 
   // The effective window, whichever way it was chosen.
   const range = useMemo(() => {
@@ -331,7 +333,7 @@ export default function TeamReportsPage({ orgWide = false }: { orgWide?: boolean
     sheets.forEach((sh) => {
       // A title row above the headers so a printed sheet explains itself.
       const ws = XLSX.utils.aoa_to_sheet([
-        [`${sh.name} — ${label}`],
+        [chosen ? `${sh.name} — ${chosen.name} (${chosen.employeeCode}) — ${label}` : `${sh.name} — ${label}`],
         [],
         sh.headers,
         ...sh.rows
@@ -345,16 +347,46 @@ export default function TeamReportsPage({ orgWide = false }: { orgWide?: boolean
 
   const tag = () => (mode === "MONTH" ? `${year}-${month}` : mode === "YEAR" ? year : `${range.from}_to_${range.to}`);
 
+  /** The person selected, if any — used for the heading and the file name. */
+  const chosen = roster.find((m) => m.employeeCode === employee);
+
+  /**
+   * Narrows a built sheet to one person.
+   *
+   * Filtering here rather than inside each of the seven builders: every sheet
+   * already carries the employee code in one of its columns, so matching on the
+   * row is both simpler and impossible to get wrong for one report and right
+   * for the others. An employee code is unique, so a row belongs to exactly one
+   * person.
+   */
+  const forEmployee = (sheet: Sheet): Sheet => {
+    if (!employee) return sheet;
+    return {
+      ...sheet,
+      rows: sheet.rows.filter((row) =>
+        row.some((cell) => String(cell ?? "").trim() === employee)
+      )
+    };
+  };
+
   const downloadOne = async () => {
     setBusy(true);
     const id = toast.loading("Building your report…");
     try {
-      const sheet = await buildSheet(report);
+      const sheet = forEmployee(await buildSheet(report));
       if (sheet.rows.length === 0) {
-        toast.error(`Nothing to report for ${label}.`, { id });
+        toast.error(
+          chosen
+            ? `Nothing to report for ${chosen.name} in ${label}.`
+            : `Nothing to report for ${label}.`,
+          { id }
+        );
         return;
       }
-      writeBook([sheet], `${orgWide ? "All" : "Team"}_${sheet.name.replace(/\s+/g, "_")}_${tag()}.xlsx`);
+      const who = chosen
+        ? `${chosen.name.replace(/\s+/g, "_")}_${chosen.employeeCode}`
+        : (orgWide ? "All" : "Team");
+      writeBook([sheet], `${who}_${sheet.name.replace(/\s+/g, "_")}_${tag()}.xlsx`);
       toast.success(`Exported ${sheet.rows.length} row${sheet.rows.length === 1 ? "" : "s"}`, { id });
     } catch (err) {
       toast.error(apiMessage(err, "Could not build the report"), { id });
@@ -463,13 +495,42 @@ export default function TeamReportsPage({ orgWide = false }: { orgWide?: boolean
                 </Select>
               </div>
             )}
-            <span className="ml-auto text-xs text-muted-foreground">Covering {label}</span>
+            {/* One person, or the whole scope. Reports were all-or-nothing,
+                so getting a single employee's attendance meant exporting
+                everybody and filtering the spreadsheet by hand. */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Employee
+              </label>
+              <Select
+                value={employee}
+                onChange={(e) => setEmployee(e.target.value)}
+                className="w-60"
+                aria-label="Employee to report on"
+              >
+                <option value="">
+                  {orgWide ? "Everyone" : "Everyone in my team"}
+                </option>
+                {[...roster]
+                  .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""))
+                  .map((m) => (
+                    <option key={m.id} value={m.employeeCode ?? ""}>
+                      {m.name} ({m.employeeCode})
+                    </option>
+                  ))}
+              </Select>
+            </div>
+            <span className="ml-auto text-xs text-muted-foreground">
+              Covering {label}
+              {chosen ? ` · ${chosen.name}` : ""}
+            </span>
           </div>
 
           <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
             <Button disabled={busy} onClick={downloadOne} className="bg-green-600 text-white hover:bg-green-700">
               {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />}
               Download {active.label.toLowerCase()}
+              {chosen ? ` — ${chosen.name}` : ""}
             </Button>
           </div>
         </CardContent>

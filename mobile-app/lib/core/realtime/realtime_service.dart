@@ -58,6 +58,10 @@ class RealtimeService {
     return '${base.replaceFirst(RegExp(r'^http'), 'ws')}/ws/websocket';
   }
 
+  /// Reconnect attempts with exponential backoff.
+  int _reconnectAttempts = 0;
+  static const _maxReconnectDelay = Duration(seconds: 30);
+
   void connect() {
     if (_client != null) return;
 
@@ -67,31 +71,32 @@ class RealtimeService {
     _client = StompClient(
       config: StompConfig(
         url: _url,
-        // The server reads this on CONNECT to name the session. It never
-        // refuses one without it — an anonymous socket still receives chat and
-        // notifications, it simply has no presence — so a token that has just
-        // expired degrades rather than disconnects.
         stompConnectHeaders: {'Authorization': 'Bearer $token'},
         webSocketConnectHeaders: {'Authorization': 'Bearer $token'},
         onConnect: _onConnect,
-        // Five seconds. A phone changes network constantly, and the cost of
-        // trying again is one failed socket.
-        reconnectDelay: const Duration(seconds: 5),
-        heartbeatIncoming: const Duration(seconds: 20),
-        heartbeatOutgoing: const Duration(seconds: 20),
+        // Exponential backoff: 1s → 2s → 4s → 8s → 16s → 30s (capped).
+        // The default 5s was too slow for chat — a user sends a message and
+        // the reply appears 5 seconds later even though the socket dropped.
+        reconnectDelay: Duration(
+          seconds: (1 * (1 << _reconnectAttempts.clamp(0, 5))).clamp(1, 30),
+        ),
+        heartbeatIncoming: const Duration(seconds: 15),
+        heartbeatOutgoing: const Duration(seconds: 15),
         onWebSocketError: (_) {},
         onStompError: (_) {},
-        // Deliberately silent. A dropped socket is ordinary on a phone and the
-        // client reconnects on its own; surfacing it would put an error in front
-        // of somebody every time they walked into a lift.
-        onDisconnect: (_) => _active.clear(),
+        onDisconnect: (_) {
+          _active.clear();
+          _reconnectAttempts++;
+        },
       ),
     );
 
     _client!.activate();
+    _reconnectAttempts = 0;
   }
 
   void _onConnect(StompFrame _) {
+    _reconnectAttempts = 0; // Reset backoff on successful connection.
     // Re-subscribe to everything asked for while the socket was down.
     for (final topic in _topics) {
       _subscribeNow(topic);

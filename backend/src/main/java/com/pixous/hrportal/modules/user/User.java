@@ -101,6 +101,15 @@ public class User extends BaseEntity {
     @Column(name = "photo_path", length = 255)
     private String photoPath;
 
+    /**
+     * The image behind the dashboard banner, chosen by the employee.
+     *
+     * Separate from the profile photo on purpose: one is the person, the other
+     * is the backdrop, and replacing either should not disturb the other.
+     */
+    @Column(name = "cover_photo_path", length = 512)
+    private String coverPhotoPath;
+
     /** Comma-separated upload paths: the employee's own paperwork. */
     @Column(columnDefinition = "text")
     private String documents;

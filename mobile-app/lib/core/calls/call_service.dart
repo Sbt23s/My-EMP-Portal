@@ -151,26 +151,34 @@ class CallService {
     }
   }
 
+  /// Cached ICE servers — fetched once, reused for all calls in this session.
+  /// This avoids a network round-trip on every call setup.
+  Map<String, dynamic>? _cachedIce;
+
   /// STUN and, when the backend offers them, TURN.
   ///
   /// Read from the server rather than hard-coded so that standing up a TURN
   /// server is a deployment change and not an app release. Falls back to the
   /// same public STUN pair the web client uses, which is what exists today.
+  /// Cached after first fetch so subsequent calls connect faster.
   Future<Map<String, dynamic>> _iceServers() async {
+    if (_cachedIce != null) return _cachedIce!;
     try {
       final data = await _api.get('/calls/ice-servers');
       if (data is Map<String, dynamic> && data['iceServers'] is List) {
-        return {'iceServers': data['iceServers']};
+        _cachedIce = {'iceServers': data['iceServers']};
+        return _cachedIce!;
       }
     } catch (_) {
       // No endpoint yet. Expected — it does not exist until a TURN server does.
     }
-    return {
+    _cachedIce = {
       'iceServers': [
         {'urls': 'stun:stun.l.google.com:19302'},
         {'urls': 'stun:stun1.l.google.com:19302'},
       ],
     };
+    return _cachedIce!;
   }
 
   Future<void> _openPeerConnection() async {
@@ -282,15 +290,19 @@ class CallService {
 
   Future<void> _openMedia({required bool video}) async {
     _localStream = await navigator.mediaDevices.getUserMedia({
-      'audio': true,
+      'audio': {
+        'echoCancellation': true,
+        'noiseSuppression': true,
+        'autoGainControl': true,
+      },
       'video': video
           ? {
               'facingMode': 'user',
-              // Modest, deliberately. A phone will happily capture 1080p and
-              // then fail to send it on a site with one bar of signal.
-              'width': {'ideal': 640},
-              'height': {'ideal': 480},
-              'frameRate': {'ideal': 24},
+              // Deliberately modest: 480p connects reliably on mobile data.
+              // Bump to 720p only when bandwidth is confirmed.
+              'width': {'ideal': 640, 'max': 1280},
+              'height': {'ideal': 480, 'max': 720},
+              'frameRate': {'ideal': 24, 'max': 30},
             }
           : false,
     });

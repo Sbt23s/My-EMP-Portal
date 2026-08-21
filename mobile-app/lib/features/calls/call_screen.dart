@@ -23,6 +23,10 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   final _remote = RTCVideoRenderer();
   bool _ready = false;
 
+  // Track what is currently bound so we only re-attach on real changes.
+  MediaStream? _boundLocal;
+  MediaStream? _boundRemote;
+
   @override
   void initState() {
     super.initState();
@@ -47,15 +51,28 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     ref.watch(callChangesProvider);
     final calls = ref.watch(callServiceProvider);
 
-    // Renderers are attached on every build rather than once: the streams
-    // arrive after this screen is already up, and a renderer bound before the
-    // stream exists shows black for the whole call.
+    // Only re-attach renderers when the stream object actually changes.
+    // Re-assigning srcObject on every build causes video flicker and restarts
+    // the decoder — the main cause of "video not showing" on slow devices.
     if (_ready) {
-      if (_local.srcObject != calls.localStream) {
-        _local.srcObject = calls.localStream;
+      final local = calls.localStream;
+      final remote = calls.remoteStream;
+      if (local != null && local != _boundLocal) {
+        _boundLocal = local;
+        _local.srcObject = local;
       }
-      if (_remote.srcObject != calls.remoteStream) {
-        _remote.srcObject = calls.remoteStream;
+      if (remote != null && remote != _boundRemote) {
+        _boundRemote = remote;
+        _remote.srcObject = remote;
+      }
+      // Clear stale bindings when stream is nulled (call ended).
+      if (local == null && _boundLocal != null) {
+        _boundLocal = null;
+        _local.srcObject = null;
+      }
+      if (remote == null && _boundRemote != null) {
+        _boundRemote = null;
+        _remote.srcObject = null;
       }
     }
 

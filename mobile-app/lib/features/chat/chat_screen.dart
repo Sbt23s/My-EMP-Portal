@@ -23,14 +23,48 @@ import '../../providers/call_provider.dart';
 import '../../providers/realtime_provider.dart';
 import '../../widgets/states.dart';
 
+/// Channels list — cached and refreshed only when invalidated explicitly.
 final chatChannelsProvider = FutureProvider.autoDispose<List<ChatChannel>>(
   (ref) => ref.watch(workRepositoryProvider).myChannels(),
 );
 
+/// Messages — kept in a StateNotifier so we can do optimistic updates
+/// instead of re-fetching the entire list after every action.
 final chatMessagesProvider =
-    FutureProvider.autoDispose.family<List<ChatMessage>, int>(
-  (ref, channelId) => ref.watch(workRepositoryProvider).messages(channelId),
+    StateNotifierProvider.autoDispose.family<ChatMessagesNotifier, AsyncValue<List<ChatMessage>>, int>(
+  (ref, channelId) => ChatMessagesNotifier(ref, channelId),
 );
+
+class ChatMessagesNotifier extends StateNotifier<AsyncValue<List<ChatMessage>>> {
+  ChatMessagesNotifier(this._ref, this._channelId) : super(const AsyncValue.loading()) {
+    load();
+  }
+
+  final Ref _ref;
+  final int _channelId;
+
+  Future<void> load() async {
+    state = const AsyncValue.loading();
+    try {
+      final msgs = await _ref.read(workRepositoryProvider).messages(_channelId);
+      state = AsyncValue.data(msgs);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  /// Replace messages in-place without hitting the network — used by the
+  /// realtime listener so a new message appears instantly.
+  void replace(List<ChatMessage> msgs) {
+    state = AsyncValue.data(msgs);
+  }
+
+  /// Optimistic append — add a message locally, then refresh in background.
+  void optimisticAdd(ChatMessage msg) {
+    final current = state.valueOrNull ?? [];
+    state = AsyncValue.data([...current, msg]);
+  }
+}
 
 final pinnedMessagesProvider =
     FutureProvider.autoDispose.family<List<ChatMessage>, int>(
@@ -284,17 +318,29 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     final topic = '/topic/community/${widget.channel.id}';
     realtime.subscribe(topic);
 
-    // Messages arrive as they are sent. The poll below stays as a safety net —
-    // a socket that dropped without saying so would otherwise leave the
-    // conversation frozen and looking fine.
+    // Messages arrive as they are sent. The realtime event triggers a
+    // lightweight reload — NOT a full invalidate, which would show a spinner.
     _live = realtime.events.listen((event) {
       if (event.topic != topic || !mounted) return;
-      ref.invalidate(chatMessagesProvider(widget.channel.id));
+      _reloadMessages();
     });
 
+    // Safety-net poll at 30s — only if the socket drops silently.
     _timer = Timer.periodic(_pollEvery, (_) {
-      if (mounted) ref.invalidate(chatMessagesProvider(widget.channel.id));
+      if (mounted) _reloadMessages();
     });
+  }
+
+  /// Reload messages without showing a loading spinner — silent refresh.
+  Future<void> _reloadMessages() async {
+    try {
+      final msgs = await ref.read(workRepositoryProvider).messages(widget.channel.id);
+      if (mounted) {
+        ref.read(chatMessagesProvider(widget.channel.id).notifier).replace(msgs);
+      }
+    } catch (_) {
+      // Silent — the poll or next realtime event will try again.
+    }
   }
 
   @override
@@ -362,17 +408,35 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     final text = _composer.text.trim();
     if (text.isEmpty || _sending) return;
 
-    setState(() => _sending = true);
+    // Optimistic UI: show the message immediately, then send in background.
+    final me = ref.read(currentUserProvider);
+    final optimistic = ChatMessage(
+      id: -(DateTime.now().millisecondsSinceEpoch), // negative = pending
+      senderId: me?.id ?? 0,
+      senderName: me?.name,
+      content: text,
+      sentAt: DateTime.now(),
+      parentId: _replyingTo?.id,
+    );
+    final notifier = ref.read(chatMessagesProvider(widget.channel.id).notifier);
+    final current = ref.read(chatMessagesProvider(widget.channel.id)).valueOrNull ?? [];
+    notifier.replace([...current, optimistic]);
+
+    final savedReply = _replyingTo;
+    _composer.clear();
+    setState(() { _replyingTo = null; _sending = true; });
+
     try {
       await ref.read(workRepositoryProvider).sendMessage(
             widget.channel.id,
             text,
-            parentId: _replyingTo?.id,
+            parentId: savedReply?.id,
           );
-      _composer.clear();
-      setState(() => _replyingTo = null);
-      ref.invalidate(chatMessagesProvider(widget.channel.id));
+      // Server responded — reload to get the real message with server ID.
+      _reloadMessages();
     } catch (e) {
+      // Remove the optimistic message on failure.
+      _reloadMessages();
       _snack('$e', error: true);
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -437,7 +501,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
       await ref
           .read(workRepositoryProvider)
           .sendChatAttachments(widget.channel.id, files, caption: caption);
-      ref.invalidate(chatMessagesProvider(widget.channel.id));
+      _reloadMessages();
     } catch (e) {
       _snack('$e', error: true);
     } finally {
@@ -572,7 +636,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
       await ref
           .read(workRepositoryProvider)
           .sendChatVoice(widget.channel.id, File(path));
-      ref.invalidate(chatMessagesProvider(widget.channel.id));
+      _reloadMessages();
     } catch (e) {
       _snack('$e', error: true);
     } finally {
@@ -596,7 +660,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
       await ref
           .read(workRepositoryProvider)
           .sendMessage(widget.channel.id, '', pollOptions: options);
-      ref.invalidate(chatMessagesProvider(widget.channel.id));
+      _reloadMessages();
     } catch (e) {
       _snack('$e', error: true);
     } finally {
@@ -609,7 +673,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   Future<void> _react(int messageId, String emoji) async {
     try {
       await ref.read(workRepositoryProvider).reactToMessage(messageId, emoji);
-      ref.invalidate(chatMessagesProvider(widget.channel.id));
+      _reloadMessages(); // Silent reload, no spinner
     } catch (e) {
       _snack('$e', error: true);
     }
@@ -617,11 +681,10 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
 
   Future<void> _pin(ChatMessage m) async {
     try {
-      // Toggled from what it is now, so the same gesture pins and unpins.
       await ref
           .read(workRepositoryProvider)
           .pinMessage(m.id, pinned: !m.pinned);
-      ref.invalidate(chatMessagesProvider(widget.channel.id));
+      _reloadMessages();
     } catch (e) {
       _snack('$e', error: true);
     }
@@ -651,7 +714,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     if (confirmed != true || !mounted) return;
     try {
       await ref.read(workRepositoryProvider).deleteMessage(m.id);
-      ref.invalidate(chatMessagesProvider(widget.channel.id));
+      _reloadMessages();
     } catch (e) {
       _snack('$e', error: true);
     }
@@ -661,7 +724,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     if (m.myVote == index) return;
     try {
       await ref.read(workRepositoryProvider).votePoll(m.id, index);
-      ref.invalidate(chatMessagesProvider(widget.channel.id));
+      _reloadMessages();
     } catch (e) {
       _snack('$e', error: true);
     }
@@ -670,7 +733,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   Future<void> _acknowledge(ChatMessage m) async {
     try {
       await ref.read(workRepositoryProvider).acknowledgeMessage(m.id);
-      ref.invalidate(chatMessagesProvider(widget.channel.id));
+      _reloadMessages();
     } catch (e) {
       _snack('$e', error: true);
     }
@@ -679,7 +742,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   @override
   Widget build(BuildContext context) {
     final me = ref.watch(currentUserProvider)?.id;
-    final async = ref.watch(chatMessagesProvider(widget.channel.id));
+    final asyncMsgs = ref.watch(chatMessagesProvider(widget.channel.id));
 
     return Scaffold(
       appBar: AppBar(
@@ -723,12 +786,11 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
       body: Column(
         children: [
           Expanded(
-            child: async.when(
+            child: asyncMsgs.when(
               loading: () => const LoadingList(),
               error: (e, _) => ErrorState(
                 message: '$e',
-                onRetry: () =>
-                    ref.invalidate(chatMessagesProvider(widget.channel.id)),
+                onRetry: () => _reloadMessages(),
               ),
               data: (messages) {
                 if (messages.isEmpty) {

@@ -25,7 +25,7 @@ const iceServers = {
   ]
 };
 
-interface CallSignal {
+export interface CallSignal {
   senderId: number;
   senderName: string;
   type: string;
@@ -43,6 +43,20 @@ interface CallApi {
   rejectCall: () => void;
   hangUp: () => void;
   toggleTrack: (kind: "audio" | "video") => boolean;
+
+  /*
+    The three below exist so a group call can be built on this connection
+    rather than beside it. A second STOMP client would mean a second socket,
+    a second reconnect cycle and two places where a signal can be missed --
+    and the server already fans every signal for this user out to the one
+    topic this provider is listening on.
+  */
+  /** Relay a signal to one person. Same channel a one-to-one call uses. */
+  sendSignal: (recipientId: number, type: string, data: any) => Promise<void>;
+  /** Watch every incoming signal. Returns the function that stops watching. */
+  addSignalListener: (fn: (signal: CallSignal) => void) => () => void;
+  /** TURN and STUN as configured on the server, with public STUN as backup. */
+  getIceServers: () => Promise<RTCConfiguration>;
 }
 
 const CallContext = createContext<CallApi | null>(null);
@@ -277,10 +291,24 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         noiseSuppression: true,
         autoGainControl: true
       },
+      /*
+        1080p asked for, 720p accepted, nothing below 360p.
+
+        The old numbers asked for 640x480 and capped at 720p, so even people
+        on a good line and a good camera got a soft picture -- the browser
+        gives you what you ask for, not the best the camera can do.
+
+        4K is deliberately not requested. A 2160p stream is roughly 20 Mbit/s
+        upstream, more than most office connections have to spare in the
+        upward direction, and it is decoded into a window a few hundred
+        pixels tall. Asking for it does not produce a sharper call; it
+        produces a call that stalls. 1080p is the point where more pixels
+        stop being visible on screen and start being dropped frames.
+      */
       video: isVideo ? {
-        width: { ideal: 640, max: 1280 },
-        height: { ideal: 480, max: 720 },
-        frameRate: { ideal: 24, max: 30 }
+        width: { ideal: 1920, max: 1920 },
+        height: { ideal: 1080, max: 1080 },
+        frameRate: { ideal: 30, max: 30 }
       } : false
     };
 
@@ -303,6 +331,43 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const pc = new RTCPeerConnection(iceConfig);
     pcRef.current = pc;
     stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+    /*
+      Raise the ceiling on the video encoder.
+
+      Capturing at 1080p achieves nothing on its own: browsers start a video
+      sender at somewhere around 1 to 2.5 Mbit/s regardless of what the camera
+      is producing, and simply re-encode the high resolution frames down to
+      fit. The picture stays soft and the extra capture work is wasted.
+
+      2.5 Mbit/s is chosen rather than something larger because it is about
+      what 1080p30 of a talking head needs -- faces are mostly still, so the
+      codec spends very little on most of the frame -- and because a ceiling
+      the network cannot sustain is worse than a lower one: congestion
+      control reacts by dropping frames, and a stuttering sharp picture
+      reads as more broken than a smooth slightly softer one.
+
+      maintain-framerate says which way to give when the line cannot keep up.
+      Faces in motion look wrong at low frame rates in a way they do not look
+      wrong at slightly reduced resolution.
+
+      Wrapped because setParameters is not implemented identically across
+      browsers, and a failure here must not stop a call that would otherwise
+      connect perfectly well at the default bitrate.
+    */
+    void (async () => {
+      try {
+        const videoSender = pc.getSenders().find((sn) => sn.track?.kind === "video");
+        if (!videoSender) return;
+        const params = videoSender.getParameters();
+        if (!params.encodings || params.encodings.length === 0) params.encodings = [{}];
+        params.encodings[0].maxBitrate = 2_500_000;
+        params.degradationPreference = "maintain-framerate";
+        await videoSender.setParameters(params);
+      } catch {
+        // Default bitrate it is.
+      }
+    })();
 
     pc.ontrack = (event) => {
       if (event.streams && event.streams[0]) {
@@ -643,6 +708,19 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     }
   }, [sendSignal, drainCandidates, cleanupCall, logCall, callIsVideo, cancelGiveUp]);
 
+  /*
+    Extra listeners on the same stream of signals.
+
+    A Set rather than an array so a listener that somehow registers twice
+    still only fires once, and so removal is by identity rather than index --
+    indexes shift when an earlier listener unsubscribes first.
+  */
+  const signalListenersRef = useRef(new Set<(s: CallSignal) => void>());
+  const addSignalListener = useCallback((fn: (s: CallSignal) => void) => {
+    signalListenersRef.current.add(fn);
+    return () => { signalListenersRef.current.delete(fn); };
+  }, []);
+
   const handlerRef = useRef(handleSignal);
   useEffect(() => { handlerRef.current = handleSignal; }, [handleSignal]);
 
@@ -660,7 +738,17 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         setConnected(true);
         client.subscribe(`/topic/calls/${user.id}`, (msg) => {
           try {
-            handlerRef.current(JSON.parse(msg.body) as CallSignal);
+            const signal = JSON.parse(msg.body) as CallSignal;
+            /*
+              Listeners first, and each in its own try, because one that
+              throws must not stop the others or the one-to-one handler
+              below it. A group call going wrong cannot be allowed to
+              stop an ordinary call from ringing.
+            */
+            signalListenersRef.current.forEach((fn) => {
+              try { fn(signal); } catch (e) { console.error("Signal listener failed", e); }
+            });
+            handlerRef.current(signal);
           } catch (e) {
             console.error("Invalid calling signal payload", e);
           }
@@ -734,9 +822,11 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<CallApi>(() => ({
     callState, activeCallPartner, callIsVideo, localStream, remoteStream,
-    startCall, acceptCall, rejectCall, hangUp, toggleTrack
+    startCall, acceptCall, rejectCall, hangUp, toggleTrack,
+    sendSignal, addSignalListener, getIceServers: getIceServersConfig
   }), [callState, activeCallPartner, callIsVideo, localStream, remoteStream,
-    startCall, acceptCall, rejectCall, hangUp, toggleTrack]);
+    startCall, acceptCall, rejectCall, hangUp, toggleTrack,
+    sendSignal, addSignalListener, getIceServersConfig]);
 
   return (
     <CallContext.Provider value={value}>
@@ -784,5 +874,9 @@ const DORMANT: CallApi = {
   acceptCall: async () => {},
   rejectCall: () => {},
   hangUp: () => {},
-  toggleTrack: () => false
+  toggleTrack: () => false,
+  // No socket outside the provider, so these do nothing rather than pretend.
+  sendSignal: async () => {},
+  addSignalListener: () => () => {},
+  getIceServers: async () => iceServers
 };

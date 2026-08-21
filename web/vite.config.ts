@@ -18,6 +18,43 @@ export default defineConfig({
       // service worker (Workbox refuses to precache oversized bundles).
       workbox: {
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+        /*
+          Three chunks are cached when they are first needed rather than
+          downloaded up front.
+
+          Precaching means the service worker fetches the whole list in the
+          background as soon as it installs -- on every deploy, for every
+          user, whether or not they go near the feature. Between them the
+          spreadsheet writer, the chart library and the animation engine were
+          about 1.1 MB of the 3.1 MB list, and most people never export a
+          sheet, open a chart or see the announcement modal in a given
+          session. On a slow connection that is bandwidth competing with the
+          page the user is actually waiting for.
+
+          They are still cached, just later: the rule below stores each one
+          the first time it is genuinely fetched, so the second visit to a
+          chart is as fast as it was before and the first is no slower than
+          it would have been without a service worker at all.
+        */
+        globIgnores: [
+          "**/xlsx-*.js",
+          "**/AreaChart-*.js",
+          "**/Lottie-*.js"
+        ],
+        runtimeCaching: [
+          {
+            urlPattern: /\/assets\/(xlsx|AreaChart|Lottie)-[\w-]+\.js$/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "heavy-chunks",
+              // Content-hashed filenames, so an entry can never be stale --
+              // a new build is a new URL. The cap is here to stop old
+              // hashes accumulating forever across many deploys.
+              expiration: { maxEntries: 12, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          }
+        ],
         /**
          * Opening a stored file in its own tab is a navigation, and the offline
          * fallback answered every navigation with index.html — so a task-chat

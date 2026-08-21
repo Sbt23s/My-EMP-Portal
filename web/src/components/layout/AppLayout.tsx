@@ -36,6 +36,15 @@ const GlobalLoginAnnouncementModal = lazy(() =>
   import("@/components/GlobalLoginAnnouncementModal").then(
     (m) => ({ default: m.GlobalLoginAnnouncementModal })));
 import { CallProvider, useCalls } from "@/hooks/useCalls";
+/*
+  Group calling sits inside CallProvider because it is built on that
+  provider's socket rather than one of its own -- see the note on the
+  shared signalling channel in useCalls. The overlay is mounted here
+  rather than in the chat page so a call outlives navigating away from it.
+*/
+import { GroupCallProvider } from "@/hooks/useGroupCall";
+const GroupCallOverlay = lazy(() =>
+  import("@/components/GroupCallOverlay").then((m) => ({ default: m.GroupCallOverlay })));
 import { describeCallNotification } from "@/lib/callNotifications";
 import { displayPersonName } from "@/lib/people";
 
@@ -727,7 +736,14 @@ function AppShell() {
 export function AppLayout() {
   return (
     <CallProvider>
-      <AppShell />
+      <GroupCallProvider>
+        <AppShell />
+        {/* No fallback: there is nothing on screen to hold a place for until
+            a call actually starts. */}
+        <Suspense fallback={null}>
+          <GroupCallOverlay />
+        </Suspense>
+      </GroupCallProvider>
     </CallProvider>
   );
 }

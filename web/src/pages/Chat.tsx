@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useGroupCall } from "@/hooks/useGroupCall";
 import { useAuth } from "@/hooks/useAuth";
 import { useChat, type ChatMessage, type SendExtras } from "@/hooks/useChat";
 import {
@@ -473,6 +474,9 @@ export default function ChatPage() {
     callState, startCall
   } = useChat(activeGroupId);
 
+  // Drawn above the routes as well; the page only starts one.
+  const groupCall = useGroupCall();
+
   const onlineSet = useMemo(() => new Set(onlineUserIds), [onlineUserIds]);
 
   // Switching rooms must not carry staged files across — they would be sent to
@@ -822,6 +826,32 @@ export default function ChatPage() {
     }
   };
 
+  /**
+   * Ring everyone in the room.
+   *
+   * The member list is fetched at the moment of calling rather than kept in
+   * sync: it is only needed here, it is small, and a list that was correct
+   * when the page loaded is not necessarily correct now.
+   */
+  const onStartGroupCall = async (video: boolean) => {
+    if (!activeGroup) return;
+    try {
+      // Bare array, not an envelope, and the path is plural. Both differ
+      // from most endpoints in this app, so they are easy to get wrong.
+      const res = await api.get<Array<{ id: number }>>(
+        `/communities/${activeGroup.id}/members`
+      );
+      const ids = (res.data ?? []).map((m) => m.id).filter(Boolean);
+      if (ids.length === 0) {
+        toast.error("This room has no members to call.");
+        return;
+      }
+      await groupCall.start(String(activeGroup.id), activeGroup.name, ids, video);
+    } catch (err: any) {
+      toast.error(err?.message || "Could not start the group call");
+    }
+  };
+
   // Filter my conversations based on search text
   const filteredGroups =
     myGroups?.filter(
@@ -1093,6 +1123,39 @@ export default function ChatPage() {
                       disabled={callState !== "idle"}
                       title="Video call"
                       onClick={() => onStartCall(true)}
+                      className="h-9 w-9 rounded-full text-sky-600 hover:bg-sky-50 hover:text-sky-700 disabled:opacity-40"
+                    >
+                      <Video className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+
+                {/*
+                  A room with several people in it gets a group call instead.
+                  Announcement rooms are excluded: they are a broadcast to a
+                  large audience, and ringing everybody on one would be the
+                  opposite of what the room is for.
+                */}
+                {!isDirect && !isAnnouncement && activeGroup && (
+                  <>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      disabled={groupCall.state !== "idle" || callState !== "idle"}
+                      title="Group voice call"
+                      onClick={() => onStartGroupCall(false)}
+                      className="h-9 w-9 rounded-full text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-40"
+                    >
+                      <Phone className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      disabled={groupCall.state !== "idle" || callState !== "idle"}
+                      title="Group video call"
+                      onClick={() => onStartGroupCall(true)}
                       className="h-9 w-9 rounded-full text-sky-600 hover:bg-sky-50 hover:text-sky-700 disabled:opacity-40"
                     >
                       <Video className="h-4 w-4" />

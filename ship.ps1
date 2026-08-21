@@ -139,6 +139,23 @@ if [ -z "$SERVICES" ]; then
 fi
 
 echo "--- rebuilding: $SERVICES ---"
+# Stop and remove the services being replaced, by name, before compose starts.
+#
+# Compose recreates a container by renaming the old one out of the way and then
+# removing it. With the containerd snapshotter that removal is not instant, so
+# the next deploy hits "the container name <hex>_hrportal-backend is already in
+# use" -- a race with a corpse, not with anything running. Taking them down
+# ourselves first means there is nothing to rename, and the retry below stops
+# being needed.
+for svc in $SERVICES; do
+  case "$svc" in
+    backend|web|analytics)
+      sudo docker rm -f "hrportal-$svc" >/dev/null 2>&1 || true
+      ;;
+  esac
+done
+sudo docker rm -f $(sudo docker ps -aq --filter "name=_hrportal-") >/dev/null 2>&1 || true
+
 # One retry, because a name reservation that has not yet expired clears in
 # seconds. A deploy whose images built fine should not need a human for that.
 if ! sudo docker compose -f docker-compose.prod.yml up -d --build $SERVICES; then

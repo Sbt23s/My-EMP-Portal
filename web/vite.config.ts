@@ -44,6 +44,27 @@ export default defineConfig({
     })
   ],
 
+  build: {
+    /*
+      Everything used to land in one entry chunk, so a deploy that touched a
+      single line of our own code invalidated React and the router along with
+      it and every user re-downloaded the lot. These four rarely change, so
+      giving them their own files lets the browser keep them across releases.
+      The list is deliberately short: splitting further produces many small
+      requests, which on a cold load costs more than it saves.
+    */
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          "vendor-query": ["@tanstack/react-query", "@tanstack/react-table"],
+          "vendor-realtime": ["@stomp/stompjs", "sockjs-client"],
+          "vendor-forms": ["react-hook-form", "@hookform/resolvers", "zod"]
+        }
+      }
+    }
+  },
+
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src")

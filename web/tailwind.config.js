@@ -55,7 +55,12 @@ export default {
       fontFamily: {
         display: ["'Space Grotesk'", "ui-sans-serif", "system-ui", "sans-serif"],
         sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
-        mono: ["'JetBrains Mono'", "ui-monospace", "monospace"]
+        mono: ["'JetBrains Mono'", "ui-monospace", "monospace"],
+        // The two display faces used for a person's identity in the sidebar.
+        // "identity" is driven by a CSS variable so the face can be swapped
+        // for a licensed one by editing a single line in index.css.
+        identity: ["var(--font-identity)", "'Barlow Condensed'", "sans-serif"],
+        role: ["'Fugaz One'", "'Space Grotesk'", "cursive"]
       },
       borderRadius: {
         lg: "var(--radius)",

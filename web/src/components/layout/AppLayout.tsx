@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
@@ -16,10 +16,25 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { roleCodeLabel } from "@/lib/roles";
 import dayjs from "dayjs";
-import { useIsFetching } from "@tanstack/react-query";
+import { useIsFetching, useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import type { ApiEnvelope } from "@/types";
 import { CustomLoader } from "@/components/ui/custom-loader";
-import { ChatBotWidget } from "@/components/ChatBotWidget";
-import { GlobalLoginAnnouncementModal } from "@/components/GlobalLoginAnnouncementModal";
+/*
+  These two are loaded after the first paint instead of with it.
+
+  Neither is on screen when a page opens -- the chat widget is a button in
+  the corner and the announcement modal only appears when there is an
+  announcement -- but between them they were dragging the animation engine
+  and the websocket client into the entry bundle, which every user waits
+  for before seeing anything at all. Splitting them out does not change
+  when either one appears to the user; it changes what has to arrive first.
+*/
+const ChatBotWidget = lazy(() =>
+  import("@/components/ChatBotWidget").then((m) => ({ default: m.ChatBotWidget })));
+const GlobalLoginAnnouncementModal = lazy(() =>
+  import("@/components/GlobalLoginAnnouncementModal").then(
+    (m) => ({ default: m.GlobalLoginAnnouncementModal })));
 import { CallProvider, useCalls } from "@/hooks/useCalls";
 import { describeCallNotification } from "@/lib/callNotifications";
 import { displayPersonName } from "@/lib/people";
@@ -315,6 +330,47 @@ function AppShell() {
   const userName = displayPersonName(rawName, user?.employeeCode) ?? rawName;
   const roleLabel = isPIXE100 ? "CTO" : getRoleDisplayName(user?.roles);
 
+  /*
+    Employees and team leaders see their actual job title here rather than
+    the word "Employee", which told them nothing they did not already know.
+    The role name is still what everyone above that tier gets, because for
+    HR and the administrators the role IS the job.
+
+    The query shares the "profile" key with the Profile page, so opening
+    that page costs no second request, and the five minute stale time in
+    the query client means this is fetched about once per sign-in.
+  */
+  const wantsDesignation =
+    !isPIXE100 &&
+    ["IT_EMP", "IT_TL", "CV_EMP", "CV_SUP"].some((r) => user?.roles?.includes(r));
+
+  const myProfile = useQuery({
+    enabled: wantsDesignation,
+    queryKey: ["profile"],
+    queryFn: async () =>
+      (await api.get<ApiEnvelope<{
+        designationTitle?: string;
+        positionTitle?: string;
+      }>>("/users/me")).data.data,
+  });
+
+  /*
+    Designation is the field we want, but it is only set when somebody was
+    given one, and older accounts were imported with the job written into
+    the position column instead. Trying position second means those people
+    see their real job rather than the word "Employee".
+
+    Falling back to the role label last matters: both fields are optional,
+    and an empty line under the name looks like a broken layout.
+  */
+  const designation = (
+    myProfile.data?.designationTitle ||
+    myProfile.data?.positionTitle ||
+    ""
+  ).trim();
+  const subtitle = wantsDesignation && designation ? designation : roleLabel;
+  const subtitleIsTitle = subtitle === designation;
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar */}
@@ -441,11 +497,17 @@ function AppShell() {
               <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-secondary" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="truncate text-sm font-bold text-white leading-tight">
+              <div className="identity-name truncate text-white">
                 {userName}
               </div>
-              <div className="truncate text-xs font-bold text-slate-300 leading-tight mt-0.5">
-                {roleLabel}
+              <div
+                className={cn(
+                  "truncate leading-tight mt-0.5",
+                  subtitleIsTitle ? "identity-role" : "identity-role-plain"
+                )}
+                title={subtitle}
+              >
+                {subtitle}
               </div>
             </div>
           </button>
@@ -649,8 +711,10 @@ function AppShell() {
           </div>
         </main>
       </div>
-      <ChatBotWidget />
-      <GlobalLoginAnnouncementModal />
+      <Suspense fallback={null}>
+        <ChatBotWidget />
+        <GlobalLoginAnnouncementModal />
+      </Suspense>
     </div>
   );
 }

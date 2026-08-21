@@ -84,6 +84,15 @@
     --border: 240 5% 28%;
     --input: 240 5% 28%;
     --ring: 243 90% 70%;
+
+    /*
+      The face used for a person's own name in the sidebar. The design calls
+      for Beathcond, which is a licensed font and is not on Google Fonts, so
+      Barlow Condensed 800 italic stands in for it: same heavy, condensed,
+      slanted display character. To use the real thing, drop the .woff2 into
+      web/public/fonts, add an @font-face for it, and change this one line.
+    */
+    --font-identity: "Barlow Condensed";
   }
 
   * {
@@ -182,6 +191,85 @@
       linear-gradient(hsla(243, 75%, 70%, 0.10) 1px, transparent 1px),
       linear-gradient(90deg, hsla(243, 75%, 70%, 0.10) 1px, transparent 1px);
     background-size: 28px 28px;
+  }
+
+  /*
+    The name and job title in the sidebar footer. The name is set in the
+    condensed display face and the designation in Fugaz One, which is wide
+    and heavy, so the two never read as one block of text despite sitting on
+    consecutive lines.
+  */
+  .identity-name {
+    font-family: var(--font-identity), "Barlow Condensed", sans-serif;
+    font-weight: 800;
+    font-style: italic;
+    font-size: 1.2rem;
+    line-height: 1.05;
+    letter-spacing: 0.005em;
+  }
+
+  /*
+    The designation carries a slow highlight that travels across the letters.
+    It is a moving background behind clipped text rather than an opacity or
+    transform loop, so nothing about the element's box changes and the sweep
+    costs no layout work.
+  */
+  .identity-role {
+    font-family: "Fugaz One", "Space Grotesk", cursive;
+    font-size: 0.6875rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    /*
+      Four stops rather than a soft two-colour blend. The eye reads a
+      travelling edge, not a slow tint change, so the movement is obvious
+      at this size without the text ever becoming hard to read.
+    */
+    background-image: linear-gradient(
+      100deg,
+      #818cf8 0%,
+      #818cf8 28%,
+      #ffffff 42%,
+      #5eead4 50%,
+      #34d399 58%,
+      #818cf8 74%,
+      #818cf8 100%
+    );
+    background-size: 320% 100%;
+    background-position: 100% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: identity-sweep 3.2s linear infinite;
+  }
+
+  /* A title nobody has filled in yet should not shimmer as if it had. */
+  .identity-role-plain {
+    font-family: "Fugaz One", "Space Grotesk", cursive;
+    font-size: 0.6875rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: rgb(203 213 225);
+  }
+
+  @keyframes identity-sweep {
+    to {
+      background-position: -220% 0;
+    }
+  }
+
+  /*
+    Motion is decoration here, so it goes away entirely for anyone who has
+    asked their system for less of it. The gradient is dropped with it,
+    because a clipped gradient that never moves reads as uneven colour.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    .identity-role {
+      animation: none;
+      background-image: none;
+      -webkit-background-clip: border-box;
+      background-clip: border-box;
+      color: rgb(203 213 225);
+    }
   }
 
   .code-chip {

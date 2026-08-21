@@ -114,6 +114,13 @@ class CallService {
   /// Emits whenever anything below changes, so one listener redraws the UI.
   Stream<void> get changes => _changes.stream;
 
+  final _errors = StreamController<String>.broadcast();
+
+  /// Emits a human-readable error when something goes wrong during call setup
+  /// (e.g. no camera permission, media device not available). The shell or
+  /// call screen can listen and display a snackbar.
+  Stream<String> get errors => _errors.stream;
+
   CallState get state => _state;
   CallPeer? get peer => _peer;
   bool get isVideo => _isVideo;
@@ -208,6 +215,16 @@ class CallService {
       if (_state == CallState.idle) return;
 
       switch (s) {
+        // A path was found, so the budget below starts again. Without this the
+        // two allowed restarts were two per app session rather than two per
+        // problem: a call that survived a couple of handovers spent the budget
+        // permanently, and from then on the first blip in that call -- and in
+        // every later call, because nothing cleared it either -- ended things
+        // outright. Two people would have one bad call and then find that
+        // calling back kept failing instantly for no visible reason.
+        case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
+          _iceRestarts = 0;
+
         // Closed is final — the connection object itself is gone and there is
         // nothing left to recover.
         case RTCPeerConnectionState.RTCPeerConnectionStateClosed:
@@ -312,14 +329,14 @@ class CallService {
   int get _elapsedSeconds =>
       _connectedAt == null ? 0 : DateTime.now().difference(_connectedAt!).inSeconds;
 
-  /// Ring somebody.
+  /// Prepare the call state synchronously so the UI can react instantly.
   ///
-  /// The offer deliberately does **not** go out here: it waits for "ringing",
-  /// exactly as the web client does, so a callee who is not listening yet still
-  /// receives a working call.
-  Future<void> call(CallPeer to, {required bool video}) async {
+  /// This sets the peer and state to outgoing and emits, causing the shell to
+  /// rebuild and show the CallScreen — all without any async work. The caller
+  /// then calls [call] to open media and start signalling, but the UI transition
+  /// already happened.
+  void prepareCall(CallPeer to, {required bool video}) {
     if (isBusy) return;
-
     _peer = to;
     _isVideo = video;
     _isCaller = true;
@@ -327,6 +344,21 @@ class CallService {
     _state = CallState.outgoing;
     _emit();
     _startRingTimer();
+  }
+
+  /// Ring somebody.
+  ///
+  /// The offer deliberately does **not** go out here: it waits for "ringing",
+  /// exactly as the web client does, so a callee who is not listening yet still
+  /// receives a working call.
+  ///
+  /// If [prepareCall] was called first, this only opens media and signals —
+  /// the UI is already on the CallScreen.
+  Future<void> call(CallPeer to, {required bool video}) async {
+    if (!isBusy) {
+      // No prepareCall — single-step call for compatibility.
+      prepareCall(to, video: video);
+    }
 
     try {
       await _openMedia(video: video);
@@ -334,8 +366,11 @@ class CallService {
 
       // "calling" first, so their phone rings while the offer is still being
       // built — and so the server raises its notification for it.
-      await _send(to.id, 'calling', {'isVideo': video});
-    } catch (_) {
+      await _send(_peer!.id, 'calling', {'isVideo': video});
+    } catch (e) {
+      if (!_errors.isClosed) {
+        _errors.add('Could not start the call: ${e.toString()}');
+      }
       await hangUp(notify: false);
     }
   }
@@ -449,6 +484,12 @@ class CallService {
     _state = CallState.idle;
     _muted = false;
     _speakerOn = false;
+
+    // Belt and braces for the counter above: a call that ends while the path
+    // is still broken never reaches Connected, so without clearing it here a
+    // failed call would hand its spent budget to the next one.
+    _iceRestarts = 0;
+    _restarting = false;
     _emit();
   }
 
@@ -661,6 +702,7 @@ class CallService {
   Future<void> dispose() async {
     await _signals?.cancel();
     await hangUp(notify: false);
-    await _changes.close();
+    if (!_changes.isClosed) await _changes.close();
+    if (!_errors.isClosed) await _errors.close();
   }
 }

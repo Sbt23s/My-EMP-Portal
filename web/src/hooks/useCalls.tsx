@@ -142,6 +142,24 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const restartCountRef = useRef(0);
   /** Guards against sending a second offer if "ringing" arrives twice. */
   const offerSentRef = useRef(false);
+  /**
+   * The pending "give up on this call" timer.
+   *
+   * Held in a ref rather than left to fire because it has to be cancellable.
+   * It was previously started and forgotten, so a connection that failed
+   * twice had two timers racing, and -- the case that actually ended calls --
+   * a repair that was working could not stop the timer that was about to
+   * throw the call away.
+   */
+  const giveUpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Stop the countdown. Called whenever there is evidence of recovery. */
+  const cancelGiveUp = useCallback(() => {
+    if (giveUpTimerRef.current) {
+      clearTimeout(giveUpTimerRef.current);
+      giveUpTimerRef.current = null;
+    }
+  }, []);
 
   const sendSignal = useCallback(async (recipientId: number, type: string, data: any) => {
     try {
@@ -166,10 +184,22 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const cleanupCall = useCallback(() => {
+    if (giveUpTimerRef.current) {
+      clearTimeout(giveUpTimerRef.current);
+      giveUpTimerRef.current = null;
+    }
     pendingOfferRef.current = null;
     pendingCandidatesRef.current = [];
     isCallerRef.current = false;
     offerSentRef.current = false;
+    /*
+      The restart budget belongs to a call, not to the tab. It was only ever
+      cleared on reaching "connected", so a call that failed for good left the
+      counter spent -- and the next call, and every call after it in that tab,
+      got no repair attempt at all and ended the moment the network hiccuped.
+    */
+    restartCountRef.current = 0;
+    restartingRef.current = false;
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
       localStreamRef.current = null;
@@ -342,7 +372,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         // the TURN server and complete a round trip through the other client —
         // on a slow mobile connection three seconds cut off restarts that were
         // still in progress and would have succeeded.
-        setTimeout(() => {
+        //
+        // Only ever one of these. Restarting the countdown on each failure
+        // rather than stacking a second timer beside the first is what keeps
+        // the deadline meaning "eight seconds since the last bad news".
+        cancelGiveUp();
+        giveUpTimerRef.current = setTimeout(() => {
+          giveUpTimerRef.current = null;
           if (pcRef.current && (pcRef.current.connectionState === "failed" || pcRef.current.connectionState === "closed")) {
             if (callStateRef.current === "connected" || callStateRef.current === "connecting" || callStateRef.current === "ringing") {
               toast.error("The connection dropped.");
@@ -351,12 +387,25 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           }
         }, 8000);
       }
-      // Recovered. Clear the budget so a later, unrelated failure gets its own
-      // two attempts instead of inheriting a spent counter from an hour ago.
-      if (pc.connectionState === "connected") restartCountRef.current = 0;
+
+      /*
+        Recovered.
+
+        Clearing the budget lets a later, unrelated failure have its own two
+        attempts instead of inheriting a spent counter from an hour ago, and
+        cancelling the countdown is what stops a call that has already come
+        back from being torn down by a timer set before it did. Without that
+        second line the timer fired, found the connection healthy, and did
+        nothing -- but only because of a guard; anything that made the state
+        wobble at the eight second mark ended a working call.
+      */
+      if (pc.connectionState === "connected") {
+        restartCountRef.current = 0;
+        cancelGiveUp();
+      }
     };
     return pc;
-  }, [sendSignal, cleanupCall, getIceServersConfig]);
+  }, [sendSignal, cleanupCall, getIceServersConfig, cancelGiveUp]);
 
   const startCall = useCallback(async (partnerId: number, partnerName: string, isVideo: boolean) => {
     if (callStateRef.current !== "idle") return;
@@ -493,6 +542,24 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         // Held until Accept is pressed, unless this side already accepted and
         // was waiting for it.
         if (pcRef.current && localStreamRef.current && !isCallerRef.current) {
+          /*
+            An offer arriving on a call that is already up is the other side
+            repairing the path, not a new call.
+
+            This is the side that cannot repair anything itself -- only the
+            caller may re-offer, or the two offers collide as glare -- so all
+            it could previously do was watch its own eight second countdown
+            run out. When the repair took longer than the remainder of that
+            countdown, this side hung up on a call that was in the middle of
+            coming back, and the other side saw the call die just as its
+            restart succeeded. That is the "connection dropped" people were
+            getting on calls that recovered.
+
+            Arrival of the offer is proof the far end is alive and working on
+            it, so the countdown is cancelled here and, if the repair does not
+            land, the connection will fail again and start a fresh one.
+          */
+          if (data?.iceRestart) cancelGiveUp();
           try {
             await pcRef.current.setRemoteDescription(new RTCSessionDescription(data?.sdp));
             await drainCandidates();
@@ -533,6 +600,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
       case "answer":
         if (pcRef.current) {
+          // The far end answered, so it is there and negotiating. Same reason
+          // as above: do not let a countdown started before this arrived end a
+          // call that is in the middle of being repaired.
+          cancelGiveUp();
           await pcRef.current.setRemoteDescription(new RTCSessionDescription(data.sdp));
           await drainCandidates();
           setCallState("connected");
@@ -570,7 +641,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       default:
         break;
     }
-  }, [sendSignal, drainCandidates, cleanupCall, logCall, callIsVideo]);
+  }, [sendSignal, drainCandidates, cleanupCall, logCall, callIsVideo, cancelGiveUp]);
 
   const handlerRef = useRef(handleSignal);
   useEffect(() => { handlerRef.current = handleSignal; }, [handleSignal]);

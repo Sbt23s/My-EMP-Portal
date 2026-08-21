@@ -2554,7 +2554,7 @@ export default function DashboardPage() {
               {greeting}, {user?.name?.split(" ")[0] ?? ""} 👋
             </h1>
             {showsCoverTitle && coverTitle && (
-              <div className="cover-role mt-2">
+              <div className="cover-role">
                 <span>{coverTitle}</span>
               </div>
             )}

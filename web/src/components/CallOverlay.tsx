@@ -83,7 +83,55 @@ export function CallOverlay({
   const remoteAudio = useRef<HTMLAudioElement | null>(null);
   const [seconds, setSeconds] = useState(0);
 
-  const hasRemoteVideo = isVideo && !!remoteStream && remoteStream.getVideoTracks().some(t => t.readyState === "live" && t.enabled);
+  /*
+    Bumped whenever the far side's tracks change.
+
+    A MediaStream is mutable, and both of the other person's tracks belong to
+    the same one. The audio track arrives first and the stream is put into
+    state; the video track is then added to that very same object, so the
+    reference React holds is unchanged and it correctly decides there is
+    nothing to re-render. hasRemoteVideo below stays as it was computed when
+    the stream held audio only -- false -- and the remote picture is never
+    shown at all, on either side, for the whole call.
+
+    Watching the stream itself is what makes the derived values below true:
+    addtrack for a track appearing, mute and unmute for the other side
+    turning their camera off and on, which are events on the receiving end
+    rather than anything that travels in the signalling.
+  */
+  const [remoteRevision, setRemoteRevision] = useState(0);
+
+  useEffect(() => {
+    if (!remoteStream) return;
+    const bump = () => setRemoteRevision((n) => n + 1);
+
+    remoteStream.addEventListener("addtrack", bump);
+    remoteStream.addEventListener("removetrack", bump);
+    const tracks = remoteStream.getTracks();
+    tracks.forEach((t) => {
+      t.addEventListener("mute", bump);
+      t.addEventListener("unmute", bump);
+      t.addEventListener("ended", bump);
+    });
+
+    // One bump on attach as well: a track can arrive between the render that
+    // read the stream and this effect running, and nothing would announce it.
+    bump();
+
+    return () => {
+      remoteStream.removeEventListener("addtrack", bump);
+      remoteStream.removeEventListener("removetrack", bump);
+      tracks.forEach((t) => {
+        t.removeEventListener("mute", bump);
+        t.removeEventListener("unmute", bump);
+        t.removeEventListener("ended", bump);
+      });
+    };
+    // remoteRevision is a dependency so newly added tracks get listeners too.
+  }, [remoteStream, remoteRevision]);
+
+  const hasRemoteVideo = isVideo && !!remoteStream
+    && remoteStream.getVideoTracks().some(t => t.readyState === "live" && !t.muted);
   const hasLocalVideo = isVideo && !!localStream && localStream.getVideoTracks().some(t => t.readyState === "live" && t.enabled) && !cameraOff;
 
   // Streams are attached through the DOM rather than a src attribute. The state
@@ -139,58 +187,81 @@ export function CallOverlay({
       {isVideo ? (
         <div className="relative flex-1 w-full max-w-4xl overflow-hidden rounded-2xl bg-black shadow-2xl flex items-center justify-center">
           {state === "connected" ? (
-            hasRemoteVideo ? (
-              <>
-                <video
-                  ref={remoteVideo}
-                  autoPlay
-                  playsInline
-                  className="h-full w-full object-contain bg-black"
-                />
-                {/*
-                  Hidden rather than unmounted. A remounted video element is a
-                  new element with no stream attached, and re-attaching it is
-                  easy to get wrong -- as it was. Keeping the one element for
-                  the life of the call means the picture is always ready the
-                  instant the camera is switched back on, with no black frame
-                  while it reconnects.
-                */}
-                <video
-                  ref={localVideo}
-                  autoPlay
-                  playsInline
-                  muted
-                  className={cn(
-                    "absolute bottom-4 right-4 w-36 h-24 sm:w-48 sm:h-32 rounded-xl border-2 border-white/30 object-contain bg-black shadow-xl -scale-x-100",
-                    !hasLocalVideo && "hidden"
-                  )}
-                />
-                <div className="absolute left-4 top-4 rounded-full bg-black/60 px-4 py-1.5 text-sm font-semibold tabular-nums backdrop-blur-md">
-                  {partnerName} · {label}
+            /*
+              One set of elements for the whole call, shown and hidden rather
+              than swapped in and out.
+
+              The three cases used to be separate branches, so the remote
+              <video> only existed while hasRemoteVideo was true. That value is
+              derived from the far side's tracks, which arrive after the call
+              connects -- so at the moment it was first read there was no video
+              track yet, the branch rendered the avatar instead, and the
+              element that would have shown the other person was never created.
+              Nobody saw anybody.
+
+              Keeping the elements mounted means the picture appears the
+              instant a track starts flowing, with no dependency on a React
+              value being recomputed at exactly the right time, and no black
+              frame while a new element finds its stream.
+            */
+            <>
+              <video
+                ref={remoteVideo}
+                autoPlay
+                playsInline
+                className={cn(
+                  "h-full w-full object-contain bg-black",
+                  !hasRemoteVideo && "hidden"
+                )}
+              />
+
+              {/* Own camera, full size, while the other side has none to show. */}
+              <video
+                ref={mainLocalVideo}
+                autoPlay
+                playsInline
+                muted
+                className={cn(
+                  "h-full w-full object-contain bg-black -scale-x-100",
+                  (hasRemoteVideo || !hasLocalVideo) && "hidden"
+                )}
+              />
+
+              {/* Own camera, small, once there is something to sit on top of. */}
+              <video
+                ref={localVideo}
+                autoPlay
+                playsInline
+                muted
+                className={cn(
+                  "absolute bottom-4 right-4 w-36 h-24 sm:w-48 sm:h-32 rounded-xl border-2 border-white/30 object-contain bg-black shadow-xl -scale-x-100",
+                  (!hasRemoteVideo || !hasLocalVideo) && "hidden"
+                )}
+              />
+
+              {/* Shown over the top when there is no picture from either side. */}
+              {!hasRemoteVideo && !hasLocalVideo && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/80">
+                  <div className="flex h-28 w-28 items-center justify-center rounded-full bg-white/20 text-4xl font-bold backdrop-blur-sm shadow-xl">
+                    {initials(partnerName)}
+                  </div>
+                  <h3 className="font-display text-2xl font-bold drop-shadow-md">{partnerName}</h3>
+                  <p className="text-base font-medium tabular-nums text-white/90 drop-shadow-md">{label}</p>
                 </div>
-              </>
-            ) : hasLocalVideo ? (
-              <>
-                <video
-                  ref={mainLocalVideo}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="h-full w-full object-contain bg-black -scale-x-100"
-                />
-                <div className="absolute left-4 top-4 rounded-full bg-black/60 px-4 py-1.5 text-sm font-semibold tabular-nums backdrop-blur-md">
-                  {partnerName} · {label}
+              )}
+
+              {/* The other person's camera being off is worth saying, rather
+                  than leaving a black rectangle to be interpreted. */}
+              {!hasRemoteVideo && hasLocalVideo && (
+                <div className="absolute left-1/2 top-6 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-xs backdrop-blur-md">
+                  {partnerName}'s camera is off
                 </div>
-              </>
-            ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/80">
-                <div className="flex h-28 w-28 items-center justify-center rounded-full bg-white/20 text-4xl font-bold backdrop-blur-sm shadow-xl">
-                  {initials(partnerName)}
-                </div>
-                <h3 className="font-display text-2xl font-bold drop-shadow-md">{partnerName}</h3>
-                <p className="text-base font-medium tabular-nums text-white/90 drop-shadow-md">{label}</p>
+              )}
+
+              <div className="absolute left-4 top-4 rounded-full bg-black/60 px-4 py-1.5 text-sm font-semibold tabular-nums backdrop-blur-md">
+                {partnerName} · {label}
               </div>
-            )
+            </>
           ) : (
             <>
               <video

@@ -2533,53 +2533,16 @@ export default function DashboardPage() {
             {branding?.base?.welcomeText?.trim() && (
               <p className="mt-1 text-sm text-white/85">{branding.base.welcomeText}</p>
             )}
-            {/* Nagging someone to mark attendance they have no way to mark
-                is the module leaking through the greeting. */}
-            {hasModule("ATTENDANCE") && (
-              <p className="mt-1 text-sm text-white/85">
-                {d?.punchedInToday ? "You are present today. Have a great day!" : "Don't forget to mark your attendance!"}
-              </p>
-            )}
+            {/*
+              The attendance reminder and the row of shortcut cards were here.
 
-            {/* Quick action cards */}
-            <div className="mt-5 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
-              {hasModule("ATTENDANCE") && (
-                <Link
-                  to="/attendance"
-                  className="group flex flex-col items-start gap-2 rounded-xl bg-white/95 p-3.5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-emerald-950/80 dark:border dark:border-emerald-400/30 backdrop-blur-md"
-                >
-                  <span className="grid h-9 w-9 place-items-center rounded-lg bg-indigo-100 text-indigo-600 dark:bg-indigo-500/30 dark:text-indigo-300">
-                    <Clock className="h-4 w-4" />
-                  </span>
-                  <span className="text-sm font-bold text-slate-900 dark:text-white">{d?.punchedInToday ? "Punch Out" : "Punch In"}</span>
-                  <span className="text-[11px] font-semibold text-slate-600 dark:text-emerald-200/90">Go to Attendance</span>
-                </Link>
-              )}
-
-              {/* Each shortcut names the module it belongs to and disappears
-                  with it. A shortcut to a switched-off module leads to a page
-                  the sidebar no longer offers, which reads as a broken link
-                  rather than as a feature the company does not use. */}
-              {[
-                { to: "/leave", label: "Apply Leave", icon: CalendarCheck, tint: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/30 dark:text-emerald-300", sub: "Time off", module: "LEAVE" },
-                { to: "/helpdesk", label: "Raise Ticket", icon: LifeBuoy, tint: "bg-sky-100 text-sky-600 dark:bg-sky-500/30 dark:text-sky-300", sub: "Get help", module: "HELPDESK" }
-                // "My Requests" used to sit here. It pointed at /leave, the same
-                // page as "Apply Leave" beside it, so the row offered the same
-                // destination twice under two names.
-              ].filter((a) => hasModule(a.module)).map((a) => (
-                <Link
-                  key={a.label}
-                  to={a.to}
-                  className="group flex flex-col items-start gap-2 rounded-xl bg-white/95 p-3.5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-emerald-950/80 dark:border dark:border-emerald-400/30 backdrop-blur-md"
-                >
-                  <span className={cn("grid h-9 w-9 place-items-center rounded-lg", a.tint)}>
-                    <a.icon className="h-4 w-4" />
-                  </span>
-                  <span className="text-sm font-bold text-slate-900 dark:text-white">{a.label}</span>
-                  <span className="text-[11px] font-semibold text-slate-600 dark:text-emerald-200/90">{a.sub}</span>
-                </Link>
-              ))}
-            </div>
+              Both were removed deliberately. The reminder told people something
+              the Today's Status card below already shows, and the three cards --
+              Punch In, Apply Leave, Raise Ticket -- duplicated the first three
+              entries of the sidebar, which is on every screen. With a cover
+              image behind it the banner is now a header rather than a second
+              navigation, and the page reaches the real figures sooner.
+            */}
           </div>
 
           {/* The employee's own photo when they have uploaded one, and the

@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Avatar, resolvePhotoUrl } from "@/components/ui/avatar";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
@@ -123,13 +124,14 @@ export default function ProfilePage() {
   });
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<ProfileForm>({ mode: "onBlur" });
+  const nameField = register("name", nameRules);
 
   useEffect(() => {
     if (profile.data) {
       reset({
         name: profile.data.name,
         email: profile.data.email,
-        gender: profile.data.gender,
+        gender: (profile.data.gender ?? "").trim().toUpperCase().slice(0, 1),
         house: profile.data.address?.house,
         street: profile.data.address?.street,
         locality: profile.data.address?.locality,
@@ -363,9 +365,22 @@ export default function ProfilePage() {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label htmlFor="name">Full name</Label>
-                      {/* Letters only. The field accepted anything at all,
-                          including a name typed as digits. */}
-                      <Input id="name" {...register("name", nameRules)} />
+                      {/*
+                        Digits are dropped as they are typed rather than
+                        reported afterwards. Telling somebody their name is
+                        wrong once they have finished typing it is worse than
+                        never letting the wrong character land, and the rules
+                        still run on submit for everything a filter cannot
+                        catch.
+                      */}
+                      <Input
+                        id="name"
+                        {...nameField}
+                        onChange={(e) => {
+                          e.target.value = e.target.value.replace(/[0-9]/g, "");
+                          nameField.onChange(e);
+                        }}
+                      />
                       {errors.name && (
                         <p className="text-xs text-destructive">{errors.name.message}</p>
                       )}
@@ -379,7 +394,21 @@ export default function ProfilePage() {
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="gender">Gender</Label>
-                      <Input id="gender" {...register("gender")} />
+                      {/*
+                        A list rather than a free text box. It was typed by
+                        hand, so the stored value could be "F", "female",
+                        "FEMALE" or anything else, and the field showed the
+                        single letter the server keeps rather than a word.
+                        The values here are the single letters the server
+                        already stores, so nothing about the saved data
+                        changes.
+                      */}
+                      <Select id="gender" {...register("gender")}>
+                        <option value="">Select…</option>
+                        <option value="M">Male</option>
+                        <option value="F">Female</option>
+                        <option value="O">Other</option>
+                      </Select>
                     </div>
                   </div>
 

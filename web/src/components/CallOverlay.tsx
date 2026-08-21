@@ -98,7 +98,16 @@ export function CallOverlay({
       mainLocalVideo.current.srcObject = localStream ?? null;
       if (localStream) mainLocalVideo.current.play().catch(() => {});
     }
-  }, [localStream, state, isVideo, hasRemoteVideo]);
+    /*
+      hasLocalVideo and cameraOff are dependencies because they decide whether
+      the element exists at all. Turning the camera off unmounted the <video>;
+      turning it back on mounted a brand new one with no srcObject, and this
+      effect did not re-run because the stream object itself had not changed.
+      The result was your own picture never coming back after Stop Video --
+      the camera was running and the far side could see you, but your own
+      preview stayed black.
+    */
+  }, [localStream, state, isVideo, hasRemoteVideo, hasLocalVideo, cameraOff]);
   useEffect(() => {
     if (remoteVideo.current) {
       remoteVideo.current.srcObject = remoteStream ?? null;
@@ -138,15 +147,24 @@ export function CallOverlay({
                   playsInline
                   className="h-full w-full object-contain bg-black"
                 />
-                {hasLocalVideo && (
-                  <video
-                    ref={localVideo}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="absolute bottom-4 right-4 w-36 h-24 sm:w-48 sm:h-32 rounded-xl border-2 border-white/30 object-contain bg-black shadow-xl -scale-x-100"
-                  />
-                )}
+                {/*
+                  Hidden rather than unmounted. A remounted video element is a
+                  new element with no stream attached, and re-attaching it is
+                  easy to get wrong -- as it was. Keeping the one element for
+                  the life of the call means the picture is always ready the
+                  instant the camera is switched back on, with no black frame
+                  while it reconnects.
+                */}
+                <video
+                  ref={localVideo}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={cn(
+                    "absolute bottom-4 right-4 w-36 h-24 sm:w-48 sm:h-32 rounded-xl border-2 border-white/30 object-contain bg-black shadow-xl -scale-x-100",
+                    !hasLocalVideo && "hidden"
+                  )}
+                />
                 <div className="absolute left-4 top-4 rounded-full bg-black/60 px-4 py-1.5 text-sm font-semibold tabular-nums backdrop-blur-md">
                   {partnerName} · {label}
                 </div>

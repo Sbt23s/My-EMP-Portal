@@ -3,7 +3,7 @@ import {
 } from "react";
 import toast from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useCalls, type CallSignal } from "@/hooks/useCalls";
+import { useCalls, playRingtone, type CallSignal } from "@/hooks/useCalls";
 
 /**
  * Group voice and video calling.
@@ -49,6 +49,17 @@ const GROUP_VIDEO: MediaTrackConstraints = {
 
 /** Per-stream ceiling, chosen so a full room fits in a typical upload. */
 const GROUP_MAX_BITRATE = 400_000;
+
+/**
+ * How long a group call may go unanswered.
+ *
+ * Without this an invitation rang until somebody closed the tab, and the
+ * caller sat in an empty call with no way to tell the difference between
+ * "still ringing" and "nobody is going to answer". Forty-five seconds is
+ * about as long as anyone lets a phone ring before deciding it is not being
+ * picked up.
+ */
+const RING_TIMEOUT_MS = 45_000;
 
 /* ------------------------------------------------------------------ types */
 
@@ -135,6 +146,23 @@ export function GroupCallProvider({ children }: { children: React.ReactNode }) {
   const localStreamRef = useRef<MediaStream | null>(null);
   const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
   const stateRef = useRef<GroupCallState>("idle");
+  /** Stops the ringing tone. Null when nothing is ringing. */
+  const stopRingRef = useRef<(() => void) | null>(null);
+  const ringTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /*
+    Silence and cancel together, always. The tone and the timer are started at
+    the same moment and either one outliving the other is a bug the user hears
+    -- a phone that rings after the call is over, or a call that never gives up.
+  */
+  const stopRinging = useCallback(() => {
+    stopRingRef.current?.();
+    stopRingRef.current = null;
+    if (ringTimerRef.current) {
+      clearTimeout(ringTimerRef.current);
+      ringTimerRef.current = null;
+    }
+  }, []);
   const isVideoRef = useRef(true);
 
   useEffect(() => { stateRef.current = state; }, [state]);
@@ -157,6 +185,7 @@ export function GroupCallProvider({ children }: { children: React.ReactNode }) {
   /* ------------------------------------------------------------ teardown */
 
   const teardown = useCallback((notify: boolean) => {
+    stopRinging();
     const room = roomIdRef.current;
 
     if (notify && room) {
@@ -188,7 +217,7 @@ export function GroupCallProvider({ children }: { children: React.ReactNode }) {
     setMuted(false);
     setCameraOff(false);
     setSharingScreen(false);
-  }, [sendSignal]);
+  }, [sendSignal, stopRinging]);
 
   /* ------------------------------------------------- one connection to one */
 
@@ -322,6 +351,24 @@ export function GroupCallProvider({ children }: { children: React.ReactNode }) {
         memberIds: Array.isArray(data?.memberIds) ? data.memberIds : []
       });
       setState("incoming");
+
+      /*
+        Ring, and stop ringing on its own.
+
+        It rang silently before, so a group call only reached anybody who
+        happened to be looking at the tab, and it rang for ever, so an
+        invitation nobody answered stayed on screen until the tab was closed.
+      */
+      stopRinging();
+      stopRingRef.current = playRingtone();
+      ringTimerRef.current = setTimeout(() => {
+        ringTimerRef.current = null;
+        if (stateRef.current !== "incoming") return;
+        stopRinging();
+        setInvite(null);
+        setState("idle");
+        toast(`Missed a group call from ${senderName}`, { icon: "📞" });
+      }, RING_TIMEOUT_MS);
       return;
     }
 
@@ -339,6 +386,8 @@ export function GroupCallProvider({ children }: { children: React.ReactNode }) {
         about each other, every pair would glare on every join.
       */
       case "g-join": {
+        // Somebody is here, so the caller's own "nobody answered" clock stops.
+        stopRinging();
         if (peersRef.current.has(senderId)) return;
         if (peersRef.current.size + 1 >= MAX_GROUP_PARTICIPANTS) {
           void sendSignal(senderId, "g-full", { roomId: room });
@@ -464,7 +513,7 @@ export function GroupCallProvider({ children }: { children: React.ReactNode }) {
         toast(`${senderName} is on another call.`, { icon: "📞" });
         return;
     }
-  }, [createPeer, publish, sendSignal, teardown, user?.id, muted, cameraOff]);
+  }, [createPeer, publish, sendSignal, teardown, user?.id, muted, cameraOff, stopRinging]);
 
   const handleRef = useRef(handle);
   useEffect(() => { handleRef.current = handle; }, [handle]);
@@ -514,11 +563,25 @@ export function GroupCallProvider({ children }: { children: React.ReactNode }) {
         roomId, roomName: name, isVideo: video, memberIds
       });
     }
-  }, [openMedia, sendSignal, teardown, user?.id]);
+
+    /*
+      Give up if nobody joins. The caller was otherwise left sitting in an
+      empty call with their camera on, unable to tell "still ringing" from
+      "nobody is coming". Cancelled by the first g-join above.
+    */
+    stopRinging();
+    ringTimerRef.current = setTimeout(() => {
+      ringTimerRef.current = null;
+      if (stateRef.current !== "active" || peersRef.current.size > 0) return;
+      toast("Nobody answered.", { icon: "📞" });
+      teardown(true);
+    }, RING_TIMEOUT_MS);
+  }, [openMedia, sendSignal, teardown, user?.id, stopRinging]);
 
   const accept = useCallback(async () => {
     const inv = invite;
     if (!inv) return;
+    stopRinging();
 
     setRoomName(inv.roomName);
     setIsVideo(inv.isVideo);
@@ -546,13 +609,14 @@ export function GroupCallProvider({ children }: { children: React.ReactNode }) {
       if (id === user?.id) continue;
       void sendSignal(id, "g-join", { roomId: inv.roomId });
     }
-  }, [invite, openMedia, sendSignal, teardown, user?.id]);
+  }, [invite, openMedia, sendSignal, teardown, user?.id, stopRinging]);
 
   const decline = useCallback(() => {
+    stopRinging();
     if (invite) void sendSignal(invite.fromId, "g-leave", { roomId: invite.roomId });
     setInvite(null);
     setState("idle");
-  }, [invite, sendSignal]);
+  }, [invite, sendSignal, stopRinging]);
 
   const leave = useCallback(() => teardown(true), [teardown]);
 
@@ -630,6 +694,10 @@ export function GroupCallProvider({ children }: { children: React.ReactNode }) {
       // The picker was dismissed. Not an error worth a message.
     }
   }, [sharingScreen]);
+
+  // Leaving the page while a call is ringing must not leave a tone playing
+  // with nothing on screen to explain it.
+  useEffect(() => stopRinging, [stopRinging]);
 
   // A tab closing mid-call should not leave everyone else with a frozen tile.
   useEffect(() => {

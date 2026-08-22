@@ -65,7 +65,15 @@ interface CallApi {
 
 const CallContext = createContext<CallApi | null>(null);
 
-function playRingtone() {
+/**
+ * The ringing tone, as a pair of oscillators rather than an audio file.
+ *
+ * Exported so a group call rings with the same sound as a one-to-one one. A
+ * second implementation would drift from this one, and two different ring
+ * tones in the same product is the kind of detail that reads as two different
+ * products.
+ */
+export function playRingtone() {
   try {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioCtx) return () => {};

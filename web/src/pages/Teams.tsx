@@ -41,17 +41,48 @@ export default function TeamsPage() {
         .data.data.designation ?? []
   });
 
+  /*
+    Whether this account may read the whole staff directory.
+
+    Both endpoints below are restricted to people who manage others. An
+    ordinary employee has none of those permissions, so the page asked for
+    the directory, got a 403 and showed an error -- Teams was simply broken
+    for the largest group of people in the company, while working perfectly
+    for everyone who could have reported it.
+
+    A leader, HR or an administrator still gets every team. An employee gets
+    their own, from endpoints that need no permission and return the same
+    shapes, so everything downstream is unchanged.
+  */
+  const seesEveryone = hasPermission("USER_MANAGE", "TEAM_MANAGE", "ATTENDANCE_TEAM", "DASHBOARD_EXEC");
+
   const employees = useQuery({
-    queryKey: ["teams-employees"],
-    queryFn: async () =>
-      (await api.get<ApiEnvelope<PageEnvelope<UserSummary>>>("/users?status=ACTIVE&size=1000")).data.data.content
+    queryKey: ["teams-employees", seesEveryone],
+    queryFn: async () => {
+      if (seesEveryone) {
+        return (await api.get<ApiEnvelope<PageEnvelope<UserSummary>>>(
+          "/users?status=ACTIVE&size=1000")).data.data.content;
+      }
+      return (await api.get<ApiEnvelope<{ teamName: string; members: UserSummary[] }>>(
+        "/users/my-team")).data.data.members ?? [];
+    }
   });
 
-  // Today's attendance across everyone, for the present / absent counts.
+  // Today's attendance, reduced to "who is in" — the only thing the page asks
+  // of it. The two sources describe that differently, so each is converted
+  // here rather than leaving the difference for the summary below to handle.
   const attendance = useQuery({
-    queryKey: ["teams-attendance-today"],
-    queryFn: async () =>
-      (await api.get<ApiEnvelope<AttendanceRecord[]>>("/attendance/team")).data.data ?? []
+    queryKey: ["teams-attendance-today", seesEveryone],
+    queryFn: async (): Promise<number[]> => {
+      if (seesEveryone) {
+        const rows = (await api.get<ApiEnvelope<AttendanceRecord[]>>(
+          "/attendance/team")).data.data ?? [];
+        return rows.filter((a) => a.status === "PRESENT").map((a) => a.userId);
+      }
+      const rows = (await api.get<ApiEnvelope<{ userId: number; punchedIn: boolean }[]>>(
+        "/attendance/my-team-today")).data.data ?? [];
+      return rows.filter((r) => r.punchedIn).map((r) => r.userId);
+    }
   });
 
   // Move an employee out of their team by clearing their designation title.
@@ -112,9 +143,7 @@ export default function TeamsPage() {
   const teamSummary = useMemo(() => {
     const people = employees.data ?? [];
     const assignable = groups.filter((d) => d.assignable);
-    const present = new Set(
-      (attendance.data ?? []).filter((a) => a.status === "PRESENT").map((a) => a.userId)
-    );
+    const present = new Set(attendance.data ?? []);
 
     const sized = assignable
       .map((d) => ({ label: d.label, size: d.members.length }))

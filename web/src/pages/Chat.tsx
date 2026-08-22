@@ -2,7 +2,9 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { useGroupCall } from "@/hooks/useGroupCall";
+import { useGroupCall, MAX_GROUP_PARTICIPANTS } from "@/hooks/useGroupCall";
+import { Dialog, DialogHeader } from "@/components/ui/dialog";
+import { Avatar } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useChat, type ChatMessage, type SendExtras } from "@/hooks/useChat";
 import {
@@ -421,6 +423,18 @@ export default function ChatPage() {
   const [activeGroupId, setActiveGroupId] = useState<number | null>(requestedGroupId);
   const [draft, setDraft] = useState("");
   const [chatSearch, setChatSearch] = useState("");
+  /*
+    Ad-hoc group calls.
+
+    Calling from a room only works when a room already exists for exactly the
+    people you want, which is rarely true -- you usually want three colleagues
+    on a call, not the room they all happen to share. This picks the people
+    instead, and needs no room at all: the mesh only needs a list of who is in
+    it, and the id below is what keeps two concurrent calls apart.
+  */
+  const [groupCallOpen, setGroupCallOpen] = useState(false);
+  const [groupCallPick, setGroupCallPick] = useState<number[]>([]);
+  const [groupCallSearch, setGroupCallSearch] = useState("");
 
   // Searching inside the open room, which is what makes a long history useful.
   const [searchOpen, setSearchOpen] = useState(false);
@@ -852,6 +866,40 @@ export default function ChatPage() {
     }
   };
 
+  /**
+   * Ring the people picked in the dialog above.
+   *
+   * The room id is invented here rather than taken from a chat room, because
+   * there is no room -- the mesh needs a list of people and something to tell
+   * one call apart from another, and nothing else. It carries the caller's id
+   * and the clock so two calls started in the same second by different people
+   * cannot collide.
+   *
+   * memberIds includes the caller. Everyone who accepts announces themselves
+   * to every other member, and leaving the caller out of that list would mean
+   * nobody ever connected back to the person who started the call.
+   */
+  const startAdHocGroupCall = async (video: boolean) => {
+    if (groupCallPick.length === 0 || !user?.id) return;
+    const names = (contacts ?? [])
+      .filter((c) => groupCallPick.includes(c.id))
+      .map((c) => (c.name || "").split(" ")[0])
+      .filter(Boolean);
+    const title = names.length <= 2
+      ? names.join(" & ")
+      : `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
+    try {
+      await groupCall.start(
+        `adhoc-${user.id}-${Date.now()}`,
+        title || "Group call",
+        [user.id, ...groupCallPick],
+        video
+      );
+    } catch (err: any) {
+      toast.error(err?.message || "Could not start the group call");
+    }
+  };
+
   // Filter my conversations based on search text
   const filteredGroups =
     myGroups?.filter(
@@ -954,6 +1002,16 @@ export default function ChatPage() {
             >
               <UserPlus className="w-4 h-4" />
               New
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              title="Start a group call with anyone"
+              onClick={() => { setGroupCallOpen(true); setGroupCallPick([]); setGroupCallSearch(""); }}
+              disabled={groupCall.state !== "idle" || callState !== "idle"}
+            >
+              <Video className="w-4 h-4" />
+              Group call
             </Button>
           </div>
           <div className="relative">
@@ -2136,6 +2194,93 @@ export default function ChatPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/*
+        Pick who is on the call.
+
+        Capped at the mesh ceiling, and the cap is enforced by disabling the
+        rest of the list rather than by refusing after the fact -- being told
+        "too many" once you have already chosen eight people is a worse
+        experience than not being able to choose the seventh.
+      */}
+      {groupCallOpen && (
+        <Dialog open onClose={() => setGroupCallOpen(false)} className="max-w-md">
+          <DialogHeader
+            title="Start a group call"
+            description={`Choose up to ${MAX_GROUP_PARTICIPANTS - 1} people. Everyone you pick will ring at once.`}
+          />
+          <div className="px-4">
+            <Input
+              autoFocus
+              placeholder="Search people…"
+              value={groupCallSearch}
+              onChange={(e) => setGroupCallSearch(e.target.value)}
+            />
+          </div>
+          <div className="max-h-72 overflow-y-auto p-2">
+            {(contacts ?? [])
+              .filter((c) => c.name?.toLowerCase().includes(groupCallSearch.toLowerCase()))
+              .map((c) => {
+                const picked = groupCallPick.includes(c.id);
+                const full = groupCallPick.length >= MAX_GROUP_PARTICIPANTS - 1;
+                return (
+                  <label
+                    key={c.id}
+                    className={cn(
+                      "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 hover:bg-muted",
+                      !picked && full && "cursor-not-allowed opacity-40"
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={picked}
+                      disabled={!picked && full}
+                      onChange={() =>
+                        setGroupCallPick((prev) =>
+                          prev.includes(c.id) ? prev.filter((x) => x !== c.id) : [...prev, c.id])
+                      }
+                    />
+                    <Avatar name={c.name} src={c.photoPath} className="h-8 w-8" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium">{c.name}</div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {c.employeeCode || c.email || ""}
+                      </div>
+                    </div>
+                    {onlineSet.has(c.id) && (
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+                    )}
+                  </label>
+                );
+              })}
+            {(contacts ?? []).length === 0 && (
+              <p className="p-6 text-center text-sm text-muted-foreground">
+                There is nobody here to call.
+              </p>
+            )}
+          </div>
+          <div className="flex items-center justify-between gap-2 border-t p-3">
+            <span className="text-xs text-muted-foreground">
+              {groupCallPick.length} selected
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                disabled={groupCallPick.length === 0}
+                onClick={() => { setGroupCallOpen(false); void startAdHocGroupCall(false); }}
+              >
+                <Phone className="mr-1.5 h-4 w-4" /> Voice
+              </Button>
+              <Button
+                disabled={groupCallPick.length === 0}
+                onClick={() => { setGroupCallOpen(false); void startAdHocGroupCall(true); }}
+              >
+                <Video className="mr-1.5 h-4 w-4" /> Video
+              </Button>
+            </div>
+          </div>
+        </Dialog>
       )}
 
       {retentionOpen && <RetentionDialog onClose={() => setRetentionOpen(false)} />}

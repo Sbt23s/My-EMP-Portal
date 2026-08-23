@@ -149,6 +149,25 @@ public class PayrollController {
                 .body(new ByteArrayResource(bytes));
     }
 
+
+    /**
+     * Email a generated payslip to the employee it belongs to.
+     *
+     * <p>Takes no address. The recipient is read from the employee's own
+     * profile inside the service, so nobody can send someone else's payslip
+     * to an address they typed in.
+     *
+     * <p>PAYROLL_VIEW as well as PAYROLL_RUN, because the people who look
+     * after payroll are not always the people who run it, and sending a
+     * payslip that already exists is not a payroll run.
+     */
+    @PostMapping("/payslip/{id}/email")
+    @PreAuthorize("hasAnyAuthority('PAYROLL_RUN','PAYROLL_VIEW')")
+    public ApiResponse<Void> emailPayslip(@PathVariable Long id) {
+        String sentTo = service.emailToEmployee(id);
+        return ApiResponse.message("Payslip emailed to " + sentTo);
+    }
+
     @PostMapping("/runs")
     @PreAuthorize("hasAuthority('PAYROLL_RUN')")
     public ApiResponse<PayrollRunResponse> startBatch(@Valid @RequestBody PayrollRunRequest req) {

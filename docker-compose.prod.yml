@@ -43,6 +43,16 @@ services:
       # Run the backend in India time so LocalDateTime.now() (attendance punch
       # times, timestamps) is IST, not the container's default UTC.
       TZ: Asia/Kolkata
+      # Outgoing mail. Unset by default, and MailService treats that as
+      # "not configured" and says so, rather than posting into a socket
+      # nobody is listening on -- which is what localhost:1025 was.
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_AUTH: ${MAIL_AUTH:-true}
+      MAIL_STARTTLS: ${MAIL_STARTTLS:-true}
       # Defaults to the mysql container below. Point DB_HOST at the hosted
       # database in .env to use the real one instead — and then do not start the
       # mysql container at all, or half the stack talks to an empty copy.

@@ -1,7 +1,7 @@
 import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Wallet, FileText, Download, IndianRupee, Eye, Users, Clock, Banknote, WalletCards, ReceiptText, CheckCircle2 } from "lucide-react";
+import { Wallet, FileText, Download, IndianRupee, Eye, Users, Clock, Banknote, WalletCards, ReceiptText, CheckCircle2, Mail } from "lucide-react";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
@@ -122,6 +122,29 @@ export default function PayrollPage() {
   const [toDate, setToDate] = useState("");
   const [salaryFor, setSalaryFor] = useState<UserSummary | null>(null);
   const [genFor, setGenFor] = useState<UserSummary | null>(null);
+  /** Which payslip is being emailed, so only that row shows a spinner. */
+  const [emailing, setEmailing] = useState<number | null>(null);
+
+  /**
+   * Email a payslip to the employee it belongs to.
+   *
+   * No address is sent from here. The server reads it from that employee's
+   * own profile, which means this button cannot deliver somebody's salary to
+   * an address typed in by whoever pressed it. It reports back which address
+   * was used, so there is still confirmation of where it went.
+   */
+  const emailPayslip = async (payslipId: number, name: string) => {
+    setEmailing(payslipId);
+    const id = toast.loading(`Emailing ${name}'s payslip…`);
+    try {
+      const res = await api.post<{ message?: string }>(`/payroll/payslip/${payslipId}/email`);
+      toast.success(res.data?.message || `Payslip emailed to ${name}`, { id });
+    } catch (err) {
+      toast.error(apiMessage(err, "Could not send the payslip"), { id });
+    } finally {
+      setEmailing(null);
+    }
+  };
   const [payslipsFor, setPayslipsFor] = useState<UserSummary | null>(null);
 
   const employees = useQuery({
@@ -516,6 +539,23 @@ export default function PayrollPage() {
                                 title="Download PDF"
                               >
                                 <Download className="h-4 w-4" />
+                              </button>
+                              {/*
+                                No address is passed. The server reads it from
+                                the employee's own profile, so a payslip cannot
+                                be sent to somebody else by mistyping — and the
+                                button does not need to know or show it.
+                              */}
+                              <button
+                                type="button"
+                                disabled={emailing === payslip.id}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/30 transition-colors disabled:opacity-40"
+                                onClick={() => emailPayslip(payslip.id, e.name)}
+                                title={`Email this payslip to ${e.name}`}
+                              >
+                                {emailing === payslip.id
+                                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                                  : <Mail className="h-4 w-4" />}
                               </button>
                             </>
                           ) : (

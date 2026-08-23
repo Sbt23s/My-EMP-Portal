@@ -46,6 +46,7 @@ public class PayslipService {
     private final AttendanceRepository attendanceRepository;
     private final HolidayRepository holidayRepository;
     private final ReportService reportService;
+    private final com.pixous.hrportal.common.MailService mailService;
     private final PayrollRunRepository payrollRunRepository;
     private final NotificationService notificationService;
     private final BankDetailRepository bankDetailRepository;
@@ -420,6 +421,71 @@ public class PayslipService {
                 .orElseThrow(() -> ApiException.notFound("User"));
         // Always regenerate payslip on-the-fly to guarantee updated designation/bank metadata is shown
         return reportService.payslipPdfBytes(p, u);
+    }
+
+    /**
+     * Email one payslip to the person it belongs to.
+     *
+     * <p>The address is read from their profile rather than typed by whoever
+     * presses the button, so a payslip cannot reach the wrong person through a
+     * slip of the keyboard. Personal email is preferred over the work address:
+     * somebody who has left, or is about to, still needs their payslip, and a
+     * work mailbox is not private to them.
+     *
+     * <p>The PDF is generated fresh here rather than read from storage, exactly
+     * as the download does, so the copy that arrives by mail and the copy taken
+     * from the portal are always the same document.
+     *
+     * @return the address it was sent to, so the caller can say where it went
+     */
+    @Transactional(readOnly = true)
+    public String emailToEmployee(Long payslipId) {
+        Payslip p = payslipRepository.findById(payslipId)
+                .orElseThrow(() -> ApiException.notFound("Payslip"));
+        User u = userRepository.findById(p.getUserId())
+                .orElseThrow(() -> ApiException.notFound("User"));
+
+        String to = firstNonBlank(u.getPersonalEmail(), u.getEmail());
+        if (to == null) {
+            throw ApiException.business(
+                    u.getName() + " has no email address on their profile, so there is "
+                    + "nowhere to send it. Add one on their employee record first.");
+        }
+
+        String period = monthName(p.getPayMonth()) + " " + p.getPayYear();
+        String subject = "Payslip for " + period + " - Pixous Technologies";
+
+        String body =
+                "<p>Dear " + escapeHtml(u.getName()) + ",</p>"
+                + "<p>Your payslip for <strong>" + escapeHtml(period) + "</strong> is attached.</p>"
+                + "<p>If anything on it looks wrong, reply to this email or speak to HR.</p>"
+                + "<p>Pixous Technologies</p>"
+                + "<p style=\"color:#6b7280;font-size:12px\">"
+                + "This message was sent automatically by the HR portal. "
+                + "The attachment is confidential and intended only for you.</p>";
+
+        String fileName = "Payslip-" + period.replace(' ', '-') + ".pdf";
+        mailService.sendWithPdf(to, subject, body, fileName, reportService.payslipPdfBytes(p, u));
+        return to;
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String v : values) {
+            if (v != null && !v.isBlank()) return v.trim();
+        }
+        return null;
+    }
+
+    /** Names are user-supplied and go into HTML, so they are escaped. */
+    private static String escapeHtml(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    private static String monthName(int month) {
+        if (month < 1 || month > 12) return String.valueOf(month);
+        return java.time.Month.of(month)
+                .getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH);
     }
 
     // ---- helpers ----

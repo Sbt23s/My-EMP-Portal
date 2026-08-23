@@ -187,9 +187,17 @@ def get_executive_analytics(industry: str = "ALL"):
     cursor = conn.cursor(dictionary=True)
     
     try:
-        # Get list of unique departments
-        cursor.execute("SELECT DISTINCT department FROM users WHERE department IS NOT NULL")
-        depts = [r['department'] for r in cursor.fetchall()]
+        # Get list of unique departments.
+        #
+        # department_title, not department. There is a "department" column in
+        # this database but it is on payslips, so this query failed outright
+        # with "unknown column" and took the whole executive endpoint down
+        # with it -- the dashboard swallowed the 500 and showed empty widgets.
+        cursor.execute(
+            "SELECT DISTINCT department_title FROM users "
+            "WHERE department_title IS NOT NULL AND department_title <> ''"
+        )
+        depts = [r['department_title'] for r in cursor.fetchall()]
         
         dept_analytics = []
         for dept in depts:
@@ -197,7 +205,7 @@ def get_executive_analytics(industry: str = "ALL"):
                 SELECT COUNT(*) as total, SUM(is_late = 1) as late, SUM(status = 'PRESENT' OR status = 'WFH') as present
                 FROM attendance a
                 JOIN users u ON a.user_id = u.id
-                WHERE u.department = %s
+                WHERE u.department_title = %s
             """
             params = [dept]
             if industry != "ALL":

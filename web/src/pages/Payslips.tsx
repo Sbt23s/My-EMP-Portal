@@ -2,7 +2,7 @@ import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import type { ComponentType } from "react";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Wallet, Eye, Users, Banknote, WalletCards, ReceiptText } from "lucide-react";
+import { Download, Wallet, Eye, Users, Banknote, WalletCards, ReceiptText, Mail } from "lucide-react";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
 import { api, apiMessage } from "@/lib/api";
@@ -21,6 +21,28 @@ const YEARS = [CUR_YEAR, CUR_YEAR - 1, CUR_YEAR - 2, CUR_YEAR - 3];
 
 export default function PayslipsPage() {
   const [downloading, setDownloading] = useState<number | null>(null);
+  const [emailing, setEmailing] = useState<number | null>(null);
+
+  /**
+   * Email one of your own payslips to yourself.
+   *
+   * The address is not asked for. The server takes it from your profile, so
+   * there is nothing to type wrong and nothing on screen revealing where a
+   * salary document is going. The reply names the address it used, which is
+   * also how you find out your profile has the wrong one.
+   */
+  const emailToMe = async (payslipId: number, label: string) => {
+    setEmailing(payslipId);
+    const id = toast.loading("Sending your payslip…");
+    try {
+      const res = await api.post<{ message?: string }>(`/payroll/payslip/${payslipId}/email`);
+      toast.success(res.data?.message || `${label} payslip emailed to you`, { id });
+    } catch (err) {
+      toast.error(apiMessage(err, "Could not send your payslip"), { id });
+    } finally {
+      setEmailing(null);
+    }
+  };
   const [fMonth, setFMonth] = useState<string>("all");
   const [fYear, setFYear] = useState<string>("all");
 
@@ -282,6 +304,29 @@ export default function PayslipsPage() {
                               <Download className="h-3.5 w-3.5" />
                             )}
                             Download
+                          </Button>
+                          {/*
+                            Send it to yourself, without asking HR for it.
+
+                            No address is entered and none is shown: the server
+                            reads it from your own profile, which is also why
+                            this is safe to give everybody -- the only place
+                            your payslip can go from here is your own inbox.
+                          */}
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            className="h-8 gap-1.5 px-2.5 text-xs text-sky-600 border-sky-200 hover:bg-sky-50 dark:border-sky-900 dark:hover:bg-sky-950/30"
+                            disabled={emailing === p.id}
+                            onClick={() => emailToMe(p.id, label)}
+                            title="Email this payslip to yourself"
+                          >
+                            {emailing === p.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Mail className="h-3.5 w-3.5" />
+                            )}
+                            Email
                           </Button>
                         </div>
                       </td>

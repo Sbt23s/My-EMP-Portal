@@ -162,9 +162,14 @@ public class PayrollController {
      * payslip that already exists is not a payroll run.
      */
     @PostMapping("/payslip/{id}/email")
-    @PreAuthorize("hasAnyAuthority('PAYROLL_RUN','PAYROLL_VIEW')")
     public ApiResponse<Void> emailPayslip(@PathVariable Long id) {
-        String sentTo = service.emailToEmployee(id);
+        // Same shape as the PDF download directly above: privileged people may
+        // send anyone's, and everybody else may send their own. Ownership is
+        // checked in the service, against the payslip, rather than trusted
+        // from the request.
+        boolean privileged = SecurityUtils.hasAuthority("PAYROLL_VIEW")
+                || SecurityUtils.hasAuthority("PAYROLL_RUN");
+        String sentTo = service.emailToEmployee(SecurityUtils.currentUserId(), id, privileged);
         return ApiResponse.message("Payslip emailed to " + sentTo);
     }
 

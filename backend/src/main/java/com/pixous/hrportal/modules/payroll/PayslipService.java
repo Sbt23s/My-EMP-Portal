@@ -439,9 +439,21 @@ public class PayslipService {
      * @return the address it was sent to, so the caller can say where it went
      */
     @Transactional(readOnly = true)
-    public String emailToEmployee(Long payslipId) {
+    public String emailToEmployee(Long requesterId, Long payslipId, boolean privileged) {
         Payslip p = payslipRepository.findById(payslipId)
                 .orElseThrow(() -> ApiException.notFound("Payslip"));
+        /*
+          An employee may send their own payslip and nobody else's.
+          
+          There is little to abuse here even so -- the destination is read from
+          the profile below, so the worst anyone can do is mail their own
+          payslip to their own address. The check exists because "send" should
+          obey the same rule as "download", not because the alternative would
+          be catastrophic.
+        */
+        if (!privileged && !p.getUserId().equals(requesterId)) {
+            throw ApiException.business("You can only email your own payslips");
+        }
         User u = userRepository.findById(p.getUserId())
                 .orElseThrow(() -> ApiException.notFound("User"));
 

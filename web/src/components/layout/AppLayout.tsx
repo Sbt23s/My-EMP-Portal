@@ -125,9 +125,18 @@ const NAV: NavEntry[] = [
   { to: "/helpdesk", label: "Supports", icon: LifeBuoy, moduleCode: "HELPDESK" },
   { to: "/complaints", label: "Complaints", icon: MessageSquareWarning, moduleCode: "HELPDESK" },
   { to: "/reports", label: "Reports", icon: FileBarChart, anyPermission: ["REPORT_VIEW"], excludeRole: ["SUPER_ADMIN", "COMPANY_ADMIN"], moduleCode: "REPORTS" },
-  // HR runs their own groups here as well as the admin, so the section follows
-  // COMMUNITY_MANAGE rather than the organisation-wide permission.
   { to: "/chat", label: "Chat", icon: MessageSquareWarning, moduleCode: "CHAT" },
+  /*
+    HR runs their own groups here as well as the administrator, so this
+    follows COMMUNITY_MANAGE rather than the organisation-wide permission.
+
+    The comment above said exactly that, but the entry it described was not
+    here. The page and its route exist and the module can be switched on in
+    the tech admin screens -- switching it on simply did nothing, because
+    nothing in the sidebar ever pointed at it.
+  */
+  { to: "/communities", label: "Communities", icon: Users2,
+    anyPermission: ["ORG_MANAGE", "COMMUNITY_MANAGE"], moduleCode: "COMMUNITIES" },
   { to: "/calendar", label: "Calendar", icon: CalendarDays, moduleCode: "CALENDAR" },
   { to: "/teams", label: "Teams", icon: Users2, moduleCode: "TEAMS" },
   { to: "/documents", label: "Documents", icon: FolderOpen, moduleCode: "DOCUMENTS" },

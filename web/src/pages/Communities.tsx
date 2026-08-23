@@ -5,8 +5,10 @@ import { api } from "@/lib/api";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Plus, Trash2, Check, UserPlus } from "lucide-react";
+import { Users, Plus, Trash2, Check, UserPlus, Phone, Video } from "lucide-react";
 import toast from "react-hot-toast";
+import { useGroupCall } from "@/hooks/useGroupCall";
+import { useCalls } from "@/hooks/useCalls";
 
 import type { ApiEnvelope, PageEnvelope, UserSummary } from "@/types";
 
@@ -30,6 +32,8 @@ function CommunityCard({
   onDelete: (id: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const groupCall = useGroupCall();
+  const { callState } = useCalls();
 
   const { data: members, isLoading, refetch } = useQuery({
     queryKey: ["community_members", c.id],
@@ -38,6 +42,27 @@ function CommunityCard({
       return res.data;
     }
   });
+
+  /**
+   * Ring this community.
+   *
+   * The room id is the community's own id, so two people starting a call on
+   * the same group land in the same call rather than two calls that cannot
+   * see each other. The member list is the community's, which is what keeps
+   * the call to the group: nobody outside it is sent an invitation.
+   */
+  const startCommunityCall = async (video: boolean) => {
+    const ids = (members ?? []).map((m) => m.id).filter(Boolean);
+    if (ids.length === 0) {
+      toast.error("This group has no members to call.");
+      return;
+    }
+    try {
+      await groupCall.start(`community-${c.id}`, c.name, ids, video);
+    } catch (err: any) {
+      toast.error(err?.message || "Could not start the group call");
+    }
+  };
 
   const addMember = useMutation({
     mutationFn: async (userId: string) => {
@@ -84,6 +109,34 @@ function CommunityCard({
           <p className="text-xs text-muted-foreground mt-1">{members?.length ?? 0} members</p>
         </div>
         <div className="flex items-center gap-1.5">
+          {/*
+            Call this group.
+
+            Only the people in it are rung -- the member list this card already
+            loaded is the guest list, so nobody outside the community is
+            invited into its call. Disabled while any other call is running,
+            because one browser can only hold one.
+          */}
+          <Button
+            variant="ghost"
+            size="icon"
+            title={`Voice call ${c.name}`}
+            disabled={!members?.length || groupCall.state !== "idle" || callState !== "idle"}
+            onClick={() => startCommunityCall(false)}
+            className="text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-40"
+          >
+            <Phone className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            title={`Video call ${c.name}`}
+            disabled={!members?.length || groupCall.state !== "idle" || callState !== "idle"}
+            onClick={() => startCommunityCall(true)}
+            className="text-sky-600 hover:bg-sky-50 hover:text-sky-700 disabled:opacity-40"
+          >
+            <Video className="w-4 h-4" />
+          </Button>
           {expanded ? (
             <Button size="sm" onClick={() => setExpanded(false)}>
               <Check className="w-4 h-4 mr-1" /> Confirm

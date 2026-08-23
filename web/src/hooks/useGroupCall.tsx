@@ -102,6 +102,10 @@ interface GroupCallApi {
   toggleMute: () => void;
   toggleCamera: () => void;
   toggleScreenShare: () => Promise<void>;
+  /** Ring more people into the call that is already running. */
+  addPeople: (userIds: number[]) => void;
+  /** Who is already here or has been rung, so a picker can exclude them. */
+  memberIds: number[];
 }
 
 const GroupCallContext = createContext<GroupCallApi | null>(null);
@@ -142,6 +146,16 @@ export function GroupCallProvider({ children }: { children: React.ReactNode }) {
   const [sharingScreen, setSharingScreen] = useState(false);
 
   const roomIdRef = useRef<string | null>(null);
+  /*
+    Everyone who belongs to this call, including people still ringing.
+
+    A late invitation has to carry the whole list, not just the newcomer: when
+    they accept they announce themselves to every id in it, and that is how
+    the mesh gets built. Handing them a short list would connect them to some
+    of the room and not the rest.
+  */
+  const memberIdsRef = useRef<number[]>([]);
+  const [memberIds, setMemberIds] = useState<number[]>([]);
   const peersRef = useRef(new Map<number, Peer>());
   const localStreamRef = useRef<MediaStream | null>(null);
   const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
@@ -210,6 +224,8 @@ export function GroupCallProvider({ children }: { children: React.ReactNode }) {
     cameraTrackRef.current = null;
 
     roomIdRef.current = null;
+    memberIdsRef.current = [];
+    setMemberIds([]);
     setLocalStream(null);
     setParticipants([]);
     setInvite(null);
@@ -503,6 +519,15 @@ export function GroupCallProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      /* The room's membership changed because somebody added people. */
+      case "g-members": {
+        const list = Array.isArray(data?.memberIds) ? data.memberIds : null;
+        if (!list) return;
+        memberIdsRef.current = list;
+        setMemberIds(list);
+        return;
+      }
+
       case "g-full":
         toast.error("That call is already full.");
         teardown(false);
@@ -546,6 +571,8 @@ export function GroupCallProvider({ children }: { children: React.ReactNode }) {
     setIsVideo(video);
     setState("inviting");
     roomIdRef.current = roomId;
+    memberIdsRef.current = memberIds;
+    setMemberIds(memberIds);
 
     try {
       // Own devices first. If the camera is refused there is no point making
@@ -587,6 +614,8 @@ export function GroupCallProvider({ children }: { children: React.ReactNode }) {
     setIsVideo(inv.isVideo);
     setState("joining");
     roomIdRef.current = inv.roomId;
+    memberIdsRef.current = inv.memberIds;
+    setMemberIds(inv.memberIds);
 
     try {
       await openMedia(inv.isVideo);
@@ -617,6 +646,54 @@ export function GroupCallProvider({ children }: { children: React.ReactNode }) {
     setInvite(null);
     setState("idle");
   }, [invite, sendSignal, stopRinging]);
+
+  /**
+   * Ring more people into a call that is already running.
+   *
+   * The invitation is the same one the call started with, carrying the room
+   * id, so accepting drops them straight into this call rather than opening
+   * a second one. The member list sent with it is the full list including
+   * the new arrivals, because whoever accepts announces themselves to every
+   * id in it -- that announcement is how the mesh assembles, so a short list
+   * would leave the newcomer connected to part of the room only.
+   *
+   * Everyone already here is told about the additions too, so if two people
+   * add somebody at the same time both ends still agree on who belongs.
+   */
+  const addPeople = useCallback((userIds: number[]) => {
+    const room = roomIdRef.current;
+    if (!room || stateRef.current !== "active") return;
+
+    const fresh = userIds.filter(
+      (id) => id !== user?.id && !memberIdsRef.current.includes(id)
+    );
+    if (fresh.length === 0) return;
+
+    const combined = [...memberIdsRef.current, ...fresh];
+    if (combined.length > MAX_GROUP_PARTICIPANTS) {
+      toast.error(
+        `A call takes up to ${MAX_GROUP_PARTICIPANTS} people. There is room for ` +
+        `${Math.max(0, MAX_GROUP_PARTICIPANTS - memberIdsRef.current.length)} more.`
+      );
+      return;
+    }
+
+    memberIdsRef.current = combined;
+    setMemberIds(combined);
+
+    for (const id of fresh) {
+      void sendSignal(id, "g-invite", {
+        roomId: room, roomName, isVideo: isVideoRef.current, memberIds: combined
+      });
+    }
+    // Everyone already connected learns the new list, so a second person
+    // adding somebody does not overwrite the first person's addition.
+    peersRef.current.forEach((_, id) => {
+      void sendSignal(id, "g-members", { roomId: room, memberIds: combined });
+    });
+
+    toast.success(fresh.length === 1 ? "Ringing them now." : `Ringing ${fresh.length} people.`);
+  }, [roomName, sendSignal, user?.id]);
 
   const leave = useCallback(() => teardown(true), [teardown]);
 
@@ -709,10 +786,12 @@ export function GroupCallProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<GroupCallApi>(() => ({
     state, roomName, isVideo, localStream, participants, invite,
     muted, cameraOff, sharingScreen,
-    start, accept, decline, leave, toggleMute, toggleCamera, toggleScreenShare
+    start, accept, decline, leave, toggleMute, toggleCamera, toggleScreenShare,
+    addPeople, memberIds
   }), [state, roomName, isVideo, localStream, participants, invite,
     muted, cameraOff, sharingScreen,
-    start, accept, decline, leave, toggleMute, toggleCamera, toggleScreenShare]);
+    start, accept, decline, leave, toggleMute, toggleCamera, toggleScreenShare,
+    addPeople, memberIds]);
 
   return (
     <GroupCallContext.Provider value={value}>{children}</GroupCallContext.Provider>
@@ -729,7 +808,9 @@ const DORMANT: GroupCallApi = {
   leave: () => {},
   toggleMute: () => {},
   toggleCamera: () => {},
-  toggleScreenShare: async () => {}
+  toggleScreenShare: async () => {},
+  addPeople: () => {},
+  memberIds: []
 };
 
 /** Outside a provider this is dormant rather than throwing, as with useCalls. */

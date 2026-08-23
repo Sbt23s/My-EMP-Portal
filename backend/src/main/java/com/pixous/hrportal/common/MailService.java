@@ -69,37 +69,49 @@ public class MailService {
     }
 
     /**
+     * Send one message with one attachment of any allowed type.
+     *
+     * <p>The PDF helper below is this with the type filled in; both exist so
+     * that callers sending a payslip do not have to know a MIME type, while a
+     * caller forwarding whatever the browser produced can say what it has.
+     */
+    public void sendAttachment(String to, String subject, String bodyHtml,
+                               String attachmentName, String contentType, byte[] data) {
+        if (!isConfigured()) {
+            throw ApiException.business(notConfiguredMessage());
+        }
+        if (to == null || to.isBlank()) {
+            throw ApiException.business("No email address was given.");
+        }
+
+        try {
+            MimeMessage message = sender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(from);
+            helper.setTo(to.trim());
+            helper.setSubject(subject);
+            helper.setText(bodyHtml, true);
+            helper.addAttachment(attachmentName, new ByteArrayResource(data), contentType);
+            sender.send(message);
+            log.info("Sent '{}' to {}", subject, to);
+        } catch (Exception e) {
+            log.error("Could not send '{}' to {}", subject, to, e);
+            throw ApiException.business(
+                    "The email could not be sent. The mail server refused it — "
+                    + "the details are in the server log.");
+        }
+    }
+
+    /**
      * Send one message with one PDF attached.
      *
      * @throws ApiException when mail is not configured, or the server refuses it
      */
     public void sendWithPdf(String to, String subject, String bodyHtml,
                             String attachmentName, byte[] pdf) {
-        if (!isConfigured()) {
-            throw ApiException.business(notConfiguredMessage());
-        }
         if (to == null || to.isBlank()) {
             throw ApiException.business("That employee has no email address on their profile.");
         }
-
-        try {
-            MimeMessage message = sender.createMimeMessage();
-            // true: this message has an attachment, so it needs to be multipart.
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(from);
-            helper.setTo(to.trim());
-            helper.setSubject(subject);
-            helper.setText(bodyHtml, true);
-            helper.addAttachment(attachmentName, new ByteArrayResource(pdf), "application/pdf");
-            sender.send(message);
-            log.info("Sent '{}' to {}", subject, to);
-        } catch (Exception e) {
-            // The underlying text names hosts, ports and sometimes credentials,
-            // so it goes to the log and not to the browser.
-            log.error("Could not send '{}' to {}", subject, to, e);
-            throw ApiException.business(
-                    "The email could not be sent. The mail server refused it — "
-                    + "the details are in the server log.");
-        }
+        sendAttachment(to, subject, bodyHtml, attachmentName, "application/pdf", pdf);
     }
 }

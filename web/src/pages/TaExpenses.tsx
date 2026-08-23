@@ -2,13 +2,14 @@ import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Map, Plus, Settings, Upload, ImagePlus, Pencil, Clock, Check, X } from "lucide-react";
+import { Map, Plus, Settings, Upload, ImagePlus, Pencil, Clock, Check, X, Download, Mail } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,6 +37,7 @@ const inr = (n: number) =>
   "₹" + (Number(n) || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 import { Eye } from "lucide-react";
 import dayjs from "dayjs";
+import * as XLSX from "xlsx";
 
 export default function TaExpensesPage() {
   const queryClient = useQueryClient();
@@ -94,6 +96,122 @@ export default function TaExpensesPage() {
     });
   }, [taList.data, statusTab, q]);
 
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailTo, setEmailTo] = useState("");
+  const [emailNote, setEmailNote] = useState("");
+  const [sending, setSending] = useState(false);
+
+  /**
+   * Build the spreadsheet for whatever is currently on screen.
+   *
+   * One function for both destinations, so the file that is downloaded and
+   * the file that is emailed cannot become different reports that share a
+   * name. It returns the workbook as bytes rather than saving it, and the two
+   * callers decide what to do with them.
+   */
+  const buildClaimsSheet = () => {
+    const headers = ["#", "Employee", "Employee ID", "Team", "Date", "Location",
+                     "Category", "Total km", "Hills km", "Plains km",
+                     "Travel", "Bus fare", "Others", "Gross total", "Status", "Remarks"];
+    const body = rows.map((r, i) => [
+      i + 1,
+      r.userName ?? "",
+      r.employeeCode ?? "",
+      r.team ?? "",
+      r.date ? dayjs(r.date).format("DD MMM YYYY") : "",
+      r.location ?? "",
+      r.category ?? "",
+      r.totalKm ?? 0,
+      r.hillsKm ?? 0,
+      r.plainsKm ?? 0,
+      Number(r.totalAmount ?? 0),
+      Number(r.busFare ?? 0),
+      Number(r.others ?? 0),
+      Number(r.grossTotal ?? 0),
+      r.status ?? "",
+      r.remarks ?? ""
+    ]);
+
+    // Only the claims that will actually be paid are totalled. Adding rejected
+    // ones in would produce a figure that matches no payment anybody makes.
+    const payable = rows
+      .filter((r) => (r.status ?? "").toUpperCase() === "APPROVED")
+      .reduce((sum, r) => sum + Number(r.grossTotal ?? 0), 0);
+
+    const ws = XLSX.utils.aoa_to_sheet([
+      ["Claims — Pixous Technologies"],
+      [`${rows.length} claim${rows.length === 1 ? "" : "s"}`
+        + (statusTab === "ALL" ? "" : ` · ${statusTab.toLowerCase()}`)
+        + ` · exported ${dayjs().format("DD MMM YYYY, h:mm A")}`],
+      [`Approved total: ₹${payable.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`],
+      [],
+      headers,
+      ...body
+    ]);
+    ws["!cols"] = [{ wch: 5 }, { wch: 24 }, { wch: 13 }, { wch: 18 }, { wch: 14 },
+                   { wch: 18 }, { wch: 14 }, { wch: 9 }, { wch: 9 }, { wch: 10 },
+                   { wch: 11 }, { wch: 10 }, { wch: 10 }, { wch: 13 }, { wch: 11 }, { wch: 30 }];
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Claims");
+    return XLSX.write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+  };
+
+  const claimsFileName = () =>
+    `Claims-${statusTab === "ALL" ? "all" : statusTab.toLowerCase()}-${dayjs().format("YYYY-MM-DD")}.xlsx`;
+
+  const exportClaims = () => {
+    const blob = new Blob([buildClaimsSheet()], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = claimsFileName();
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`${rows.length} claim${rows.length === 1 ? "" : "s"} exported`);
+  };
+
+  /**
+   * Email that same spreadsheet to a typed address.
+   *
+   * The file goes up with the request rather than being rebuilt on the
+   * server, so the recipient receives exactly the export the sender saw.
+   */
+  const sendClaimsEmail = async () => {
+    const to = emailTo.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/.test(to)) {
+      toast.error("Enter a valid email address.");
+      return;
+    }
+    setSending(true);
+    const id = toast.loading(`Sending to ${to}…`);
+    try {
+      const blob = new Blob([buildClaimsSheet()], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      });
+      const form = new FormData();
+      form.append("to", to);
+      form.append("subject",
+        `Claims report — ${rows.length} claim${rows.length === 1 ? "" : "s"} — ${dayjs().format("DD MMM YYYY")}`);
+      form.append("message", emailNote);
+      form.append("file", blob, claimsFileName());
+
+      const res = await api.post<{ message?: string }>("/mail/send-report", form);
+      toast.success(res.data?.message || `Sent to ${to}`, { id });
+      setEmailOpen(false);
+      setEmailNote("");
+    } catch (err) {
+      toast.error(apiMessage(err, "Could not send the report"), { id });
+    } finally {
+      setSending(false);
+    }
+  };
+
   // Paged like every other table, with the numbers and rows-per-page.
   const paged = usePagedRows(rows, 15, [statusTab, q, scope, taList.data]);
 
@@ -146,7 +264,35 @@ export default function TaExpensesPage() {
               <Plus className="mr-2 h-4 w-4" />
               Add Entry
             </Button>
-          ) : null
+          ) : (
+            /*
+              Export and email sit together because they are the same report
+              reaching two destinations. Both build the sheet from `rows`,
+              which is what is on screen after the status tab and the search
+              box -- so what is emailed is what the sender was looking at,
+              not a different query that happens to be called the same thing.
+            */
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                disabled={rows.length === 0}
+                onClick={exportClaims}
+                title={rows.length ? "Download these claims as a spreadsheet" : "Nothing to export"}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export Excel
+              </Button>
+              <Button
+                variant="outline"
+                disabled={rows.length === 0}
+                onClick={() => { setEmailTo(""); setEmailOpen(true); }}
+                title={rows.length ? "Email these claims to someone" : "Nothing to send"}
+              >
+                <Mail className="mr-2 h-4 w-4" />
+                Send Email
+              </Button>
+            </div>
+          )
         }
       />
 
@@ -339,6 +485,58 @@ export default function TaExpensesPage() {
           />
         )}
       </Card>
+
+      {/*
+        Where the claims report is addressed.
+
+        The address is typed rather than picked from a list on purpose: these
+        go to accountants, auditors and managers who are often not employees
+        in the portal at all, so a picker of colleagues would exclude most of
+        the people this is actually for.
+      */}
+      {emailOpen && (
+        <Dialog open onClose={() => setEmailOpen(false)} className="max-w-md">
+          <DialogHeader
+            title="Email this claims report"
+            description={`${rows.length} claim${rows.length === 1 ? "" : "s"} will be attached as a spreadsheet — exactly what is on screen now.`}
+          />
+          <div className="space-y-3 p-4">
+            <div className="space-y-1">
+              <Label htmlFor="claims-email-to">Send to<span className="text-destructive"> *</span></Label>
+              <Input
+                id="claims-email-to"
+                autoFocus
+                type="email"
+                inputMode="email"
+                placeholder="name@company.com"
+                value={emailTo}
+                onChange={(e) => setEmailTo(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !sending) void sendClaimsEmail(); }}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="claims-email-note">Message (optional)</Label>
+              <textarea
+                id="claims-email-note"
+                rows={3}
+                value={emailNote}
+                onChange={(e) => setEmailNote(e.target.value)}
+                placeholder="Anything the recipient should know…"
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 border-t p-3">
+            <Button variant="outline" onClick={() => setEmailOpen(false)} disabled={sending}>
+              Cancel
+            </Button>
+            <Button onClick={() => void sendClaimsEmail()} disabled={sending || !emailTo.trim()}>
+              <Mail className="mr-2 h-4 w-4" />
+              {sending ? "Sending…" : "Send"}
+            </Button>
+          </div>
+        </Dialog>
+      )}
 
       {showSettings && (
         <TaSettingsModal

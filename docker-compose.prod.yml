@@ -116,7 +116,16 @@ services:
     restart: unless-stopped
     profiles: ["analytics"]
     environment:
-      DB_HOST: mysql
+      # The same database the backend uses, not the local container.
+      #
+      # This said "mysql" outright, so analytics talked to the container
+      # beside it while the backend talked to the hosted database named in
+      # .env. The container has the schema but none of the data, so every
+      # analytics call failed with "table users doesn't exist" -- a 500 the
+      # dashboard swallowed, which is why the widgets were simply empty
+      # rather than obviously broken.
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
       DB_USER: ${DB_USER:-hruser}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME:-hr_portal}

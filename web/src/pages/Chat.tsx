@@ -672,14 +672,22 @@ export default function ChatPage() {
     }
   }
 
-  // Contacts for starting a private chat (loaded only while the picker is open)
+  /*
+    Everyone this person may contact, for both pickers.
+
+    Fetched only while one of them is open, because it is the whole staff list
+    and no other part of this page wants it. The group call picker had to be
+    added to this condition: it reads the same list, so with only the private
+    chat picker named here it opened onto "There is nobody here to call" --
+    the request had never been made.
+  */
   const { data: contacts, isLoading: contactsLoading } = useQuery({
     queryKey: ["chat_contacts"],
     queryFn: async () => {
       const res = await api.get<Contact[]>("/communities/contacts");
       return res.data;
     },
-    enabled: pickerOpen
+    enabled: pickerOpen || groupCallOpen
   });
 
   const startDirect = useMutation({
@@ -2254,9 +2262,27 @@ export default function ChatPage() {
                   </label>
                 );
               })}
-            {(contacts ?? []).length === 0 && (
+            {/*
+              Loading and empty are different things and were shown the same
+              way. "There is nobody here to call" is alarming and wrong while
+              the list is still on its way, and it was on its way every single
+              time, because the request only started when the dialog opened.
+            */}
+            {contactsLoading && (
+              <p className="p-6 text-center text-sm text-muted-foreground">
+                Loading people…
+              </p>
+            )}
+            {!contactsLoading && (contacts ?? []).length === 0 && (
               <p className="p-6 text-center text-sm text-muted-foreground">
                 There is nobody here to call.
+              </p>
+            )}
+            {!contactsLoading && (contacts ?? []).length > 0
+              && (contacts ?? []).filter((c) =>
+                   c.name?.toLowerCase().includes(groupCallSearch.toLowerCase())).length === 0 && (
+              <p className="p-6 text-center text-sm text-muted-foreground">
+                Nobody matches “{groupCallSearch}”.
               </p>
             )}
           </div>

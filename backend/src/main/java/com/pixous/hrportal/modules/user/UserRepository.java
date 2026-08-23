@@ -168,6 +168,31 @@ public interface UserRepository extends JpaRepository<User, Long> {
            nativeQuery = true)
     long countByEmployeeCodeAcrossTenants(@Param("code") String code);
 
+    /*
+      Username, Aadhaar and phone are unique across the whole users table, so
+      the checks that guard them have to see the whole table as well.
+
+      The derived queries above them (existsByUsername and friends) go through
+      the User entity, which carries the tenant filter, so the moment an
+      account has a company id those checks stop seeing rows outside it. The
+      index does not, and the result is the failure that already happened once
+      with employee_code: a duplicate passes the check, the insert is refused,
+      and the person adding the employee is shown "Something went wrong"
+      instead of "that username is taken".
+
+      Nobody has a company id yet, so the filter is currently inactive and the
+      old checks happen to work. That is luck, not design, and it runs out on
+      the day multi-tenancy is switched on.
+    */
+    @Query(value = "SELECT COUNT(*) FROM users WHERE username = :username", nativeQuery = true)
+    long countByUsernameAcrossTenants(@Param("username") String username);
+
+    @Query(value = "SELECT COUNT(*) FROM users WHERE aadhar = :aadhar", nativeQuery = true)
+    long countByAadharAcrossTenants(@Param("aadhar") String aadhar);
+
+    @Query(value = "SELECT COUNT(*) FROM users WHERE phone = :phone", nativeQuery = true)
+    long countByPhoneAcrossTenants(@Param("phone") String phone);
+
     /** Enabled users who hold the given permission code through any of their roles. */
     @Query("""
             SELECT DISTINCT u FROM User u

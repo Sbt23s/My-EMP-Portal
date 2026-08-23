@@ -153,15 +153,15 @@ public class AuthService {
 
     @Transactional
     public LoginResponse signup(SignupRequest req) {
-        if (userRepository.existsByUsername(req.username().trim())) {
+        if (userRepository.countByUsernameAcrossTenants(req.username().trim()) > 0) {
             throw ApiException.conflict("An account with this username already exists");
         }
         if (req.aadhar() != null && !req.aadhar().isBlank()
-                && userRepository.existsByAadhar(req.aadhar())) {
+                && userRepository.countByAadharAcrossTenants(req.aadhar()) > 0) {
             throw ApiException.conflict("An account with this Aadhaar already exists");
         }
         if (req.phone() != null && !req.phone().isBlank()
-                && userRepository.existsByPhone(req.phone())) {
+                && userRepository.countByPhoneAcrossTenants(req.phone()) > 0) {
             throw ApiException.conflict("An account with this phone already exists");
         }
 
@@ -204,7 +204,10 @@ public class AuthService {
         String defaultRole = "CIVIL".equalsIgnoreCase(user.getIndustry()) ? "CV_EMP" : "IT_EMP";
         roleRepository.findByCode(defaultRole).ifPresent(r -> user.getRoles().add(r));
 
-        userRepository.save(user);
+        // Set before the row is written, as in createEmployee. Saving first and
+        // updating afterwards left a moment where a user existed with no
+        // employee ID, and made any failure read as an update to a row that
+        // had just been inserted.
         user.setEmployeeCode(generateEmployeeCode(user));
         userRepository.save(user);
 
@@ -222,15 +225,15 @@ public class AuthService {
         if (username.isBlank()) {
             throw ApiException.business("Username is required");
         }
-        if (userRepository.existsByUsername(username)) {
+        if (userRepository.countByUsernameAcrossTenants(username) > 0) {
             throw ApiException.conflict("Username '" + username + "' is already taken");
         }
         if (req.aadhar() != null && !req.aadhar().isBlank()
-                && userRepository.existsByAadhar(req.aadhar())) {
+                && userRepository.countByAadharAcrossTenants(req.aadhar()) > 0) {
             throw ApiException.conflict("An account with this Aadhaar already exists");
         }
         if (req.phone() != null && !req.phone().isBlank()
-                && userRepository.existsByPhone(req.phone())) {
+                && userRepository.countByPhoneAcrossTenants(req.phone()) > 0) {
             throw ApiException.conflict("An account with this phone already exists");
         }
 

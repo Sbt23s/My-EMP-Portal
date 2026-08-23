@@ -294,7 +294,9 @@ class AuthServiceTest {
 
     @Test
     void signupRejectsDuplicateUsername() {
-        when(userRepository.existsByUsername("taken")).thenReturn(true);
+        // Counted against the table, not the entity: the unique index is
+        // global and the entity is filtered by company.
+        when(userRepository.countByUsernameAcrossTenants("taken")).thenReturn(1L);
 
         SignupRequest req = signup("taken", "Name", "pass1234");
         assertThatThrownBy(() -> authService.signup(req))
@@ -304,21 +306,25 @@ class AuthServiceTest {
 
     @Test
     void signupAssignsDefaultRoleAndEncodesPassword() {
-        when(userRepository.existsByUsername("newbie")).thenReturn(false);
+        when(userRepository.countByUsernameAcrossTenants("newbie")).thenReturn(0L);
         Role role = new Role();
         role.setCode("IT_EMP");
         when(roleRepository.findByCode("IT_EMP")).thenReturn(Optional.of(role));
         when(passwordEncoder.encode("pass1234")).thenReturn("enc");
         when(passwordVault.seal("pass1234")).thenReturn("vault");
-        when(userRepository.findMaxEmployeeCode("EMP")).thenReturn(null);
+        // Allocation reads the table rather than the entity, because the
+        // entity carries the tenant filter and the unique index does not.
+        when(userRepository.findMaxEmployeeCodeAcrossTenants("EMP")).thenReturn(null);
         when(jwtService.generateAccessToken(any(), anyString(), any())).thenReturn("t");
         when(jwtService.getAccessTtlSeconds()).thenReturn(3600L);
 
         SignupRequest req = signup("newbie", "New Person", "pass1234");
         LoginResponse response = authService.signup(req);
 
+        // One insert. The employee ID is set before the row is written, so
+        // there is no follow-up update to save it.
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository, org.mockito.Mockito.times(2)).save(captor.capture());
+        verify(userRepository, org.mockito.Mockito.times(1)).save(captor.capture());
         User saved = captor.getValue();
         assertThat(saved.getUsername()).isEqualTo("newbie");
         assertThat(saved.getPasswordHash()).isEqualTo("enc");

@@ -11,6 +11,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -132,6 +133,41 @@ public class GlobalExceptionHandler {
         log.debug("No handler for {}", ex.getResourcePath());
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.fail("Not found.", null));
+    }
+
+    /**
+     * A unique constraint the application did not catch first.
+     *
+     * Every one of these is a bug -- the checks upstream exist so a duplicate
+     * is reported in the caller's own words -- but the person in front of the
+     * screen should still be told which field is the problem rather than
+     * "Something went wrong". That is what happened when an employee ID
+     * collided: HR saw a reference number and had nothing to act on, and the
+     * field that was actually wrong was only discoverable from the log.
+     *
+     * The column name is read out of the constraint name and mapped to a
+     * human word. Anything unrecognised falls back to a general message,
+     * because the raw text names tables and indexes and belongs in the log.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(DataIntegrityViolationException ex) {
+        String ref = UUID.randomUUID().toString().substring(0, 8);
+        log.error("Constraint violation [ref={}]", ref, ex);
+
+        String detail = String.valueOf(ex.getMostSpecificCause().getMessage()).toLowerCase();
+        String field =
+                detail.contains("employee_code") ? "employee ID"
+              : detail.contains("username")      ? "username"
+              : detail.contains("aadhar")        ? "Aadhaar number"
+              : detail.contains("phone")         ? "phone number"
+              : detail.contains("email")         ? "email address"
+              : null;
+
+        String message = field != null
+                ? "That " + field + " is already in use."
+                : "That change conflicts with data that already exists. (ref " + ref + ")";
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.fail(message, null));
     }
 
     @ExceptionHandler(Exception.class)

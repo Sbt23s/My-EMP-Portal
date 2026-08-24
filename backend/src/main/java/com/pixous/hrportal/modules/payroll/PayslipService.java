@@ -457,7 +457,21 @@ public class PayslipService {
         User u = userRepository.findById(p.getUserId())
                 .orElseThrow(() -> ApiException.notFound("User"));
 
-        String to = firstNonBlank(u.getPersonalEmail(), u.getEmail());
+        /*
+          Work address first, personal only as a fallback.
+
+          It was the other way round, on the reasoning that a payslip is
+          personal and a work mailbox is not private. That is true in general
+          and wrong here: the work address is the one the company issued, the
+          one HR knows, and the one the employee is expecting company post to
+          arrive at. Sending to a personal address they may not have checked
+          in months -- or may not remember giving -- looks like the payslip
+          never arrived at all, which is exactly what happened.
+
+          Personal remains the fallback for anyone with no work address on
+          their record, so nobody is left unable to receive their payslip.
+        */
+        String to = firstNonBlank(u.getEmail(), u.getPersonalEmail());
         if (to == null) {
             throw ApiException.business(
                     u.getName() + " has no email address on their profile, so there is "

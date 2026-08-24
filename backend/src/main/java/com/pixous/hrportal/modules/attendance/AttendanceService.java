@@ -45,6 +45,7 @@ public class AttendanceService {
     private final GeofenceService geofenceService;
     private final AppProperties props;
     private final LeaveRequestRepository leaveRequestRepository;
+    private final com.pixous.hrportal.modules.leave.PermissionRequestRepository permissionRequestRepository;
     private final com.pixous.hrportal.modules.org.HolidayRepository holidayRepository;
     private final com.pixous.hrportal.common.StorageService storageService;
     private final jakarta.persistence.EntityManager entityManager;
@@ -85,6 +86,7 @@ public class AttendanceService {
                              GeofenceService geofenceService,
                              AppProperties props,
                              LeaveRequestRepository leaveRequestRepository,
+                             com.pixous.hrportal.modules.leave.PermissionRequestRepository permissionRequestRepository,
                              com.pixous.hrportal.modules.org.HolidayRepository holidayRepository,
                              com.pixous.hrportal.common.StorageService storageService,
                              jakarta.persistence.EntityManager entityManager,
@@ -100,6 +102,7 @@ public class AttendanceService {
         this.geofenceService = geofenceService;
         this.props = props;
         this.leaveRequestRepository = leaveRequestRepository;
+        this.permissionRequestRepository = permissionRequestRepository;
         this.holidayRepository = holidayRepository;
     }
 
@@ -205,6 +208,15 @@ public class AttendanceService {
         }
         if (attendance.getPunchOutAt() != null) {
             throw ApiException.business("You have already punched out today");
+        }
+
+        // The day ends at the office end time, unless leave was granted to go early.
+        java.time.LocalTime earliest = earliestPunchOut(userId, today);
+        java.time.LocalTime now = java.time.LocalTime.now();
+        if (now.isBefore(earliest)) {
+            throw ApiException.business(
+                    "You can punch out from " + earliest + ". "
+                    + "To leave before then, apply for permission and have it approved first.");
         }
 
         attendance.setPunchOutAt(LocalDateTime.now());
@@ -373,6 +385,57 @@ public class AttendanceService {
                 .plusMinutes(props.attendance().lateGraceMinutes());
         if (!punchInAt.isAfter(allowedUntil)) return 0;
         return (int) Duration.between(allowedUntil, punchInAt).toMinutes();
+    }
+
+    /**
+     * The earliest time this person may punch out today.
+     *
+     * <p>Normally the office end time: punching out the moment you arrive is
+     * not a working day, and the record it leaves behind says somebody worked
+     * for two minutes, which is worse than no record at all.
+     *
+     * <p>An approved permission is the way out of that, and it moves the line
+     * rather than removing it — somebody granted permission from three
+     * o'clock may punch out at three, not at any time they please. The
+     * earliest approved permission of the day wins, because a person with two
+     * of them is leaving at the first.
+     *
+     * <p>Only APPROVED counts. A pending request is a question nobody has
+     * answered yet, and treating it as a yes would make approval pointless.
+     */
+    private java.time.LocalTime earliestPunchOut(Long userId, LocalDate day) {
+        java.time.LocalTime officeEnd =
+                parseTime(props.attendance().officeEnd(), java.time.LocalTime.of(18, 0));
+
+        return earliestPunchOut(officeEnd, permissionRequestRepository
+                .findByUserIdAndRequestDateAndStatus(userId, day, "APPROVED")
+                .stream()
+                .map(com.pixous.hrportal.modules.leave.PermissionRequest::getFromTime)
+                .toList());
+    }
+
+    /**
+     * The decision itself, separated from where the data came from.
+     *
+     * <p>Package-private and static so it can be tested directly. This rule
+     * decides whether an entire company can clock off; a mistake in it is not
+     * a cosmetic bug, and it should not need a database and twelve mocks to
+     * demonstrate that it is right.
+     *
+     * <p>Unparseable times are ignored rather than treated as midnight. A
+     * malformed row should not silently hand somebody permission to leave at
+     * the start of the day.
+     */
+    static java.time.LocalTime earliestPunchOut(
+            java.time.LocalTime officeEnd, java.util.List<String> approvedFromTimes) {
+        java.time.LocalTime earliest = officeEnd;
+        for (String raw : approvedFromTimes) {
+            java.time.LocalTime from = parseTime(raw, null);
+            if (from != null && from.isBefore(earliest)) {
+                earliest = from;
+            }
+        }
+        return earliest;
     }
 
     /** Minutes worked past the office end time â€” nothing before it counts. */

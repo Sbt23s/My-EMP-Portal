@@ -10,6 +10,16 @@ public interface PermissionRequestRepository extends JpaRepository<PermissionReq
 
     List<PermissionRequest> findByUserIdOrderByCreatedAtDesc(Long userId);
 
+    /**
+     * One person's permissions for one day in one state.
+     *
+     * <p>Used by punch-out: an approved permission is what allows somebody to
+     * leave before the office closes, so the rule needs to know whether one
+     * exists for today and from what time it runs.
+     */
+    List<PermissionRequest> findByUserIdAndRequestDateAndStatus(
+            Long userId, java.time.LocalDate requestDate, String status);
+
     @Query("SELECT p FROM PermissionRequest p WHERE p.status = 'PENDING' ORDER BY p.createdAt ASC")
     List<PermissionRequest> findAllPending();
 

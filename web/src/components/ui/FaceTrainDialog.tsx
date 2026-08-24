@@ -174,6 +174,15 @@ export function FaceTrainDialog({
     }
   };
 
+  /*
+    Kept, unused by any button on purpose.
+
+    Biometric data has to remain erasable -- for somebody who leaves, or who
+    asks for it -- and deleting this function would mean writing it again from
+    scratch when erasure is wired into offboarding. What has been removed is
+    the casual path to it, not the capability.
+  */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const forgetFace = async () => {
     setBusy(true);
     try {
@@ -285,17 +294,21 @@ export function FaceTrainDialog({
               {step + 1 >= POSES.length ? "Capture and finish" : "Capture this photo"}
             </Button>
 
-            {saved > 0 && (
-              <Button
-                variant="outline"
-                onClick={forgetFace}
-                disabled={busy}
-                className="h-9 w-full text-xs text-destructive hover:bg-destructive/10"
-              >
-                <Trash2 className="mr-2 h-3.5 w-3.5" />
-                Remove my face data
-              </Button>
-            )}
+            {/*
+              "Remove my face data" was here.
+
+              A registered face is what lets somebody punch attendance, so
+              erasing it does not just delete a photo -- it stops that person
+              being able to clock in until an administrator sits them in front
+              of a camera again. It was one button away from the capture
+              button, offered on every visit to this dialog, and no confirm
+              step stood between them.
+
+              Registration is now permanent: re-registering replaces the
+              photos, and nothing in the portal takes it away. Erasure for
+              somebody who has actually left is a deliberate act and belongs
+              with offboarding, not beside a camera shutter.
+            */}
 
             <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
               Your face is stored as a set of measurements, not as photographs, and only

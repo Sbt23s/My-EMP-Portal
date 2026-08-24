@@ -3138,39 +3138,19 @@ function EmployeeToday({ userName, d, punch, org }: {
         </CardContent>
       </Card>
 
-      <Card className={cn("shadow-sm border-border/50 flex flex-col", !hasModule("ATTENDANCE") && "hidden")}>
-        <CardHeader className="pb-3"><CardTitle className="text-base">Today's Status</CardTitle></CardHeader>
-        <CardContent className="flex flex-1 items-center gap-5">
-          <div
-            className="grid h-28 w-28 shrink-0 place-items-center rounded-full"
-            style={{ background: `conic-gradient(hsl(var(--success)) 0 ${pct}%, hsl(var(--muted)) 0)` }}
-          >
-            <div className="grid h-[86px] w-[86px] place-items-center rounded-full bg-card text-center">
-              <div>
-                <div className="text-sm font-bold">{d.punchedInToday ? "In" : "Not In"}</div>
-                <div className="text-[10px] text-muted-foreground">{d.punchedInToday ? "Checked in" : "Checked out"}</div>
-              </div>
-            </div>
-          </div>
-          <div className="flex-1 space-y-2">
-            <div className="flex items-center gap-2 text-sm"><Clock className="h-4 w-4 text-success" /><span className="text-xs text-muted-foreground">Working</span><b className="ml-auto tabular-nums">{minutesToHours(worked)}</b></div>
-            <div className="flex items-center gap-2 text-sm"><Clock className="h-4 w-4 text-muted-foreground" /><span className="text-xs text-muted-foreground">Punch in</span><b className="ml-auto tabular-nums">{d.punchInAt ? dayjs(d.punchInAt).format("h:mm A") : "—"}</b></div>
-            <div className="flex items-center gap-2 text-sm"><Clock className="h-4 w-4 text-muted-foreground" /><span className="text-xs text-muted-foreground">Punch out</span><b className="ml-auto tabular-nums">{d.punchOutAt ? dayjs(d.punchOutAt).format("h:mm A") : "—"}</b></div>
-            <Button
-              size="sm"
-              className={cn("mt-1 w-full rounded-lg", !!d.punchOutAt && "opacity-65 cursor-not-allowed")}
-              disabled={punch.isPending || !!d.punchOutAt}
-              onClick={() => {
-                if (!d.punchOutAt) {
-                  punch.mutate(d.punchedInToday ? "punch-out" : "punch-in");
-                }
-              }}
-            >
-              {d.punchOutAt ? "Punched Out Today" : d.punchedInToday ? "Punch Out" : "Punch In"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/*
+        The second "Today's Status" panel was here.
+
+        It repeated the Today's Status card at the top of this page and
+        carried a second Punch In button. Two controls that do the same
+        thing on one screen is a question the reader has to answer before
+        pressing either.
+
+        Punching is not lost with it: Attendance is a full punch page,
+        geofence and all, and it is in the sidebar for every role. That
+        was checked before this came out -- removing the only way an
+        employee can clock in would have stopped the company working.
+      */}
 
       <Card className={cn(
         "border-primary/30 bg-gradient-to-br from-primary/5 to-transparent shadow-sm",

@@ -136,6 +136,27 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * A response the request asked for in a format we cannot produce.
+     *
+     * <p>Requesting an API path that ends in something like {@code .js} makes
+     * Spring fix the response type to that extension before the handler runs.
+     * The handler then returns an object, there is no converter that can write
+     * an object as JavaScript, and the failure surfaced as an unhandled
+     * exception and a 500 -- as though the server had broken, when in fact it
+     * was asked for something that does not exist in that shape.
+     *
+     * <p>406 is the honest answer, and logging it at debug keeps a stream of
+     * scanner traffic from burying real faults in the error log.
+     */
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotWritableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotWritable(
+            org.springframework.http.converter.HttpMessageNotWritableException ex) {
+        log.debug("Cannot write the response in the requested format: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE)
+                .body(ApiResponse.fail("This endpoint cannot answer in the format requested.", null));
+    }
+
+    /**
      * A unique constraint the application did not catch first.
      *
      * Every one of these is a bug -- the checks upstream exist so a duplicate

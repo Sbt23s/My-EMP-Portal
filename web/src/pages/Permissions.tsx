@@ -149,6 +149,11 @@ export default function PermissionsPage() {
   const qc = useQueryClient();
   const { user, hasPermission, hasRole } = useAuth();
   const isAdmin = hasPermission("USER_MANAGE");
+  /*
+    A portal administrator, not merely somebody who can manage users. HR holds
+    USER_MANAGE and is still an employee; these two accounts are not.
+  */
+  const isSystemAdmin = hasRole("SUPER_ADMIN") || hasRole("COMPANY_ADMIN");
   const isHR = hasRole("IT_MGR") || hasRole("IT_HR");
   const isApprover = hasPermission("LEAVE_APPROVE");
   const seesAll = isHR || isAdmin;
@@ -357,7 +362,21 @@ export default function PermissionsPage() {
         title="Permission"
         subtitle="Request short, hours-wise time off during a work day."
         actions={
-          !isAdmin ? (
+          /*
+            Anybody who works here can ask for an hour off, including HR.
+
+            This hid the button from anyone holding USER_MANAGE, on the
+            reasoning that an administrator manages requests rather than making
+            them. But IT_HR carries USER_MANAGE, so the HR Head -- an employee
+            who takes time off like everyone else -- had no way to ask for it
+            from this page at all, while the approver chain behind it already
+            knew exactly who they should ask.
+
+            The system administrator accounts are the genuine exception: they
+            exist to configure the portal rather than to work shifts, and a
+            permission request from one has nobody above it to approve.
+          */
+          !isSystemAdmin ? (
             <Button onClick={() => setOpen(true)}>
               <Plus className="mr-1.5 h-4 w-4" /> Apply for permission
             </Button>

@@ -92,9 +92,17 @@ export default function ComplaintsPage() {
             ? "Review employee complaints and respond."
             : "Raise a complaint. HR and admin will review and respond."
         }
-        // Reviewers (HR / Admin) only respond — they don't submit.
+        /*
+          Reviewing complaints and having one are different things.
+
+          The button was hidden from reviewers on the reasoning that HR
+          responds rather than submits. But HR is an employee too, and the one
+          complaint they cannot raise anywhere else is the one about their own
+          situation -- which is exactly the case the recipient list below is
+          for, since it lets them address it upward.
+        */
         actions={
-          !canReview && (
+          (
             <Button onClick={() => setShowSubmit(true)}>
               <Plus className="mr-2 h-4 w-4" /> New Submission
             </Button>

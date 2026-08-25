@@ -161,11 +161,17 @@ export default function HelpdeskPage() {
         title="Supports"
         subtitle={canSeeAll ? "Overview of all support requests" : "Raise IT and facility requests, track progress, and rate resolutions."}
         actions={
-          !canSeeAll && (
-            <Button onClick={() => navigate("/helpdesk/new")}>
-              <Plus className="h-4 w-4" /> New ticket
-            </Button>
-          )
+          /*
+            Seeing every ticket and needing to raise one are different things.
+
+            This hid the button from anyone who can see all tickets, which is
+            HR -- who is also an employee whose laptop breaks. The overview and
+            the button are not in conflict: the page can list the company's
+            tickets and still let the person reading it raise their own.
+          */
+          <Button onClick={() => navigate("/helpdesk/new")}>
+            <Plus className="h-4 w-4" /> New ticket
+          </Button>
         }
       />
 

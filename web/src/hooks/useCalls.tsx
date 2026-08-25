@@ -436,8 +436,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         stop being visible on screen and start being dropped frames.
       */
       video: isVideo ? {
-        width: { ideal: 1920, max: 1920 },
-        height: { ideal: 1080, max: 1080 },
+        width: { ideal: 1280, max: 1920 },
+        height: { ideal: 720, max: 1080 },
         frameRate: { ideal: 30, max: 30 }
       } : false
     };

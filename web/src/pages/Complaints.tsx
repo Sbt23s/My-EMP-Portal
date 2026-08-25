@@ -359,7 +359,7 @@ function AllComplaints() {
     Defaults to what was addressed to me, because that is the work. The whole
     list stays one tap away for anyone overseeing the lot.
   */
-  const [scope, setScope] = useState<"me" | "all">("me");
+  const [scope, setScope] = useState<"me" | "mine" | "all">("me");
 
   const query = useQuery({
     queryKey: ["complaints", "all"],
@@ -381,8 +381,31 @@ function AllComplaints() {
   });
 
   const everything = query.data?.content ?? [];
+  /*
+    Three different things, which were all one list before.
+
+    A reviewer is also an employee. HR raising a complaint about their own
+    situation is the case the recipient dropdown exists for -- and those
+    belong with their other submissions, not in the queue of work waiting on
+    them. Judging one's own complaint is not review, so those are read-only
+    here and the decision is left to whoever it was actually addressed to.
+  */
   const addressedToMe = everything.filter((c) => c.requestedTo === me?.id);
-  const all = scope === "me" ? addressedToMe : everything;
+  const raisedByMe = everything.filter((c) => c.raisedBy === me?.id);
+  const all =
+    scope === "me" ? addressedToMe : scope === "mine" ? raisedByMe : everything;
+
+  /*
+    Who may actually decide a complaint: the person it was addressed to, and
+    never its author, and not once it has been settled. A complaint that is
+    resolved or rejected is finished -- reopening it by a second response
+    would erase the answer the submitter has already been given.
+  */
+  const canDecide = (c: ComplaintNeed) =>
+    c.requestedTo === me?.id &&
+    c.raisedBy !== me?.id &&
+    c.status !== "RESOLVED" &&
+    c.status !== "REJECTED";
 
   const years = useMemo(() => {
     const set = new Set<string>();
@@ -441,6 +464,7 @@ function AllComplaints() {
       <div className="flex gap-1 rounded-lg border bg-muted/60 p-1 w-fit">
         {([
           ["me", `Addressed to me (${addressedToMe.length})`],
+          ["mine", `My requests (${raisedByMe.length})`],
           ["all", `All complaints (${everything.length})`],
         ] as const).map(([key, label]) => (
           <button
@@ -527,8 +551,17 @@ function AllComplaints() {
                 {rows.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell className="pr-6 text-right">
-                      <Button size="sm" variant="outline" onClick={() => setActingOn(c)}>
-                        Respond
+                      {/*
+                        Only the person it was addressed to decides it, and
+                        only while it is still open for a decision. Everyone
+                        else -- including whoever raised it -- reads it.
+                      */}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setActingOn(c)}
+                      >
+                        {canDecide(c) ? "Respond" : "View"}
                       </Button>
                     </TableCell>
                     <TableCell className="pl-6 font-medium code-chip">{c.referenceCode}</TableCell>
@@ -568,6 +601,7 @@ function AllComplaints() {
       {actingOn && (
         <RespondDialog
           complaint={actingOn}
+          readOnly={!canDecide(actingOn)}
           onClose={() => setActingOn(null)}
           onSaved={() => {
             qc.invalidateQueries({ queryKey: ["complaints"] });
@@ -699,14 +733,26 @@ function SubmitDialog({ onClose }: { onClose: () => void }) {
 /** Respond to a complaint modal for HR & Admin reviewers. */
 function RespondDialog({
   complaint,
+  readOnly,
   onClose,
   onSaved
 }: {
   complaint: ComplaintNeed;
+  /** Open to read: not addressed to this person, or already settled. */
+  readOnly: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [status, setStatus] = useState(complaint.status || "IN_REVIEW");
+  /*
+    A complaint only moves forward. Once it is in review it cannot be put
+    back to open, and once it is settled it cannot be moved at all -- so the
+    step it has passed is offered as a disabled option rather than removed,
+    which shows where it has been instead of silently dropping it.
+  */
+  const allowed = NEXT_STATUS[complaint.status] || STATUS_FLOW.map((f) => f.value);
+  const [status, setStatus] = useState(
+    complaint.status === "OPEN" ? "IN_REVIEW" : complaint.status || "IN_REVIEW"
+  );
   const [notes, setNotes] = useState(complaint.hrResponse || "");
 
   const update = useMutation({
@@ -728,7 +774,7 @@ function RespondDialog({
   return (
     <Dialog open onClose={onClose} className="max-w-md">
       <DialogHeader
-        title={`Respond to Complaint #${complaint.referenceCode}`}
+        title={`${readOnly ? "Complaint" : "Respond to Complaint"} #${complaint.referenceCode}`}
         description={complaint.subject}
       />
       <div className="mt-3 space-y-3">
@@ -737,39 +783,76 @@ function RespondDialog({
           <div className="text-muted-foreground">{complaint.description}</div>
         </div>
 
-        <div className="space-y-1">
-          <Label htmlFor="st">Update Status</Label>
-          <Select id="st" value={status} onChange={(e) => setStatus(e.target.value)}>
-            {(NEXT_STATUS[complaint.status] || STATUS_FLOW.map(s => s.value)).map((st) => (
-              <option key={st} value={st}>{st.replace("_", " ")}</option>
-            ))}
-          </Select>
-          {STEP_HINT[complaint.status] && (
-            <p className="text-[11px] text-muted-foreground">{STEP_HINT[complaint.status]}</p>
-          )}
-        </div>
+        {readOnly ? (
+          <>
+            <div className="space-y-1">
+              <Label>Status</Label>
+              <div>
+                <Badge variant={statusVariant(complaint.status)}>
+                  {complaint.status.replace("_", " ")}
+                </Badge>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Response</Label>
+              {complaint.hrResponse ? (
+                <p className="rounded-md border bg-muted/40 p-3 text-xs whitespace-pre-wrap">
+                  {complaint.hrResponse}
+                </p>
+              ) : (
+                <p className="text-xs italic text-muted-foreground">
+                  Awaiting a response from {complaint.requestedToName || "the reviewer"}.
+                </p>
+              )}
+            </div>
+            <div className="flex justify-end pt-2">
+              <Button type="button" variant="outline" onClick={onClose}>Close</Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="space-y-1">
+              <Label htmlFor="st">Update Status</Label>
+              {/*
+                Every step is listed so the path is visible, but the ones
+                already passed are disabled -- a complaint in review cannot go
+                back to open.
+              */}
+              <Select id="st" value={status} onChange={(e) => setStatus(e.target.value)}>
+                {STATUS_FLOW.map((f) => (
+                  <option key={f.value} value={f.value} disabled={!allowed.includes(f.value)}>
+                    {f.label}
+                  </option>
+                ))}
+              </Select>
+              {STEP_HINT[complaint.status] && (
+                <p className="text-[11px] text-muted-foreground">{STEP_HINT[complaint.status]}</p>
+              )}
+            </div>
 
-        <div className="space-y-1">
-          <Label htmlFor="nts">Resolution Notes / Response</Label>
-          <Textarea
-            id="nts"
-            rows={3}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Enter response or resolution details for the employee..."
-          />
-        </div>
+            <div className="space-y-1">
+              <Label htmlFor="nts">Resolution Notes / Response</Label>
+              <Textarea
+                id="nts"
+                rows={3}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Enter response or resolution details for the employee..."
+              />
+            </div>
 
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button
-            type="button"
-            disabled={update.isPending}
-            onClick={() => update.mutate()}
-          >
-            {update.isPending ? "Saving..." : "Save Response"}
-          </Button>
-        </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+              <Button
+                type="button"
+                disabled={update.isPending}
+                onClick={() => update.mutate()}
+              >
+                {update.isPending ? "Saving..." : "Save Response"}
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </Dialog>
   );

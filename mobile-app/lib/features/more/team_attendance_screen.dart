@@ -286,14 +286,67 @@ class _Row extends StatelessWidget {
           ),
         ),
         title: Text(
-          row.employeeName ?? 'Unnamed',
+          // "Unnamed" was what every row said, because this endpoint returns a
+          // userId and no person. The name is joined on in the repository; the
+          // employee code is the fallback, and both being absent is now rare
+          // enough to be worth showing plainly rather than hiding.
+          row.employeeName ?? row.employeeCode ?? 'Employee ${row.userId}',
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        subtitle: Text(
-          row.punchedIn
-              ? '${time.format(row.punchInAt!)}'
-                  '${row.punchOutAt != null ? ' – ${time.format(row.punchOutAt!)}' : ''}'
-              : 'No punch recorded',
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              row.punchedIn
+                  ? '${time.format(row.punchInAt!)}'
+                      '${row.punchOutAt != null ? ' – ${time.format(row.punchOutAt!)}' : ''}'
+                  : 'No punch recorded',
+            ),
+            /*
+              Where the punch happened, for the punches where that is a
+              question. An office punch is not geofenced, so a location on it
+              says nothing; a field punch outside its site is the thing
+              somebody actually wants to see, so it is called out rather than
+              left as two numbers to interpret.
+            */
+            if (row.punchedIn && (row.mode != null || row.hasLocation))
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Row(
+                  children: [
+                    Icon(
+                      row.hasLocation
+                          ? Icons.place_outlined
+                          : Icons.business_outlined,
+                      size: 13,
+                      color: row.withinGeofence == false
+                          ? AppTheme.warning(context)
+                          : scheme.outline,
+                    ),
+                    const SizedBox(width: 3),
+                    Expanded(
+                      child: Text(
+                        [
+                          if (row.mode != null) row.mode!,
+                          if (row.withinGeofence == false) 'outside site',
+                          if (row.hasLocation)
+                            '${row.inLatitude!.toStringAsFixed(4)}, '
+                                '${row.inLongitude!.toStringAsFixed(4)}',
+                        ].join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: row.withinGeofence == false
+                              ? AppTheme.warning(context)
+                              : scheme.outline,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,

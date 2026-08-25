@@ -206,6 +206,33 @@ class WorkRepository {
     return ApiEnvelope.listOf(data).map(Ticket.fromJson).toList();
   }
 
+  /// GET /tickets/{id} — one ticket, with whatever the server attaches to it.
+  Future<Map<String, dynamic>> ticket(int id) async {
+    final data = await _api.get('/tickets/$id');
+    if (data is Map<String, dynamic>) return data;
+    throw StateError('ticket $id');
+  }
+
+  /// GET /tickets/{id}/comments — the conversation on a ticket.
+  ///
+  /// Wrapped so an endpoint that is not there yet reads as "no replies" rather
+  /// than as a broken screen: the thread is the least important part of the
+  /// page and should not take the rest of it down.
+  Future<List<Map<String, dynamic>>> ticketComments(int id) async {
+    try {
+      final data = await _api.get('/tickets/$id/comments');
+      return ApiEnvelope.listOf(data)
+          .whereType<Map<String, dynamic>>()
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// POST /tickets/{id}/comments — reply on a ticket.
+  Future<void> replyToTicket(int id, String comment) =>
+      _api.post('/tickets/$id/comments', body: {'comment': comment.trim()});
+
   /// POST /tickets
   Future<Ticket> raiseTicket({
     required String subject,
@@ -421,7 +448,44 @@ class WorkRepository {
       '/attendance/team',
       query: {'date': _apiDate.format(date)},
     );
-    return ApiEnvelope.listOf(data).map(TeamAttendanceRow.fromJson).toList();
+    final rows = ApiEnvelope.listOf(data).map(TeamAttendanceRow.fromJson).toList();
+
+    /*
+      Put names on the rows.
+
+      This endpoint returns attendance and nothing about the person: no name,
+      no employee code, only a userId. So every row rendered as "Unnamed" and
+      the screen looked broken -- times and statuses with nobody attached to
+      them, which is unreadable rather than merely untidy.
+
+      The names are resolved here from the directory the app can already read,
+      keyed by id. Done in the repository rather than the screen so anything
+      else that shows these rows gets them too.
+
+      If the directory cannot be read -- a team leader may not be allowed the
+      company-wide one -- the rows are returned as they came. Attendance
+      without names is still worth showing; failing the whole screen because
+      the labels are missing is not.
+    */
+    if (rows.isEmpty) return rows;
+    try {
+      final names = <int, String>{};
+      final codes = <int, String>{};
+      final team = await myTeam();
+      for (final m in team.members) {
+        names[m.id] = m.name;
+        if (m.employeeCode != null) codes[m.id] = m.employeeCode!;
+      }
+      if (names.isEmpty) return rows;
+      return rows
+          .map((r) => r.withPerson(
+                name: names[r.userId],
+                code: codes[r.userId],
+              ))
+          .toList();
+    } catch (_) {
+      return rows;
+    }
   }
 
   // ---- complaints --------------------------------------------------------
@@ -537,6 +601,35 @@ class WorkRepository {
       form.fields.add(MapEntry('caption', caption.trim()));
     }
     await _api.upload('/communities/$channelId/attachments', form);
+  }
+
+  /// POST /workreports/{id}/attachments — files, links, or both.
+  ///
+  /// The website offers the same two, and the endpoint takes them in one
+  /// request, so a report submitted with a photo and a document link needs one
+  /// round trip rather than three.
+  Future<void> addWorkReportAttachments(
+    int reportId, {
+    List<File> files = const [],
+    List<String> links = const [],
+  }) async {
+    if (files.isEmpty && links.isEmpty) return;
+    final form = FormData();
+    for (final f in files) {
+      form.files.add(MapEntry(
+        'files',
+        await MultipartFile.fromFile(f.path, filename: f.uri.pathSegments.last),
+      ));
+    }
+    for (final l in links) {
+      final t = l.trim();
+      // The server accepts http and https only and rejects the rest, so
+      // anything else is dropped here rather than sent to be refused.
+      if (t.startsWith('http://') || t.startsWith('https://')) {
+        form.fields.add(MapEntry('links', t));
+      }
+    }
+    await _api.upload('/workreports/$reportId/attachments', form);
   }
 
   /// POST /communities/{id}/voice — a voice note.

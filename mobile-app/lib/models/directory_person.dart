@@ -80,6 +80,10 @@ class TeamAttendanceRow {
     this.status,
     this.workedMinutes,
     this.lateMinutes,
+    this.mode,
+    this.withinGeofence,
+    this.inLatitude,
+    this.inLongitude,
   });
 
   final int userId;
@@ -90,6 +94,40 @@ class TeamAttendanceRow {
   final String? status;
   final int? workedMinutes;
   final int? lateMinutes;
+
+  /// Office, work-from-home or field. Decides whether a location means anything.
+  final String? mode;
+
+  /// Whether a field punch landed inside the site it was supposed to.
+  final bool? withinGeofence;
+
+  /// Where the punch-in happened. Null for an office punch, which is not
+  /// geofenced, and null on older records taken before locations were kept.
+  final double? inLatitude;
+  final double? inLongitude;
+
+  bool get hasLocation => inLatitude != null && inLongitude != null;
+
+  /// The same row with a name attached.
+  ///
+  /// The attendance endpoint returns a userId and no person, so names come
+  /// from the directory and are joined on afterwards. Existing values win --
+  /// if the server ever starts sending a name, it is the better one.
+  TeamAttendanceRow withPerson({String? name, String? code}) =>
+      TeamAttendanceRow(
+        userId: userId,
+        employeeName: employeeName ?? name,
+        employeeCode: employeeCode ?? code,
+        punchInAt: punchInAt,
+        punchOutAt: punchOutAt,
+        status: status,
+        workedMinutes: workedMinutes,
+        lateMinutes: lateMinutes,
+        mode: mode,
+        withinGeofence: withinGeofence,
+        inLatitude: inLatitude,
+        inLongitude: inLongitude,
+      );
 
   bool get punchedIn => punchInAt != null;
   bool get isLate => (lateMinutes ?? 0) > 0;
@@ -109,6 +147,10 @@ class TeamAttendanceRow {
         punchOutAt: DateTime.tryParse(json['punchOutAt']?.toString() ?? ''),
         status: json['status']?.toString(),
         workedMinutes: (json['workedMinutes'] as num?)?.toInt(),
+        mode: json['mode']?.toString(),
+        withinGeofence: json['withinGeofence'] as bool?,
+        inLatitude: (json['inLatitude'] as num?)?.toDouble(),
+        inLongitude: (json['inLongitude'] as num?)?.toDouble(),
         lateMinutes: (json['lateMinutes'] as num?)?.toInt(),
       );
 }

@@ -1,22 +1,28 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
+
+import '../../core/config/app_config.dart';
 
 import '../../models/work_items.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/modules_provider.dart';
-import 'ai_assistant_screen.dart';
 import 'audit_screen.dart';
 import 'communities_screen.dart';
 import 'employees_screen.dart';
 import 'my_team_screen.dart';
-import 'safety_screen.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/states.dart';
 import '../approvals/approvals_screen.dart';
 import 'calendar_screen.dart';
 import 'raise_ticket_sheet.dart';
+import 'ticket_detail_sheet.dart';
 import 'complaints_screen.dart';
 import 'submit_claim_sheet.dart';
 import 'team_attendance_screen.dart';
@@ -110,7 +116,7 @@ class MoreScreen extends ConsumerWidget {
       if (modules.has('HELPDESK'))
         _Entry(
           icon: Icons.support_agent_rounded,
-          title: 'Support tickets',
+          title: 'Supports',
           subtitle: 'Raise and track requests',
           onTap: () => _open(context, const TicketsScreen()),
         ),
@@ -142,7 +148,14 @@ class MoreScreen extends ConsumerWidget {
           subtitle: 'Raise something with HR',
           onTap: () => _open(context, const ComplaintsScreen()),
         ),
-      if (modules.has('TEAMS'))
+      /*
+        Teams is the company-wide view of every team, which is an HR and
+        executive question rather than a team leader's. A leader's own people
+        are under "My team" below, which is the view that answers what they
+        actually need -- and USER_MANAGE is what separates the two, because a
+        leader does not hold it.
+      */
+      if (modules.has('TEAMS') && (user?.can('USER_MANAGE') ?? false))
         _Entry(
           icon: Icons.groups_2_outlined,
           title: 'Teams',
@@ -156,22 +169,8 @@ class MoreScreen extends ConsumerWidget {
           subtitle: 'Channels and direct messages',
           onTap: () => _open(context, const ChatScreen()),
         ),
-      if (modules.has('CHAT'))
-        _Entry(
-          icon: Icons.auto_awesome_rounded,
-          title: 'AI assistant',
-          subtitle: 'Ask about leave, payroll and policies',
-          onTap: () => _open(context, const AiAssistantScreen()),
-        ),
-      // Safety sits outside the module list: reporting an incident must never
-      // depend on a module switch — the web page is always reachable for the
-      // same reason.
-      _Entry(
-        icon: Icons.shield_outlined,
-        title: 'Safety',
-        subtitle: 'Report an incident, or review the team’s',
-        onTap: () => _open(context, const SafetyScreen()),
-      ),
+
+
       // My team: the people around you, who is celebrating, who is off.
       if (modules.has('TEAMS'))
         _Entry(
@@ -181,7 +180,13 @@ class MoreScreen extends ConsumerWidget {
           onTap: () => _open(context, const MyTeamScreen()),
         ),
       // The directory: who works here, and how to reach them.
-      if (user?.canAny(const ['USER_MANAGE', 'ATTENDANCE_TEAM', 'REPORT_VIEW']) ?? false)
+      /*
+        The directory is for the people who administer it. ATTENDANCE_TEAM and
+        REPORT_VIEW were in this list, and both are held by team leaders, so
+        the whole company directory was reachable by every leader. USER_MANAGE
+        alone leaves it with HR, the administrator and the CTO.
+      */
+      if (user?.can('USER_MANAGE') ?? false)
         _Entry(
           icon: Icons.badge_outlined,
           title: 'Employees',
@@ -440,11 +445,100 @@ class _ListScaffold<T> extends ConsumerWidget {
   }
 }
 
-class PayslipsScreen extends StatelessWidget {
+class PayslipsScreen extends ConsumerWidget {
   const PayslipsScreen({super.key});
 
+  /// Fetch the PDF and hand it to whatever the phone opens PDFs with.
+  ///
+  /// `view` and `download` are the same request; the difference is only what
+  /// is said afterwards. The website offers both because a browser can show a
+  /// PDF inline, and a phone opens it in a reader either way -- so the two
+  /// buttons are kept, matching the site, rather than pretending one of them
+  /// does something different.
+  static Future<void> _openPdf(
+    BuildContext context,
+    WidgetRef ref,
+    Payslip p, {
+    required bool save,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(save ? 'Downloading payslip…' : 'Opening payslip…'),
+        duration: const Duration(seconds: 2),
+      ));
+    try {
+      final dio = ref.read(apiClientProvider).raw;
+      final res = await dio.get<List<int>>(
+        '${AppConfig.apiBaseUrl}/payroll/payslip/${p.id}/pdf',
+        options: Options(responseType: ResponseType.bytes),
+      );
+      final dir = save
+          ? await getApplicationDocumentsDirectory()
+          : await getTemporaryDirectory();
+      // Named by period rather than id, because the file ends up in a folder
+      // with other downloads and "payslip-412.pdf" tells nobody anything.
+      final safe = p.periodLabel.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '-');
+      final file = File('${dir.path}/Payslip-$safe.pdf');
+      await file.writeAsBytes(res.data ?? const []);
+
+      final opened = await OpenFilex.open(file.path);
+      if (opened.type != ResultType.done) {
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(
+            content: Text('Saved to ${file.path}'),
+            duration: const Duration(seconds: 5),
+          ));
+      } else if (save) {
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(const SnackBar(content: Text('Payslip downloaded')));
+      }
+    } catch (e) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(
+          content: Text('Could not open that payslip. Try again.'),
+        ));
+    }
+  }
+
+  /// Email a payslip to the address on the employee's own profile.
+  ///
+  /// The address is never typed here: the server reads it from the record, so
+  /// a payslip cannot be sent to the wrong person by a mistyped character.
+  static Future<void> _email(
+    BuildContext context,
+    WidgetRef ref,
+    Payslip p,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text('Sending…')));
+    try {
+      await ref.read(apiClientProvider).post('/payroll/payslip/${p.id}/email');
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(
+          content: Text('Payslip emailed to you'),
+        ));
+    } catch (e) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          // The server says why -- email not configured, no address on file --
+          // and that is more useful than a generic failure.
+          content: Text('$e'),
+          duration: const Duration(seconds: 5),
+        ));
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final money = NumberFormat.currency(
       locale: 'en_IN',
       symbol: '₹',
@@ -457,23 +551,61 @@ class PayslipsScreen extends StatelessWidget {
       emptyTitle: 'No payslips yet',
       emptyDescription: 'They appear here once payroll has been run.',
       itemBuilder: (context, p) => Card(
-        child: ListTile(
-          title: Text(
-            p.periodLabel,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          subtitle: Text(
-            p.payDate != null
-                ? 'Paid ${DateFormat('d MMM yyyy').format(p.payDate!)}'
-                : 'Not yet paid',
-          ),
-          trailing: Text(
-            money.format(p.takeHome),
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontFeatures: [FontFeature.tabularFigures()],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ListTile(
+              title: Text(
+                p.periodLabel,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                p.payDate != null
+                    ? 'Paid ${DateFormat('d MMM yyyy').format(p.payDate!)}'
+                    : 'Not yet paid',
+              ),
+              trailing: Text(
+                money.format(p.takeHome),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
             ),
-          ),
+            /*
+              The same three actions the website offers on a payslip row. They
+              were missing entirely here, so the app could show that a payslip
+              existed and give no way to read it.
+
+              Wrapped rather than in a Row: at the smallest phone width three
+              labelled buttons do not fit on one line, and Wrap drops the last
+              one onto a second line instead of overflowing.
+            */
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 4,
+                children: [
+                  TextButton.icon(
+                    onPressed: () => _openPdf(context, ref, p, save: false),
+                    icon: const Icon(Icons.visibility_outlined, size: 18),
+                    label: const Text('View'),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => _openPdf(context, ref, p, save: true),
+                    icon: const Icon(Icons.download_rounded, size: 18),
+                    label: const Text('Download'),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => _email(context, ref, p),
+                    icon: const Icon(Icons.mail_outline_rounded, size: 18),
+                    label: const Text('Email'),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -658,7 +790,7 @@ class TicketsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return _ListScaffold<Ticket>(
-      title: 'Support tickets',
+      title: 'Supports',
       provider: ticketsProvider,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
@@ -671,7 +803,7 @@ class TicketsScreen extends ConsumerWidget {
           if (raised == true) ref.invalidate(ticketsProvider);
         },
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Raise'),
+        label: const Text('New ticket'),
       ),
       emptyIcon: Icons.support_agent_rounded,
       emptyTitle: 'No tickets',
@@ -682,6 +814,17 @@ class TicketsScreen extends ConsumerWidget {
             : AppTheme.warning(context);
         return Card(
           child: ListTile(
+            // The row was not tappable, so a ticket could be raised and never
+            // read again from the phone -- whatever HR replied was only
+            // visible on the website.
+            onTap: () async {
+              await showModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                useSafeArea: true,
+                builder: (_) => TicketDetailSheet(ticket: t),
+              );
+            },
             title: Text(
               t.displayTitle,
               maxLines: 2,

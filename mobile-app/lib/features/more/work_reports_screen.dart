@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -233,18 +236,111 @@ class _SubmitWorkReportSheetState extends ConsumerState<SubmitWorkReportSheet> {
     super.dispose();
   }
 
+  /*
+    Files and links chosen before the report is sent.
+
+    They cannot be uploaded until the report exists -- the endpoint attaches to
+    a report id -- so they are held here and sent immediately after it is
+    created. Keeping them in a list rather than uploading each on selection
+    means somebody who changes their mind has nothing to undo on the server.
+  */
+  final List<File> _files = [];
+  final List<String> _links = [];
+
+  Future<void> _pickFiles() async {
+    try {
+      final picked = await FilePicker.platform.pickFiles(allowMultiple: true);
+      if (picked == null) return;
+      setState(() {
+        for (final f in picked.files) {
+          if (f.path != null) _files.add(File(f.path!));
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Could not open the file picker.')));
+    }
+  }
+
+  Future<void> _addLink() async {
+    final controller = TextEditingController();
+    final link = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add a link'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.url,
+          decoration: const InputDecoration(hintText: 'https://…'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+    if (link == null || link.isEmpty) return;
+    // The server accepts http and https only, so anything else is refused here
+    // where it can be explained rather than there where it cannot.
+    if (!link.startsWith('http://') && !link.startsWith('https://')) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(
+          content: Text('A link has to start with http:// or https://'),
+        ));
+      return;
+    }
+    setState(() => _links.add(link));
+  }
+
   Future<void> _submit() async {
     if (_busy) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() => _busy = true);
     try {
-      await ref.read(workRepositoryProvider).submitWorkReport(
+      final report = await ref.read(workRepositoryProvider).submitWorkReport(
             workDate: _date,
             projectName: _project.text,
             workHours: double.parse(_hours.text.trim()),
             taskDescription: _task.text,
           );
+
+      /*
+        Attachments are a second request, because they attach to a report that
+        has to exist first. A failure here is reported without discarding the
+        report: the day's work is recorded either way, and losing a submitted
+        report because a photo would not upload would be the worse outcome.
+      */
+      if (_files.isNotEmpty || _links.isNotEmpty) {
+        try {
+          await ref.read(workRepositoryProvider).addWorkReportAttachments(
+                report.id,
+                files: _files,
+                links: _links,
+              );
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(const SnackBar(
+                content: Text('Report saved, but the attachments did not upload.'),
+                duration: Duration(seconds: 4),
+              ));
+          }
+        }
+      }
+
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } catch (e) {
@@ -336,6 +432,63 @@ class _SubmitWorkReportSheetState extends ConsumerState<SubmitWorkReportSheet> {
                   alignLabelWithHint: true,
                 ),
               ),
+              const SizedBox(height: 18),
+              /*
+                Attachments, as the website has them: files and links.
+
+                Both are offered because a work report often points at
+                something that is not a file -- a pull request, a document in
+                a shared drive -- and uploading a screenshot of a link is what
+                people do when there is nowhere to put the link itself.
+              */
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _busy ? null : _pickFiles,
+                      icon: const Icon(Icons.attach_file_rounded, size: 18),
+                      label: const Text('Add files'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _busy ? null : _addLink,
+                      icon: const Icon(Icons.link_rounded, size: 18),
+                      label: const Text('Add link'),
+                    ),
+                  ),
+                ],
+              ),
+              if (_files.isNotEmpty || _links.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final f in _files)
+                      Chip(
+                        avatar: const Icon(Icons.insert_drive_file_outlined, size: 16),
+                        label: Text(
+                          f.uri.pathSegments.last,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        // Removable while it is only a choice; once uploaded it
+                        // belongs to the report and is the server's to remove.
+                        onDeleted: _busy ? null : () => setState(() => _files.remove(f)),
+                      ),
+                    for (final l in _links)
+                      Chip(
+                        avatar: const Icon(Icons.link_rounded, size: 16),
+                        label: Text(
+                          Uri.tryParse(l)?.host ?? l,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        onDeleted: _busy ? null : () => setState(() => _links.remove(l)),
+                      ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 22),
               FilledButton(
                 onPressed: _busy ? null : _submit,

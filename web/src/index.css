@@ -395,3 +395,77 @@ textarea,
   border-radius: 9999px;
   border: 2px solid hsl(var(--background));
 }
+
+/*
+  Small text, on a small screen.
+
+  There are around 470 places in this app that pin a size in pixels --
+  text-[9px], text-[10px], text-[11px] -- for dense desktop tables, stat
+  captions and badges. None of them is responsive, so they arrive on a phone
+  at exactly the size they were drawn for a 27-inch monitor: legible at
+  arm's length on a desk, not in a hand.
+
+  Fixing this at the source would mean editing several hundred class names
+  across thirty files, each one a chance to break a layout that currently
+  works. Doing it here is one rule, reversible, and it cannot change the
+  desktop at all -- the media query does not apply above 640px.
+
+  The floors are chosen to stay inside the space those elements already have.
+  11px is the smallest size that is comfortable on a phone; below that the
+  gain in legibility is smaller than the risk of the text no longer fitting
+  the badge it sits in.
+
+  min() rather than a flat value so anything already larger is left alone.
+*/
+@media (max-width: 640px) {
+  .text-\[9px\]  { font-size: 11px !important; line-height: 1.35 !important; }
+  .text-\[10px\] { font-size: 11.5px !important; line-height: 1.35 !important; }
+  .text-\[11px\] { font-size: 12px !important; line-height: 1.4 !important; }
+
+  /* Tailwind's own small steps, same reasoning. text-xs is 12px and turns up
+     in table cells and helper lines all over the app. */
+  .text-\[10\.5px\] { font-size: 11.5px !important; }
+
+  /*
+    Tables stay dense but become readable.
+
+    Every table here already scrolls sideways, so widening a cell costs
+    nothing but a little more scrolling -- and a table nobody can read is
+    worse than one they have to scroll.
+  */
+  table { font-size: 12.5px; }
+  th, td { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+
+  /*
+    Icon buttons big enough to hit.
+
+    There are around 170 buttons sized h-6, h-7 or h-8 -- 24, 28 and 32
+    pixels. That is fine for a mouse and too small for a thumb, which needs
+    about 44. The visible box is left alone and the tappable area is grown
+    underneath it, so nothing moves on screen but the target stops being a
+    game of accuracy. Eye icons, downloads and row actions are all this size.
+  */
+  button.h-6, button.h-7, button.h-8,
+  a.h-6, a.h-7, a.h-8 {
+    position: relative;
+  }
+  button.h-6::after, button.h-7::after, button.h-8::after,
+  a.h-6::after, a.h-7::after, a.h-8::after {
+    content: "";
+    position: absolute;
+    /* Grows the hit area outward to roughly 44px without shifting layout. */
+    inset: -8px;
+  }
+
+  /*
+    Four columns of numbers is too many at 360px.
+
+    These are the small stat strips -- present / absent / late / leave. At a
+    phone's width each column is under 80 pixels, so a two-digit figure and
+    its caption end up stacked and clipped. Two columns of two reads properly
+    and takes the same space.
+  */
+  .grid.grid-cols-4:not([class*="sm:grid-cols"]):not([class*="md:grid-cols"]):not([class*="lg:grid-cols"]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../models/leave.dart';
 import '../../providers/app_providers.dart';
 import '../../widgets/states.dart';
+import '../../widgets/date_field.dart';
 
 final myPermissionsProvider =
     FutureProvider.autoDispose<List<PermissionRequestItem>>(
@@ -369,7 +370,7 @@ class _RequestPermissionSheetState
                 data: (list) => list.isEmpty
                     ? const SizedBox.shrink()
                     : DropdownButtonFormField<int>(
-                        value: _approver,
+                        initialValue: _approver,
                         decoration: const InputDecoration(
                           labelText: 'Send to (optional)',
                           prefixIcon: Icon(Icons.person_outline_rounded),
@@ -388,7 +389,7 @@ class _RequestPermissionSheetState
               const SizedBox(height: 14),
 
               DropdownButtonFormField<String>(
-                value: _priority,
+                initialValue: _priority,
                 decoration: const InputDecoration(
                   labelText: 'Priority',
                   prefixIcon: Icon(Icons.flag_outlined),
@@ -450,8 +451,8 @@ class _RequestPermissionSheetState
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
+    final picked = await pickDate(
+      context,
       initialDate: _date,
       // A week back for one already taken and being recorded late; three months
       // forward is as far as anybody plans an hour off.

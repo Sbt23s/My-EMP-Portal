@@ -7,6 +7,7 @@ import '../../models/directory_person.dart';
 import '../../providers/app_providers.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/states.dart';
+import '../../widgets/date_field.dart';
 
 /// Rows for one day. Keyed by the date so switching back to yesterday is
 /// instant rather than a second request for something already fetched.
@@ -127,8 +128,8 @@ class _TeamAttendanceScreenState extends ConsumerState<TeamAttendanceScreen> {
 
   Future<void> _pickDate() async {
     final today = _todayOnly();
-    final picked = await showDatePicker(
-      context: context,
+    final picked = await pickDate(
+      context,
       initialDate: _date,
       firstDate: today.subtract(const Duration(days: 365)),
       lastDate: today,

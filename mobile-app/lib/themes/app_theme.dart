@@ -78,7 +78,7 @@ class AppTheme {
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(radius),
           side: BorderSide(
             color: scheme.outlineVariant.withValues(alpha: isDark ? 0.35 : 0.6),
           ),
@@ -93,23 +93,23 @@ class AppTheme {
           vertical: 14,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(radius),
           borderSide: BorderSide(color: scheme.outlineVariant),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(radius),
           borderSide: BorderSide(color: scheme.outlineVariant),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(radius),
           borderSide: BorderSide(color: scheme.primary, width: 1.6),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(radius),
           borderSide: const BorderSide(color: _danger),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(radius),
           borderSide: const BorderSide(color: _danger, width: 1.6),
         ),
       ),
@@ -118,7 +118,7 @@ class AppTheme {
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(50),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(radius),
           ),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
@@ -128,7 +128,7 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size.fromHeight(48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(radius),
           ),
         ),
       ),
@@ -152,9 +152,18 @@ class AppTheme {
         space: 1,
       ),
 
-      // Body text carries the body family; headings are applied below, so a
-      // pairing like "Serif + Sans" reads as two faces rather than one.
-      fontFamily: brand?.font.bodyFamily,
+      /*
+       * Body text carries the body family; headings are applied below, so a
+       * pairing like "Serif + Sans" reads as two faces rather than one.
+       *
+       * The fallback is the portal's own face rather than nothing. Branding
+       * only names a family when a company has chosen one, and until today
+       * that meant almost every screen fell through to whatever the phone
+       * ships -- Roboto on most Android, something else on a Samsung. That is
+       * the single biggest reason this app did not look like the website: not
+       * the colours or the spacing, the letters.
+       */
+      fontFamily: brand?.font.bodyFamily ?? bodyFace,
     ).copyWith(
       textTheme: _withHeadingFace(
         ThemeData(brightness: brightness).textTheme,
@@ -168,9 +177,26 @@ class AppTheme {
   /// Returns the text theme untouched when the pairing uses one family for both
   /// — rebuilding every style to set the same value it already has would be
   /// work for no visible difference.
+  /*
+   * The portal's corner radius, in one place.
+   *
+   * The website sets --radius: 0.65rem, which is 10.4 logical pixels. Cards
+   * here were rounded to 14 and controls to 12, so a card in the app and the
+   * same card in the browser were visibly different shapes -- one of those
+   * differences nobody can name but everybody notices.
+   */
+  static const double radius = 10.4;
+
+  /// Inter, as the portal uses for everything it does not call a heading.
+  static const String bodyFace = 'Inter';
+
+  /// Space Grotesk, as the portal uses for headings and figures.
+  static const String headingFace = 'Space Grotesk';
+
   static TextTheme _withHeadingFace(TextTheme base, ResolvedBranding? brand) {
-    final heading = brand?.font.headingFamily;
-    if (heading == null || heading == brand?.font.bodyFamily) return base;
+    final heading = brand?.font.headingFamily ?? headingFace;
+    final body = brand?.font.bodyFamily ?? bodyFace;
+    if (heading == body) return base;
     return base.copyWith(
       displayLarge: base.displayLarge?.copyWith(fontFamily: heading),
       displayMedium: base.displayMedium?.copyWith(fontFamily: heading),

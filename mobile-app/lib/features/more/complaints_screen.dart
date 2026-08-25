@@ -343,7 +343,7 @@ class _RaiseComplaintSheetState extends ConsumerState<RaiseComplaintSheet> {
               ),
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
-                value: _priority,
+                initialValue: _priority,
                 decoration: const InputDecoration(labelText: 'Priority'),
                 items: const [
                   DropdownMenuItem(value: 'LOW', child: Text('Low')),
@@ -365,7 +365,7 @@ class _RaiseComplaintSheetState extends ConsumerState<RaiseComplaintSheet> {
                 data: (people) => people.isEmpty
                     ? const SizedBox.shrink()
                     : DropdownButtonFormField<int?>(
-                        value: _requestedTo,
+                        initialValue: _requestedTo,
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Address to (optional)',

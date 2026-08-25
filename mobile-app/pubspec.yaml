@@ -108,3 +108,32 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # The website's own faces, bundled rather than fetched.
+  #
+  # Nothing was declared here before, so every label fell back to the phone's
+  # system font -- Roboto on most Android, something else on Samsung -- which
+  # is why the app never looked like the portal no matter what the theme said.
+  #
+  # Bundled rather than downloaded at runtime: an HR app that has to reach
+  # Google before it can draw text would show the wrong font on a bad
+  # connection and a different one on a good one.
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+    - family: Space Grotesk
+      fonts:
+        - asset: assets/fonts/SpaceGrotesk-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/SpaceGrotesk-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/SpaceGrotesk-Bold.ttf
+          weight: 700

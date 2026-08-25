@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The portal follows the phone's theme, so the window behind it must
+         too. A white window flashing behind a dark page on every launch is
+         the most noticeable thing about a badly wrapped site. -->
+    <style name="Theme.Pixous" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:statusBarColor">#312E81</item>
+        <item name="android:windowBackground">#0F172A</item>
+    </style>
+</resources>

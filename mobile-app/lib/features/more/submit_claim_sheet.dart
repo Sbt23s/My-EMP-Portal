@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/app_providers.dart';
+import '../../widgets/date_field.dart';
 
 /// Submit a travel-allowance claim. Pops `true` when one was actually created.
 ///
@@ -95,8 +96,8 @@ class _SubmitClaimSheetState extends ConsumerState<SubmitClaimSheet> {
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
+    final picked = await pickDate(
+      context,
       initialDate: _date,
       firstDate: DateTime(now.year - 1, now.month, now.day),
       lastDate: now,
@@ -221,7 +222,7 @@ class _SubmitClaimSheetState extends ConsumerState<SubmitClaimSheet> {
 
               // Claim type
               DropdownButtonFormField<String>(
-                value: _category,
+                initialValue: _category,
                 decoration: const InputDecoration(labelText: 'Claim type *'),
                 items: [
                   for (final c in _categories)

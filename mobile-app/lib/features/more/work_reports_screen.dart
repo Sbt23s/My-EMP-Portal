@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../models/work_report.dart';
 import '../../providers/app_providers.dart';
 import '../../widgets/states.dart';
+import '../../widgets/date_field.dart';
 
 final myWorkReportsProvider = FutureProvider.autoDispose<List<WorkReport>>(
   (ref) => ref.watch(workRepositoryProvider).myWorkReports(),
@@ -355,8 +356,8 @@ class _SubmitWorkReportSheetState extends ConsumerState<SubmitWorkReportSheet> {
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
+    final picked = await pickDate(
+      context,
       initialDate: _date,
       // Sixty days back covers a genuine catch-up without offering a date range
       // nobody files against. No future dates: a report is what was done.

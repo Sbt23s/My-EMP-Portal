@@ -7,6 +7,7 @@ import '../../models/safety.dart';
 import '../../providers/app_providers.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/states.dart';
+import '../../widgets/date_field.dart';
 
 final mySafetyProvider = FutureProvider.autoDispose<List<SafetyIncident>>(
   (ref) => ref.watch(workRepositoryProvider).mySafetyIncidents(),
@@ -427,8 +428,8 @@ class _ReportIncidentSheetState extends ConsumerState<ReportIncidentSheet> {
 
   Future<void> _pickWhen() async {
     final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
+    final picked = await pickDate(
+      context,
       initialDate: _occurredAt,
       firstDate: DateTime(now.year - 1),
       lastDate: now,
@@ -485,7 +486,7 @@ class _ReportIncidentSheetState extends ConsumerState<ReportIncidentSheet> {
               Text('Report an incident', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _type,
+                initialValue: _type,
                 decoration: const InputDecoration(labelText: 'Type'),
                 items: _types
                     .map((t) => DropdownMenuItem(
@@ -515,7 +516,7 @@ class _ReportIncidentSheetState extends ConsumerState<ReportIncidentSheet> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _severity,
+                initialValue: _severity,
                 decoration: const InputDecoration(labelText: 'Severity'),
                 items: _severities
                     .map((s) => DropdownMenuItem(
@@ -623,7 +624,7 @@ class _ResolveSheetState extends ConsumerState<_ResolveSheet> {
               style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 16),              DropdownButtonFormField<String>(
-              value: _status,
+              initialValue: _status,
               decoration: const InputDecoration(labelText: 'Status'),
               items: _statuses
                   .map((s) => DropdownMenuItem(value: s, child: Text(s)))

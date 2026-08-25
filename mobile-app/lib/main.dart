@@ -65,6 +65,37 @@ class _HrPortalAppState extends ConsumerState<HrPortalApp> {
       // a light/dark button in its top bar; this had none, so a person who keeps
       // their phone dark had no way to read a payslip in light.
       themeMode: ref.watch(themeModeProvider),
+      /*
+       * Keep somebody's font-size choice, but not past the point where the
+       * layout gives up.
+       *
+       * Android lets a phone scale every label by up to 2x. This app has a few
+       * hundred rows and cards built to a fixed height -- a summary tile, a
+       * table row, a call control -- and at 2x the text inside them no longer
+       * fits: it clips, or Flutter paints the yellow-and-black overflow stripe
+       * over the screen. Neither is readable, which defeats the point of asking
+       * for larger text in the first place.
+       *
+       * 1.3 is the most the current layouts absorb without clipping. Below
+       * that the phone's setting is honoured exactly, so somebody who needs
+       * slightly larger text still gets it -- they are simply not offered a
+       * size that breaks the page.
+       *
+       * The proper fix is for those heights to be intrinsic rather than fixed,
+       * screen by screen. Until then this is the difference between "a bit
+       * small for me" and "unusable".
+       */
+      builder: (context, child) {
+        final media = MediaQuery.of(context);
+        final scale = media.textScaler.clamp(
+          minScaleFactor: 1.0,
+          maxScaleFactor: 1.3,
+        );
+        return MediaQuery(
+          data: media.copyWith(textScaler: scale),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: switch (auth.status) {
         AuthStatus.checking when auth.user == null => const _Splash(),
         AuthStatus.signedIn => const AppShell(),

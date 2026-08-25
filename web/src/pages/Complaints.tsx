@@ -149,6 +149,14 @@ function MySubmissions() {
   const query = useQuery({
     queryKey: ["complaints", "mine"],
     placeholderData: keepPreviousData,
+    /*
+      Kept live. A complaint arrives from somebody else's screen, so this
+      list is stale the moment it loads. Refetched on an interval and
+      whenever the tab is looked at again, which is when a stale count is
+      actually noticed.
+    */
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const res = await api.get<ApiEnvelope<PageEnvelope<ComplaintNeed>>>(
         "/complaints/mine?page=0&size=500"
@@ -292,14 +300,14 @@ function MySubmissions() {
                   <TableCell>
                     <Badge variant={priorityVariant(c.priority)}>{c.priority}</Badge>
                   </TableCell>
-                  <TableCell>{c.targetRoleName || "HR & Admin"}</TableCell>
+                  <TableCell>{c.requestedToName || "HR & Admin"}</TableCell>
                   <TableCell>
                     <Badge variant={statusVariant(c.status)}>{c.status.replace("_", " ")}</Badge>
                   </TableCell>
                   <TableCell className="pr-6 max-w-[260px]">
-                    {c.resolutionNotes ? (
+                    {c.hrResponse ? (
                       <div>
-                        <div className="text-xs font-medium">{c.resolutionNotes}</div>
+                        <div className="text-xs font-medium">{c.hrResponse}</div>
                         {c.resolvedAt && (
                           <div className="text-[10px] text-muted-foreground">
                             {dayjs(c.resolvedAt).format("DD MMM YYYY, HH:mm")}
@@ -356,9 +364,17 @@ function AllComplaints() {
   const query = useQuery({
     queryKey: ["complaints", "all"],
     placeholderData: keepPreviousData,
+    /*
+      Kept live. A complaint arrives from somebody else's screen, so this
+      list is stale the moment it loads. Refetched on an interval and
+      whenever the tab is looked at again, which is when a stale count is
+      actually noticed.
+    */
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const res = await api.get<ApiEnvelope<PageEnvelope<ComplaintNeed>>>(
-        "/complaints/all?page=0&size=500"
+        "/complaints?page=0&size=500"
       );
       return res.data.data;
     }
@@ -591,7 +607,7 @@ function SubmitDialog({ onClose }: { onClose: () => void }) {
         subject,
         category,
         priority,
-        targetRoleId: selectedTargetRoleId ? Number(selectedTargetRoleId) : undefined,
+        requestedTo: selectedTargetRoleId ? Number(selectedTargetRoleId) : undefined,
         description,
         isAnonymous: anonymous
       };
@@ -691,13 +707,13 @@ function RespondDialog({
   onSaved: () => void;
 }) {
   const [status, setStatus] = useState(complaint.status || "IN_REVIEW");
-  const [notes, setNotes] = useState(complaint.resolutionNotes || "");
+  const [notes, setNotes] = useState(complaint.hrResponse || "");
 
   const update = useMutation({
     mutationFn: async () => {
-      await api.put(`/complaints/${complaint.id}/status`, {
+      await api.post(`/complaints/${complaint.id}/respond`, {
         status,
-        resolutionNotes: notes
+        response: notes
       });
     },
     onSuccess: () => {

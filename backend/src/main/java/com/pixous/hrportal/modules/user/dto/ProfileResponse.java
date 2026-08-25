@@ -40,6 +40,19 @@ public record ProfileResponse(
         String departmentTitle,
         String positionTitle,
         List<String> roles,
+        /**
+         * What this person is allowed to do, flattened from their roles.
+         *
+         * The same list sign-in returns. The mobile app rebuilds the signed-in
+         * user from this endpoint every time it restores a saved session --
+         * which is every launch after the first -- and with no permissions
+         * here that list came back empty. Every screen gated on a permission
+         * then vanished: approvals, team attendance, reports, payroll runs,
+         * user management. It worked on the launch you signed in on and was
+         * gone the next morning, which is a hard thing to report and a harder
+         * thing to find.
+         */
+        List<String> permissions,
         /** Comma-separated upload paths: the employee's paperwork. */
         String documents,
         /**

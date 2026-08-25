@@ -644,6 +644,14 @@ public class UserService {
                 u.getEmergencyContactRelation(), u.getBloodGroup(), u.getPersonalEmail(),
                 u.getDesignationTitle(), u.getDepartmentTitle(), u.getPositionTitle(),
                 u.getRoles().stream().map(Role::getCode).toList(),
+                // Flattened across every role and de-duplicated, exactly as
+                // sign-in builds it, so a restored session and a fresh one
+                // grant the same screens.
+                u.getRoles().stream()
+                        .flatMap(r -> r.getPermissions().stream())
+                        .map(pm -> pm.getCode())
+                        .distinct()
+                        .toList(),
                 u.getDocuments(),
                 u.getFacePhotoPath(), u.getFaceRegisteredAt(),
                 u.getFaceRegisteredBy() == null ? null

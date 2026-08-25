@@ -78,9 +78,13 @@ function priorityVariant(p: string) {
 }
 
 export default function ComplaintsPage() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, hasRole, user } = useAuth();
   // HR reviews through COMPLAINT_MANAGE; admins through USER_MANAGE.
   const canReview = hasPermission("USER_MANAGE", "COMPLAINT_MANAGE");
+  /* The top of the chain; PIX-E100 is the CTO. */
+  const isSystemAdminOrCto =
+    hasRole("SUPER_ADMIN") || hasRole("COMPANY_ADMIN") ||
+    user?.employeeCode?.toUpperCase() === "PIX-E100";
   const [showSubmit, setShowSubmit] = useState(false);
 
   return (
@@ -102,7 +106,13 @@ export default function ComplaintsPage() {
           for, since it lets them address it upward.
         */
         actions={
-          (
+          /*
+            The CTO and the system administrators receive complaints rather
+            than raise them: every recipient dropdown offers them, and there is
+            nobody above them to address one to. HR keeps the button, because
+            HR can address theirs to the CTO.
+          */
+          !isSystemAdminOrCto && (
             <Button onClick={() => setShowSubmit(true)}>
               <Plus className="mr-2 h-4 w-4" /> New Submission
             </Button>
@@ -329,6 +339,19 @@ function AllComplaints() {
   const [month, setMonth] = useState("all");
   const [day, setDay] = useState("");
   const [actingOn, setActingOn] = useState<ComplaintNeed | null>(null);
+  const { user: me } = useAuth();
+  /*
+    Whose complaints to show.
+
+    A complaint names the person it was addressed to, and every reviewer saw
+    all of them regardless -- so one sent to the CTO sat in a list beside every
+    complaint sent to HR, with nothing to say which was which. The person
+    actually asked had no way to find theirs.
+
+    Defaults to what was addressed to me, because that is the work. The whole
+    list stays one tap away for anyone overseeing the lot.
+  */
+  const [scope, setScope] = useState<"me" | "all">("me");
 
   const query = useQuery({
     queryKey: ["complaints", "all"],
@@ -341,7 +364,9 @@ function AllComplaints() {
     }
   });
 
-  const all = query.data?.content ?? [];
+  const everything = query.data?.content ?? [];
+  const addressedToMe = everything.filter((c) => c.requestedTo === me?.id);
+  const all = scope === "me" ? addressedToMe : everything;
 
   const years = useMemo(() => {
     const set = new Set<string>();
@@ -388,6 +413,33 @@ function AllComplaints() {
             active={statusTab === t.key}
             onClick={() => { setStatusTab(t.key); paged.setPage(0); }}
           />
+        ))}
+      </div>
+
+      {/*
+        Mine, or everybody's.
+
+        Shown as a count so the number of complaints actually waiting on this
+        person is visible without switching to find out.
+      */}
+      <div className="flex gap-1 rounded-lg border bg-muted/60 p-1 w-fit">
+        {([
+          ["me", `Addressed to me (${addressedToMe.length})`],
+          ["all", `All complaints (${everything.length})`],
+        ] as const).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => { setScope(key); paged.setPage(0); }}
+            className={
+              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors " +
+              (scope === key
+                ? "bg-background shadow-sm text-foreground"
+                : "text-muted-foreground hover:text-foreground")
+            }
+          >
+            {label}
+          </button>
         ))}
       </div>
 

@@ -64,12 +64,25 @@ function priorityVariant(p: string) {
 }
 
 export default function HelpdeskPage() {
-  const { hasPermission, user } = useAuth();
+  const { hasPermission, hasRole, user } = useAuth();
   const navigate = useNavigate();
   const isAgent = hasPermission("HELPDESK_AGENT");
   // HR / Admin / execs can oversee every ticket in the org.
   const canSeeAll = hasPermission("USER_MANAGE") || hasPermission("DASHBOARD_EXEC");
-  const [tab, setTab] = useState<"mine" | "queue" | "all">(canSeeAll ? "all" : "mine");
+  /*
+    The top of the chain. PIX-E100 is the CTO, identified by code because the
+    role list does not distinguish them from the administrators who share it.
+  */
+  const isSystemAdminOrCto =
+    hasRole("SUPER_ADMIN") || hasRole("COMPANY_ADMIN") ||
+    user?.employeeCode?.toUpperCase() === "PIX-E100";
+  /*
+    Land on the work, not the archive. Somebody who is assigned tickets opens
+    on those; everyone else opens on their own.
+  */
+  const [tab, setTab] = useState<"mine" | "queue" | "all">(
+    isAgent ? "queue" : canSeeAll ? "all" : "mine"
+  );
   const [openId, setOpenId] = useState<number | null>(null);
   // The ticket open in the edit form.
   const [editTicket, setEditTicket] = useState<Ticket | null>(null);
@@ -146,12 +159,24 @@ export default function HelpdeskPage() {
   const paged = usePagedRows(list, 15, [tab, year, month, day, statusTab, rawList]);
   const filtersOn = year !== "all" || month !== "all" || !!day;
 
-  const tabs = canSeeAll
-    ? [{ id: "all" as const, label: "All tickets" }]
-    : [
-        { id: "mine" as const, label: "My tickets" },
-        ...(isAgent ? [{ id: "queue" as const, label: "Assigned to me" }] : [])
-      ];
+  /*
+    Three separate questions, and an overview answers only one of them.
+
+    Anyone who can see every ticket had their tabs collapsed to "All tickets",
+    so HR and the CTO lost both "sent to me" -- the tickets somebody actually
+    addressed to them, which is the queue they are meant to work -- and "mine",
+    the ones they raised themselves. A ticket sent to the CTO sat in a list of
+    two hundred with nothing marking it as theirs.
+
+    The data was always there: /tickets/assigned-to-me is gated on
+    HELPDESK_AGENT, which HR, the CTO and the administrators all hold. Only the
+    tab that reaches it was missing.
+  */
+  const tabs = [
+    ...(isAgent ? [{ id: "queue" as const, label: "Assigned to me" }] : []),
+    ...(canSeeAll ? [{ id: "all" as const, label: "All tickets" }] : []),
+    { id: "mine" as const, label: "My tickets" },
+  ];
 
   const tickets = all.data ?? [];
 
@@ -169,9 +194,17 @@ export default function HelpdeskPage() {
             the button are not in conflict: the page can list the company's
             tickets and still let the person reading it raise their own.
           */
-          <Button onClick={() => navigate("/helpdesk/new")}>
-            <Plus className="h-4 w-4" /> New ticket
-          </Button>
+          /*
+            The CTO and the system administrators are where tickets end up,
+            not where they start: every dropdown in the portal offers them as
+            a recipient, and there is nobody above them to send one to.
+            Everyone else, HR included, raises their own.
+          */
+          !isSystemAdminOrCto && (
+            <Button onClick={() => navigate("/helpdesk/new")}>
+              <Plus className="h-4 w-4" /> New ticket
+            </Button>
+          )
         }
       />
 

@@ -6,11 +6,24 @@
   <link rel="icon" type="image/png" href="/pixous-favicon.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#4F46E5" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,700;1,800&family=Fugaz+One&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap"
-    rel="stylesheet" />
+  <!--
+    Fonts come from this server, not from Google.
+
+    The two preconnects and the stylesheet below used to point at
+    fonts.googleapis.com and fonts.gstatic.com. Both are external hosts, each
+    needing its own DNS lookup and TLS handshake, and the stylesheet blocks
+    rendering while the font files it names are still being fetched -- around
+    380ms in front of first paint, measured from Coimbatore, plus a dependency
+    on a third party that some networks block outright.
+
+    Served locally the browser is already connected, and the files carry the
+    year-long immutable cache header every other asset here does.
+
+    The Inter regular face is preloaded because it is what almost every word
+    on screen is set in; the rest are fetched as they are needed.
+  -->
+  <link rel="preload" as="style" href="/fonts/fonts.css" />
+  <link rel="stylesheet" href="/fonts/fonts.css" />
   <title>My EMP Portal</title>
   <script src="https://js.puter.com/v2/"></script>
 </head>

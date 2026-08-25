@@ -307,7 +307,14 @@ function MySubmissions() {
                   <TableCell>
                     <Badge variant={priorityVariant(c.priority)}>{c.priority}</Badge>
                   </TableCell>
-                  <TableCell>{c.requestedToName || "HR & Admin"}</TableCell>
+                  <TableCell>
+                    <div>{c.requestedToName || "HR & Admin"}</div>
+                    {c.handledByName && (
+                      <div className="text-xs text-muted-foreground">
+                        Answered by {c.handledByName}
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={statusVariant(c.status)}>{c.status.replace("_", " ")}</Badge>
                   </TableCell>
@@ -548,6 +555,7 @@ function AllComplaints() {
                   <TableHead className="pr-6 text-right">Action</TableHead>
                   <TableHead className="pl-6">Reference</TableHead>
                   <TableHead>Raised by</TableHead>
+                  <TableHead>Sent to</TableHead>
                   <TableHead>Subject</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Priority</TableHead>
@@ -575,6 +583,22 @@ function AllComplaints() {
                     <TableCell>
                       <div className="font-medium">{c.raisedByName || "Employee"}</div>
                       <div className="text-xs text-muted-foreground">{c.raisedByCode}</div>
+                    </TableCell>
+                    {/*
+                      Who is expected to answer, and who did.
+
+                      Three people can review, so a list that shows only who
+                      raised a complaint leaves everyone guessing whose it is.
+                      Once somebody has responded the handler is named too --
+                      that is the answer to "who dealt with this".
+                    */}
+                    <TableCell>
+                      <div className="font-medium">{c.requestedToName || "HR & Admin"}</div>
+                      {c.handledByName && (
+                        <div className="text-xs text-muted-foreground">
+                          Answered by {c.handledByName}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="max-w-[240px]">
                       <div className="font-medium">{c.subject}</div>
@@ -784,8 +808,26 @@ function RespondDialog({
         description={complaint.subject}
       />
       <div className="mt-3 space-y-3">
+        {/*
+          Both ends of the complaint, not just the one it came from: opening
+          it should answer "whose is this" without going back to the table.
+        */}
         <div className="rounded-md border bg-muted/40 p-3 text-xs space-y-1">
-          <div className="font-semibold text-foreground">Raised by: {complaint.raisedByName || "Employee"}</div>
+          <div className="font-semibold text-foreground">
+            Raised by: {complaint.raisedByName || "Employee"}
+            {complaint.raisedByCode ? ` (${complaint.raisedByCode})` : ""}
+          </div>
+          <div className="font-semibold text-foreground">
+            Sent to: {complaint.requestedToName || "HR & Admin"}
+          </div>
+          {complaint.handledByName && (
+            <div className="font-semibold text-foreground">
+              Answered by: {complaint.handledByName}
+              {complaint.resolvedAt
+                ? ` on ${dayjs(complaint.resolvedAt).format("DD MMM YYYY, HH:mm")}`
+                : ""}
+            </div>
+          )}
           <div className="text-muted-foreground">{complaint.description}</div>
         </div>
 

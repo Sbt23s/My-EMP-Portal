@@ -213,6 +213,7 @@ export function CallOverlay({
 
   useEffect(() => {
     if (remoteVideo.current) {
+      remoteVideo.current.muted = true;
       if (remoteVideo.current.srcObject !== (remoteStream ?? null)) {
         remoteVideo.current.srcObject = remoteStream ?? null;
       }
@@ -245,11 +246,12 @@ export function CallOverlay({
       {/* Background or Main Video */}
       {isVideo ? (
         <div className="relative flex-1 w-full max-w-4xl overflow-hidden rounded-2xl bg-black shadow-2xl flex items-center justify-center">
-          {/* Main Remote Video Element - Always Mounted for Frame Decoding */}
+          {/* Main Remote Video Element - Always Mounted & Muted for Unrestricted Real-Time WebRTC Video Decoding */}
           <video
             ref={remoteVideo}
             autoPlay
             playsInline
+            muted
             className={cn(
               "h-full w-full object-contain bg-black transition-opacity duration-300",
               (!hasRemoteVideo || state !== "connected") ? "opacity-0 absolute inset-0 pointer-events-none" : "opacity-100 relative z-10"
@@ -363,6 +365,8 @@ export function CallOverlay({
           </>
         )}
       </div>
+      {/* Invisible Audio element dedicated for un-blocked audio playback */}
+      <audio ref={remoteAudio} autoPlay playsInline className="hidden" />
     </div>
   );
 }

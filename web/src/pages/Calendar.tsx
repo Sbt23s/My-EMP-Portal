@@ -889,12 +889,24 @@ export default function CalendarPage() {
                             if (isSysAdmin) {
                               return item.requestedTo === user?.id || (item.employeeCode && (item.employeeCode.includes("HR") || item.employeeCode.includes("MGR")));
                             }
-                            // HR approves Employees and TLs
-                            if (isHR) {
-                              return true;
-                            }
-                            // TL approves Team Members
-                            if (isTL) {
+                            /*
+                              Everyone decides only what was addressed to them.
+
+                              HR returned true unconditionally, so HR was shown
+                              Approve and Reject on every request on the
+                              calendar -- including one an employee had sent to
+                              their team leader, which is the leader's to answer
+                              and nobody else's. Pressing it took the decision
+                              away from the person the employee actually asked.
+
+                              The server has always enforced the real rule, so
+                              nothing was decided that should not have been --
+                              but offering a button that the server will refuse,
+                              on somebody else's request, is worse than not
+                              offering it: it reads as authority the role does
+                              not have.
+                            */
+                            if (isHR || isTL) {
                               return item.requestedTo === user?.id;
                             }
                             return false;

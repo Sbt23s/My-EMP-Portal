@@ -111,9 +111,21 @@ public class PermissionService {
 
         java.util.function.Predicate<User> allowed;
         if (iAmHr) {
-            // HR permission request -> ONLY CTO Elamaran Subramanian (PIX-E100) or System Admin
-            allowed = u -> "PIX-E100".equalsIgnoreCase(u.getEmployeeCode())
-                    || hasRole(u, "SUPER_ADMIN") || hasRole(u, "COMPANY_ADMIN");
+            /*
+              HR asks the CTO, and only the CTO.
+
+              This also admitted anybody holding SUPER_ADMIN or COMPANY_ADMIN,
+              which in this company is five accounts: the CTO plus a system
+              administrator and three others carrying the company-admin role.
+              So HR opening the form was asked to choose an approver from a
+              list of five, four of whom have no business approving their
+              hours -- they hold the role to configure the portal, not to
+              manage HR's time.
+
+              There is exactly one person above HR, and naming them is the
+              whole point of the rung.
+            */
+            allowed = u -> "PIX-E100".equalsIgnoreCase(u.getEmployeeCode());
         } else if (iAmTl) {
             // TL permission request -> HR and CTO Elamaran Subramanian (PIX-E100)
             allowed = u -> "PIX-E100".equalsIgnoreCase(u.getEmployeeCode())

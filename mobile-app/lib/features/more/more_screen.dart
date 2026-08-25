@@ -19,6 +19,7 @@ import 'employees_screen.dart';
 import 'my_team_screen.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/states.dart';
+import '../../widgets/ui_kit.dart';
 import '../approvals/approvals_screen.dart';
 import 'calendar_screen.dart';
 import 'raise_ticket_sheet.dart';
@@ -349,12 +350,12 @@ class _Entry extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Card(
+      child: Container(
+        decoration: UI.card(context),
+        clipBehavior: Clip.antiAlias,
         child: ListTile(
           onTap: onTap,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: UI.br),
           leading: Container(
             padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
@@ -365,10 +366,10 @@ class _Entry extends StatelessWidget {
           ),
           title: Text(
             title,
-            style: const TextStyle(fontWeight: FontWeight.w600),
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
           ),
-          subtitle: Text(subtitle),
-          trailing: const Icon(Icons.chevron_right_rounded),
+          subtitle: Text(subtitle, style: const TextStyle(fontSize: 11.5)),
+          trailing: const Icon(Icons.chevron_right_rounded, size: 20),
         ),
       ),
     );

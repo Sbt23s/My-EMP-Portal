@@ -319,6 +319,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     setLiveCaller(callState !== "idle" ? (activeCallPartner?.name ?? null) : null);
   }, [callState, activeCallPartner?.name]);
 
+
   /** When the conversation started, so a call log can say how long it ran. */
   const connectedAtRef = useRef<number | null>(null);
   useEffect(() => {
@@ -340,14 +341,35 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  /*
+    The TURN and STUN list, fetched once and kept.
+
+    This was fetched fresh every time a call was answered or dialled, and the
+    fetch sits in front of everything else: no peer connection can be built
+    without it. The server is in Paris and the people using this are in
+    Coimbatore, so that was around 650ms of doing nothing, every time, before
+    the camera was even asked for. On answering a call that is the difference
+    between "instant" and "why is this taking so long".
+
+    The list changes when somebody edits the TURN configuration, which is
+    approximately never, so ten minutes is a generous freshness window and
+    still bounded -- a credential rotation is picked up without a reload.
+  */
+  const iceCacheRef = useRef<{ config: RTCConfiguration; at: number } | null>(null);
+  const ICE_CACHE_MS = 10 * 60 * 1000;
+
   const getIceServersConfig = useCallback(async (): Promise<RTCConfiguration> => {
+    const cached = iceCacheRef.current;
+    if (cached && Date.now() - cached.at < ICE_CACHE_MS) return cached.config;
     try {
       const res = await api.get<{ iceServers: RTCIceServer[] }>("/calls/ice-servers");
       if (res.data?.iceServers && res.data.iceServers.length > 0) {
-        return {
+        const config: RTCConfiguration = {
           iceServers: res.data.iceServers,
           iceCandidatePoolSize: 10
         };
+        iceCacheRef.current = { config, at: Date.now() };
+        return config;
       }
     } catch (e) {
       console.warn("Could not fetch server ICE config, using default STUN", e);
@@ -364,6 +386,25 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       iceCandidatePoolSize: 10
     };
   }, []);
+  /*
+    Fetch the TURN list before anybody needs it.
+
+    Once when the provider mounts, and again the moment a call starts ringing.
+    A ringing phone gives us several seconds while somebody reaches for the
+    mouse, and spending them on a round trip that would otherwise happen after
+    they click is free speed: by the time Accept is pressed the answer is
+    already in hand and the only remaining wait is the camera opening.
+  */
+  useEffect(() => {
+    if (!user?.id) return;
+    void getIceServersConfig();
+  }, [user?.id, getIceServersConfig]);
+
+  useEffect(() => {
+    if (callState === "incoming" || callState === "calling") {
+      void getIceServersConfig();
+    }
+  }, [callState, getIceServersConfig]);
 
   const setupPeerConnection = useCallback(async (partnerId: number, isVideo: boolean) => {
     // The camera and microphone are only offered to a secure page. On plain HTTP

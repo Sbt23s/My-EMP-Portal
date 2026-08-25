@@ -130,8 +130,51 @@ export function CallOverlay({
     // remoteRevision is a dependency so newly added tracks get listeners too.
   }, [remoteStream, remoteRevision]);
 
-  const hasRemoteVideo = isVideo && !!remoteStream
-    && remoteStream.getVideoTracks().some(t => t.readyState === "live" && !t.muted);
+  /*
+    Whether the far side's picture is actually arriving.
+
+    This asked the track: live, and not muted. Both of those are unreliable
+    for a track you are receiving rather than sending. A received track starts
+    muted and is unmuted by the browser when media begins, but the unmute can
+    fire before anything is listening for it, and several browsers simply
+    leave muted true for the life of a perfectly good stream. The result was
+    a call that showed your own camera full screen with "their camera is off"
+    written across it, while their video was flowing the whole time.
+
+    The video element is the ground truth. It reports a width once it has
+    decoded a frame, and a width means there is a picture -- no browser
+    disagrees about that.
+  */
+  const [remoteHasPicture, setRemoteHasPicture] = useState(false);
+
+  useEffect(() => {
+    const el = remoteVideo.current;
+    if (!el) return;
+
+    const check = () => setRemoteHasPicture(el.videoWidth > 0);
+
+    // resize fires when the far side's camera starts, stops or changes size,
+    // which covers them turning it off and on mid-call.
+    el.addEventListener("loadedmetadata", check);
+    el.addEventListener("resize", check);
+    el.addEventListener("playing", check);
+    el.addEventListener("emptied", check);
+    check();
+
+    return () => {
+      el.removeEventListener("loadedmetadata", check);
+      el.removeEventListener("resize", check);
+      el.removeEventListener("playing", check);
+      el.removeEventListener("emptied", check);
+    };
+    // remoteRevision so this re-checks when tracks come and go.
+  }, [remoteStream, remoteRevision, state]);
+
+  /** A live video track exists, whether or not it has produced a picture yet. */
+  const remoteVideoTrackLive = !!remoteStream
+    && remoteStream.getVideoTracks().some((t) => t.readyState === "live");
+
+  const hasRemoteVideo = isVideo && remoteHasPicture;
   const hasLocalVideo = isVideo && !!localStream && localStream.getVideoTracks().some(t => t.readyState === "live" && t.enabled) && !cameraOff;
 
   // Streams are attached through the DOM rather than a src attribute. The state
@@ -254,7 +297,15 @@ export function CallOverlay({
                   than leaving a black rectangle to be interpreted. */}
               {!hasRemoteVideo && hasLocalVideo && (
                 <div className="absolute left-1/2 top-6 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-xs backdrop-blur-md">
-                  {partnerName}'s camera is off
+                  {/*
+                    A track that is live but has not produced a picture yet is
+                    still on its way; only the absence of a track means they
+                    turned their camera off. Saying the wrong one of those
+                    blames the other person for a delay that is ours.
+                  */}
+                  {remoteVideoTrackLive
+                    ? `Waiting for ${partnerName}'s video…`
+                    : `${partnerName}'s camera is off`}
                 </div>
               )}
 

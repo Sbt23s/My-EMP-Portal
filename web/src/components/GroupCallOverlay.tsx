@@ -41,17 +41,54 @@ function Tile({
 }) {
   const ref = useRef<HTMLVideoElement | null>(null);
 
+  /*
+    Whether this tile actually has a picture to show.
+
+    Counting video tracks is not the same question. A track can be attached
+    and carrying nothing yet, and the far side's own state arrives separately
+    over the signalling channel -- so a tile that trusted the track count
+    showed a black rectangle, and one that trusted the announced state showed
+    an avatar over a perfectly good video.
+
+    The element knows. It reports a width once it has decoded a frame, and
+    every browser agrees on that.
+  */
+  const [hasPicture, setHasPicture] = useState(false);
+
   // Streams are attached through the DOM. A src attribute cannot carry one,
   // and re-attaching on every render would restart playback.
   useEffect(() => {
-    if (!ref.current) return;
-    if (ref.current.srcObject !== stream) {
-      ref.current.srcObject = stream;
-      if (stream) ref.current.play().catch(() => {});
+    const el = ref.current;
+    if (!el) return;
+    if (el.srcObject !== stream) {
+      el.srcObject = stream;
+      if (stream) el.play().catch(() => {});
     }
+
+    const check = () => setHasPicture(el.videoWidth > 0);
+    // resize covers the far side starting or stopping their camera mid-call.
+    el.addEventListener("loadedmetadata", check);
+    el.addEventListener("resize", check);
+    el.addEventListener("playing", check);
+    el.addEventListener("emptied", check);
+    check();
+
+    return () => {
+      el.removeEventListener("loadedmetadata", check);
+      el.removeEventListener("resize", check);
+      el.removeEventListener("playing", check);
+      el.removeEventListener("emptied", check);
+    };
   }, [stream]);
 
-  const showing = !!stream && !cameraOff && stream.getVideoTracks().length > 0;
+  /*
+    Own tile follows the local switch, because the local preview keeps
+    producing frames for a moment after the camera is turned off and showing
+    yourself when you have just hidden yourself is alarming. Everyone else's
+    tile follows the picture, because that is the only thing that is true
+    regardless of what was announced and when.
+  */
+  const showing = isSelf ? (!cameraOff && hasPicture) : hasPicture;
 
   return (
     <div className="relative aspect-video overflow-hidden rounded-xl bg-slate-800 ring-1 ring-white/10">

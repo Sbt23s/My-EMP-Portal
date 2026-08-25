@@ -552,28 +552,90 @@ class PayslipsScreen extends ConsumerWidget {
       emptyIcon: Icons.receipt_long_outlined,
       emptyTitle: 'No payslips yet',
       emptyDescription: 'They appear here once payroll has been run.',
-      itemBuilder: (context, p) => Card(
+      itemBuilder: (context, p) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: UI.card(context),
+        clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ListTile(
-              title: Text(
-                p.periodLabel,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-              subtitle: Text(
-                p.payDate != null
-                    ? 'Paid ${DateFormat('d MMM yyyy').format(p.payDate!)}'
-                    : 'Not yet paid',
-              ),
-              trailing: Text(
-                money.format(p.takeHome),
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
+            /*
+              The take-home is the number somebody opens a payslip for, so it
+              is the one thing set large. Gross and deductions sit under it as
+              the two figures it is made of, which is how the paper payslip
+              reads and how the reference lays it out.
+            */
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              decoration: BoxDecoration(gradient: UI.heroGradient(context)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          p.periodLabel,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14.5,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        p.payDate != null
+                            ? 'Paid ${DateFormat('d MMM').format(p.payDate!)}'
+                            : 'Not yet paid',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    money.format(p.takeHome),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 27,
+                      fontWeight: FontWeight.w800,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  const Text(
+                    'Net pay',
+                    style: TextStyle(color: Colors.white70, fontSize: 11.5),
+                  ),
+                ],
               ),
             ),
+            if (p.grossSalary != null || p.totalDeductions != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
+                child: Row(
+                  children: [
+                    if (p.grossSalary != null)
+                      Expanded(
+                        child: StatCell(
+                          value: money.format(p.grossSalary),
+                          label: 'Earnings',
+                          color: AppTheme.success(context),
+                        ),
+                      ),
+                    if (p.totalDeductions != null)
+                      Expanded(
+                        child: StatCell(
+                          value: money.format(p.totalDeductions),
+                          label: 'Deductions',
+                          color: AppTheme.danger(context),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             /*
               The same three actions the website offers on a payslip row. They
               were missing entirely here, so the app could show that a payslip
@@ -584,7 +646,7 @@ class PayslipsScreen extends ConsumerWidget {
               one onto a second line instead of overflowing.
             */
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
               child: Wrap(
                 alignment: WrapAlignment.end,
                 spacing: 4,

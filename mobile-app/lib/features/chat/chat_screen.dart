@@ -14,6 +14,7 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
+import '../../widgets/hero_cards.dart';
 import '../../core/config/app_config.dart';
 import '../../core/realtime/realtime_service.dart';
 import '../../core/calls/call_service.dart';
@@ -142,21 +143,24 @@ class ChatScreen extends ConsumerWidget {
               itemBuilder: (context, i) {
                 final c = channels[i];
                 return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.14),
-                    child: Icon(
-                      c.direct
-                          ? Icons.person_rounded
-                          : c.isAnnouncement
-                              ? Icons.campaign_rounded
-                              : Icons.groups_rounded,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
-                    ),
-                  ),
+                  leading: c.direct
+                      // A one-to-one conversation is a person; their initials
+                      // identify them where a generic silhouette repeated down
+                      // the list does not.
+                      ? Avatar(name: c.name, size: 40)
+                      : CircleAvatar(
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.14),
+                          child: Icon(
+                            c.isAnnouncement
+                                ? Icons.campaign_rounded
+                                : Icons.groups_rounded,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 20,
+                          ),
+                        ),
                   title: Text(
                     c.name,
                     style: const TextStyle(fontWeight: FontWeight.w600),
@@ -228,9 +232,7 @@ Future<void> _startDirect(BuildContext context, WidgetRef ref) async {
             final p = people[i];
             final name = p['name']?.toString() ?? 'Colleague';
             return ListTile(
-              leading: CircleAvatar(
-                child: Text(name.characters.first.toUpperCase()),
-              ),
+              leading: Avatar(name: name, size: 40),
               title: Text(name),
               subtitle: p['designationTitle'] == null
                   ? null

@@ -164,6 +164,13 @@ class ExpenseClaim {
     this.category,
     this.totalKm,
     this.totalAmount,
+    this.hillsKm,
+    this.plainsKm,
+    this.busFare,
+    this.others,
+    this.grossTotal,
+    this.remarks,
+    this.decisionComment,
   });
 
   final int id;
@@ -174,6 +181,27 @@ class ExpenseClaim {
   final int? totalKm;
   final num? totalAmount;
 
+  /*
+    The rest of what the server already sends on a claim.
+
+    Only the first seven fields were parsed, so the app could show that a claim
+    existed and its total, and nothing about how the total was arrived at --
+    which is the part somebody checks when a figure looks wrong, and the part a
+    rejection comment explains.
+  */
+  final int? hillsKm;
+  final int? plainsKm;
+  final num? busFare;
+  final num? others;
+  final num? grossTotal;
+  final String? remarks;
+
+  /// Why it was approved or rejected, when whoever decided wrote something.
+  final String? decisionComment;
+
+  bool get isRejected => status.toUpperCase() == 'REJECTED';
+  bool get isApproved => status.toUpperCase() == 'APPROVED';
+
   factory ExpenseClaim.fromJson(Map<String, dynamic> json) => ExpenseClaim(
     id: (json['id'] as num?)?.toInt() ?? 0,
     status: json['status']?.toString() ?? 'PENDING',
@@ -182,6 +210,13 @@ class ExpenseClaim {
     category: json['category']?.toString(),
     totalKm: (json['totalKm'] as num?)?.toInt(),
     totalAmount: json['totalAmount'] as num?,
+    hillsKm: (json['hillsKm'] as num?)?.toInt(),
+    plainsKm: (json['plainsKm'] as num?)?.toInt(),
+    busFare: json['busFare'] as num?,
+    others: json['others'] as num?,
+    grossTotal: json['grossTotal'] as num?,
+    remarks: json['remarks']?.toString(),
+    decisionComment: json['decisionComment']?.toString(),
   );
 }
 

@@ -23,6 +23,7 @@ import '../approvals/approvals_screen.dart';
 import 'calendar_screen.dart';
 import 'raise_ticket_sheet.dart';
 import 'ticket_detail_sheet.dart';
+import 'claim_detail_sheet.dart';
 import 'complaints_screen.dart';
 import 'submit_claim_sheet.dart';
 import 'team_attendance_screen.dart';
@@ -861,11 +862,36 @@ class TicketsScreen extends ConsumerWidget {
   }
 }
 
-class AssetsScreen extends StatelessWidget {
+class AssetsScreen extends ConsumerWidget {
   const AssetsScreen({super.key});
 
+  /// Confirm the thing is actually in your hands.
+  ///
+  /// The repository could already do this and nothing ever called it, so an
+  /// asset issued on the website stayed awaiting confirmation for anybody
+  /// working from the phone -- and the record of who holds what stayed
+  /// unconfirmed with it.
+  static Future<void> _acknowledge(
+    BuildContext context,
+    WidgetRef ref,
+    AssetItem a,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(workRepositoryProvider).acknowledgeAsset(a.id);
+      ref.invalidate(assetsProvider);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Confirmed')));
+    } catch (e) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return _ListScaffold<AssetItem>(
       title: 'My assets',
       provider: assetsProvider,
@@ -873,25 +899,70 @@ class AssetsScreen extends StatelessWidget {
       emptyTitle: 'Nothing issued to you',
       emptyDescription: 'Equipment allocated to you appears here.',
       itemBuilder: (context, a) => Card(
-        child: ListTile(
-          leading: const Icon(Icons.devices_other_rounded),
-          title: Text(
-            a.displayName,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          subtitle: Text(
-            [
-              if (a.assetCode != null) a.assetCode!,
-              if (a.category != null) a.category!,
-              if (a.serialNumber != null) 'SN ${a.serialNumber}',
-            ].join(' · '),
-          ),
-          trailing: a.allocatedAt == null
-              ? null
-              : Text(
-                  DateFormat('d MMM yy').format(a.allocatedAt!),
-                  style: const TextStyle(fontSize: 11),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.devices_other_rounded),
+              title: Text(
+                a.displayName,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                [
+                  if (a.assetCode != null) a.assetCode!,
+                  if (a.category != null) a.category!,
+                  if (a.serialNumber != null) 'SN ${a.serialNumber}',
+                  if (a.brand != null) a.brand!,
+                ].join(' · '),
+              ),
+              trailing: a.allocatedAt == null
+                  ? null
+                  : Text(
+                      DateFormat('d MMM yy').format(a.allocatedAt!),
+                      style: const TextStyle(fontSize: 11),
+                    ),
+            ),
+            /*
+              Acknowledgement, as the website has it.
+
+              Shown only while it is outstanding. Once confirmed the row says
+              so instead: a button that does nothing is worse than no button,
+              and at that point the state is the useful information rather than
+              the action.
+            */
+            if (a.acknowledged == true)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle_outline_rounded,
+                        size: 15, color: AppTheme.success(context)),
+                    const SizedBox(width: 5),
+                    Text(
+                      'Confirmed by you',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: AppTheme.success(context),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => _acknowledge(context, ref, a),
+                    icon: const Icon(Icons.check_rounded, size: 18),
+                    label: const Text('Confirm receipt'),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -931,6 +1002,16 @@ class ClaimsScreen extends ConsumerWidget {
       ),
       itemBuilder: (context, c) => Card(
         child: ListTile(
+          // The website opens a claim to show the breakdown behind the total.
+          // Without this the app could show a figure and nothing about how it
+          // was reached, which is exactly what somebody checks when a number
+          // looks wrong -- or when a claim comes back rejected.
+          onTap: () => showModalBottomSheet<void>(
+            context: context,
+            isScrollControlled: true,
+            useSafeArea: true,
+            builder: (_) => ClaimDetailSheet(claim: c),
+          ),
           title: Text(
             [
               c.location,

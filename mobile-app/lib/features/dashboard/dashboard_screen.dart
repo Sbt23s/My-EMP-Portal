@@ -8,7 +8,11 @@ import '../../providers/app_providers.dart';
 import '../../providers/modules_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/states.dart';
+import '../more/more_screen.dart';
 import '../notifications/notifications_screen.dart';
+import '../../routes/app_shell.dart';
+import '../../widgets/hero_cards.dart';
+import '../../widgets/ui_kit.dart';
 
 /// What the dashboard shows, fetched fresh.
 ///
@@ -25,24 +29,13 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(currentUserProvider);
     final async = ref.watch(myDashboardProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              DateFormat('EEEE, d MMMM').format(DateTime.now()),
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            Text(user?.name.isNotEmpty == true ? user!.name : 'Dashboard'),
-          ],
-        ),
-        actions: const [_NotificationBell()],
-      ),
-      body: RefreshIndicator(
+      // No app bar: the greeting row below is the header, as in the design.
+      body: SafeArea(
+        bottom: false,
+        child: RefreshIndicator(
         onRefresh: () => ref.refresh(myDashboardProvider.future),
         child: async.when(
           loading: () => const LoadingList(itemCount: 4, itemHeight: 96),
@@ -60,6 +53,7 @@ class DashboardScreen extends ConsumerWidget {
             ],
           ),
           data: (d) => _Content(data: d),
+          ),
         ),
       ),
     );
@@ -130,60 +124,101 @@ class _Content extends ConsumerWidget {
 
   final EmployeeDashboard data;
 
+  static String _greeting() {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Good Morning';
+    if (h < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final modules = ref.watch(modulesProvider);
     final brand = ref.watch(brandingProvider);
+    final user = ref.watch(currentUserProvider);
+    final now = DateTime.now();
 
     /*
-     * Tiles belonging to a switched-off module do not appear.
+     * Quick actions are gated by module, exactly as the tiles below are.
      *
-     * The web dashboard gates all thirteen of its widgets this way, and the
-     * reason is the same here: a company with Assets switched off has nobody who
-     * can be issued an asset, so "Assets with me: 0" is not a fact about them,
-     * it is a feature leaking through a setting that was supposed to hide it.
-     *
-     * Built as a list because the heading above depends on it — "My overview"
-     * over nothing is worse than no heading.
+     * A shortcut into a switched-off module is a dead end: it opens a screen
+     * with nothing in it, or fails on a request the company does not have.
+     * Better that it is not offered at all.
      */
-    final tiles = <Widget>[
+    final quick = <Widget>[
       if (modules.has('LEAVE'))
-        StatCard(
-          label: 'Pending leave requests',
-          value: '${data.pendingLeaveRequests}',
+        QuickAction(
           icon: Icons.event_note_rounded,
-          tint: AppTheme.warning(context),
-        ),
-      if (modules.has('HELPDESK'))
-        StatCard(
-          label: 'Open tickets',
-          value: '${data.myOpenTickets}',
-          icon: Icons.support_agent_rounded,
-          tint: scheme.tertiary,
-        ),
-      if (modules.has('ASSETS'))
-        StatCard(
-          label: 'Assets with me',
-          value: '${data.myAssets}',
-          icon: Icons.inventory_2_outlined,
-          tint: scheme.primary,
+          label: 'Leave',
+          color: scheme.primary,
+          onTap: () => AppShell.go(context, 'Leave'),
         ),
       if (modules.has('ATTENDANCE'))
-        StatCard(
-          label: 'Worked today',
+        QuickAction(
+          icon: Icons.fingerprint_rounded,
+          label: 'Attendance',
+          color: AppTheme.success(context),
+          onTap: () => AppShell.go(context, 'Attendance'),
+        ),
+      if (modules.has('PAYROLL'))
+        QuickAction(
+          icon: Icons.account_balance_wallet_rounded,
+          label: 'Payslip',
+          color: AppTheme.warning(context),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const PayslipsScreen()),
+          ),
+        ),
+      QuickAction(
+        icon: Icons.grid_view_rounded,
+        label: 'More',
+        color: scheme.tertiary,
+        onTap: () => AppShell.go(context, 'More'),
+      ),
+    ];
+
+    final tiles = <Widget>[
+      if (modules.has('LEAVE'))
+        StatCell(
+          value: '${data.pendingLeaveRequests}',
+          label: 'Pending',
+          color: AppTheme.warning(context),
+        ),
+      if (modules.has('HELPDESK'))
+        StatCell(
+          value: '${data.myOpenTickets}',
+          label: 'Tickets',
+          color: scheme.tertiary,
+        ),
+      if (modules.has('ASSETS'))
+        StatCell(
+          value: '${data.myAssets}',
+          label: 'Assets',
+          color: scheme.primary,
+        ),
+      if (modules.has('ATTENDANCE'))
+        StatCell(
           value: data.workedLabel,
-          icon: Icons.timer_outlined,
-          tint: AppTheme.success(context),
+          label: 'Worked',
+          color: AppTheme.success(context),
         ),
     ];
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
       children: [
-        // The company's own welcome line, where it has written one. Set in the
-        // branding screen; absent for everyone who has not.
+        GreetingHeader(
+          greeting: _greeting(),
+          name: user?.name.isNotEmpty == true ? user!.name : 'Dashboard',
+          subtitle: user?.designation ?? '',
+          photoUrl: user?.photoPath,
+          trailing: const _NotificationBell(),
+        ),
+        const SizedBox(height: 16),
+
+        // The company's own welcome line, where it has written one.
         if (brand.welcomeText != null) ...[
           Text(
             brand.welcomeText!,
@@ -194,130 +229,103 @@ class _Content extends ConsumerWidget {
           ),
           const SizedBox(height: 14),
         ],
+
         // Nagging someone to punch in when they have no way to punch is the
         // module leaking through the greeting.
         if (modules.has('ATTENDANCE'))
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color:
-                        (data.punchedInToday
-                                ? AppTheme.success(context)
-                                : scheme.primary)
-                            .withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    data.punchedInToday
-                        ? Icons.check_circle_outline_rounded
-                        : Icons.schedule_rounded,
-                    color: data.punchedInToday
-                        ? AppTheme.success(context)
-                        : scheme.primary,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          HeroCard(
+            title: DateFormat('hh:mm a').format(now),
+            subtitle: DateFormat('EEEE, d MMMM yyyy').format(now),
+            badge: data.punchedInToday ? 'Checked In' : null,
+            action: data.punchedInToday ? null : 'Go to Attendance',
+            onAction: () => AppShell.go(context, 'Attendance'),
+            footer: data.punchInAt != null
+                ? Row(
                     children: [
+                      const Icon(Icons.login_rounded,
+                          size: 15, color: Colors.white70),
+                      const SizedBox(width: 6),
                       Text(
-                        data.punchedInToday
-                            ? 'Punched in'
-                            : "You haven't punched in yet",
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        data.punchInAt != null
-                            ? 'Since ${DateFormat('h:mm a').format(data.punchInAt!)} · ${data.workedLabel}'
-                            : 'Mark your attendance from the Attendance tab',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
+                        'Since ${DateFormat('h:mm a').format(data.punchInAt!)}'
+                        '  \u00b7  ${data.workedLabel}',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
+                  )
+                : null,
+          ).animate().fadeIn(duration: 260.ms).slideY(
+                begin: 0.06,
+                end: 0,
+                curve: Curves.easeOutCubic,
+              ),
+
+        if (quick.isNotEmpty) ...[
+          const SizedBox(height: 22),
+          const SectionHeader('Quick Actions'),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+            decoration: UI.card(context),
+            child: Row(
+              children: [
+                for (var i = 0; i < quick.length; i++)
+                  Expanded(
+                    child: quick[i]
+                        .animate()
+                        .fadeIn(delay: (i * 55).ms, duration: 220.ms),
                   ),
-                ),
               ],
             ),
           ),
-        ),
-        if (tiles.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          Text(
-            'My overview',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.3,
-            ),
-          ),
-          const SizedBox(height: 12),
-          /*
-           * Columns from the width available, not a fixed two.
-           *
-           * Two was right on a phone and wrong everywhere else: in landscape and
-           * on a tablet each tile stretched to half the screen, so four numbers
-           * occupied a page and the card read as an empty box with a digit in
-           * the corner. Sized by a target tile width instead, so the count grows
-           * with the window and the tiles keep their proportions.
-           */
-          LayoutBuilder(
-            builder: (context, constraints) {
-              const target = 190.0;
-              final columns =
-                  (constraints.maxWidth / target).floor().clamp(2, 4);
-              return GridView.count(
-                crossAxisCount: columns,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.35,
-                children: [
-              for (var i = 0; i < tiles.length; i++)
-                tiles[i]
-                    .animate()
-                    .fadeIn(delay: (i * 60).ms, duration: 240.ms)
-                        .slideY(begin: 0.10, end: 0, curve: Curves.easeOutCubic),
-                ],
-              );
-            },
-          ),
         ],
-        if (modules.has('LEAVE') && data.leaveBalances.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          Text(
-            'Leave balance',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.3,
+
+        if (tiles.isNotEmpty) ...[
+          const SizedBox(height: 22),
+          const SectionHeader('Overview'),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+            decoration: UI.card(context),
+            child: Row(
+              children: [
+                for (final t in tiles) Expanded(child: t),
+              ],
             ),
-          ),
-          const SizedBox(height: 12),
-          Card(
+          ).animate().fadeIn(duration: 240.ms),
+        ],
+
+        if (modules.has('LEAVE') && data.leaveBalances.isNotEmpty) ...[
+          const SizedBox(height: 22),
+          const SectionHeader('Leave balance'),
+          Container(
+            decoration: UI.card(context),
+            clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
                 for (var i = 0; i < data.leaveBalances.length; i++) ...[
                   if (i > 0) const Divider(height: 1),
                   ListTile(
-                    title: Text(data.leaveBalances[i].leaveTypeName),
+                    dense: true,
+                    title: Text(
+                      data.leaveBalances[i].leaveTypeName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13.5,
+                      ),
+                    ),
                     subtitle: Text(
                       '${data.leaveBalances[i].used} used '
                       'of ${data.leaveBalances[i].allocated}',
+                      style: const TextStyle(fontSize: 11.5),
                     ),
                     trailing: Text(
                       '${data.leaveBalances[i].available}',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: scheme.primary,
-                      ),
+                            fontWeight: FontWeight.w800,
+                            color: scheme.primary,
+                          ),
                     ),
                   ),
                 ],
@@ -325,7 +333,6 @@ class _Content extends ConsumerWidget {
             ),
           ),
         ],
-        const SizedBox(height: 24),
       ],
     );
   }

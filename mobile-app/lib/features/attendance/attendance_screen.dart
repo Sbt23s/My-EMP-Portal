@@ -5,8 +5,9 @@ import 'package:intl/intl.dart';
 import '../../models/attendance.dart';
 import 'face_punch_sheet.dart';
 import '../../providers/app_providers.dart';
-import '../../themes/app_theme.dart';
+import '../../widgets/hero_cards.dart';
 import '../../widgets/states.dart';
+import '../../widgets/ui_kit.dart';
 
 final todayAttendanceProvider = FutureProvider.autoDispose<AttendanceDay?>(
   (ref) => ref.watch(workRepositoryProvider).today(),
@@ -135,7 +136,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Attendance')),
+      appBar: AppBar(
+        title: const Text('Attendance'),
+        centerTitle: false,
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref
@@ -145,14 +149,12 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
           children: [
             today.when(
-              loading: () => const Card(
-                child: SizedBox(
-                  height: 150,
-                  child: Center(child: CircularProgressIndicator()),
-                ),
+              loading: () => const SizedBox(
+                height: 168,
+                child: Center(child: CircularProgressIndicator()),
               ),
               error: (e, _) => Card(
                 child: SizedBox(
@@ -171,15 +173,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                 onFacePunch: () => _facePunch(punchIn: !(today.value?.isPunchedIn ?? false)),
               ),
             ),
-            const SizedBox(height: 24),
-            Text(
-              'This month',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.3,
-              ),
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 22),
+            const SectionHeader('This Month Overview'),
             month.when(
               loading: () => const SizedBox(
                 height: 200,
@@ -201,7 +196,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                         description: 'Days appear here once you punch in.',
                       ),
                     )
-                  : Card(
+                  : Container(
+                      decoration: UI.card(context),
+                      clipBehavior: Clip.antiAlias,
                       child: Column(
                         children: [
                           for (var i = 0; i < days.length; i++) ...[
@@ -273,87 +270,100 @@ class _PunchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final punchedIn = day?.isPunchedIn ?? false;
     final done = day?.isComplete ?? false;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Text(
-              DateFormat('h:mm a').format(DateTime.now()),
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.w300,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              done
-                  ? 'Done for today'
-                  : punchedIn
-                  ? 'Punched in at ${DateFormat('h:mm a').format(day!.punchInAt!)}'
-                  : 'Not punched in',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-            if (day?.lateMinutes != null && day!.lateMinutes! > 0) ...[
-              const SizedBox(height: 6),
-              Text(
-                '${day!.lateMinutes} minutes late',
-                style: TextStyle(
-                  color: AppTheme.warning(context),
-                  fontSize: 12,
-                ),
-              ),
-            ],
-            const SizedBox(height: 20),
-            if (done)
-              Text(
-                'Worked ${day!.workedLabel}',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              )
-            else
-              FilledButton.icon(
-                onPressed: busy ? null : (punchedIn ? onPunchOut : onPunchIn),
-                style: punchedIn
-                    ? FilledButton.styleFrom(
-                        backgroundColor: AppTheme.danger(context),
-                      )
-                    : null,
-                icon: busy
-                    ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2.2),
-                      )
-                    : Icon(
-                        punchedIn ? Icons.logout_rounded : Icons.login_rounded,
-                      ),
-                label: Text(punchedIn ? 'Punch out' : 'Punch in'),
-              ),
-            if (!done) ...[
-              const SizedBox(height: 10),
-              // Secondary, not primary. Most punches are the ordinary kind; the
-              // face check is what a company turns on when it needs proof, and
-              // making it the louder of the two buttons would suggest the plain
-              // one is the lesser option when the server treats them equally.
-              OutlinedButton.icon(
-                onPressed: busy ? null : onFacePunch,
-                icon: const Icon(Icons.face_retouching_natural_rounded, size: 18),
-                label: Text(
-                  punchedIn ? 'Punch out with face' : 'Punch in with face',
-                ),
-              ),
-            ],
-          ],
+    final status = done
+        ? 'Checked Out'
+        : punchedIn
+            ? 'Checked In'
+            : null;
+
+    return Column(
+      children: [
+        HeroCard(
+          title: DateFormat('hh:mm a').format(DateTime.now()),
+          subtitle: DateFormat('EEEE, d MMMM yyyy').format(DateTime.now()),
+          badge: status,
+          action: done ? null : (punchedIn ? 'Check Out' : 'Check In'),
+          actionBusy: busy,
+          onAction: punchedIn ? onPunchOut : onPunchIn,
+          footer: _footer(context),
         ),
-      ),
+        if (!done) ...[
+          const SizedBox(height: 10),
+          // Secondary, not primary. Most punches are the ordinary kind; the
+          // face check is what a company turns on when it needs proof, and
+          // making it the louder of the two buttons would suggest the plain
+          // one is the lesser option when the server treats them equally.
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: busy ? null : onFacePunch,
+              icon: const Icon(Icons.face_retouching_natural_rounded, size: 18),
+              label: Text(
+                punchedIn ? 'Punch out with face' : 'Punch in with face',
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
+
+  /// The facts under the clock: when the day started, and anything the
+  /// person needs to know about it.
+  Widget? _footer(BuildContext context) {
+    final rows = <Widget>[];
+
+    if (day?.punchInAt != null) {
+      rows.add(_line(
+        Icons.login_rounded,
+        'Checked in  ${DateFormat('h:mm a').format(day!.punchInAt!)}',
+      ));
+    }
+    if (day?.punchOutAt != null) {
+      rows.add(_line(
+        Icons.logout_rounded,
+        'Checked out  ${DateFormat('h:mm a').format(day!.punchOutAt!)}',
+      ));
+    }
+    if (day?.isComplete == true) {
+      rows.add(_line(Icons.timer_outlined, 'Worked  ${day!.workedLabel}'));
+    }
+    if (day?.lateMinutes != null && day!.lateMinutes! > 0) {
+      rows.add(_line(
+        Icons.warning_amber_rounded,
+        '${day!.lateMinutes} minutes late',
+      ));
+    }
+
+    if (rows.isEmpty) return null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < rows.length; i++) ...[
+          if (i > 0) const SizedBox(height: 5),
+          rows[i],
+        ],
+      ],
+    );
+  }
+
+  Widget _line(IconData icon, String text) => Row(
+        children: [
+          Icon(icon, size: 14, color: Colors.white70),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      );
 }

@@ -7,6 +7,7 @@ import '../../models/leave.dart';
 import '../../providers/app_providers.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/states.dart';
+import '../../widgets/ui_kit.dart';
 import 'apply_leave_sheet.dart';
 import '../../providers/cache.dart';
 
@@ -73,24 +74,10 @@ class LeaveScreen extends ConsumerWidget {
              * leave". The web page merges the two lists for exactly this
              * reason; so does this now.
              */
-            Text(
-              'Balances',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
-                  ),
-            ),
-            const SizedBox(height: 12),
+            const SectionHeader('Balances'),
             _Balances(types: ref.watch(leaveTypesForBalanceProvider), balances: balances),
             const SizedBox(height: 24),
-            Text(
-              'My requests',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.3,
-              ),
-            ),
-            const SizedBox(height: 12),
+            const SectionHeader('My Leaves'),
             requests.when(
               loading: () =>
                   const SizedBox(height: 300, child: LoadingList(itemCount: 4)),
@@ -199,7 +186,9 @@ class _LeaveTile extends StatelessWidget {
     final colour = _statusColour(context);
     final scheme = Theme.of(context).colorScheme;
 
-    return Card(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: UI.card(context),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Row(
@@ -340,7 +329,9 @@ class _Balances extends StatelessWidget {
       );
     }
 
-    return Card(
+    return Container(
+      decoration: UI.card(context),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
           for (var i = 0; i < rows.length; i++) ...[

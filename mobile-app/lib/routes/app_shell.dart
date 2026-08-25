@@ -39,6 +39,18 @@ class _Tab {
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
 
+  /*
+    Jump to a tab by its label.
+
+    Not an index: which tabs exist depends on the company's switched-on
+    modules, so index 2 is Leave for one company and something else for the
+    next. The label is the stable name, and a tab that is not currently
+    visible is a no-op rather than a crash.
+  */
+  static void go(BuildContext context, String label) {
+    context.findAncestorStateOfType<_AppShellState>()?.selectByLabel(label);
+  }
+
   @override
   ConsumerState<AppShell> createState() => _AppShellState();
 }
@@ -46,6 +58,15 @@ class AppShell extends ConsumerStatefulWidget {
 class _AppShellState extends ConsumerState<AppShell> {
   int _index = 0;
   StreamSubscription<String>? _callErrorSub;
+
+  /// The labels currently on the bar, kept so [selectByLabel] can resolve a
+  /// name to the position it actually occupies for this company.
+  List<String> _visibleLabels = const [];
+
+  void selectByLabel(String label) {
+    final i = _visibleLabels.indexOf(label);
+    if (i >= 0 && mounted) setState(() => _index = i);
+  }
 
   /// Tracks the previous call state so we can detect transitions and push/pop
   /// the CallScreen overlay at the right moment.
@@ -170,6 +191,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     if (visible.isEmpty) {
       return const Scaffold(body: SafeArea(child: _NothingEnabled()));
     }
+    _visibleLabels = [for (final t in visible) t.label];
     final index = _index.clamp(0, visible.length - 1);
 
     return Scaffold(

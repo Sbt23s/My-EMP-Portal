@@ -54,11 +54,18 @@ const STATUS_FLOW = [
   { value: "REJECTED", label: "Rejected" }
 ];
 
+/*
+  Where a complaint may go next -- and never where it already is.
+
+  Each step used to list itself, so the current one stayed selectable and
+  "Save Response" could be pressed on a status that changes nothing. A step
+  is a move forward or it is not offered.
+*/
 const NEXT_STATUS: Record<string, string[]> = {
-  OPEN: ["OPEN", "IN_REVIEW"],
-  IN_REVIEW: ["IN_REVIEW", "RESOLVED", "REJECTED"],
-  RESOLVED: ["RESOLVED"],
-  REJECTED: ["REJECTED"]
+  OPEN: ["IN_REVIEW", "RESOLVED", "REJECTED"],
+  IN_REVIEW: ["RESOLVED", "REJECTED"],
+  RESOLVED: [],
+  REJECTED: []
 };
 
 const STEP_HINT: Record<string, string> = {
@@ -749,10 +756,9 @@ function RespondDialog({
     step it has passed is offered as a disabled option rather than removed,
     which shows where it has been instead of silently dropping it.
   */
-  const allowed = NEXT_STATUS[complaint.status] || STATUS_FLOW.map((f) => f.value);
-  const [status, setStatus] = useState(
-    complaint.status === "OPEN" ? "IN_REVIEW" : complaint.status || "IN_REVIEW"
-  );
+  const allowed = NEXT_STATUS[complaint.status] ?? [];
+  // Start on the first step actually available, never on the current one.
+  const [status, setStatus] = useState(allowed[0] ?? complaint.status);
   const [notes, setNotes] = useState(complaint.hrResponse || "");
 
   const update = useMutation({
@@ -819,11 +825,18 @@ function RespondDialog({
                 back to open.
               */}
               <Select id="st" value={status} onChange={(e) => setStatus(e.target.value)}>
-                {STATUS_FLOW.map((f) => (
-                  <option key={f.value} value={f.value} disabled={!allowed.includes(f.value)}>
-                    {f.label}
-                  </option>
-                ))}
+                {STATUS_FLOW.map((f) => {
+                  const here = f.value === complaint.status;
+                  return (
+                    <option
+                      key={f.value}
+                      value={f.value}
+                      disabled={!allowed.includes(f.value)}
+                    >
+                      {f.label}{here ? " (current)" : ""}
+                    </option>
+                  );
+                })}
               </Select>
               {STEP_HINT[complaint.status] && (
                 <p className="text-[11px] text-muted-foreground">{STEP_HINT[complaint.status]}</p>
@@ -845,7 +858,7 @@ function RespondDialog({
               <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
               <Button
                 type="button"
-                disabled={update.isPending}
+                disabled={update.isPending || !allowed.includes(status)}
                 onClick={() => update.mutate()}
               >
                 {update.isPending ? "Saving..." : "Save Response"}

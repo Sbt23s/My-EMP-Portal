@@ -208,6 +208,8 @@ class CallService {
       _connectedAt ??= DateTime.now();
       _state = CallState.connected;
       _ringTimer?.cancel();
+      _connectTimer?.cancel();
+      _connectTimer = null;
       _emit();
     };
 
@@ -215,37 +217,34 @@ class CallService {
       if (_state == CallState.idle) return;
 
       switch (s) {
-        // A path was found, so the budget below starts again. Without this the
-        // two allowed restarts were two per app session rather than two per
-        // problem: a call that survived a couple of handovers spent the budget
-        // permanently, and from then on the first blip in that call -- and in
-        // every later call, because nothing cleared it either -- ended things
-        // outright. Two people would have one bad call and then find that
-        // calling back kept failing instantly for no visible reason.
         case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
           _iceRestarts = 0;
+          _connectTimer?.cancel();
+          _connectTimer = null;
 
-        // Closed is final — the connection object itself is gone and there is
-        // nothing left to recover.
         case RTCPeerConnectionState.RTCPeerConnectionStateClosed:
+          _connectTimer?.cancel();
           hangUp(notify: false);
 
-        // Failed is not final, and treating it as final is what ended calls
-        // that had every chance of carrying on.
-        //
-        // ICE fails whenever the path it negotiated stops working: wifi handing
-        // over to mobile data, a carrier rotating the NAT binding, a tunnel. The
-        // remedy WebRTC provides is an ICE restart — gather fresh candidates and
-        // renegotiate over the connection that is already open. Hanging up
-        // instead threw away a call that a two-second restart would have saved,
-        // and to the two people on it that is indistinguishable from the app
-        // being broken.
         case RTCPeerConnectionState.RTCPeerConnectionStateFailed:
           _restartIce();
 
-        // Disconnected is transient on a phone — one bar, a lift, a handover —
-        // and recovers on its own within a few seconds. Acting on it would end
-        // calls that were never actually in trouble.
+        // Disconnected is transient on a phone — but if it persists for more
+        // than 5 seconds the connection is likely dead. Try an ICE restart
+        // rather than waiting for the user to stare at a frozen screen.
+        case RTCPeerConnectionState.RTCPeerConnectionStateDisconnected:
+          Timer(const Duration(seconds: 5), () async {
+            final pc = _pc;
+            if (pc == null) return;
+            try {
+              final state = pc.connectionState;
+              if (state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
+                  state == RTCPeerConnectionState.RTCPeerConnectionStateFailed) {
+                await _restartIce();
+              }
+            } catch (_) {}
+          });
+
         default:
           break;
       }
@@ -254,11 +253,6 @@ class CallService {
 
   /// Rebuild the connection path without dropping the call.
   ///
-  /// Only the caller may do this. An ICE restart is a new offer, and both ends
-  /// generating one at the same moment is glare — the two offers collide and
-  /// neither is applied, leaving a call that is more broken than before. The
-  /// answerer waits for the offer that arrives.
-  ///
   /// Bounded to two attempts. If a fresh set of candidates cannot find a path
   /// twice over, there is no path to find — the network is genuinely blocking
   /// it — and retrying forever leaves two people staring at a call that will
@@ -266,14 +260,38 @@ class CallService {
   int _iceRestarts = 0;
   bool _restarting = false;
 
+  /// Timer that fires if the call stays in connecting/outgoing for too long.
+  ///
+  /// On Android, calls often get stuck on "Connecting…" because ICE never
+  /// completes — the STUN server is unreachable on mobile data, the carrier
+  /// blocks UDP, or the peer is behind a symmetric NAT with no TURN relay.
+  /// Without a timeout the user stares at the spinner forever.
+  Timer? _connectTimer;
+  static const _connectTimeout = Duration(seconds: 20);
+
+  void _startConnectTimer() {
+    _connectTimer?.cancel();
+    _connectTimer = Timer(_connectTimeout, () async {
+      // Still not connected after 20s — try one ICE restart, then give up.
+      if (_state != CallState.connecting && _state != CallState.outgoing) return;
+      await _restartIce();
+      // If still not connected 5s later, give up.
+      _connectTimer = Timer(const Duration(seconds: 5), () async {
+        if (_state != CallState.connected) {
+          if (!_errors.isClosed) {
+            _errors.add('Call could not connect. Please check your network and try again.');
+          }
+          await hangUp(notify: true);
+        }
+      });
+    });
+  }
+
   Future<void> _restartIce() async {
     final pc = _pc;
     final to = _peer?.id;
 
     if (pc == null || to == null || _restarting) return;
-
-    // The answerer sits still and lets the caller drive.
-    if (!_isCaller) return;
 
     if (_iceRestarts >= 2) {
       await hangUp(notify: true);
@@ -290,11 +308,8 @@ class CallService {
       final offer = await pc.createOffer({'iceRestart': true});
       await pc.setLocalDescription(offer);
       await _send(to, 'offer', {
-        'sdp': offer.sdp,
-        'type': offer.type,
-        'video': _isVideo,
-        // Marks it as a repair of the existing call rather than a new one, so
-        // the other end renegotiates instead of ringing again.
+        'sdp': offer.toMap(),
+        'isVideo': _isVideo,
         'iceRestart': true,
       });
     } catch (_) {
@@ -363,6 +378,7 @@ class CallService {
     try {
       await _openMedia(video: video);
       await _openPeerConnection();
+      _startConnectTimer();
 
       // "calling" first, so their phone rings while the offer is still being
       // built — and so the server raises its notification for it.
@@ -403,6 +419,7 @@ class CallService {
     try {
       await _openMedia(video: _isVideo);
       await _openPeerConnection();
+      _startConnectTimer();
 
       // The offer may have landed while the camera was opening, so it is read
       // again after setup rather than captured before — the web client re-reads
@@ -433,7 +450,9 @@ class CallService {
 
     await _pc!.setRemoteDescription(desc);
     for (final c in _earlyCandidates) {
-      await _pc!.addCandidate(c);
+      try {
+        await _pc!.addCandidate(c);
+      } catch (_) {}
     }
     _earlyCandidates.clear();
 
@@ -460,9 +479,9 @@ class CallService {
         outcome: wasConnected ? 'ENDED' : (wasIncoming ? 'DECLINED' : 'MISSED'),
         seconds: _elapsedSeconds,
       );
-    }
-
-    _ringTimer?.cancel();
+    }      _ringTimer?.cancel();
+    _connectTimer?.cancel();
+    _connectTimer = null;
     await _pc?.close();
     _pc = null;
 
@@ -601,11 +620,13 @@ class CallService {
         if (desc == null) return;
         await _pc!.setRemoteDescription(desc);
         for (final c in _earlyCandidates) {
-          await _pc!.addCandidate(c);
+          try {
+            await _pc!.addCandidate(c);
+          } catch (_) {}
         }
         _earlyCandidates.clear();
+        _connectTimer?.cancel();
         _connectedAt ??= DateTime.now();
-        _state = CallState.connecting;
         _ringTimer?.cancel();
         _emit();
 
@@ -618,12 +639,14 @@ class CallService {
           (raw['sdpMLineIndex'] as num?)?.toInt(),
         );
         final pc = _pc;
-        // Held rather than dropped when there is no description yet — see the
-        // note on _earlyCandidates.
         if (pc == null || (await pc.getRemoteDescription()) == null) {
           _earlyCandidates.add(candidate);
         } else {
-          await pc.addCandidate(candidate);
+          try {
+            await pc.addCandidate(candidate);
+          } catch (_) {
+            _earlyCandidates.add(candidate);
+          }
         }
 
       case 'decline':
@@ -700,6 +723,7 @@ class CallService {
   }
 
   Future<void> dispose() async {
+    _connectTimer?.cancel();
     await _signals?.cancel();
     await hangUp(notify: false);
     if (!_changes.isClosed) await _changes.close();

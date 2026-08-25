@@ -21,7 +21,7 @@
  * again, and an address that is well-formed but wrong can only be found by
  * sending mail to it.
  */
-export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2}$/;
 
 /**
  * A person's name: letters, with the punctuation names actually contain.
@@ -41,8 +41,7 @@ export const nameRules = {
     if (/\d/.test(value)) return "A name cannot contain numbers";
     if (!NAME_PATTERN.test(value)) return "Letters only";
     return true;
-  },
-};
+  }};
 
 export const emailRules = {
   required: "Email is required",
@@ -51,5 +50,4 @@ export const emailRules = {
     if (!value) return "Email is required";
     if (!EMAIL_PATTERN.test(value)) return "Enter a full email address, like name@gmail.com";
     return true;
-  },
-};
+  }};

@@ -398,10 +398,16 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   Future<void> _startCall({required bool video}) async {
     final partnerId = widget.channel.partnerId;
     if (partnerId == null) return;
-    await ref.read(callServiceProvider).call(
-          CallPeer(id: partnerId, name: widget.channel.name),
-          video: video,
-        );
+    final service = ref.read(callServiceProvider);
+    // Guard against double-tap — if already on a call, ignore.
+    if (service.isBusy) return;
+    final peer = CallPeer(id: partnerId, name: widget.channel.name);
+    // 1) Set the call state SYNCHRONOUSLY — the shell detects the transition
+    //    (idle → outgoing) and pushes CallScreen as a route overlay. The chat
+    //    screen stays in the stack underneath.
+    service.prepareCall(peer, video: video);
+    // 2) Open media + signalling in background.
+    unawaited(service.call(peer, video: video));
   }
 
   Future<void> _send() async {

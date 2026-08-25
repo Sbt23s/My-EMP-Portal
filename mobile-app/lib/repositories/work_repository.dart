@@ -688,6 +688,95 @@ class WorkRepository {
     return ApiEnvelope.listOf(data).toList();
   }
 
+  /// POST /payroll/salary — set or update an employee's salary structure.
+  Future<void> setSalary({
+    required int userId,
+    required double basicSalary,
+    double hra = 0,
+    double allowances = 0,
+    double pfPercentage = 12,
+    bool esiApplicable = false,
+    double ptAmount = 0,
+  }) async {
+    await _api.post('/payroll/salary', body: {
+      'userId': userId,
+      'basicSalary': basicSalary,
+      'hra': hra,
+      'allowances': allowances,
+      'pfPercentage': pfPercentage,
+      'esiApplicable': esiApplicable,
+      'ptAmount': ptAmount,
+    });
+  }
+
+  /// POST /payroll/runs — generate a payroll run for a month.
+  Future<Map<String, dynamic>> generatePayrollRun({
+    required int month,
+    required int year,
+  }) async {
+    final data = await _api.post('/payroll/runs?month=$month&year=$year');
+    if (data is! Map<String, dynamic>) return const {};
+    return data;
+  }
+
+  /// GET /payroll/runs — list all payroll runs.
+  Future<List<Map<String, dynamic>>> payrollRuns() async {
+    final data = await _api.get('/payroll/runs');
+    return ApiEnvelope.listOf(data).toList();
+  }
+
+  /// POST /payroll/runs/{id}/confirm — confirm a payroll run.
+  Future<void> confirmPayrollRun(int id) async {
+    await _api.post('/payroll/runs/$id/confirm');
+  }
+
+  /// POST /payroll/runs/{id}/finance-approve — finance approve a payroll run.
+  Future<void> financeApprovePayrollRun(int id) async {
+    await _api.post('/payroll/runs/$id/finance-approve');
+  }
+
+  /// GET /payroll/requests — HR inbox of payslip requests.
+  Future<List<Map<String, dynamic>>> payrollRequests({
+    bool pendingOnly = true,
+  }) async {
+    final data = await _api.get(
+      '/payroll/requests',
+      query: {'pendingOnly': '$pendingOnly'},
+    );
+    return ApiEnvelope.listOf(data).toList();
+  }
+
+  /// POST /payroll/requests/{id}/approve — approve a payslip request.
+  Future<void> approvePayrollRequest(int id,
+      {Map<String, dynamic>? form}) async {
+    await _api.post('/payroll/requests/$id/approve', body: form ?? {});
+  }
+
+  /// POST /payroll/requests/{id}/reject — reject a payslip request.
+  Future<void> rejectPayrollRequest(int id, {String? note}) async {
+    await _api.post('/payroll/requests/$id/reject', body: {
+      if (note != null) 'note': note,
+    });
+  }
+
+  /// GET /payroll/payslips/month — all payslips for a month (HR view).
+  Future<Map<String, dynamic>> payslipsByMonth({
+    required int month,
+    required int year,
+  }) async {
+    final data = await _api.get('/payroll/payslips/month', query: {
+      'month': '$month',
+      'year': '$year',
+    });
+    if (data is! Map<String, dynamic>) return const {};
+    return data;
+  }
+
+  /// POST /payroll/payslip/{id}/email — email a payslip to employee.
+  Future<void> emailPayslip(int id) async {
+    await _api.post('/payroll/payslip/$id/email');
+  }
+
   // ---- onboarding (HR) ----------------------------------------------------
 
   /// GET /onboarding/employees — ids of people still being onboarded.

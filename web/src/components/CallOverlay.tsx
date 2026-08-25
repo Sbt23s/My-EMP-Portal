@@ -101,34 +101,51 @@ export function CallOverlay({
   */
   const [remoteRevision, setRemoteRevision] = useState(0);
 
+  /*
+    Watch the far side's tracks appear and change.
+
+    This effect must not depend on the counter it increments. It did, and it
+    also bumped unconditionally on every run, so it re-triggered itself for
+    ever: render, bump, render, bump. A React loop like that does not throw --
+    it simply occupies the main thread, and the video pipeline never gets the
+    time it needs to decode a frame. The symptom was the far side's picture
+    never arriving, which is exactly what it looks like when a connection is
+    at fault, and is why it took a while to find.
+
+    Tracks added later are handled by listening to the stream, and attaching
+    the per-track listeners from inside that handler, rather than by
+    re-running this whole effect.
+  */
   useEffect(() => {
     if (!remoteStream) return;
     const bump = () => setRemoteRevision((n) => n + 1);
 
-    remoteStream.addEventListener("addtrack", bump);
-    remoteStream.addEventListener("removetrack", bump);
-    const tracks = remoteStream.getTracks();
-    tracks.forEach((t) => {
+    const watchTrack = (t: MediaStreamTrack) => {
       t.addEventListener("mute", bump);
       t.addEventListener("unmute", bump);
       t.addEventListener("ended", bump);
-    });
+    };
+    const unwatchTrack = (t: MediaStreamTrack) => {
+      t.removeEventListener("mute", bump);
+      t.removeEventListener("unmute", bump);
+      t.removeEventListener("ended", bump);
+    };
 
-    // One bump on attach as well: a track can arrive between the render that
-    // read the stream and this effect running, and nothing would announce it.
-    bump();
+    const onAddTrack = (e: MediaStreamTrackEvent) => { watchTrack(e.track); bump(); };
+    const watched = remoteStream.getTracks();
+    watched.forEach(watchTrack);
+
+    remoteStream.addEventListener("addtrack", onAddTrack);
+    remoteStream.addEventListener("removetrack", bump);
 
     return () => {
-      remoteStream.removeEventListener("addtrack", bump);
+      remoteStream.removeEventListener("addtrack", onAddTrack);
       remoteStream.removeEventListener("removetrack", bump);
-      tracks.forEach((t) => {
-        t.removeEventListener("mute", bump);
-        t.removeEventListener("unmute", bump);
-        t.removeEventListener("ended", bump);
-      });
+      // Whatever the stream holds now, not what it held when this ran.
+      remoteStream.getTracks().forEach(unwatchTrack);
+      watched.forEach(unwatchTrack);
     };
-    // remoteRevision is a dependency so newly added tracks get listeners too.
-  }, [remoteStream, remoteRevision]);
+  }, [remoteStream]);
 
   /*
     Whether the far side's picture is actually arriving.
@@ -151,30 +168,37 @@ export function CallOverlay({
     const el = remoteVideo.current;
     if (!el) return;
 
-    const check = () => setRemoteHasPicture(el.videoWidth > 0);
+    const check = () => {
+      if (el.videoWidth > 0) {
+        setRemoteHasPicture(true);
+      }
+    };
 
-    // resize fires when the far side's camera starts, stops or changes size,
-    // which covers them turning it off and on mid-call.
+    // resize fires when the far side's camera starts, stops or changes size
     el.addEventListener("loadedmetadata", check);
+    el.addEventListener("loadeddata", check);
     el.addEventListener("resize", check);
     el.addEventListener("playing", check);
-    el.addEventListener("emptied", check);
+    el.addEventListener("timeupdate", check);
     check();
 
+    const interval = setInterval(check, 300);
+
     return () => {
+      clearInterval(interval);
       el.removeEventListener("loadedmetadata", check);
+      el.removeEventListener("loadeddata", check);
       el.removeEventListener("resize", check);
       el.removeEventListener("playing", check);
-      el.removeEventListener("emptied", check);
+      el.removeEventListener("timeupdate", check);
     };
-    // remoteRevision so this re-checks when tracks come and go.
   }, [remoteStream, remoteRevision, state]);
 
   /** A live video track exists, whether or not it has produced a picture yet. */
   const remoteVideoTrackLive = !!remoteStream
-    && remoteStream.getVideoTracks().some((t) => t.readyState === "live");
+    && remoteStream.getVideoTracks().some((t) => t.readyState === "live" && t.enabled !== false);
 
-  const hasRemoteVideo = isVideo && remoteHasPicture;
+  const hasRemoteVideo = isVideo && (remoteHasPicture || remoteVideoTrackLive);
   const hasLocalVideo = isVideo && !!localStream && localStream.getVideoTracks().some(t => t.readyState === "live" && t.enabled) && !cameraOff;
 
   // Streams are attached through the DOM rather than a src attribute. The state
@@ -189,23 +213,19 @@ export function CallOverlay({
       mainLocalVideo.current.srcObject = localStream ?? null;
       if (localStream) mainLocalVideo.current.play().catch(() => {});
     }
-    /*
-      hasLocalVideo and cameraOff are dependencies because they decide whether
-      the element exists at all. Turning the camera off unmounted the <video>;
-      turning it back on mounted a brand new one with no srcObject, and this
-      effect did not re-run because the stream object itself had not changed.
-      The result was your own picture never coming back after Stop Video --
-      the camera was running and the far side could see you, but your own
-      preview stayed black.
-    */
   }, [localStream, state, isVideo, hasRemoteVideo, hasLocalVideo, cameraOff]);
+
   useEffect(() => {
     if (remoteVideo.current) {
-      remoteVideo.current.srcObject = remoteStream ?? null;
+      if (remoteVideo.current.srcObject !== (remoteStream ?? null)) {
+        remoteVideo.current.srcObject = remoteStream ?? null;
+      }
       if (remoteStream) remoteVideo.current.play().catch(() => {});
     }
     if (remoteAudio.current) {
-      remoteAudio.current.srcObject = remoteStream ?? null;
+      if (remoteAudio.current.srcObject !== (remoteStream ?? null)) {
+        remoteAudio.current.srcObject = remoteStream ?? null;
+      }
       if (remoteStream) remoteAudio.current.play().catch(() => {});
     }
   }, [remoteStream, state, isVideo, hasRemoteVideo]);
@@ -234,18 +254,9 @@ export function CallOverlay({
               One set of elements for the whole call, shown and hidden rather
               than swapped in and out.
 
-              The three cases used to be separate branches, so the remote
-              <video> only existed while hasRemoteVideo was true. That value is
-              derived from the far side's tracks, which arrive after the call
-              connects -- so at the moment it was first read there was no video
-              track yet, the branch rendered the avatar instead, and the
-              element that would have shown the other person was never created.
-              Nobody saw anybody.
-
-              Keeping the elements mounted means the picture appears the
-              instant a track starts flowing, with no dependency on a React
-              value being recomputed at exactly the right time, and no black
-              frame while a new element finds its stream.
+              Keeping the elements mounted and un-hidden (using opacity-0 when
+              no picture yet) ensures the browser media decoder decodes frames
+              immediately and updates videoWidth > 0.
             */
             <>
               <video
@@ -253,8 +264,8 @@ export function CallOverlay({
                 autoPlay
                 playsInline
                 className={cn(
-                  "h-full w-full object-contain bg-black",
-                  !hasRemoteVideo && "hidden"
+                  "h-full w-full object-contain bg-black transition-opacity duration-300",
+                  !hasRemoteVideo ? "opacity-0 absolute inset-0 pointer-events-none" : "opacity-100 relative z-10"
                 )}
               />
 

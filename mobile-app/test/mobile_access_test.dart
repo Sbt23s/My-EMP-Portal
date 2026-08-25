@@ -28,10 +28,19 @@ void main() {
       }
     });
 
-    test('turns administrators away', () {
+    test('lets company-level admins in — CTO holds SUPER_ADMIN', () {
+      for (final role in ['SUPER_ADMIN', 'COMPANY_ADMIN']) {
+        expect(
+          MobileAccess.allows(_userWith([role])),
+          isTrue,
+          reason: '$role should be able to use the app',
+        );
+      }
+    });
+
+    test('turns platform-level administrators away', () {
       for (final role in [
-        'SUPER_ADMIN', 'COMPANY_ADMIN', 'BOARD_ADMIN',
-        'TECHNICAL_ADMIN', 'CV_ADM', 'IT_ADM',
+        'BOARD_ADMIN', 'TECHNICAL_ADMIN', 'CV_ADM', 'IT_ADM',
       ]) {
         expect(
           MobileAccess.allows(_userWith([role])),
@@ -42,16 +51,15 @@ void main() {
     });
 
     test('one administrator role is enough, whatever else is held', () {
-      // The case that matters: an administrator who is also on the employee
-      // list. Reading only the first role would let them straight in.
-      expect(MobileAccess.allows(_userWith(['IT_EMP', 'COMPANY_ADMIN'])), isFalse);
-      expect(MobileAccess.allows(_userWith(['COMPANY_ADMIN', 'IT_EMP'])), isFalse);
+      // A platform admin who is also on the employee list is still turned away.
+      expect(MobileAccess.allows(_userWith(['IT_EMP', 'BOARD_ADMIN'])), isFalse);
+      expect(MobileAccess.allows(_userWith(['BOARD_ADMIN', 'IT_EMP'])), isFalse);
     });
 
     test('is not case sensitive', () {
       // Role codes come back from the server in whatever case the row holds.
-      expect(MobileAccess.allows(_userWith(['company_admin'])), isFalse);
-      expect(MobileAccess.allows(_userWith(['Super_Admin'])), isFalse);
+      expect(MobileAccess.allows(_userWith(['board_admin'])), isFalse);
+      expect(MobileAccess.allows(_userWith(['Technical_Admin'])), isFalse);
     });
 
     test('an account with no roles is let through, not turned away', () {
@@ -64,8 +72,7 @@ void main() {
       // The failure this sentence prevents: an administrator reads "cannot sign
       // in", assumes a typo, and retypes a correct password forever.
       expect(MobileAccess.refusal.toLowerCase(), contains('web portal'));
-      expect(MobileAccess.refusal.toLowerCase(), contains('works normally'));
-      expect(MobileAccess.refusal.toLowerCase(), contains('employees'));
+      expect(MobileAccess.refusal.toLowerCase(), contains('account'));
     });
   });
 }

@@ -500,13 +500,22 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     })();
 
     pc.ontrack = (event) => {
-      if (event.streams && event.streams[0]) {
-        setRemoteStream(event.streams[0]);
+      const stream = (event.streams && event.streams[0]) ? event.streams[0] : null;
+      if (stream) {
+        setRemoteStream(new MediaStream(stream.getTracks()));
+        stream.onaddtrack = () => {
+          setRemoteStream(new MediaStream(stream.getTracks()));
+        };
+        stream.onremovetrack = () => {
+          setRemoteStream(new MediaStream(stream.getTracks()));
+        };
       } else if (event.track) {
         setRemoteStream((prev) => {
-          const ms = prev ? new MediaStream(prev.getTracks()) : new MediaStream();
-          ms.addTrack(event.track);
-          return ms;
+          const existing = prev ? prev.getTracks() : [];
+          if (!existing.some((t) => t.id === event.track.id)) {
+            return new MediaStream([...existing, event.track]);
+          }
+          return prev;
         });
       }
     };

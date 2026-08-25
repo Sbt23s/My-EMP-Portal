@@ -369,8 +369,7 @@ function AppShell() {
       (await api.get<ApiEnvelope<{
         designationTitle?: string;
         positionTitle?: string;
-      }>>("/users/me")).data.data,
-  });
+      }>>("/users/me")).data.data});
 
   /*
     Designation is the field we want, but it is only set when somebody was

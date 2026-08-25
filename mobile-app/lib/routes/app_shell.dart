@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,27 +31,11 @@ class _Tab {
   final IconData icon;
   final IconData selectedIcon;
   final Widget screen;
-
-  /// Null for a destination that is not a module — Profile, More.
   final String? moduleCode;
-
-  /// Mirrors the web sidebar's `excludeRole`. An administrator does not punch in
-  /// or apply for their own leave; they approve other people's.
-  ///
-  /// Belt and braces. Administrators cannot sign in to this app at all — see
-  /// MobileAccess — so nothing currently reaches this. Kept because the two
-  /// rules answer different questions: that one decides who gets in, this one
-  /// decides what they would see, and relaxing the first should not silently
-  /// hand somebody a punch-in button.
   final bool hiddenForAdmin;
 }
 
 /// The tabs, gated exactly as the web client gates its sidebar.
-///
-/// A module switched off has to disappear here too. It did not: the app read no
-/// settings at all, so switching Chat off hid it in the browser and left it on
-/// every phone — which is worse than not having the setting, because somebody
-/// believes a module is off when it is still in a colleague's pocket.
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
 
@@ -59,6 +45,11 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   int _index = 0;
+  StreamSubscription<String>? _callErrorSub;
+
+  /// Tracks the previous call state so we can detect transitions and push/pop
+  /// the CallScreen overlay at the right moment.
+  CallState _prevCallState = CallState.idle;
 
   static const List<_Tab> _all = [
     _Tab(
@@ -99,14 +90,72 @@ class _AppShellState extends ConsumerState<AppShell> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final callService = ref.read(callServiceProvider);
+      _callErrorSub = callService.errors.listen((msg) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(msg),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _callErrorSub?.cancel();
+    super.dispose();
+  }
+
+  /// Push the CallScreen as a full-screen route on top of whatever is showing.
+  /// When the call ends, the CallScreen pops itself and the user returns to
+  /// exactly where they were — chat, dashboard, more screen, anything.
+  void _handleCallTransition(CallState newState) {
+    final wentActive = newState != CallState.idle && _prevCallState == CallState.idle;
+    final wentIdle = newState == CallState.idle && _prevCallState != CallState.idle;
+    _prevCallState = newState;
+
+    if (wentActive && mounted) {
+      Navigator.of(context).push(
+        PageRouteBuilder(
+          opaque: true,
+          fullscreenDialog: true,
+          transitionDuration: Duration.zero,
+          pageBuilder: (_, __, ___) => const _CallOverlay(),
+          settings: const RouteSettings(name: 'call'),
+        ),
+      );
+    }
+    if (wentIdle && mounted) {
+      // Pop the CallScreen overlay — it will return to whatever was underneath.
+      final nav = Navigator.of(context);
+      // Only pop if the current route is the call overlay.
+      if (nav.canPop()) {
+        nav.pop();
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Opens the live socket for as long as somebody is signed in, and closes it
-    // when they are not. Watched here because the shell is the one widget whose
-    // lifetime is exactly a session.
     ref.watch(realtimeBinderProvider);
-    // Listens for incoming calls for as long as the session lasts.
     ref.watch(callBinderProvider);
     ref.watch(callChangesProvider);
+
+    // After building, check for call state transitions so we can push/pop
+    // the call overlay at the right moment.
+    final call = ref.watch(callServiceProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _handleCallTransition(call.state);
+    });
 
     final modules = ref.watch(modulesProvider);
     final user = ref.watch(currentUserProvider);
@@ -118,35 +167,14 @@ class _AppShellState extends ConsumerState<AppShell> {
       return true;
     }).toList();
 
-    // Profile is not a module and cannot be switched off, so this is only
-    // reachable if the list itself were emptied — but an index past the end
-    // throws, and the list shrinks whenever a module is switched off while
-    // somebody is standing on that tab.
     if (visible.isEmpty) {
       return const Scaffold(body: SafeArea(child: _NothingEnabled()));
     }
     final index = _index.clamp(0, visible.length - 1);
 
-    /*
-     * A live call covers the app.
-     *
-     * Over the shell rather than pushed as a route: a call can begin while any
-     * screen is open, and pushing would leave whatever was underneath to be
-     * popped back to — which goes wrong the moment somebody navigates during a
-     * call. This simply takes the screen while there is a call and gives it back
-     * when there is not.
-     */
-    final call = ref.watch(callServiceProvider);
-    if (call.state != CallState.idle) {
-      return const CallScreen();
-    }
-
     return Scaffold(
       body: IndexedStack(
         index: index,
-        // Kept alive rather than rebuilt: each tab holds its scroll position and
-        // its loaded data, which is what a person expects coming back to a tab
-        // they were just on.
         children: [for (final tab in visible) tab.screen],
       ),
       bottomNavigationBar: NavigationBar(
@@ -165,12 +193,47 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 }
 
-/// Shown when this company has no module the person in this role may open.
-///
-/// Without it they would sign in to an app with an empty bar and a blank panel,
-/// indistinguishable from the application being broken. It is not broken;
-/// nothing has been switched on for them yet, and that is worth saying in those
-/// words. The same notice, in the same words, as the web client shows.
+/// The CallScreen pushed as a route overlay. When the call ends (state
+/// returns to idle), it pops itself so the user returns to whatever screen
+/// they were on before the call started.
+
+class _CallOverlay extends ConsumerStatefulWidget {
+  const _CallOverlay();
+
+  @override
+  ConsumerState<_CallOverlay> createState() => _CallOverlayState();
+}
+
+class _CallOverlayState extends ConsumerState<_CallOverlay> {
+  CallState _lastSeen = CallState.outgoing;
+  bool _popping = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final call = ref.watch(callServiceProvider);
+
+    // When the call ends, pop this overlay immediately. Use a synchronous
+    // flag to avoid rebuilding with an empty peer on the next frame.
+    if (call.state == CallState.idle && _lastSeen != CallState.idle && !_popping) {
+      _popping = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+      });
+    }
+    _lastSeen = call.state;
+
+    // While popping, show nothing (transparent) so the pop animation reveals
+    // whatever is underneath rather than flashing an empty call screen.
+    if (_popping) {
+      return const Scaffold(backgroundColor: Colors.transparent);
+    }
+
+    return const CallScreen();
+  }
+}
+
 class _NothingEnabled extends StatelessWidget {
   const _NothingEnabled();
 

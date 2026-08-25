@@ -184,7 +184,7 @@ export default function TaExpensesPage() {
    */
   const sendClaimsEmail = async () => {
     const to = emailTo.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/.test(to)) {
+    if (!/^[^\s@]+@[^\s@]+\.[A-Za-z]{2}$/.test(to)) {
       toast.error("Enter a valid email address.");
       return;
     }

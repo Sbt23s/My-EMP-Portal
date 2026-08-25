@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -51,28 +53,36 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     ref.watch(callChangesProvider);
     final calls = ref.watch(callServiceProvider);
 
-    // Only re-attach renderers when the stream object actually changes.
-    // Re-assigning srcObject on every build causes video flicker and restarts
-    // the decoder — the main cause of "video not showing" on slow devices.
+    // Bind renderers via post-frame callback so the RTCVideoView has time to
+    // register its native view before we hand it a stream. Doing it in the
+    // same frame as the widget creation causes a race on some Android devices
+    // where the native surface is not yet ready.
     if (_ready) {
       final local = calls.localStream;
       final remote = calls.remoteStream;
       if (local != null && local != _boundLocal) {
         _boundLocal = local;
-        _local.srcObject = local;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _local.srcObject = local;
+        });
       }
       if (remote != null && remote != _boundRemote) {
         _boundRemote = remote;
-        _remote.srcObject = remote;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _remote.srcObject = remote;
+        });
       }
-      // Clear stale bindings when stream is nulled (call ended).
       if (local == null && _boundLocal != null) {
         _boundLocal = null;
-        _local.srcObject = null;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _local.srcObject = null;
+        });
       }
       if (remote == null && _boundRemote != null) {
         _boundRemote = null;
-        _remote.srcObject = null;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _remote.srcObject = null;
+        });
       }
     }
 
@@ -81,12 +91,19 @@ class _CallScreenState extends ConsumerState<CallScreen> {
 
     final video = calls.isVideo;
     final connected = calls.state == CallState.connected;
+    final isConnecting = calls.state == CallState.connecting;
+
+    // Show remote video as soon as it's available (connecting OR connected).
+    // This gives the user faster visual feedback that the call is working.
+    final hasRemoteVideo = video && _ready && calls.remoteStream != null;
 
     return Scaffold(
       backgroundColor: const Color(0xFF101014),
       body: Stack(
         children: [
-          if (video && connected && _ready)
+          // Remote video — show as soon as the remote stream arrives
+          // (connecting or connected). If not yet available, show waiting screen.
+          if (hasRemoteVideo)
             Positioned.fill(
               child: RTCVideoView(
                 _remote,
@@ -94,10 +111,18 @@ class _CallScreenState extends ConsumerState<CallScreen> {
               ),
             )
           else
-            Positioned.fill(child: _Waiting(peer: peer, state: calls.state)),
+            Positioned.fill(
+              child: _Waiting(
+                peer: peer,
+                state: calls.state,
+                isVideo: video,
+              ),
+            ),
 
-          // Your own camera, small and in the corner, only once there is
-          // something to show.
+          // Your own camera — small PIP in the corner, shown as soon as the
+          // local stream is available (not just when connected). This matches
+          // the web: you see yourself immediately while the other person's
+          // camera is still starting.
           if (video && _ready && calls.localStream != null)
             Positioned(
               right: 16,
@@ -106,33 +131,63 @@ class _CallScreenState extends ConsumerState<CallScreen> {
               height: 150,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: RTCVideoView(
-                  _local,
-                  mirror: true,
-                  objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black26,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: RTCVideoView(
+                    _local,
+                    mirror: true,
+                    objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                  ),
                 ),
               ),
             ),
 
-          if (video && connected)
+          // Caller name — top of screen, always visible during video.
+          if (video && (connected || isConnecting))
             Positioned(
               left: 0,
               right: 0,
               top: MediaQuery.of(context).padding.top + 20,
-              child: Column(
-                children: [
-                  Text(
-                    peer.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    Text(
+                      peer.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                ],
+                    if (isConnecting)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Connecting…',
+                          style: TextStyle(color: Colors.white60, fontSize: 13),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
 
+          // Call timer — shown only when connected.
+          if (connected)
+            Positioned(
+              left: 0,
+              right: 0,
+              top: MediaQuery.of(context).padding.top + (video ? 60 : 20),
+              child: const Center(
+                child: _CallTimer(),
+              ),
+            ),
+
+          // Controls at the bottom.
           Positioned(
             left: 0,
             right: 0,
@@ -146,10 +201,11 @@ class _CallScreenState extends ConsumerState<CallScreen> {
 }
 
 class _Waiting extends StatelessWidget {
-  const _Waiting({required this.peer, required this.state});
+  const _Waiting({required this.peer, required this.state, this.isVideo = false});
 
   final CallPeer peer;
   final CallState state;
+  final bool isVideo;
 
   @override
   Widget build(BuildContext context) {
@@ -164,18 +220,22 @@ class _Waiting extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        CircleAvatar(
-          radius: 56,
-          backgroundColor: Colors.white12,
-          child: Text(
-            peer.name.characters.first.toUpperCase(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 40,
-              fontWeight: FontWeight.w600,
+        // Pulsing ring around the avatar for outgoing/incoming states.
+        if (state == CallState.outgoing || state == CallState.incoming)
+          _PulsingAvatar(name: peer.name)
+        else
+          CircleAvatar(
+            radius: 56,
+            backgroundColor: Colors.white12,
+            child: Text(
+              peer.name.characters.first.toUpperCase(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 40,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-        ),
         const SizedBox(height: 22),
         Text(
           peer.name,
@@ -187,7 +247,141 @@ class _Waiting extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(label, style: const TextStyle(color: Colors.white60, fontSize: 15)),
+        if (state == CallState.outgoing) ...[
+          const SizedBox(height: 10),
+          Icon(
+            isVideo ? Icons.videocam_rounded : Icons.call_rounded,
+            color: Colors.white38,
+            size: 22,
+          ),
+        ],
       ],
+    );
+  }
+}
+
+/// Avatar with expanding pulse rings to indicate ringing.
+class _PulsingAvatar extends StatefulWidget {
+  const _PulsingAvatar({required this.name});
+  final String name;
+
+  @override
+  State<_PulsingAvatar> createState() => _PulsingAvatarState();
+}
+
+class _PulsingAvatarState extends State<_PulsingAvatar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    _scale = Tween<double>(begin: 1.0, end: 1.5).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
+    );
+    _opacity = Tween<double>(begin: 0.6, end: 0.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
+    );
+    _ctrl.repeat();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 130,
+      height: 130,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Pulse ring
+          AnimatedBuilder(
+            animation: _ctrl,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: _scale.value,
+                child: Container(
+                  width: 112,
+                  height: 112,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.greenAccent.withValues(alpha: _opacity.value),
+                      width: 2,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          // Avatar
+          CircleAvatar(
+            radius: 56,
+            backgroundColor: Colors.white12,
+            child: Text(
+              widget.name.characters.first.toUpperCase(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 40,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Live call duration timer.
+class _CallTimer extends StatefulWidget {
+  const _CallTimer();
+
+  @override
+  State<_CallTimer> createState() => _CallTimerState();
+}
+
+class _CallTimerState extends State<_CallTimer> {
+  Timer? _ticker;
+  int _seconds = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _seconds++);
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final m = (_seconds ~/ 60).toString().padLeft(2, '0');
+    final s = (_seconds % 60).toString().padLeft(2, '0');
+    return Text(
+      '$m:$s',
+      style: const TextStyle(
+        color: Colors.white70,
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        fontFeatures: [FontFeature.tabularFigures()],
+      ),
     );
   }
 }
@@ -198,7 +392,7 @@ class _Controls extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Ringing: refuse or answer. Everything else: the in-call row.
+    // --- Incoming: Decline + Answer ---
     if (calls.state == CallState.incoming) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -219,6 +413,37 @@ class _Controls extends ConsumerWidget {
       );
     }
 
+    // --- Outgoing: single Cancel button (like the web "end call" while ringing) ---
+    if (calls.state == CallState.outgoing) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _RoundButton(
+            icon: Icons.call_end_rounded,
+            colour: Colors.red,
+            label: 'Cancel',
+            onTap: () => calls.hangUp(),
+          ),
+        ],
+      );
+    }
+
+    // --- Connecting: End button only (media is opening, controls not useful yet) ---
+    if (calls.state == CallState.connecting) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _RoundButton(
+            icon: Icons.call_end_rounded,
+            colour: Colors.red,
+            label: 'End',
+            onTap: () => calls.hangUp(),
+          ),
+        ],
+      );
+    }
+
+    // --- Connected: full in-call controls ---
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [

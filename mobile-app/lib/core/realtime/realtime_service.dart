@@ -60,7 +60,6 @@ class RealtimeService {
 
   /// Reconnect attempts with exponential backoff.
   int _reconnectAttempts = 0;
-  static const _maxReconnectDelay = Duration(seconds: 30);
 
   void connect() {
     if (_client != null) return;

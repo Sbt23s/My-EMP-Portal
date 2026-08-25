@@ -66,6 +66,5 @@ export function describeCallNotification(
 
   return {
     title: caller ? `${caller} - voice call` : title || "Voice call",
-    body: caller ? `${caller} called you` : "Called you",
-  };
+    body: caller ? `${caller} called you` : "Called you"};
 }

@@ -211,9 +211,9 @@ class MoreScreen extends ConsumerWidget {
       if (user?.can('REPORT_VIEW') ?? false)
         _Entry(
           icon: Icons.insert_chart_outlined_rounded,
-          title: 'Reports',
-          subtitle: 'Attendance, leave and payroll spreadsheets',
-          onTap: () => _open(context, const ReportsScreen()),
+          title: 'Team reports',
+          subtitle: 'Attendance, leave and payroll by month, year or range',
+          onTap: () => _open(context, const TeamReportsScreen()),
         ),
       if ((user?.can('PAYROLL_RUN') ?? false) && modules.has('PAYROLL'))
         _Entry(
@@ -221,6 +221,20 @@ class MoreScreen extends ConsumerWidget {
           title: 'Payroll',
           subtitle: 'Salaries across the company',
           onTap: () => _open(context, const PayrollScreen()),
+        ),
+      if ((user?.can('PAYROLL_RUN') ?? false) && modules.has('PAYROLL'))
+        _Entry(
+          icon: Icons.play_circle_outline_rounded,
+          title: 'Payroll runs',
+          subtitle: 'Generate, confirm and approve monthly payroll',
+          onTap: () => _open(context, const PayrollRunsScreen()),
+        ),
+      if ((user?.can('PAYROLL_RUN') ?? false) && modules.has('PAYROLL'))
+        _Entry(
+          icon: Icons.mark_email_read_outlined,
+          title: 'Payslip requests',
+          subtitle: 'Approve or reject employee payslip requests',
+          onTap: () => _open(context, const PayrollRequestsScreen()),
         ),
       if ((user?.can('ORG_MANAGE') ?? false) && modules.has('LEAVE'))
         _Entry(

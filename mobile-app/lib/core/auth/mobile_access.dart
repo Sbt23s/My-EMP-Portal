@@ -2,13 +2,10 @@ import '../../models/auth_user.dart';
 
 /// Who this app is for.
 ///
-/// Employees, team leads and HR. Administrators sign in on the web.
-///
-/// The reason is weight, not permission. An administrator's portal carries the
-/// organisation dashboards, the directory, payroll runs, reports and the audit
-/// trail — screens built for a wide window and a real connection, each pulling
-/// lists measured in hundreds. Rendering that on a phone is slow enough to feel
-/// broken, and the honest answer is that this app was not built for it.
+/// All roles — employees, team leads, HR, CTO, and company admins — may use
+/// the mobile app. Only platform-level roles (BOARD_ADMIN) and the technical
+/// admin panel (TECHNICAL_ADMIN) are gated, as those screens are too heavy
+/// for a phone.
 ///
 /// Enforced in the client only, deliberately. The server is unchanged: an
 /// administrator's credentials are still perfectly valid, still work in the
@@ -22,14 +19,14 @@ import '../../models/auth_user.dart';
 class MobileAccess {
   const MobileAccess._();
 
-  /// Roles that run a company. These sign in on the web.
+  /// Roles turned away from the mobile app.
   ///
-  /// Listed rather than inferred from `isCompanyAdmin` so the two cannot drift:
-  /// this decides who is turned away at the door and wants to be read on its
-  /// own, without following an alias into another file.
+  /// The mobile app now carries every module the web does — attendance,
+  /// chat, calls, approvals, payroll, reports — so company-level admins
+  /// (SUPER_ADMIN / COMPANY_ADMIN) including the CTO are allowed through.
+  /// Only platform-level roles (BOARD_ADMIN) and the technical admin panel
+  /// (TECHNICAL_ADMIN) remain gated, as those pages are too heavy for a phone.
   static const Set<String> blockedRoles = {
-    'SUPER_ADMIN',
-    'COMPANY_ADMIN',
     'BOARD_ADMIN',
     'TECHNICAL_ADMIN',
     'CV_ADM',
@@ -49,12 +46,10 @@ class MobileAccess {
 
   /// What to tell somebody who is turned away.
   ///
-  /// Names the product they should use and says their account is fine. Being
-  /// refused at a login screen reads as "wrong password" unless the message
-  /// says otherwise, and an administrator retyping a correct password is the
-  /// failure this sentence exists to prevent.
+  /// Platform-level administrators and the technical admin panel are too
+  /// heavy for a phone. Their account is fine — please use the web.
   static const String refusal =
-      'This app is for employees, team leads and HR.\n\n'
-      'Your account is an administrator account and works normally — please '
-      'sign in on the web portal, where the admin screens live.';
+      'This app does not support platform administrator or technical admin '
+      'accounts.\n\n'
+      'Your account is valid — please sign in on the web portal.';
 }

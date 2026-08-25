@@ -209,11 +209,7 @@ export function CallOverlay({
       localVideo.current.srcObject = localStream ?? null;
       if (localStream) localVideo.current.play().catch(() => {});
     }
-    if (mainLocalVideo.current) {
-      mainLocalVideo.current.srcObject = localStream ?? null;
-      if (localStream) mainLocalVideo.current.play().catch(() => {});
-    }
-  }, [localStream, state, isVideo, hasRemoteVideo, hasLocalVideo, cameraOff]);
+  }, [localStream, state, isVideo, cameraOff]);
 
   useEffect(() => {
     if (remoteVideo.current) {
@@ -228,7 +224,7 @@ export function CallOverlay({
       }
       if (remoteStream) remoteAudio.current.play().catch(() => {});
     }
-  }, [remoteStream, state, isVideo, hasRemoteVideo]);
+  }, [remoteStream, state, isVideo]);
 
   useEffect(() => {
     if (state !== "connected") return;
@@ -249,102 +245,48 @@ export function CallOverlay({
       {/* Background or Main Video */}
       {isVideo ? (
         <div className="relative flex-1 w-full max-w-4xl overflow-hidden rounded-2xl bg-black shadow-2xl flex items-center justify-center">
-          {state === "connected" ? (
-            /*
-              One set of elements for the whole call, shown and hidden rather
-              than swapped in and out.
+          {/* Main Remote Video Element - Always Mounted for Frame Decoding */}
+          <video
+            ref={remoteVideo}
+            autoPlay
+            playsInline
+            className={cn(
+              "h-full w-full object-contain bg-black transition-opacity duration-300",
+              (!hasRemoteVideo || state !== "connected") ? "opacity-0 absolute inset-0 pointer-events-none" : "opacity-100 relative z-10"
+            )}
+          />
 
-              Keeping the elements mounted and un-hidden (using opacity-0 when
-              no picture yet) ensures the browser media decoder decodes frames
-              immediately and updates videoWidth > 0.
-            */
-            <>
-              <video
-                ref={remoteVideo}
-                autoPlay
-                playsInline
-                className={cn(
-                  "h-full w-full object-contain bg-black transition-opacity duration-300",
-                  !hasRemoteVideo ? "opacity-0 absolute inset-0 pointer-events-none" : "opacity-100 relative z-10"
-                )}
-              />
-
-              {/* Own camera, full size, while the other side has none to show. */}
-              <video
-                ref={mainLocalVideo}
-                autoPlay
-                playsInline
-                muted
-                className={cn(
-                  "h-full w-full object-contain bg-black -scale-x-100",
-                  (hasRemoteVideo || !hasLocalVideo) && "hidden"
-                )}
-              />
-
-              {/* Own camera, small, once there is something to sit on top of. */}
-              <video
-                ref={localVideo}
-                autoPlay
-                playsInline
-                muted
-                className={cn(
-                  "absolute bottom-4 right-4 w-36 h-24 sm:w-48 sm:h-32 rounded-xl border-2 border-white/30 object-contain bg-black shadow-xl -scale-x-100",
-                  (!hasRemoteVideo || !hasLocalVideo) && "hidden"
-                )}
-              />
-
-              {/* Shown over the top when there is no picture from either side. */}
-              {!hasRemoteVideo && !hasLocalVideo && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/80">
-                  <div className="flex h-28 w-28 items-center justify-center rounded-full bg-white/20 text-4xl font-bold backdrop-blur-sm shadow-xl">
-                    {initials(partnerName)}
-                  </div>
-                  <h3 className="font-display text-2xl font-bold drop-shadow-md">{partnerName}</h3>
-                  <p className="text-base font-medium tabular-nums text-white/90 drop-shadow-md">{label}</p>
-                </div>
-              )}
-
-              {/* The other person's camera being off is worth saying, rather
-                  than leaving a black rectangle to be interpreted. */}
-              {!hasRemoteVideo && hasLocalVideo && (
-                <div className="absolute left-1/2 top-6 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-xs backdrop-blur-md">
-                  {/*
-                    A track that is live but has not produced a picture yet is
-                    still on its way; only the absence of a track means they
-                    turned their camera off. Saying the wrong one of those
-                    blames the other person for a delay that is ours.
-                  */}
-                  {remoteVideoTrackLive
-                    ? `Waiting for ${partnerName}'s video…`
-                    : `${partnerName}'s camera is off`}
-                </div>
-              )}
-
-              <div className="absolute left-4 top-4 rounded-full bg-black/60 px-4 py-1.5 text-sm font-semibold tabular-nums backdrop-blur-md">
-                {partnerName} · {label}
+          {/* Center Avatar & Status Card when remote video is not active or while connecting */}
+          {(!hasRemoteVideo || state !== "connected") && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-neutral-900/90 z-0">
+              <div className="flex h-28 w-28 animate-pulse items-center justify-center rounded-full bg-white/20 text-4xl font-bold backdrop-blur-sm shadow-xl border border-white/10">
+                {initials(partnerName)}
               </div>
-            </>
-          ) : (
-            <>
-              <video
-                ref={localVideo}
-                autoPlay
-                playsInline
-                muted
-                className="absolute inset-0 h-full w-full object-cover opacity-50 blur-sm scale-105"
-              />
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/30">
-                {/* This is the not-connected half of the branch above, so the
-                    pulse is unconditional here -- the `state !== "connected"`
-                    guard that used to be on it could never be false. */}
-                <div className="flex h-28 w-28 animate-pulse items-center justify-center rounded-full bg-white/20 text-4xl font-bold backdrop-blur-sm shadow-xl">
-                  {initials(partnerName)}
-                </div>
-                <h3 className="font-display text-2xl font-bold drop-shadow-md">{partnerName}</h3>
-                <p className="text-base font-medium tabular-nums text-white/90 drop-shadow-md">{label}</p>
-              </div>
-            </>
+              <h3 className="font-display text-2xl font-bold drop-shadow-md">{partnerName}</h3>
+              <p className="text-sm font-medium tabular-nums text-white/80 bg-black/50 px-4 py-1.5 rounded-full backdrop-blur-md">
+                {state === "connected"
+                  ? (remoteVideoTrackLive ? `Connecting video for ${partnerName}…` : `${partnerName}'s camera is off`)
+                  : label}
+              </p>
+            </div>
           )}
+
+          {/* Local Camera PIP Box (Bottom Right) - Live preview of your own face */}
+          {hasLocalVideo && (
+            <div className="absolute bottom-4 right-4 z-30 w-36 h-28 sm:w-48 sm:h-36 rounded-xl border-2 border-white/30 overflow-hidden bg-black shadow-2xl">
+              <video
+                ref={localVideo}
+                autoPlay
+                playsInline
+                muted
+                className="h-full w-full object-cover -scale-x-100"
+              />
+            </div>
+          )}
+
+          <div className="absolute left-4 top-4 z-20 rounded-full bg-black/60 px-4 py-1.5 text-sm font-semibold tabular-nums backdrop-blur-md">
+            {partnerName} · {label}
+          </div>
         </div>
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-3">

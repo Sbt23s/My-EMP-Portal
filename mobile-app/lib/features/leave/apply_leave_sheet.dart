@@ -61,6 +61,19 @@ class _ApplyLeaveSheetState extends ConsumerState<ApplyLeaveSheet> {
     }
   }
 
+  /*
+    The one approver, when there is only one.
+
+    The dropdown shows it as already chosen but a form field's initialValue
+    does not write back to state, so without this a sole approver submits as
+    nobody -- the exact fault this change is meant to close.
+  */
+  int? _soleApprover() {
+    final list = ref.read(approversProvider).valueOrNull;
+    if (list == null || list.length != 1) return null;
+    return (list.first['id'] as num?)?.toInt();
+  }
+
   Future<void> _submit() async {
     if (_busy) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -80,7 +93,7 @@ class _ApplyLeaveSheetState extends ConsumerState<ApplyLeaveSheet> {
             fromDate: _from!,
             toDate: _to!,
             reason: _reason.text,
-            requestedTo: _approverId,
+            requestedTo: _approverId ?? _soleApprover(),
           );
       if (!mounted) return;
       Navigator.pop(context, true);
@@ -173,24 +186,48 @@ class _ApplyLeaveSheetState extends ConsumerState<ApplyLeaveSheet> {
                 ),
               ),
               const SizedBox(height: 14),
+              /*
+                Required, as the website has it ("Choose an approver").
+
+                A request addressed to nobody appears in nobody's queue, which
+                is the whole reason approvals were being missed. When there is
+                exactly one possible approver it is chosen already, so the
+                requirement costs a tap only where there is a real choice.
+              */
               approvers.maybeWhen(
                 data: (list) => list.isEmpty
-                    ? const SizedBox.shrink()
+                    ? Text(
+                        'Nobody is set up to approve your leave yet.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      )
                     : DropdownButtonFormField<int>(
-                        initialValue: _approverId,
-                        decoration: const InputDecoration(labelText: 'Send to'),
+                        initialValue: _approverId ??
+                            (list.length == 1
+                                ? (list.first['id'] as num?)?.toInt()
+                                : null),
+                        isExpanded: true,
+                        decoration:
+                            const InputDecoration(labelText: 'Send to *'),
                         items: [
                           for (final a in list)
                             DropdownMenuItem(
                               value: (a['id'] as num?)?.toInt(),
-                              child: Text(a['name']?.toString() ?? 'Approver'),
+                              child: Text(
+                                a['name']?.toString() ?? 'Approver',
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                         ],
+                        validator: (v) =>
+                            v == null ? 'Choose an approver' : null,
                         onChanged: _busy
                             ? null
                             : (v) => setState(() => _approverId = v),
                       ),
-                orElse: () => const SizedBox.shrink(),
+                orElse: () => const LinearProgressIndicator(minHeight: 2),
               ),
               const SizedBox(height: 14),
               TextFormField(

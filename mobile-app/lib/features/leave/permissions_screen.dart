@@ -284,6 +284,19 @@ class _RequestPermissionSheetState
 
   int _minutes(TimeOfDay t) => t.hour * 60 + t.minute;
 
+  /*
+    The one approver, when there is only one.
+
+    The dropdown shows it as already chosen but a form field's initialValue
+    does not write back to state, so without this a sole approver submits as
+    nobody -- the exact fault this change is meant to close.
+  */
+  int? _soleApprover() {
+    final list = ref.read(permissionApproversProvider).valueOrNull;
+    if (list == null || list.length != 1) return null;
+    return (list.first['id'] as num?)?.toInt();
+  }
+
   Future<void> _submit() async {
     if (_busy) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -304,7 +317,7 @@ class _RequestPermissionSheetState
             fromTime: _hhmm(_from),
             toTime: _hhmm(_to),
             reason: _reason.text,
-            requestedTo: _approver,
+            requestedTo: _approver ?? _soleApprover(),
             priority: _priority,
           );
       if (!mounted) return;
@@ -363,28 +376,46 @@ class _RequestPermissionSheetState
               ),
               const SizedBox(height: 14),
 
-              // Optional on the server, so optional here — and the list can be
-              // empty for somebody with no assigned approver, which must not
-              // leave a dropdown that cannot be opened.
+              /*
+                Required. The server permits it to be absent, but a permission
+                addressed to nobody reaches nobody -- and for HR this list is
+                the CTO alone, which is exactly the routing that must not be
+                skipped. One possible approver is chosen already.
+              */
               approvers.maybeWhen(
                 data: (list) => list.isEmpty
-                    ? const SizedBox.shrink()
+                    ? Text(
+                        'Nobody is set up to approve your permission yet.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      )
                     : DropdownButtonFormField<int>(
-                        initialValue: _approver,
+                        initialValue: _approver ??
+                            (list.length == 1
+                                ? (list.first['id'] as num?)?.toInt()
+                                : null),
+                        isExpanded: true,
                         decoration: const InputDecoration(
-                          labelText: 'Send to (optional)',
+                          labelText: 'Send to *',
                           prefixIcon: Icon(Icons.person_outline_rounded),
                         ),
                         items: [
                           for (final a in list)
                             DropdownMenuItem(
                               value: (a['id'] as num?)?.toInt(),
-                              child: Text(a['name']?.toString() ?? 'Approver'),
+                              child: Text(
+                                a['name']?.toString() ?? 'Approver',
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                         ],
+                        validator: (v) =>
+                            v == null ? 'Choose an approver' : null,
                         onChanged: _busy ? null : (v) => setState(() => _approver = v),
                       ),
-                orElse: () => const SizedBox.shrink(),
+                orElse: () => const LinearProgressIndicator(minHeight: 2),
               ),
               const SizedBox(height: 14),
 

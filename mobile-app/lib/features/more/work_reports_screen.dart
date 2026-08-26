@@ -15,47 +15,113 @@ final myWorkReportsProvider = FutureProvider.autoDispose<List<WorkReport>>(
   (ref) => ref.watch(workRepositoryProvider).myWorkReports(),
 );
 
+/*
+  What the people reporting to you filed.
+
+  The repository could already fetch this and nothing ever called it, so a
+  Team Leader or HR could file their own report on the phone but not read
+  anybody else's -- the review half of the page existed only on the website.
+
+  The server decides who may look; a refusal surfaces as a failure rather
+  than an empty list, so the screen can say "not yours to see" instead of
+  "nobody filed anything".
+*/
+final teamWorkReportsProvider = FutureProvider.autoDispose<List<WorkReport>>(
+  (ref) => ref.watch(workRepositoryProvider).teamWorkReports(),
+);
+
 /// What you did, day by day.
 ///
 /// The portal's Work Reports page, on a phone. Grouped by date rather than
 /// listed flat: a fortnight of rows is fifty entries, and the question somebody
 /// actually has is "did I file anything on Tuesday", which a flat list makes
 /// them scan for.
-class WorkReportsScreen extends ConsumerWidget {
+class WorkReportsScreen extends ConsumerStatefulWidget {
   const WorkReportsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(myWorkReportsProvider);
+  ConsumerState<WorkReportsScreen> createState() => _WorkReportsScreenState();
+}
+
+class _WorkReportsScreenState extends ConsumerState<WorkReportsScreen> {
+  bool _team = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
+    final user = ref.watch(currentUserProvider);
+    /*
+      Who may review. The same authorities the endpoint is gated on --
+      REPORT_VIEW for a Team Leader, USER_MANAGE for HR and the
+      administrators. Without either, the toggle is not offered and the
+      screen behaves exactly as it did.
+    */
+    final canSeeTeam = (user?.can('REPORT_VIEW') ?? false) ||
+        (user?.can('USER_MANAGE') ?? false);
+    final showTeam = canSeeTeam && _team;
+    final provider =
+        showTeam ? teamWorkReportsProvider : myWorkReportsProvider;
+    final async = ref.watch(provider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Work reports')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openSheet(context, ref),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Add'),
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(myWorkReportsProvider),
+      floatingActionButton: showTeam
+          // Reviewing somebody else's reports is not the moment to file your
+          // own, and the sheet files it as yours.
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _openSheet(context, ref),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Add'),
+            ),
+      body: Column(
+        children: [
+          if (canSeeTeam)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+              child: Row(
+                children: [
+                  for (final (isTeam, label) in const [
+                    (false, 'My reports'),
+                    (true, 'My team'),
+                  ])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(label),
+                        selected: _team == isTeam,
+                        onSelected: (_) => setState(() => _team = isTeam),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          Expanded(
+            child: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(provider),
         child: async.when(
           loading: () => const LoadingList(),
           error: (e, _) => ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
               const SizedBox(height: 80),
-              ErrorState(message: '$e', onRetry: () => ref.invalidate(myWorkReportsProvider)),
+              ErrorState(message: '$e', onRetry: () => ref.invalidate(provider)),
             ],
           ),
           data: (reports) {
             if (reports.isEmpty) {
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                children: const [
-                  SizedBox(height: 80),
+                children: [
+                  const SizedBox(height: 80),
                   EmptyState(
                     icon: Icons.description_outlined,
-                    title: 'No work reports yet',
-                    description: 'Add one for today and it will appear here.',
+                    title: showTeam
+                        ? 'Nothing filed by your team yet'
+                        : 'No work reports yet',
+                    description: showTeam
+                        ? 'Reports your team files will appear here.'
+                        : 'Add one for today and it will appear here.',
                   ),
                 ],
               );
@@ -80,7 +146,10 @@ class WorkReportsScreen extends ConsumerWidget {
               },
             );
           },
+            ),
+          ),
         ),
+        ],
       ),
     );
   }

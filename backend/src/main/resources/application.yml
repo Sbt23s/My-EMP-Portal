@@ -33,6 +33,20 @@ spring:
       max-lifetime: ${DB_POOL_MAX_LIFETIME:30000}
       idle-timeout: ${DB_POOL_IDLE_TIMEOUT:10000}
       connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT:30000}
+      # A connection is tested before it is lent out. Against a database ~125ms
+      # away (measured from the server, not assumed) a test that cannot finish
+      # in a second is a connection worth replacing rather than waiting on, and
+      # the log carried "Communications link failure" from dead connections
+      # reaching real queries.
+      #
+      # Not set: keepalive-time. Hikari's floor for it is 30000ms and it must
+      # also be shorter than max-lifetime, which is 30000ms above because that
+      # is the host's wait_timeout. Both cannot hold, so Hikari logs
+      # "keepaliveTime is less than 30000ms, disabling it" and ignores any value
+      # -- verified on the running server. Raising max-lifetime to make room
+      # would mean holding connections the host has already closed, which is the
+      # fault this is meant to prevent.
+      validation-timeout: ${DB_POOL_VALIDATION_TIMEOUT:1000}
       pool-name: HrPortalHikari
   jpa:
     hibernate:

@@ -25,11 +25,45 @@ final calendarEventsProvider = FutureProvider.autoDispose<List<CalendarEvent>>((
   // Day 0 of the following month is the last day of this one, which avoids
   // hand-writing the length of February.
   final last = DateTime(month.year, month.month + 1, 0);
-  final events = await ref
-      .watch(workRepositoryProvider)
-      .calendarEvents(from: month, to: last);
+  final repo = ref.watch(workRepositoryProvider);
+  final events = await repo.calendarEvents(from: month, to: last);
 
-  final sorted = [...events]..sort((a, b) {
+  /*
+    Company holidays, alongside the events.
+
+    The website's calendar draws three things and this drew one: the holiday
+    list was already in the repository and nothing called it, so a public
+    holiday -- the entry people actually check a calendar for -- did not
+    appear on the phone at all.
+
+    A failure here drops the holidays and keeps the events. A calendar
+    missing its holidays is worse than one showing them; a calendar showing
+    nothing because one of two requests failed is worse than both.
+  */
+  var holidays = const <CalendarEvent>[];
+  try {
+    final raw = await repo.holidays(month.year);
+    holidays = raw
+        .map((h) {
+          final when = DateTime.tryParse(
+            (h['holidayDate'] ?? h['date'] ?? '').toString(),
+          );
+          if (when == null) return null;
+          if (when.year != month.year || when.month != month.month) return null;
+          return CalendarEvent(
+            type: 'HOLIDAY',
+            title: (h['name'] ?? 'Holiday').toString(),
+            description: (h['description'] ?? h['type'])?.toString(),
+            date: when,
+          );
+        })
+        .whereType<CalendarEvent>()
+        .toList();
+  } catch (_) {
+    // Left empty on purpose; see above.
+  }
+
+  final sorted = [...events, ...holidays]..sort((a, b) {
     final da = a.date, db = b.date;
     if (da == null && db == null) return 0;
     if (da == null) return 1; // undated entries sink to the bottom

@@ -20,6 +20,7 @@ import 'my_team_screen.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/states.dart';
 import '../../widgets/ui_kit.dart';
+import 'assign_task_sheet.dart';
 import '../approvals/approvals_screen.dart';
 import 'calendar_screen.dart';
 import 'raise_ticket_sheet.dart';
@@ -39,6 +40,18 @@ final payslipsProvider = FutureProvider.autoDispose<List<Payslip>>(
 );
 final tasksProvider = FutureProvider.autoDispose<List<TaskItem>>(
   (ref) => ref.watch(workRepositoryProvider).myTasks(),
+);
+
+/*
+  Everybody's tasks, for whoever oversees them.
+
+  The website has an All Employee Tasks section and the phone had none, so a
+  Team Leader could be given tasks but could not see what they had handed
+  out. Gated on the same authorities the endpoint checks -- TASK_ASSIGN for a
+  Team Leader, TASK_VIEW_ALL for HR, USER_MANAGE for the administrators.
+*/
+final allTasksProvider = FutureProvider.autoDispose<List<TaskItem>>(
+  (ref) => ref.watch(workRepositoryProvider).allTasks(),
 );
 final ticketsProvider = FutureProvider.autoDispose<List<Ticket>>(
   (ref) => ref.watch(workRepositoryProvider).myTickets(),
@@ -705,8 +718,15 @@ class PayslipsScreen extends ConsumerWidget {
   }
 }
 
-class TasksScreen extends ConsumerWidget {
+class TasksScreen extends ConsumerStatefulWidget {
   const TasksScreen({super.key});
+
+  @override
+  ConsumerState<TasksScreen> createState() => _TasksScreenState();
+}
+
+class _TasksScreenState extends ConsumerState<TasksScreen> {
+  bool _everyone = false;
 
   /// Report progress, or mark the task done.
   ///
@@ -791,13 +811,69 @@ class TasksScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final ref = this.ref;
+    final user = ref.watch(currentUserProvider);
+    final canSeeAll = user?.canAny(
+          const ['TASK_ASSIGN', 'TASK_VIEW_ALL', 'USER_MANAGE'],
+        ) ??
+        false;
+    final everyone = canSeeAll && _everyone;
+
+    // Handing work out is a different right from seeing it: a Team Leader
+    // assigns to their team, HR to anyone. Reading everybody's tasks
+    // (TASK_VIEW_ALL) does not carry it.
+    final canAssign = user?.canAny(const ['TASK_ASSIGN', 'USER_MANAGE']) ?? false;
+
     return _ListScaffold<TaskItem>(
       title: 'Tasks',
-      provider: tasksProvider,
+      provider: everyone ? allTasksProvider : tasksProvider,
+      floatingActionButton: canAssign
+          ? FloatingActionButton.extended(
+              onPressed: () async {
+                final made = await showModalBottomSheet<bool>(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  builder: (_) => const AssignTaskSheet(),
+                );
+                if (made == true) {
+                  ref
+                    ..invalidate(tasksProvider)
+                    ..invalidate(allTasksProvider);
+                }
+              },
+              icon: const Icon(Icons.add_task_rounded),
+              label: const Text('Assign'),
+            )
+          : null,
+      header: canSeeAll
+          ? Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+              child: Row(
+                children: [
+                  for (final (all, label) in const [
+                    (false, 'My tasks'),
+                    (true, 'Everyone'),
+                  ])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(label),
+                        selected: _everyone == all,
+                        onSelected: (_) => setState(() => _everyone = all),
+                      ),
+                    ),
+                ],
+              ),
+            )
+          : null,
       emptyIcon: Icons.checklist_rounded,
-      emptyTitle: 'Nothing assigned',
-      emptyDescription: 'Tasks given to you will show up here.',
+      emptyTitle: everyone ? 'No tasks yet' : 'Nothing assigned',
+      emptyDescription: everyone
+          ? 'Tasks assigned to anyone will show up here.'
+          : 'Tasks given to you will show up here.',
+      // Carried in from allTasks(), which keeps the person's name on the row.
       itemBuilder: (context, t) {
         final scheme = Theme.of(context).colorScheme;
         final colour = t.isDone
@@ -807,9 +883,17 @@ class TasksScreen extends ConsumerWidget {
             : scheme.primary;
         return Card(
           child: InkWell(
-            borderRadius: BorderRadius.circular(14),
-            // Finished tasks are not editable — the server would refuse anyway.
-            onTap: t.isDone ? null : () => _updateProgress(context, ref, t),
+            borderRadius: BorderRadius.circular(UI.radius),
+            /*
+              Finished tasks are not editable -- the server would refuse
+              anyway -- and neither is somebody else's. The oversight view is
+              for reading what has been handed out; reporting progress on a
+              colleague's task is not a thing this screen should offer, and
+              the endpoint records it against them.
+            */
+            onTap: (t.isDone || everyone)
+                ? null
+                : () => _updateProgress(context, ref, t),
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Row(
@@ -832,6 +916,19 @@ class TasksScreen extends ConsumerWidget {
                           t.title,
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
+                        // Whose it is. A list of everybody's tasks that names
+                        // nobody is a list of titles.
+                        if (everyone && t.assigneeName != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            t.assigneeName!,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: scheme.primary,
+                            ),
+                          ),
+                        ],
                         if (t.dueDate != null) ...[
                           const SizedBox(height: 3),
                           Text(

@@ -210,11 +210,37 @@ class WorkRepository {
         out.add(TaskItem.fromJson({
           ...t,
           // Carried onto the row so it survives being scrolled.
-          if (who != null && who.isNotEmpty) 'assignedToName': who,
+          if (who != null && who.isNotEmpty) 'assigneeName': who,
         }));
       }
     }
     return out;
+  }
+
+  /*
+    POST /tasks — hand a task to somebody.
+
+    A Team Leader holds TASK_ASSIGN and HR holds USER_MANAGE, and neither
+    could do this from a phone: the website could assign work and the app
+    could only report progress on work already assigned.
+  */
+  Future<TaskItem> assignTask({
+    required String title,
+    required int assignedTo,
+    String? description,
+    DateTime? dueDate,
+    String? priority,
+  }) async {
+    final data = await _api.post('/tasks', body: {
+      'title': title.trim(),
+      'assignedTo': assignedTo,
+      if (description != null && description.trim().isNotEmpty)
+        'description': description.trim(),
+      if (dueDate != null) 'dueDate': _apiDate.format(dueDate),
+      if (priority != null) 'priority': priority,
+    });
+    if (data is! Map<String, dynamic>) throw StateError('task');
+    return TaskItem.fromJson(data);
   }
 
   /// POST /tasks/{id}/progress — 0 to 100.

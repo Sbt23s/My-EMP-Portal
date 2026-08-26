@@ -72,6 +72,7 @@ class TaskItem {
     this.progress,
     this.dueDate,
     this.assignerName,
+    this.assigneeName,
   });
 
   final int id;
@@ -82,6 +83,10 @@ class TaskItem {
   final int? progress;
   final DateTime? dueDate;
   final String? assignerName;
+
+  /// Whose task it is. Only filled on the oversight list, where a row has to
+  /// name somebody -- on your own tasks it is always you.
+  final String? assigneeName;
 
   bool get isDone =>
       status.toUpperCase() == 'COMPLETED' || status.toUpperCase() == 'DONE';
@@ -103,6 +108,7 @@ class TaskItem {
     progress: (json['progress'] as num?)?.toInt(),
     dueDate: DateTime.tryParse(json['dueDate']?.toString() ?? ''),
     assignerName: json['assignerName']?.toString(),
+    assigneeName: json['assigneeName']?.toString(),
   );
 }
 

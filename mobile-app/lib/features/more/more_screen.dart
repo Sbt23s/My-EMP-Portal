@@ -97,7 +97,7 @@ class MoreScreen extends ConsumerWidget {
         _Entry(
           icon: Icons.fact_check_outlined,
           title: 'Approvals',
-          subtitle: 'Leave requests and who is in today',
+          subtitle: 'Leave, permissions, and who is in today',
           onTap: () => _open(context, const ApprovalsScreen()),
         ),
       if (modules.has('PAYROLL'))

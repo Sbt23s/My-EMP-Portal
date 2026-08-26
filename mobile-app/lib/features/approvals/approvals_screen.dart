@@ -193,7 +193,10 @@ class _LeaveQueue extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            r.leaveTypeName ?? 'Leave',
+                            r.employeeName == null
+                                ? (r.leaveTypeName ?? 'Leave')
+                                : '${r.employeeName} \u00b7 '
+                                    '${r.leaveTypeName ?? 'Leave'}',
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 3),
@@ -216,32 +219,61 @@ class _LeaveQueue extends ConsumerWidget {
                             ),
                           ],
                           const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: () =>
-                                      _decide(context, ref, r, false),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: AppTheme.danger(context),
-                                    minimumSize: const Size.fromHeight(40),
+                          /*
+                            Decided only by whoever the server says may decide
+                            it.
+
+                            The queue deliberately returns rows an approver may
+                            see but not act on -- a Team Leader sees their whole
+                            team, an administrator sees everything, and the right
+                            to decide one row is narrower than the right to look
+                            at it. The website gates these buttons on canAct and
+                            this did not, so a row somebody could only watch
+                            offered them Approve and Reject, and their own
+                            request offered it too.
+                          */
+                          if (r.canAct)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () =>
+                                        _decide(context, ref, r, false),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppTheme.danger(context),
+                                      minimumSize: const Size.fromHeight(40),
+                                    ),
+                                    child: const Text('Reject'),
                                   ),
-                                  child: const Text('Reject'),
                                 ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: FilledButton(
-                                  onPressed: () =>
-                                      _decide(context, ref, r, true),
-                                  style: FilledButton.styleFrom(
-                                    minimumSize: const Size.fromHeight(40),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: FilledButton(
+                                    onPressed: () =>
+                                        _decide(context, ref, r, true),
+                                    style: FilledButton.styleFrom(
+                                      minimumSize: const Size.fromHeight(40),
+                                    ),
+                                    child: const Text('Approve'),
                                   ),
-                                  child: const Text('Approve'),
                                 ),
-                              ),
-                            ],
-                          ),
+                              ],
+                            )
+                          else
+                            // Said plainly, so a row with no buttons does not
+                            // read as a rendering fault.
+                            Text(
+                              'Waiting on '
+                              '${r.decidedByName ?? 'another approver'}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                            ),
                         ],
                       ),
                     ),
@@ -263,9 +295,30 @@ class _LeaveQueue extends ConsumerWidget {
 class _PermissionQueue extends ConsumerWidget {
   const _PermissionQueue();
 
+  /*
+    Whether this person may decide this request -- the website's own rule,
+    ported rather than reinvented.
+
+    /leave/permissions/for-me falls back, when nothing is addressed to you,
+    to every request that names no approver at all. That fallback is what put
+    a Team Leader's own permission in their own queue with Approve and Reject
+    beside it. The server behaviour is shared with the website and is not
+    ours to change here, so the guard lives where the website keeps it: the
+    request you raised is never yours to decide, and a request is otherwise
+    decidable only by the person it names.
+  */
+  static bool _canDecide(PermissionRequestItem p, int? meId) {
+    if (!p.isPending) return false;
+    if (meId == null) return false;
+    // Never your own, however it reached this list.
+    if (p.userId == meId) return false;
+    return p.requestedTo == meId;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(permissionQueueProvider);
+    final meId = ref.watch(currentUserProvider)?.id;
 
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(permissionQueueProvider),
@@ -282,9 +335,14 @@ class _PermissionQueue extends ConsumerWidget {
           ],
         ),
         data: (all) {
-          // Pending first and only — a decided request belongs in a history,
-          // and a queue that keeps them makes the one waiting harder to find.
-          final pending = all.where((p) => p.isPending).toList();
+          /*
+            Pending, and mine to decide.
+
+            Pending alone was not enough: the endpoint's fallback hands back
+            requests addressed to nobody, including the reader's own, so a
+            Team Leader saw their own hour off waiting for their own approval.
+          */
+          final pending = all.where((p) => _canDecide(p, meId)).toList();
           if (pending.isEmpty) {
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),

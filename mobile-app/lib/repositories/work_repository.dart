@@ -189,6 +189,34 @@ class WorkRepository {
     return ApiEnvelope.listOf(data).map(TaskItem.fromJson).toList();
   }
 
+  /*
+    GET /tasks/all — every employee's tasks, for whoever oversees them.
+
+    The server groups them per person; this flattens the groups and keeps the
+    employee's name on each row, because a phone list is read top to bottom
+    and a heading scrolled off the screen names nobody.
+
+    Gated on USER_MANAGE, TASK_ASSIGN or TASK_VIEW_ALL -- a Team Leader holds
+    the second, HR the third. Anybody else is refused by the server, so the
+    screen asks only when the permission is held.
+  */
+  Future<List<TaskItem>> allTasks() async {
+    final data = await _api.get('/tasks/all');
+    final out = <TaskItem>[];
+    for (final group in ApiEnvelope.listOf(data)) {
+      final who = group['employeeName']?.toString();
+      for (final t in (group['tasks'] as List? ?? const [])) {
+        if (t is! Map<String, dynamic>) continue;
+        out.add(TaskItem.fromJson({
+          ...t,
+          // Carried onto the row so it survives being scrolled.
+          if (who != null && who.isNotEmpty) 'assignedToName': who,
+        }));
+      }
+    }
+    return out;
+  }
+
   /// POST /tasks/{id}/progress — 0 to 100.
   Future<void> updateTaskProgress(int id, int percent) => _api.post(
     '/tasks/$id/progress',

@@ -60,6 +60,8 @@ class LeaveRequest {
     this.reason,
     this.decidedAt,
     this.decidedByName,
+    this.employeeName,
+    this.canAct = false,
   });
 
   final int id;
@@ -71,6 +73,21 @@ class LeaveRequest {
   final String? reason;
   final DateTime? decidedAt;
   final String? decidedByName;
+  final String? employeeName;
+
+  /*
+    Whether the person reading this may decide it -- the server's own answer.
+
+    The approvals queue deliberately returns rows an approver may see but not
+    act on: a Team Leader sees their whole team, an administrator sees
+    everything, and the right to decide any one row is narrower than the right
+    to look at it. The website gates its buttons on this flag; nothing here
+    read it, so every visible row offered Approve and Reject.
+
+    Defaults false: a row that arrives without the flag is not actionable
+    until the server says it is, which fails the safe way.
+  */
+  final bool canAct;
 
   bool get isPending => status.toUpperCase() == 'PENDING';
   bool get isApproved => status.toUpperCase() == 'APPROVED';
@@ -91,6 +108,8 @@ class LeaveRequest {
     reason: json['reason']?.toString(),
     decidedAt: DateTime.tryParse(json['decidedAt']?.toString() ?? ''),
     decidedByName: json['decidedByName']?.toString(),
+    employeeName: json['employeeName']?.toString(),
+    canAct: json['canAct'] == true,
   );
 }
 
@@ -114,6 +133,8 @@ class PermissionRequestItem {
     this.requestedToName,
     this.decidedByName,
     this.decisionComment,
+    this.userId,
+    this.requestedTo,
   });
 
   final int id;
@@ -128,6 +149,16 @@ class PermissionRequestItem {
   final String? requestedToName;
   final String? decidedByName;
   final String? decisionComment;
+
+  /*
+    Who asked, and who was asked, as ids.
+
+    Names are for reading; only the ids can decide whether the person looking
+    at this row may act on it -- two colleagues can share a name, and nobody
+    may approve their own request.
+  */
+  final int? userId;
+  final int? requestedTo;
 
   bool get isPending => status.toUpperCase() == 'PENDING';
   bool get isApproved => status.toUpperCase() == 'APPROVED';
@@ -156,5 +187,7 @@ class PermissionRequestItem {
         requestedToName: _blank(json['requestedToName']),
         decidedByName: _blank(json['decidedByName']),
         decisionComment: _blank(json['decisionComment']),
+        userId: (json['userId'] as num?)?.toInt(),
+        requestedTo: (json['requestedTo'] as num?)?.toInt(),
       );
 }

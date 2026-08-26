@@ -13,8 +13,14 @@ import 'package:flutter/material.dart';
 class UI {
   const UI._();
 
-  /// The reference uses one radius almost everywhere, and a larger one for the
-  /// big feature cards. Two values, not seven.
+  /*
+    The reference uses one radius almost everywhere, and a larger one for the
+    big feature cards. Two values, not seven.
+
+    Deliberately the same number as AppTheme.radius: plain Cards take theirs
+    from the theme and these take theirs from here, so if the two drifted the
+    app would round its corners differently from one screen to the next.
+  */
   static const double radius = 16;
   static const double radiusLarge = 22;
   static const double gap = 14;

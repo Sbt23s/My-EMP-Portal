@@ -73,15 +73,27 @@ class AppTheme {
         ),
       ),
 
+      /*
+        One card, whether it came from Card() or from the shared kit.
+
+        Nineteen screens still build plain Cards, and the kit's UI.card()
+        draws its own. They have to agree on radius, fill and border or the
+        app looks like two apps -- so this matches UI.card() exactly: a hair
+        of shadow in light mode where a border alone reads flat, and no
+        border in dark mode where one reads as a seam.
+      */
       cardTheme: CardThemeData(
         color: isDark ? const Color(0xFF171B26) : Colors.white,
         elevation: 0,
         margin: EdgeInsets.zero,
+        shadowColor: Colors.black.withValues(alpha: 0.04),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radius),
-          side: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: isDark ? 0.35 : 0.6),
-          ),
+          side: isDark
+              ? BorderSide.none
+              : BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: 0.55),
+                ),
         ),
       ),
 
@@ -217,12 +229,19 @@ class AppTheme {
   /*
    * The portal's corner radius, in one place.
    *
-   * The website sets --radius: 0.65rem, which is 10.4 logical pixels. Cards
-   * here were rounded to 14 and controls to 12, so a card in the app and the
-   * same card in the browser were visibly different shapes -- one of those
-   * differences nobody can name but everybody notices.
+   * This tracked the website's --radius: 0.65rem (10.4 logical pixels) so a
+   * card in the app and the same card in the browser were the same shape.
+   *
+   * The phone now follows the reference design instead, which rounds more
+   * generously -- and the two had to agree: screens built from the shared kit
+   * were rounded to 16 while every plain Card stayed at 10.4, so the app
+   * disagreed with itself from one screen to the next. That is a worse
+   * mismatch than differing from the browser, which nobody sees side by side.
+   *
+   * Kept as one constant, and equal to UI.radius, so there is still a single
+   * place to change it.
    */
-  static const double radius = 10.4;
+  static const double radius = 16;
 
   /// Inter, as the portal uses for everything it does not call a heading.
   static const String bodyFace = 'Inter';

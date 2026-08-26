@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../widgets/ui_kit.dart';
 import '../../core/config/app_config.dart';
 import '../../models/leave.dart';
 import '../../providers/app_providers.dart';
@@ -1375,13 +1376,7 @@ class _TeamReportsScreenState extends ConsumerState<TeamReportsScreen> {
           ),
           const SizedBox(height: 16),
           // Download buttons
-          Text(
-            'Download',
-            style: Theme.of(context)
-                .textTheme
-                .titleSmall
-                ?.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.3),
-          ),
+          const SectionHeader('Download'),
           const SizedBox(height: 10),
           for (final r in _reports)
             Padding(
@@ -1417,21 +1412,14 @@ class _TeamReportsScreenState extends ConsumerState<TeamReportsScreen> {
   }
 }
 
+/// Defers to the shared header, so HR's screens space and weight their
+/// headings the same as every other screen rather than nearly the same.
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle(this.text);
   final String text;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Text(
-          text,
-          style: Theme.of(context)
-              .textTheme
-              .titleSmall
-              ?.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.3),
-        ),
-      );
+  Widget build(BuildContext context) => SectionHeader(text);
 }
 
 class _Empty extends StatelessWidget {

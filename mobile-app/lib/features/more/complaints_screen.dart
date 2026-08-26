@@ -7,9 +7,22 @@ import '../../models/complaint.dart';
 import '../../providers/app_providers.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/states.dart';
+import '../../widgets/ui_kit.dart';
 
 final myComplaintsProvider = FutureProvider.autoDispose<List<Complaint>>(
   (ref) => ref.watch(workRepositoryProvider).myComplaints(),
+);
+
+/*
+  Every complaint, for the people who review them.
+
+  Separate from myComplaintsProvider because they answer different questions
+  and a reviewer needs both: what is waiting on me, and what I raised myself.
+  Only requested when the permission is held -- the server refuses it
+  otherwise, and asking anyway would put an error on a screen that is working.
+*/
+final allComplaintsProvider = FutureProvider.autoDispose<List<Complaint>>(
+  (ref) => ref.watch(workRepositoryProvider).allComplaints(),
 );
 
 final complaintRecipientsProvider =
@@ -23,20 +36,58 @@ final complaintRecipientsProvider =
 /// never a colleague's. That matters more here than on most screens: a
 /// complaint often names somebody, and the endpoint that returns everything is
 /// deliberately not the one this calls.
-class ComplaintsScreen extends ConsumerWidget {
+class ComplaintsScreen extends ConsumerStatefulWidget {
   const ComplaintsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ComplaintsScreen> createState() => _ComplaintsScreenState();
+}
+
+/// Which complaints a reviewer is looking at.
+enum _Scope { addressedToMe, mine, all }
+
+class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen> {
+  _Scope _scope = _Scope.addressedToMe;
+
+  @override
+  Widget build(BuildContext context) {
+    final user = ref.watch(currentUserProvider);
+    /*
+      Who reviews. The same two permissions the web page uses -- HR through
+      COMPLAINT_MANAGE, the administrators and the CTO through USER_MANAGE.
+      The server checks them again on every call; hiding the tabs is a
+      courtesy, never the control.
+    */
+    final canReview =
+        (user?.can('USER_MANAGE') ?? false) ||
+        (user?.can('COMPLAINT_MANAGE') ?? false);
+
+    /*
+      The CTO and the system administrators receive complaints rather than
+      raise them: every recipient list offers them, and there is nobody above
+      them to address one to. HR keeps the button, because HR can address
+      theirs to the CTO.
+    */
+    final isTop = user?.isCompanyAdmin ?? false;
+
+    return canReview
+        ? _reviewer(context, user?.id, isTop)
+        : _mine(context, showRaise: !isTop);
+  }
+
+  // ---- what everybody else sees: their own, exactly as before -------------
+  Widget _mine(BuildContext context, {required bool showRaise}) {
     final async = ref.watch(myComplaintsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Complaints')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _raise(context, ref),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Raise'),
-      ),
+      floatingActionButton: showRaise
+          ? FloatingActionButton.extended(
+              onPressed: () => _raise(context, ref),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Raise'),
+            )
+          : null,
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(myComplaintsProvider),
         child: async.when(
@@ -86,6 +137,111 @@ class ComplaintsScreen extends ConsumerWidget {
     );
   }
 
+  // ---- what a reviewer sees ---------------------------------------------
+  Widget _reviewer(BuildContext context, int? meId, bool isTop) {
+    final async = ref.watch(allComplaintsProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Complaints')),
+      floatingActionButton: isTop
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _raise(context, ref),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Raise'),
+            ),
+      body: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(allComplaintsProvider),
+        child: async.when(
+          loading: () => const LoadingList(),
+          error: (e, _) => ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              const SizedBox(height: 60),
+              ErrorState(
+                message: '$e',
+                onRetry: () => ref.invalidate(allComplaintsProvider),
+              ),
+            ],
+          ),
+          data: (everything) {
+            final toMe =
+                everything.where((c) => c.requestedTo == meId).toList();
+            final byMe = everything.where((c) => c.raisedBy == meId).toList();
+            final rows = switch (_scope) {
+              _Scope.addressedToMe => toMe,
+              _Scope.mine => byMe,
+              _Scope.all => everything,
+            };
+
+            return Column(
+              children: [
+                _ScopeBar(
+                  scope: _scope,
+                  toMe: toMe.length,
+                  mine: byMe.length,
+                  all: everything.length,
+                  onChanged: (s) => setState(() => _scope = s),
+                ),
+                Expanded(
+                  child: rows.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: const [
+                            SizedBox(height: 60),
+                            EmptyState(
+                              icon: Icons.forum_outlined,
+                              title: 'Nothing here',
+                              description:
+                                  'Complaints appear here as they are raised.',
+                            ),
+                          ],
+                        )
+                      : ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding:
+                              const EdgeInsets.fromLTRB(16, 12, 16, 96),
+                          itemCount: rows.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, i) => _ComplaintCard(
+                            complaint: rows[i],
+                            /*
+                              Only the person it was addressed to decides it,
+                              never its author, and not once it is settled --
+                              a second response would erase the answer the
+                              submitter has already been given.
+                            */
+                            onRespond: (rows[i].requestedTo == meId &&
+                                    rows[i].raisedBy != meId &&
+                                    !rows[i].isClosed)
+                                ? () => _respond(context, rows[i])
+                                : null,
+                          ),
+                        ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _respond(BuildContext context, Complaint c) async {
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => RespondComplaintSheet(complaint: c),
+    );
+    if (saved == true) {
+      ref
+        ..invalidate(allComplaintsProvider)
+        ..invalidate(myComplaintsProvider);
+    }
+  }
+
   Future<void> _raise(BuildContext context, WidgetRef ref) async {
     final saved = await showModalBottomSheet<bool>(
       context: context,
@@ -123,16 +279,21 @@ String _statusLabel(String status) => switch (status) {
     };
 
 class _ComplaintCard extends StatelessWidget {
-  const _ComplaintCard({required this.complaint});
+  const _ComplaintCard({required this.complaint, this.onRespond});
 
   final Complaint complaint;
+
+  /// Given only to the person who may actually decide this one. Null for
+  /// everybody else, and the button is simply absent rather than disabled.
+  final VoidCallback? onRespond;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final tint = _statusTint(context, complaint.status);
 
-    return Card(
+    return Container(
+      decoration: UI.card(context),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -172,12 +333,33 @@ class _ComplaintCard extends StatelessWidget {
                 if (complaint.kind == 'NEED') 'Need' else 'Complaint',
                 if (complaint.createdAt != null)
                   DateFormat('d MMM').format(complaint.createdAt!),
-              ].join(' · '),
+              ].join(' \u00b7 '),
               style: Theme.of(context)
                   .textTheme
                   .labelSmall
                   ?.copyWith(color: scheme.onSurfaceVariant),
             ),
+            /*
+              Both ends of the complaint. Three people can review, so a card
+              that names only the person who raised it leaves everyone
+              guessing whose it is.
+            */
+            if (complaint.raisedByName != null ||
+                complaint.requestedToName != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                [
+                  if (complaint.raisedByName != null)
+                    'From ${complaint.raisedByName}',
+                  if (complaint.requestedToName != null)
+                    'To ${complaint.requestedToName}',
+                ].join('  \u00b7  '),
+                style: Theme.of(context)
+                    .textTheme
+                    .labelSmall
+                    ?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            ],
             if (complaint.description != null) ...[
               const SizedBox(height: 10),
               Text(
@@ -222,6 +404,203 @@ class _ComplaintCard extends StatelessWidget {
                 ),
               ),
             ],
+            if (onRespond != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonalIcon(
+                  onPressed: onRespond,
+                  icon: const Icon(Icons.reply_rounded, size: 18),
+                  label: const Text('Respond'),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Mine, addressed to me, or everybody's.
+///
+/// Shown as counts so the number of complaints actually waiting on this
+/// person is visible without switching to find out.
+class _ScopeBar extends StatelessWidget {
+  const _ScopeBar({
+    required this.scope,
+    required this.toMe,
+    required this.mine,
+    required this.all,
+    required this.onChanged,
+  });
+
+  final _Scope scope;
+  final int toMe;
+  final int mine;
+  final int all;
+  final ValueChanged<_Scope> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <(_Scope, String)>[
+      (_Scope.addressedToMe, 'To me ($toMe)'),
+      (_Scope.mine, 'Mine ($mine)'),
+      (_Scope.all, 'All ($all)'),
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Row(
+        children: [
+          for (final (value, label) in items)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(label),
+                selected: scope == value,
+                onSelected: (_) => onChanged(value),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Settling a complaint: a step forward, and what to tell the person.
+class RespondComplaintSheet extends ConsumerStatefulWidget {
+  const RespondComplaintSheet({super.key, required this.complaint});
+
+  final Complaint complaint;
+
+  @override
+  ConsumerState<RespondComplaintSheet> createState() =>
+      _RespondComplaintSheetState();
+}
+
+class _RespondComplaintSheetState
+    extends ConsumerState<RespondComplaintSheet> {
+  /*
+    Where a complaint may go next -- and never where it already is.
+
+    A step is a move forward or it is not offered: an open complaint that
+    offers "Open" lets somebody save a change that changes nothing, and a
+    settled one cannot move at all.
+  */
+  static const Map<String, List<String>> _next = {
+    'OPEN': ['IN_REVIEW', 'RESOLVED', 'REJECTED'],
+    'IN_REVIEW': ['RESOLVED', 'REJECTED'],
+    'RESOLVED': <String>[],
+    'REJECTED': <String>[],
+  };
+
+  late final List<String> _allowed = _next[widget.complaint.status] ?? const [];
+  late String _status = _allowed.isEmpty ? widget.complaint.status : _allowed.first;
+  final _reply = TextEditingController();
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _reply.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_busy || _allowed.isEmpty) return;
+    setState(() => _busy = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    try {
+      await ref.read(workRepositoryProvider).respondToComplaint(
+            widget.complaint.id,
+            status: _status,
+            response: _reply.text,
+          );
+      navigator.pop(true);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Complaint updated')));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.complaint;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        20,
+        20,
+        MediaQuery.viewInsetsOf(context).bottom + 20,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              c.subject,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            if (c.raisedByName != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Raised by ${c.raisedByName}',
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+            ],
+            if (c.description != null) ...[
+              const SizedBox(height: 12),
+              Text(c.description!,
+                  style: Theme.of(context).textTheme.bodySmall),
+            ],
+            const SizedBox(height: 18),
+            const Text('Status',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final st in _allowed)
+                  ChoiceChip(
+                    label: Text(_statusLabel(st)),
+                    selected: _status == st,
+                    onSelected: (_) => setState(() => _status = st),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            TextField(
+              controller: _reply,
+              minLines: 3,
+              maxLines: 6,
+              decoration: const InputDecoration(
+                labelText: 'Response',
+                hintText: 'What to tell the person who raised this',
+                alignLabelWithHint: true,
+              ),
+            ),
+            const SizedBox(height: 18),
+            FilledButton(
+              onPressed: _busy || _allowed.isEmpty ? null : _save,
+              child: _busy
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2.2),
+                    )
+                  : const Text('Save response'),
+            ),
           ],
         ),
       ),
@@ -355,32 +734,47 @@ class _RaiseComplaintSheetState extends ConsumerState<RaiseComplaintSheet> {
                     : (v) => setState(() => _priority = v ?? 'MEDIUM'),
               ),
               const SizedBox(height: 14),
-              // Optional by design: leaving it unset means any HR can pick it
-              // up, which is the server's own default and usually the right
-              // answer. A required field here would make somebody choose a name
-              // they may have no reason to prefer.
+              /*
+                Required, as on the website.
+
+                It was optional, defaulting to "Any HR" -- and a complaint
+                addressed to nobody is the reason none of them reached the
+                person they were meant for. Somebody raising a complaint knows
+                who it is about; making them say so is the whole point of the
+                field, and it is what decides who may respond.
+              */
               recipients.when(
                 loading: () => const LinearProgressIndicator(minHeight: 2),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (e, __) => Text(
+                  'Could not load who this can be sent to. $e',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
                 data: (people) => people.isEmpty
-                    ? const SizedBox.shrink()
+                    ? Text(
+                        'There is nobody set up to receive complaints yet.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      )
                     : DropdownButtonFormField<int?>(
                         initialValue: _requestedTo,
                         isExpanded: true,
                         decoration: const InputDecoration(
-                          labelText: 'Address to (optional)',
+                          labelText: 'Send to *',
                         ),
                         items: [
-                          const DropdownMenuItem<int?>(
-                            value: null,
-                            child: Text('Any HR'),
-                          ),
                           for (final p in people)
                             DropdownMenuItem<int?>(
                               value: p.id,
                               child: Text(p.name, overflow: TextOverflow.ellipsis),
                             ),
                         ],
+                        validator: (v) =>
+                            v == null ? 'Choose who this goes to' : null,
                         onChanged:
                             _busy ? null : (v) => setState(() => _requestedTo = v),
                       ),

@@ -126,11 +126,48 @@ class AppTheme {
 
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(48),
+          minimumSize: const Size.fromHeight(50),
+          side: BorderSide(color: scheme.primary.withValues(alpha: 0.45), width: 1.4),
+          foregroundColor: scheme.primary,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radius),
           ),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
         ),
+      ),
+
+      /*
+        The rest of the buttons, given the same weight.
+
+        Two of the four were sized and two were left at Material's defaults,
+        so a screen built from ElevatedButton had noticeably smaller targets
+        than the one beside it -- and a text button on a phone is a small
+        thing to hit. One height, one radius, one weight, everywhere.
+      */
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          minimumSize: const Size.fromHeight(50),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radius),
+          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+      ),
+
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(64, 44),
+          foregroundColor: scheme.primary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radius),
+          ),
+          textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+        ),
+      ),
+
+      /// A tapped icon needs a target, not just a glyph.
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(minimumSize: const Size(44, 44)),
       ),
 
       snackBarTheme: SnackBarThemeData(

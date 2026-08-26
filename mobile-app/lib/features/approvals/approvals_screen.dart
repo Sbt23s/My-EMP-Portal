@@ -31,14 +31,25 @@ class ApprovalsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    /*
+      Three tabs for three lists.
+
+      The controller was built for two while the view held three, so the
+      permission queue -- written, wired and asking the server for the right
+      rows -- could not be reached at all: a Team Leader had no way to decide
+      a permission from the phone.
+    */
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Approvals'),
           bottom: const TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
             tabs: [
               Tab(text: 'Leave requests'),
+              Tab(text: 'Permissions'),
               Tab(text: 'Team today'),
             ],
           ),

@@ -16,6 +16,10 @@ class Complaint {
     this.hrResponse,
     this.requestedToName,
     this.handledByName,
+    this.raisedBy,
+    this.requestedTo,
+    this.raisedByName,
+    this.raisedByCode,
     this.createdAt,
     this.resolvedAt,
   });
@@ -40,6 +44,19 @@ class Complaint {
   final String? hrResponse;
   final String? requestedToName;
   final String? handledByName;
+
+  /*
+    Who raised it and who it was addressed to, as ids.
+
+    Names are for reading; the ids are what decides whether the person looking
+    at this may act on it. Judging your own complaint is not review, so the
+    reviewer screen needs to tell "sent to me" from "raised by me", and a name
+    cannot do that -- two people can share one.
+  */
+  final int? raisedBy;
+  final int? requestedTo;
+  final String? raisedByName;
+  final String? raisedByCode;
   final DateTime? createdAt;
   final DateTime? resolvedAt;
 
@@ -60,6 +77,10 @@ class Complaint {
         hrResponse: _text(json['hrResponse']),
         requestedToName: _text(json['requestedToName']),
         handledByName: _text(json['handledByName']),
+        raisedBy: (json['raisedBy'] as num?)?.toInt(),
+        requestedTo: (json['requestedTo'] as num?)?.toInt(),
+        raisedByName: _text(json['raisedByName']),
+        raisedByCode: _text(json['raisedByCode']),
         createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
         resolvedAt: DateTime.tryParse(json['resolvedAt']?.toString() ?? ''),
       );

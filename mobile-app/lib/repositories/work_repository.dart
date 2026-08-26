@@ -233,6 +233,49 @@ class WorkRepository {
   Future<void> replyToTicket(int id, String comment) =>
       _api.post('/tickets/$id/comments', body: {'comment': comment.trim()});
 
+  /// GET /tickets/agents — the HR staff a ticket can be addressed to.
+  ///
+  /// Its own endpoint because the full directory is not an employee's to read.
+  Future<List<ComplaintRecipient>> ticketAgents() async {
+    final data = await _api.get('/tickets/agents');
+    return ApiEnvelope.listOf(data).map(ComplaintRecipient.fromJson).toList();
+  }
+
+  /*
+    GET /tickets/assigned-to-me — the queue of tickets waiting on this person.
+
+    Gated on HELPDESK_AGENT, which HR, the CTO and the administrators all
+    hold. Anyone without it never sees the tab that calls this.
+  */
+  Future<List<Ticket>> ticketsAssignedToMe() async {
+    final data = await _api.get('/tickets/assigned-to-me', query: {'size': 50});
+    return ApiEnvelope.listOf(data).map(Ticket.fromJson).toList();
+  }
+
+  /// GET /tickets/all — every ticket, for those who oversee the lot.
+  Future<List<Ticket>> allTickets() async {
+    final data = await _api.get('/tickets/all', query: {'size': 100});
+    return ApiEnvelope.listOf(data).map(Ticket.fromJson).toList();
+  }
+
+  /*
+    POST /tickets/{id}/status — move a ticket along.
+
+    OPEN | IN_PROGRESS | AWAITING_PARTS | RESOLVED | CLOSED, and optionally
+    hand it to somebody: the server takes the assignment in the same call, so
+    "I am taking this" is one action rather than two.
+  */
+  Future<void> setTicketStatus(
+    int id, {
+    required String status,
+    int? assignTo,
+  }) async {
+    await _api.post('/tickets/$id/status', body: {
+      'status': status,
+      if (assignTo != null) 'assignTo': assignTo,
+    });
+  }
+
   /// POST /tickets
   Future<Ticket> raiseTicket({
     required String subject,
@@ -241,16 +284,24 @@ class WorkRepository {
     String? priority,
     String? category,
     String? attachments,
+    int? assignedTo,
   }) async {
     final data = await _api.post(
       '/tickets',
       body: {
-        'subject': subject.trim(),
+        // The server's field is `title`. This sent `subject`, which that
+        // record does not have -- so every ticket raised from the phone
+        // arrived with nothing in the one field it requires.
+        'title': subject.trim(),
         'description': description.trim(),
         if (type != null) 'type': type,
         if (priority != null) 'priority': priority,
         if (category != null && category.trim().isNotEmpty) 'category': category.trim(),
         if (attachments != null && attachments.isNotEmpty) 'attachments': attachments,
+        // Who it is addressed to. Without this the ticket reached nobody in
+        // particular, which is why one raised on the phone never appeared in
+        // anybody's queue.
+        if (assignedTo != null) 'assignedTo': assignedTo,
       },
     );
     if (data is! Map<String, dynamic>) throw StateError('ticket');
@@ -494,6 +545,33 @@ class WorkRepository {
   Future<List<Complaint>> myComplaints() async {
     final data = await _api.get('/complaints/mine');
     return ApiEnvelope.listOf(data).map(Complaint.fromJson).toList();
+  }
+
+  /*
+    GET /complaints — every complaint, for the people who review them.
+
+    Deliberately separate from myComplaints(): the two answer different
+    questions, and a reviewer needs both. This one is refused by the server
+    for anyone without USER_MANAGE or COMPLAINT_MANAGE, so the screen asks
+    for it only when the permission is held -- hiding the call is a courtesy,
+    the server is the control.
+  */
+  Future<List<Complaint>> allComplaints() async {
+    final data = await _api.get('/complaints?page=0&size=500');
+    return ApiEnvelope.listOf(data).map(Complaint.fromJson).toList();
+  }
+
+  /// POST /complaints/{id}/respond — settle a complaint, with a reply.
+  Future<void> respondToComplaint(
+    int id, {
+    required String status,
+    String? response,
+  }) async {
+    await _api.post('/complaints/$id/respond', body: {
+      'status': status,
+      if (response != null && response.trim().isNotEmpty)
+        'response': response.trim(),
+    });
   }
 
   /// GET /complaints/recipients — the HR people this can be addressed to.

@@ -6,12 +6,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../models/complaint.dart';
 import '../../providers/app_providers.dart';
 
 /// Raise a support ticket. Pops `true` when one was actually created.
 ///
 /// Enhanced to match the web ticket form with category, assigned-to,
 /// module, priority, and file attachments.
+/// HR staff a ticket can be addressed to. Its own endpoint, because the full
+/// directory is not an employee's to read.
+final ticketAgentsProvider =
+    FutureProvider.autoDispose<List<ComplaintRecipient>>(
+  (ref) => ref.watch(workRepositoryProvider).ticketAgents(),
+);
+
 class RaiseTicketSheet extends ConsumerStatefulWidget {
   const RaiseTicketSheet({super.key});
 
@@ -54,6 +62,10 @@ class _RaiseTicketSheetState extends ConsumerState<RaiseTicketSheet> {
   ];
 
   String _type = 'IT';
+
+  /// Who the ticket goes to. Required, as on the website: a ticket addressed
+  /// to nobody sits in no queue and reaches no one.
+  int? _assignedTo;
   String _category = 'Software';
   String _priority = 'MEDIUM';
   String? _module;
@@ -181,6 +193,7 @@ class _RaiseTicketSheetState extends ConsumerState<RaiseTicketSheet> {
             description: fullDescription,
             type: _type,
             priority: _priority,
+            assignedTo: _assignedTo,
             category: _category,
             attachments: _attachmentPaths.isNotEmpty
                 ? _attachmentPaths.join(',')
@@ -316,6 +329,60 @@ class _RaiseTicketSheetState extends ConsumerState<RaiseTicketSheet> {
                     DropdownMenuItem(value: m, child: Text(m)),
                 ],
                 onChanged: _busy ? null : (v) => setState(() => _module = v),
+              ),
+              const SizedBox(height: 10),
+
+              /*
+                Who this is addressed to.
+
+                The field was missing entirely, so every ticket raised from
+                the phone was sent to nobody and appeared in no one's queue.
+                Required, exactly as the website has it.
+              */
+              Consumer(
+                builder: (context, ref, _) {
+                  final agents = ref.watch(ticketAgentsProvider);
+                  return agents.when(
+                    loading: () =>
+                        const LinearProgressIndicator(minHeight: 2),
+                    error: (e, __) => Text(
+                      'Could not load who this can be sent to. $e',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                    data: (people) => people.isEmpty
+                        ? Text(
+                            'There is nobody set up to receive tickets yet.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          )
+                        : DropdownButtonFormField<int?>(
+                            initialValue: _assignedTo,
+                            isExpanded: true,
+                            decoration:
+                                const InputDecoration(labelText: 'Send to *'),
+                            items: [
+                              for (final a in people)
+                                DropdownMenuItem<int?>(
+                                  value: a.id,
+                                  child: Text(
+                                    a.name,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                            ],
+                            validator: (v) =>
+                                v == null ? 'Choose who this goes to' : null,
+                            onChanged: _busy
+                                ? null
+                                : (v) => setState(() => _assignedTo = v),
+                          ),
+                  );
+                },
               ),
               const SizedBox(height: 10),
 

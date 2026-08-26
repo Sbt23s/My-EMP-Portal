@@ -43,6 +43,21 @@ final tasksProvider = FutureProvider.autoDispose<List<TaskItem>>(
 final ticketsProvider = FutureProvider.autoDispose<List<Ticket>>(
   (ref) => ref.watch(workRepositoryProvider).myTickets(),
 );
+
+/*
+  The queue of tickets waiting on this person, and everything.
+
+  Both are refused by the server without HELPDESK_AGENT, so the tabs that
+  call them are shown only to somebody holding it. HR, the CTO and the
+  administrators all do; an ordinary employee does not, and sees only their
+  own tickets exactly as before.
+*/
+final ticketsForMeProvider = FutureProvider.autoDispose<List<Ticket>>(
+  (ref) => ref.watch(workRepositoryProvider).ticketsAssignedToMe(),
+);
+final allTicketsProvider = FutureProvider.autoDispose<List<Ticket>>(
+  (ref) => ref.watch(workRepositoryProvider).allTickets(),
+);
 final assetsProvider = FutureProvider.autoDispose<List<AssetItem>>(
   (ref) => ref.watch(workRepositoryProvider).myAssets(),
 );
@@ -387,6 +402,7 @@ class _ListScaffold<T> extends ConsumerWidget {
     required this.emptyTitle,
     this.emptyDescription,
     this.floatingActionButton,
+    this.header,
     super.key,
   });
 
@@ -398,51 +414,64 @@ class _ListScaffold<T> extends ConsumerWidget {
   final String? emptyDescription;
   final Widget? floatingActionButton;
 
+  /*
+    Pinned above the list, inside this screen's own Scaffold.
+
+    It has to live here rather than being stacked above this widget: this
+    builds its own Scaffold with its own AppBar, so wrapping it in a Column
+    would give two app bars and a body that cannot fill the screen.
+  */
+  final Widget? header;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(provider);
+    final list = RefreshIndicator(
+      onRefresh: () async => ref.invalidate(provider as ProviderOrFamily),
+      child: async.when(
+        loading: () => const LoadingList(),
+        error: (e, _) => ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(
+              height: MediaQuery.sizeOf(context).height * 0.65,
+              child: ErrorState(
+                message: e.toString(),
+                onRetry: () => ref.invalidate(provider as ProviderOrFamily),
+              ),
+            ),
+          ],
+        ),
+        data: (items) => items.isEmpty
+            ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  SizedBox(
+                    height: MediaQuery.sizeOf(context).height * 0.65,
+                    child: EmptyState(
+                      icon: emptyIcon,
+                      title: emptyTitle,
+                      description: emptyDescription,
+                    ),
+                  ),
+                ],
+              )
+            : ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                itemCount: items.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, i) => itemBuilder(context, items[i]),
+              ),
+      ),
+    );
+
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       floatingActionButton: floatingActionButton,
-      body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(provider as ProviderOrFamily),
-        child: async.when(
-          loading: () => const LoadingList(),
-          error: (e, _) => ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            children: [
-              SizedBox(
-                height: MediaQuery.sizeOf(context).height * 0.65,
-                child: ErrorState(
-                  message: e.toString(),
-                  onRetry: () => ref.invalidate(provider as ProviderOrFamily),
-                ),
-              ),
-            ],
-          ),
-          data: (items) => items.isEmpty
-              ? ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: [
-                    SizedBox(
-                      height: MediaQuery.sizeOf(context).height * 0.65,
-                      child: EmptyState(
-                        icon: emptyIcon,
-                        title: emptyTitle,
-                        description: emptyDescription,
-                      ),
-                    ),
-                  ],
-                )
-              : ListView.separated(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(16),
-                  itemCount: items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, i) => itemBuilder(context, items[i]),
-                ),
-        ),
-      ),
+      body: header == null
+          ? list
+          : Column(children: [header!, Expanded(child: list)]),
     );
   }
 }
@@ -848,27 +877,100 @@ class TasksScreen extends ConsumerWidget {
   }
 }
 
-class TicketsScreen extends ConsumerWidget {
+class TicketsScreen extends ConsumerStatefulWidget {
   const TicketsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TicketsScreen> createState() => _TicketsScreenState();
+}
+
+/// Which tickets an agent is looking at.
+enum _TicketScope { assignedToMe, mine, all }
+
+class _TicketsScreenState extends ConsumerState<TicketsScreen> {
+  _TicketScope _scope = _TicketScope.assignedToMe;
+
+  @override
+  Widget build(BuildContext context) {
+    final user = ref.watch(currentUserProvider);
+    /*
+      Who works a queue. HELPDESK_AGENT, the same authority the website's
+      "Assigned to me" tab is gated on -- HR, the CTO and the administrators
+      all hold it. An ordinary employee does not, and sees only their own
+      tickets, exactly as before.
+    */
+    final isAgent = user?.can('HELPDESK_AGENT') ?? false;
+
+    if (!isAgent) return _list(ticketsProvider, showRaise: true);
+
+    /*
+      The CTO and the system administrators receive tickets rather than raise
+      them, as on the website. HR keeps the button.
+    */
+    final isTop = user?.isCompanyAdmin ?? false;
+
+    final provider = switch (_scope) {
+      _TicketScope.assignedToMe => ticketsForMeProvider,
+      _TicketScope.mine => ticketsProvider,
+      _TicketScope.all => allTicketsProvider,
+    };
+
+    return _list(
+      provider,
+      showRaise: !isTop,
+      header: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+        child: Row(
+          children: [
+            for (final (value, label) in const [
+              (_TicketScope.assignedToMe, 'Assigned to me'),
+              (_TicketScope.mine, 'My tickets'),
+              (_TicketScope.all, 'All tickets'),
+            ])
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(label),
+                  selected: _scope == value,
+                  onSelected: (_) => setState(() => _scope = value),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _list(
+    AutoDisposeFutureProvider<List<Ticket>> provider, {
+    required bool showRaise,
+    Widget? header,
+  }) {
     return _ListScaffold<Ticket>(
       title: 'Supports',
-      provider: ticketsProvider,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final raised = await showModalBottomSheet<bool>(
-            context: context,
-            isScrollControlled: true,
-            useSafeArea: true,
-            builder: (_) => const RaiseTicketSheet(),
-          );
-          if (raised == true) ref.invalidate(ticketsProvider);
-        },
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('New ticket'),
-      ),
+      provider: provider,
+      header: header,
+      floatingActionButton: showRaise
+          ? FloatingActionButton.extended(
+              onPressed: () async {
+                final raised = await showModalBottomSheet<bool>(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  builder: (_) => const RaiseTicketSheet(),
+                );
+                if (raised == true) {
+                  ref
+                    ..invalidate(ticketsProvider)
+                    ..invalidate(ticketsForMeProvider)
+                    ..invalidate(allTicketsProvider);
+                }
+              },
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('New ticket'),
+            )
+          : null,
       emptyIcon: Icons.support_agent_rounded,
       emptyTitle: 'No tickets',
       emptyDescription: 'Anything you raise will be tracked here.',
@@ -876,7 +978,10 @@ class TicketsScreen extends ConsumerWidget {
         final colour = t.isClosed
             ? AppTheme.success(context)
             : AppTheme.warning(context);
-        return Card(
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          decoration: UI.card(context),
+          clipBehavior: Clip.antiAlias,
           child: ListTile(
             // The row was not tappable, so a ticket could be raised and never
             // read again from the phone -- whatever HR replied was only
@@ -888,6 +993,10 @@ class TicketsScreen extends ConsumerWidget {
                 useSafeArea: true,
                 builder: (_) => TicketDetailSheet(ticket: t),
               );
+              ref
+                ..invalidate(ticketsProvider)
+                ..invalidate(ticketsForMeProvider)
+                ..invalidate(allTicketsProvider);
             },
             title: Text(
               t.displayTitle,
@@ -901,7 +1010,7 @@ class TicketsScreen extends ConsumerWidget {
                 if (t.createdAt != null)
                   DateFormat('d MMM').format(t.createdAt!),
                 if (t.assignedToName != null) 'with ${t.assignedToName}',
-              ].join(' · '),
+              ].join(' \u00b7 '),
             ),
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),

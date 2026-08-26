@@ -123,20 +123,53 @@ def fetch_password(base: str, token: str, user_id: int) -> str | None:
 
 # ------------------------------------------------------------- document ----
 
+# The company head, identified by employee code rather than by role.
+#
+# PIX-E100 holds administrative roles AND an employee role, so reading the
+# role list alone would file the CTO under whichever happened to sort first.
+# The backend identifies this account the same way -- by code -- in the
+# community, complaint and permission routing, so this matches the system
+# rather than inventing a rule for the document.
+CTO_CODE = 'PIX-E100'
+
+# The five groups this document is organised into, in order of seniority.
+GROUPS = ['CTO', 'System Admin', 'HR', 'Team Leader', 'Employee']
+
+_ROLE_NAMES = {
+    'SUPER_ADMIN': 'System Admin', 'COMPANY_ADMIN': 'System Admin',
+    'BOARD_ADMIN': 'System Admin', 'IT_HR': 'HR Head', 'IT_MGR': 'HR',
+    'CV_HR': 'HR', 'IT_TL': 'Team Leader', 'CV_SUP': 'Site Supervisor',
+    'IT_EMP': 'Employee', 'CV_EMP': 'Field Employee',
+    'EMPLOYEE': 'Employee', 'TEAM_LEAD': 'Team Leader',
+}
+
+# Most senior first: an account carrying several roles is filed under the
+# highest one, because that is the access it actually has.
+_ROLE_ORDER = ('SUPER_ADMIN', 'COMPANY_ADMIN', 'BOARD_ADMIN', 'IT_HR',
+               'IT_MGR', 'CV_HR', 'IT_TL', 'CV_SUP', 'IT_EMP', 'CV_EMP',
+               'TEAM_LEAD', 'EMPLOYEE')
+
+
 def role_label(roles: list[str]) -> str:
     """The role as people say it, not the code."""
-    names = {
-        'SUPER_ADMIN': 'System Admin', 'COMPANY_ADMIN': 'System Admin',
-        'BOARD_ADMIN': 'Board Admin', 'IT_HR': 'HR Head', 'IT_MGR': 'HR',
-        'CV_HR': 'HR', 'IT_TL': 'Team Leader', 'CV_SUP': 'Site Supervisor',
-        'IT_EMP': 'Employee', 'CV_EMP': 'Field Employee',
-        'EMPLOYEE': 'Employee', 'TEAM_LEAD': 'Team Leader',
-    }
-    for code in ('SUPER_ADMIN', 'COMPANY_ADMIN', 'BOARD_ADMIN', 'IT_HR',
-                 'IT_MGR', 'CV_HR', 'IT_TL', 'CV_SUP', 'IT_EMP', 'CV_EMP'):
+    for code in _ROLE_ORDER:
         if code in roles:
-            return names[code]
-    return names.get(roles[0], roles[0].replace('_', ' ')) if roles else '—'
+            return _ROLE_NAMES[code]
+    return roles[0].replace('_', ' ') if roles else '—'
+
+
+def group_of(user: dict) -> str:
+    """Which section of the document this account belongs in."""
+    if (user.get('employeeCode') or '').upper() == CTO_CODE:
+        return 'CTO'
+    roles = user.get('roles') or []
+    if {'SUPER_ADMIN', 'COMPANY_ADMIN', 'BOARD_ADMIN'} & set(roles):
+        return 'System Admin'
+    if {'IT_HR', 'IT_MGR', 'CV_HR'} & set(roles):
+        return 'HR'
+    if {'IT_TL', 'CV_SUP', 'TEAM_LEAD'} & set(roles):
+        return 'Team Leader'
+    return 'Employee'
 
 
 def mono(text: str) -> Raw:
@@ -149,6 +182,7 @@ def mono(text: str) -> Raw:
 
 
 def build(users: list[dict], onboarding: set[int], include: str) -> str:
+    """The document body: active staff and joiners, each grouped by role."""
     active, joining = [], []
     for u in users:
         status = (u.get('profileStatus') or '').upper()
@@ -162,25 +196,38 @@ def build(users: list[dict], onboarding: set[int], include: str) -> str:
     elif include == 'onboarding':
         active = []
 
-    def group_by_company(rows: list[dict]) -> dict[str, list[dict]]:
+    def by_role(rows: list[dict]) -> dict[str, list[dict]]:
+        """Split into the five groups, most senior first.
+
+        Sorted within a group by employee code, because that is how people
+        look somebody up on a printed sheet -- a name they half-remember is
+        harder to scan for than a code they can read off a badge.
+        """
         out: dict[str, list[dict]] = {}
         for row in rows:
-            out.setdefault(row.get('companyName') or 'Pixous Technologies',
-                           []).append(row)
+            out.setdefault(group_of(row), []).append(row)
         for members in out.values():
             members.sort(key=lambda r: (r.get('employeeCode') or 'zzz'))
-        return out
+        return {g: out[g] for g in GROUPS if g in out}
+
+    active_by_role = by_role(active)
+    joining_by_role = by_role(joining)
+
+    # A count per group, so the summary says what is in the document without
+    # anyone having to add up the tables.
+    counts = {g: len(active_by_role.get(g, [])) + len(joining_by_role.get(g, []))
+              for g in GROUPS}
 
     parts = [
         section(
             h1('1.', 'About This Document'),
             p('This document lists the sign-in credentials for every active '
-              'employee and every employee currently being onboarded. It is '
-              'generated directly from the live portal, so it reflects the '
-              'accounts as they stand at the moment of generation rather than '
-              'a stored copy.'),
+              'employee and every employee currently being onboarded, grouped '
+              'by role. It is generated directly from the live portal, so it '
+              'reflects the accounts as they stand at the moment of generation '
+              'rather than a stored copy.'),
             metrics([
-                (str(len(active)), 'active employees'),
+                (str(len(active)), 'active'),
                 (str(len(joining)), 'onboarding'),
                 (str(len(active) + len(joining)), 'total accounts'),
                 (datetime.date.today().strftime('%d %b'), 'generated'),
@@ -190,6 +237,28 @@ def build(users: list[dict], onboarding: set[int], include: str) -> str:
                  'share it only with the person each row belongs to, and delete '
                  'it once the details have been handed over. Anyone who can '
                  'read a row can sign in as that person.'),
+
+            h2('1.1  What is in it'),
+            table(['Group', 'Who that is', 'Accounts'],
+                  [['CTO', 'The company head — identified by employee code '
+                    + CTO_CODE + ', which is how the portal itself identifies '
+                    'this account', str(counts['CTO'])],
+                   ['System Admin', 'Accounts holding SUPER_ADMIN, '
+                    'COMPANY_ADMIN or BOARD_ADMIN', str(counts['System Admin'])],
+                   ['HR', 'HR Head and HR — IT_HR, IT_MGR, CV_HR',
+                    str(counts['HR'])],
+                   ['Team Leader', 'Team Leaders and Site Supervisors — IT_TL, '
+                    'CV_SUP', str(counts['Team Leader'])],
+                   ['Employee', 'Everybody else with an active account',
+                    str(counts['Employee'])]],
+                  widths=['16%', '68%', '16%']),
+            note('An account holding several roles is filed under the most '
+                 'senior of them, because that is the access it actually has. '
+                 'The CTO account is placed by employee code rather than by '
+                 'role: it carries an employee role as well as its '
+                 'administrative ones, so reading the role list alone would '
+                 'file it in the wrong place.'),
+
             p('A dash in the password column means the portal holds no '
               'recoverable password for that account — the person has set '
               'their own since the account was created, which is the intended '
@@ -198,36 +267,48 @@ def build(users: list[dict], onboarding: set[int], include: str) -> str:
         )
     ]
 
-    def credential_section(number: str, title: str, rows: dict[str, list[dict]],
-                           blurb: str) -> str:
-        if not rows:
-            return ''
-        blocks = [h1(number, title), p(blurb)]
-        for company, members in sorted(rows.items()):
-            blocks.append(h2(f'{company}  ·  {len(members)} '
+    def role_tables(rows: dict[str, list[dict]]) -> list[str]:
+        blocks = []
+        for group in GROUPS:
+            members = rows.get(group)
+            if not members:
+                continue
+            blocks.append(h2(f'{group}  ·  {len(members)} '
                              f'{"account" if len(members) == 1 else "accounts"}'))
             blocks.append(table(
-                ['#', 'Employee code', 'Name', 'Role', 'Username', 'Password'],
+                ['#', 'Employee code', 'Name', 'Designation', 'Username',
+                 'Password'],
                 [[str(i),
                   mono(m.get('employeeCode') or '—'),
                   m.get('name') or '—',
-                  role_label(m.get('roles') or []),
+                  m.get('designationTitle') or role_label(m.get('roles') or []),
                   mono(m.get('username') or '—'),
                   mono(m.get('_password') or '—')]
                  for i, m in enumerate(members, 1)],
-                widths=['5%', '16%', '25%', '16%', '19%', '19%']))
-        return section(*blocks)
+                widths=['5%', '15%', '23%', '19%', '19%', '19%']))
+        return blocks
 
-    parts.append(credential_section(
-        '2.', 'Active Employees', group_by_company(active),
-        'Employees with an active profile. These accounts can sign in to the '
-        'web portal and the mobile app now.'))
+    if active_by_role:
+        parts.append(section(
+            h1('2.', 'Active Employees'),
+            p('Employees with an active profile. These accounts can sign in to '
+              'the web portal and the mobile app now.'),
+            *role_tables(active_by_role)))
 
-    parts.append(credential_section(
-        '3.', 'Onboarding Employees', group_by_company(joining),
-        'Employees with an onboarding checklist still in progress. Their '
-        'accounts exist and can sign in; the checklist tracks what remains to '
-        'be completed before they are treated as fully active.'))
+    if joining_by_role:
+        parts.append(section(
+            h1('3.', 'Onboarding Employees'),
+            p('Employees with an onboarding checklist still in progress. Their '
+              'accounts exist and can sign in; the checklist tracks what '
+              'remains to be completed before they are treated as fully '
+              'active.'),
+            *role_tables(joining_by_role)))
+    elif include != 'active':
+        parts.append(section(
+            h1('3.', 'Onboarding Employees'),
+            p('No employee currently has an onboarding checklist in progress. '
+              'Anyone recently added whose checklist has been completed appears '
+              'under Active Employees above.')))
 
     parts.append(section(
         h1('4.', 'How People Sign In'),

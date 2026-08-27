@@ -33,7 +33,7 @@ import {
 import dayjs from "dayjs";
 import { useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { EMAIL_PATTERN } from "@/lib/validation";
+import { EMAIL_PATTERN, digitsOnly } from "@/lib/validation";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { roleCodeLabel } from "@/lib/roles";
 import { DATE_MIN, DATE_MAX } from "@/lib/dates";
@@ -2891,8 +2891,10 @@ function AddEmployeeDialog({ onClose, defaultIndustry }: { onClose: () => void; 
             </div>
             <div className="space-y-1">
               <Label htmlFor="ne-pincode">Pincode</Label>
+              {/* inputMode only asks a phone for a number keypad; a desktop
+                  keyboard still types letters, so the value is filtered. */}
               <Input id="ne-pincode" value={form.pincode} placeholder="6 digits" inputMode="numeric" maxLength={6}
-                onChange={(e) => set("pincode", e.target.value)} />
+                onChange={(e) => set("pincode", digitsOnly(e.target.value, 6))} />
             </div>
           </div>
         </section>

@@ -21,7 +21,7 @@
  * again, and an address that is well-formed but wrong can only be found by
  * sending mail to it.
  */
-export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2}$/;
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
 
 /**
  * A person's name: letters, with the punctuation names actually contain.
@@ -51,3 +51,33 @@ export const emailRules = {
     if (!EMAIL_PATTERN.test(value)) return "Enter a full email address, like name@gmail.com";
     return true;
   }};
+
+/**
+ * An Indian pincode: six digits, and nothing else.
+ *
+ * Optional on a profile — plenty of records have no address yet, and a field
+ * that refuses to be left blank makes somebody invent one.
+ */
+export const PINCODE_PATTERN = /^\d{6}$/;
+
+export const pincodeRules = {
+  validate: (v?: string) => {
+    const value = (v ?? "").trim();
+    if (!value) return true;               // optional
+    if (!/^\d+$/.test(value)) return "Digits only";
+    if (!PINCODE_PATTERN.test(value)) return "A pincode is six digits";
+    return true;
+  }};
+
+/**
+ * Strip anything that is not a digit, for a field that only ever holds them.
+ *
+ * Used on input rather than only on submit: a letter that never appears is
+ * clearer than one that appears and is then complained about, and it stops a
+ * pasted "560 001" or "PIN-560001" from becoming an error the person has to
+ * work out for themselves.
+ */
+export function digitsOnly(value: string, max?: number): string {
+  const digits = (value ?? "").replace(/\D/g, "");
+  return max ? digits.slice(0, max) : digits;
+}

@@ -1,7 +1,7 @@
 import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { nameRules, emailRules } from "@/lib/validation";
+import { nameRules, emailRules, pincodeRules, digitsOnly } from "@/lib/validation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Save, Plus, Trash2, Landmark, BadgeCheck, Camera, Download
 } from "lucide-react";
@@ -438,7 +438,31 @@ export default function ProfilePage() {
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="pincode">Pincode</Label>
-                      <Input id="pincode" className="code-chip" {...register("pincode")} />
+                      {/*
+                        Digits only, as they are typed.
+
+                        A letter that never appears is clearer than one that
+                        appears and is then complained about -- and this also
+                        takes the space out of a pasted "560 001" rather than
+                        making somebody work out why it was refused.
+                      */}
+                      <Input
+                        id="pincode"
+                        className="code-chip"
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="6 digits"
+                        {...register("pincode", pincodeRules)}
+                        onChange={(e) => {
+                          e.target.value = digitsOnly(e.target.value, 6);
+                          register("pincode", pincodeRules).onChange(e);
+                        }}
+                      />
+                      {errors.pincode && (
+                        <p className="text-xs text-destructive">
+                          {errors.pincode.message as string}
+                        </p>
+                      )}
                     </div>
                   </div>
 

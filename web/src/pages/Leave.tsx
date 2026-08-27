@@ -1,10 +1,11 @@
 import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Clock, CalendarDays, AlertTriangle, Eye, X, Plus, CalendarX2, FileSpreadsheet } from "lucide-react";
+import { RequestThread } from "@/components/RequestThread";
+import { CheckCircle2, Clock, CalendarDays, AlertTriangle, Eye, X, Plus, Paperclip, CalendarX2, FileSpreadsheet } from "lucide-react";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
@@ -104,20 +105,65 @@ export default function LeavePage() {
     }
   }, [approvers.data, reset, watch]);
 
+  /*
+    Files chosen before the request exists.
+
+    An attachment hangs off a request id, and there is no id until the request
+    is created -- so the files are held here and uploaded immediately after
+    the request comes back. Held in state rather than uploaded to a scratch
+    area first: somebody who picks a file and then cancels should leave
+    nothing behind on the server.
+  */
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const apply = useMutation({
-    mutationFn: async (values: FormValues) =>
-      api.post("/leave/apply", {
+    mutationFn: async (values: FormValues) => {
+      const created = await api.post("/leave/apply", {
         leaveTypeId: Number(values.leaveTypeId),
         fromDate: values.fromDate,
         toDate: values.toDate,
         reason: values.reason || undefined,
         requestedTo: values.requestedTo ? Number(values.requestedTo) : undefined
-      }),
+      });
+
+      /*
+        The files, now that the request has an id.
+
+        Uploaded one at a time and after the request is safely created, so a
+        rejected file never costs somebody their leave request -- the request
+        stands and the upload is reported separately. A failure here is
+        counted and told, not swallowed: somebody who attached a certificate
+        needs to know it did not arrive.
+      */
+      const id = (created as any)?.data?.data?.id;
+      if (id && pendingFiles.length > 0) {
+        let failed = 0;
+        for (const file of pendingFiles) {
+          try {
+            const form = new FormData();
+            form.append("file", file);
+            await api.post(`/requests/LEAVE/${id}/attachments`, form);
+          } catch {
+            failed += 1;
+          }
+        }
+        if (failed > 0) {
+          toast.error(
+            failed === pendingFiles.length
+              ? "The leave was submitted, but the file could not be attached."
+              : `${failed} of ${pendingFiles.length} files could not be attached.`
+          );
+        }
+      }
+      return created;
+    },
     onSuccess: () => {
       toast.success("Leave request submitted");
       qc.invalidateQueries({ queryKey: ["leave"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       setOpen(false);
+      setPendingFiles([]);
       reset();
     },
     onError: (err) => toast.error(apiMessage(err, "Could not submit leave"))
@@ -486,6 +532,24 @@ export default function LeavePage() {
               </div>
             )}
           </div>
+
+          {/*
+            The same files and conversation the approver sees.
+
+            An applicant who attached a certificate has to be able to check it
+            arrived, and an approver's question is worth nothing if the person
+            it is asked of cannot see it. Attaching stays open while the
+            request is pending -- an approver asking for a document is the
+            usual reason somebody needs to add one after submitting.
+          */}
+          <div className="mt-4 border-t pt-4">
+            <RequestThread
+              type="LEAVE"
+              requestId={viewing.id}
+              canAttach={viewing.status === "PENDING"}
+            />
+          </div>
+
           <div className="mt-5 flex justify-end">
             <Button variant="outline" onClick={() => setViewing(null)}>Close</Button>
           </div>
@@ -493,7 +557,7 @@ export default function LeavePage() {
       )}
 
       {/* Apply dialog */}
-      <Dialog open={open} onClose={() => setOpen(false)}>
+      <Dialog open={open} onClose={() => { setOpen(false); setPendingFiles([]); }}>
         <DialogHeader
           title="Apply for leave"
           description="Weekends and holidays are excluded from the day count automatically."
@@ -557,6 +621,93 @@ export default function LeavePage() {
             {errors.reason && (
               <p className="text-xs text-destructive">{errors.reason.message}</p>
             )}
+          </div>
+
+          {/*
+            Optional, and said so.
+
+            A medical certificate or a photograph of a document helps an
+            approver decide, but most leave needs none -- so this is offered
+            without being asked for, and the form submits perfectly well with
+            nothing chosen.
+          */}
+          <div className="space-y-1.5">
+            <Label htmlFor="leaveFiles">
+              Photos or documents{" "}
+              <span className="font-normal text-muted-foreground">(optional)</span>
+            </Label>
+            <input
+              ref={fileInputRef}
+              id="leaveFiles"
+              type="file"
+              multiple
+              className="hidden"
+              accept="image/*,application/pdf,.doc,.docx"
+              onChange={(e) => {
+                const chosen = Array.from(e.target.files ?? []);
+                // Cleared so picking the same file again still registers.
+                e.target.value = "";
+                if (chosen.length === 0) return;
+                setPendingFiles((current) => {
+                  const room = 10 - current.length;
+                  if (room <= 0) {
+                    toast.error("Ten files is the most a request can carry.");
+                    return current;
+                  }
+                  const tooBig = chosen.filter((f) => f.size > 10 * 1024 * 1024);
+                  if (tooBig.length > 0) {
+                    toast.error("Each file must be 10 MB or smaller.");
+                  }
+                  return [
+                    ...current,
+                    ...chosen.filter((f) => f.size <= 10 * 1024 * 1024).slice(0, room),
+                  ];
+                });
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Paperclip className="mr-1.5 h-3.5 w-3.5" />
+              Attach a photo or document
+            </Button>
+
+            {pendingFiles.length > 0 && (
+              <ul className="mt-1.5 space-y-1">
+                {pendingFiles.map((f, i) => (
+                  <li
+                    key={`${f.name}-${i}`}
+                    className="flex items-center justify-between gap-2 rounded-md border bg-muted/30 px-2.5 py-1.5 text-xs"
+                  >
+                    <span className="truncate" title={f.name}>
+                      {f.name}
+                      <span className="ml-1.5 text-muted-foreground">
+                        {f.size < 1024 * 1024
+                          ? `${Math.round(f.size / 1024)} KB`
+                          : `${(f.size / (1024 * 1024)).toFixed(1)} MB`}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-rose-50 hover:text-rose-600"
+                      title="Remove"
+                      onClick={() =>
+                        setPendingFiles((current) => current.filter((_, j) => j !== i))
+                      }
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              Images, PDF or Word. Up to ten files, 10 MB each. Your approver can
+              see them when reviewing the request.
+            </p>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>

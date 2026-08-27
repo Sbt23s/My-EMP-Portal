@@ -1,8 +1,8 @@
 import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Plus, Check, X, Clock, Eye, Inbox, Search, AlertTriangle, Ban, TrendingUp, Timer
+  Plus, Check, X, Clock, Eye, Paperclip, Inbox, Search, AlertTriangle, Ban, TrendingUp, Timer
 } from "lucide-react";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
@@ -749,6 +749,9 @@ export default function PermissionsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {/* So the applicant can check a file arrived, and read what
+                      their approver asked. */}
+                  <TableHead>Action</TableHead>
                   <TableHead sortable>Date</TableHead>
                   <TableHead sortable>Time</TableHead>
                   <TableHead sortable>Hours</TableHead>
@@ -763,6 +766,11 @@ export default function PermissionsPage() {
               <TableBody>
                 {myPaged.pageRows.map((r) => (
                   <TableRow key={r.id} className="border-b border-slate-100 dark:border-slate-800 align-top last:border-0 hover:bg-slate-50/60 dark:hover:bg-slate-800/60 transition-colors [&>td]:px-3 [&>td]:py-4">
+                    <TableCell>
+                      <Button size="sm" variant="outline" onClick={() => setViewRow(r)}>
+                        <Eye className="h-4 w-4" /> View
+                      </Button>
+                    </TableCell>
                     <TableCell className="font-medium text-slate-800 dark:text-slate-200">{dayjs(r.requestDate).format("DD MMM YYYY")}</TableCell>
                     <TableCell className="tabular-nums">{to12Hour(r.fromTime)} – {to12Hour(r.toTime)}</TableCell>
                     <TableCell className="font-semibold text-slate-700 dark:text-slate-300">{r.hours}h</TableCell>
@@ -1047,12 +1055,54 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
       (await api.get<ApiEnvelope<{ id: number; name: string; code: string }[]>>("/leave/permissions/approvers")).data.data
   });
 
+  /*
+    Files chosen before the request exists.
+
+    An attachment hangs off a request id and there is no id until the request
+    is created, so the files are held here and uploaded once it comes back.
+    Held in state rather than parked on the server first: somebody who picks a
+    file and then cancels should leave nothing behind.
+  */
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const apply = useMutation({
-    mutationFn: async () => api.post("/leave/permissions", {
-      requestDate, fromTime, toTime, reason, priority,
-      requestedTo: requestedTo ? Number(requestedTo) : null
-    }),
-    onSuccess: () => { toast.success("Permission requested"); onDone(); onClose(); },
+    mutationFn: async () => {
+      const created = await api.post("/leave/permissions", {
+        requestDate, fromTime, toTime, reason, priority,
+        requestedTo: requestedTo ? Number(requestedTo) : null
+      });
+
+      // After the request is safely created, so a rejected file never costs
+      // somebody their request. A failure is counted and told, not swallowed.
+      const id = (created as any)?.data?.data?.id;
+      if (id && pendingFiles.length > 0) {
+        let failed = 0;
+        for (const file of pendingFiles) {
+          try {
+            const form = new FormData();
+            form.append("file", file);
+            await api.post(`/requests/PERMISSION/${id}/attachments`, form);
+          } catch {
+            failed += 1;
+          }
+        }
+        if (failed > 0) {
+          toast.error(
+            failed === pendingFiles.length
+              ? "The permission was submitted, but the file could not be attached."
+              : `${failed} of ${pendingFiles.length} files could not be attached.`
+          );
+        }
+      }
+      return created;
+    },
+    onSuccess: () => {
+      toast.success("Permission requested");
+      setPendingFiles([]);
+      onDone();
+      onClose();
+    },
     onError: (e) => toast.error(apiMessage(e, "Could not submit permission"))
   });
 
@@ -1114,6 +1164,84 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
           <Label htmlFor="preason">Reason<Req /></Label>
           <Input id="preason" placeholder="e.g. Bank work" value={reason} onChange={(e) => setReason(e.target.value)} />
         </div>
+
+        {/*
+          Optional. Most permission needs no paperwork; where there is a
+          letter or a receipt, the approver can see it rather than being told
+          about it.
+        */}
+        <div className="space-y-1.5">
+          <Label htmlFor="pfiles">
+            Photos or documents{" "}
+            <span className="font-normal text-muted-foreground">(optional)</span>
+          </Label>
+          <input
+            ref={fileInputRef}
+            id="pfiles"
+            type="file"
+            multiple
+            className="hidden"
+            accept="image/*,application/pdf,.doc,.docx"
+            onChange={(e) => {
+              const chosen = Array.from(e.target.files ?? []);
+              e.target.value = "";
+              if (chosen.length === 0) return;
+              setPendingFiles((current) => {
+                const room = 10 - current.length;
+                if (room <= 0) {
+                  toast.error("Ten files is the most a request can carry.");
+                  return current;
+                }
+                if (chosen.some((f) => f.size > 10 * 1024 * 1024)) {
+                  toast.error("Each file must be 10 MB or smaller.");
+                }
+                return [
+                  ...current,
+                  ...chosen.filter((f) => f.size <= 10 * 1024 * 1024).slice(0, room),
+                ];
+              });
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Paperclip className="mr-1.5 h-3.5 w-3.5" />
+            Attach a photo or document
+          </Button>
+
+          {pendingFiles.length > 0 && (
+            <ul className="mt-1.5 space-y-1">
+              {pendingFiles.map((f, i) => (
+                <li
+                  key={`${f.name}-${i}`}
+                  className="flex items-center justify-between gap-2 rounded-md border bg-muted/30 px-2.5 py-1.5 text-xs"
+                >
+                  <span className="truncate" title={f.name}>
+                    {f.name}
+                    <span className="ml-1.5 text-muted-foreground">
+                      {f.size < 1024 * 1024
+                        ? `${Math.round(f.size / 1024)} KB`
+                        : `${(f.size / (1024 * 1024)).toFixed(1)} MB`}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-rose-50 hover:text-rose-600"
+                    title="Remove"
+                    onClick={() =>
+                      setPendingFiles((current) => current.filter((_, j) => j !== i))
+                    }
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock className="h-3.5 w-3.5" />
           {fromTime && toTime && toTime <= fromTime
@@ -1121,7 +1249,12 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
             : "Hours are calculated automatically from the time range."}
         </div>
         <div className="flex justify-end gap-2 pt-1">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button
+            variant="outline"
+            onClick={() => { setPendingFiles([]); onClose(); }}
+          >
+            Cancel
+          </Button>
           <Button disabled={!valid || apply.isPending} onClick={() => apply.mutate()}>
             {apply.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Submit
           </Button>

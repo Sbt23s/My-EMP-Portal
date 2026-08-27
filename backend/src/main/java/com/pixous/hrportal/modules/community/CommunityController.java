@@ -48,6 +48,20 @@ public class CommunityController {
         return ResponseEntity.ok(communityService.getUserCommunities(SecurityUtils.currentUserId()));
     }
 
+    /*
+      Why a request came back the way it did.
+
+      Community groups were reported missing from Chat and the code reads
+      correctly at every step, so this says what the query actually sees for
+      the caller: every non-direct group, whether they are a member, and
+      whether it would be filtered out. Read-only and scoped to the caller --
+      it discloses nothing they could not already see by other means.
+    */
+    @GetMapping("/diagnose")
+    public ResponseEntity<java.util.Map<String, Object>> diagnose() {
+        return ResponseEntity.ok(communityService.diagnose(SecurityUtils.currentUserId()));
+    }
+
     /** Enabled users the signed-in user can start a private 1:1 chat with. */
     @GetMapping("/contacts")
     public ResponseEntity<List<com.pixous.hrportal.modules.user.dto.UserSummary>> getContacts() {

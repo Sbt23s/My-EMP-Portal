@@ -108,7 +108,7 @@ export default function WorkFromHomePage() {
     tab is shown when the server actually has something addressed to this
     person, rather than guessed at from a role.
   */
-  const [tab, setTab] = useState<"mine" | "inbox">("mine");
+  const [tab, setTab] = useState<"mine" | "inbox" | "all" | "today">("mine");
   const [applyOpen, setApplyOpen] = useState(false);
   const [viewRow, setViewRow] = useState<WfhRow | null>(null);
   const [decideOn, setDecideOn] = useState<{ row: WfhRow; approve: boolean } | null>(null);
@@ -131,11 +131,49 @@ export default function WorkFromHomePage() {
     refetchOnWindowFocus: true,
   });
 
+  /*
+    Everything, and who is at home right now.
+
+    Both are gated on the server -- USER_MANAGE or DASHBOARD_EXEC for the full
+    list, plus ATTENDANCE_TEAM for the day view -- so asking for them without
+    the authority returns 403. `enabled` keeps a Team Leader's page from firing
+    two requests it will only be refused, rather than deciding here who is
+    allowed: the server is still the one that says no.
+  */
+  const canSeeAll = hasPermission("USER_MANAGE", "DASHBOARD_EXEC");
+  const canSeeToday = canSeeAll || hasPermission("ATTENDANCE_TEAM");
+
+  const all = useQuery({
+    queryKey: ["wfh", "all"],
+    queryFn: async () =>
+      (await api.get<ApiEnvelope<WfhRow[]>>("/wfh/all")).data.data ?? [],
+    enabled: canSeeAll,
+    refetchInterval: LIVE,
+    refetchOnWindowFocus: true,
+  });
+
+  const [boardDate, setBoardDate] = useState(todayIso());
+
+  const today = useQuery({
+    queryKey: ["wfh", "active", boardDate],
+    queryFn: async () =>
+      (await api.get<ApiEnvelope<WfhRow[]>>(`/wfh/active?date=${boardDate}`)).data.data ?? [],
+    enabled: canSeeToday,
+    // Shorter than the rest: this is the board somebody leaves open to see who
+    // is where, so a decision made elsewhere should show without a refresh.
+    refetchInterval: 10000,
+    refetchOnWindowFocus: true,
+  });
+
   const inboxRows = inbox.data ?? [];
   const myRows = mine.data ?? [];
   const showInbox = inboxRows.length > 0 || hasPermission("LEAVE_APPROVE");
 
-  const rows = tab === "inbox" ? inboxRows : myRows;
+  const rows =
+    tab === "inbox" ? inboxRows
+    : tab === "all" ? (all.data ?? [])
+    : tab === "today" ? (today.data ?? [])
+    : myRows;
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -187,7 +225,11 @@ export default function WorkFromHomePage() {
     onError: (e) => toast.error(apiMessage(e, "Could not withdraw that request")),
   });
 
-  const loading = tab === "inbox" ? inbox.isLoading : mine.isLoading;
+  const loading =
+    tab === "inbox" ? inbox.isLoading
+    : tab === "all" ? all.isLoading
+    : tab === "today" ? today.isLoading
+    : mine.isLoading;
 
   return (
     <div>
@@ -201,32 +243,58 @@ export default function WorkFromHomePage() {
         }
       />
 
-      {showInbox && (
-        <div className="mb-4 flex w-fit gap-1 rounded-lg border bg-muted/60 p-1">
-          {([
-            ["mine", `My requests (${myRows.length})`],
-            ["inbox", `Pending my approval (${inboxRows.filter((r) => r.canAct).length})`],
-          ] as const).map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => { setTab(key); setQ(""); }}
-              className={
-                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors " +
-                (tab === key
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground")
-              }
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
+      {/*
+        The tabs a person actually has.
+
+        Everybody has their own requests. An approver gains an inbox. HR and
+        the CTO gain the whole organisation and the day board. Built as a list
+        rather than four conditionals so the bar never renders with one lonely
+        tab in it.
+      */}
+      {(() => {
+        const tabs: Array<[typeof tab, string]> = [
+          ["mine", `My requests (${myRows.length})`],
+        ];
+        if (showInbox) {
+          tabs.push(["inbox",
+            `Pending my approval (${inboxRows.filter((r) => r.canAct).length})`]);
+        }
+        if (canSeeAll) tabs.push(["all", `All requests (${(all.data ?? []).length})`]);
+        if (canSeeToday) tabs.push(["today", `Working from home (${(today.data ?? []).length})`]);
+        if (tabs.length < 2) return null;
+        return (
+          <div className="mb-4 flex w-fit flex-wrap gap-1 rounded-lg border bg-muted/60 p-1">
+            {tabs.map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => { setTab(key); setQ(""); }}
+                className={
+                  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors " +
+                  (tab === key
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground")
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
 
       <div className="mb-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-        <StatTile label="All" value={counts.ALL} icon={Inbox} fill={TILE_FILLS.violet}
-          hint={tab === "inbox" ? "Sent to you" : "Requests you raised"} />
+        <StatTile
+          label={tab === "today" ? "At home" : "All"}
+          value={counts.ALL}
+          icon={tab === "today" ? Home : Inbox}
+          fill={TILE_FILLS.violet}
+          hint={
+            tab === "inbox" ? "Sent to you"
+            : tab === "all" ? "Across the organisation"
+            : tab === "today" ? dayjs(boardDate).format("DD MMM YYYY")
+            : "Requests you raised"
+          } />
         <StatTile label="Pending" value={counts.PENDING} icon={Clock} fill={TILE_FILLS.amber}
           hint="Waiting on a decision" />
         <StatTile label="Approved" value={counts.APPROVED} icon={CheckCircle2} fill={TILE_FILLS.green}
@@ -235,16 +303,43 @@ export default function WorkFromHomePage() {
           hint="Turned down" />
       </div>
 
-      <div className="mb-3 max-w-sm">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="pl-8"
-            placeholder="Name, employee ID, team or reason…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
+      <div className="mb-3 flex flex-wrap items-end gap-3">
+        <div className="max-w-sm flex-1">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="pl-8"
+              placeholder="Name, employee ID, team or reason…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
         </div>
+        {/*
+          The board answers "who is at home", and the day is part of the
+          question -- yesterday and next Monday are both worth asking. Only
+          shown on that tab, because the other three are not about one day.
+        */}
+        {tab === "today" && (
+          <div className="space-y-1">
+            <Label htmlFor="wfh-day" className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Day
+            </Label>
+            <Input
+              id="wfh-day"
+              type="date"
+              className="w-44"
+              max={DATE_MAX}
+              value={boardDate}
+              onChange={(e) => setBoardDate(e.target.value || todayIso())}
+            />
+          </div>
+        )}
+        {tab === "today" && boardDate !== todayIso() && (
+          <Button variant="outline" size="sm" onClick={() => setBoardDate(todayIso())}>
+            Today
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -254,11 +349,20 @@ export default function WorkFromHomePage() {
           ) : filtered.length === 0 ? (
             <EmptyState
               icon={Home}
-              title={tab === "inbox" ? "Nothing waiting on you" : "No requests yet"}
+              title={
+                tab === "inbox" ? "Nothing waiting on you"
+                : tab === "all" ? "No requests in the organisation yet"
+                : tab === "today" ? "Nobody is working from home"
+                : "No requests yet"
+              }
               description={
                 tab === "inbox"
                   ? "Requests sent to you for approval appear here."
-                  : "Use “Apply for WFH” to ask to work from home."
+                  : tab === "all"
+                    ? "Every request across the organisation appears here."
+                    : tab === "today"
+                      ? `No approved request covers ${dayjs(boardDate).format("DD MMM YYYY")}.`
+                      : "Use “Apply for WFH” to ask to work from home."
               }
             />
           ) : (
@@ -267,13 +371,18 @@ export default function WorkFromHomePage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Action</TableHead>
-                    {tab === "inbox" && <TableHead>Employee</TableHead>}
+                    {/*
+                      Whose request it is matters on every list except the one
+                      showing only your own.
+                    */}
+                    {tab !== "mine" && <TableHead>Employee</TableHead>}
+                    {tab !== "mine" && <TableHead>Role</TableHead>}
                     <TableHead>Dates</TableHead>
                     <TableHead>Days</TableHead>
                     <TableHead>Reason</TableHead>
-                    <TableHead>{tab === "inbox" ? "Team" : "Sent to"}</TableHead>
+                    <TableHead>{tab === "mine" ? "Sent to" : "Team"}</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Decided by</TableHead>
+                    <TableHead>{tab === "today" ? "Approved by" : "Decided by"}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -318,12 +427,22 @@ export default function WorkFromHomePage() {
                           )}
                         </div>
                       </TableCell>
-                      {tab === "inbox" && (
+                      {tab !== "mine" && (
                         <TableCell className="font-medium">
                           {r.employeeName}
                           <div className="code-chip text-xs text-muted-foreground">
                             {r.employeeCode || "—"}
                           </div>
+                        </TableCell>
+                      )}
+                      {tab !== "mine" && (
+                        <TableCell className="text-xs">
+                          {r.roleLabel || "Employee"}
+                          {r.designation && (
+                            <div className="text-[11px] text-muted-foreground">
+                              {r.designation}
+                            </div>
+                          )}
                         </TableCell>
                       )}
                       <TableCell className="whitespace-nowrap font-medium">{dateRange(r)}</TableCell>
@@ -332,11 +451,11 @@ export default function WorkFromHomePage() {
                         {r.reason || "—"}
                       </TableCell>
                       <TableCell className="text-xs">
-                        {tab === "inbox"
-                          ? (r.team || "—")
-                          : (r.requestedToName
+                        {tab === "mine"
+                          ? (r.requestedToName
                               ? `${r.requestedToRole ? r.requestedToRole + " · " : ""}${r.requestedToName}`
-                              : "—")}
+                              : "—")
+                          : (r.team || "—")}
                       </TableCell>
                       <TableCell><StatusBadge status={r.status} /></TableCell>
                       <TableCell className="text-xs">

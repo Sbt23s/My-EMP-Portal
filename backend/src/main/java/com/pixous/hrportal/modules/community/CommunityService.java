@@ -206,6 +206,45 @@ public class CommunityService {
     }
 
     /**
+     * What getUserCommunities sees, and why each group is kept or dropped.
+     *
+     * <p>Added because groups were reported missing from Chat while every step
+     * of the query reads correctly. Rather than guess at a fix and risk
+     * breaking a working page, this reports the facts: the caller's id, and
+     * for each non-direct group its name, whether they are a member, whether
+     * it is an announcement or a team room, and the verdict.
+     *
+     * <p>Read-only, and scoped to the caller.
+     */
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Object> diagnose(Long userId) {
+        List<java.util.Map<String, Object>> groups = groupRepository.findAll().stream()
+                .filter(g -> !isDirect(g))
+                .map(g -> {
+                    boolean member = memberRepository.isMember(g.getId(), userId);
+                    boolean team = isTeamRoom(g);
+                    boolean announce = g.isAnnouncement();
+                    java.util.Map<String, Object> row = new java.util.LinkedHashMap<>();
+                    row.put("id", g.getId());
+                    row.put("name", g.getName());
+                    row.put("isMember", member);
+                    row.put("isAnnouncement", announce);
+                    row.put("isTeamRoom", team);
+                    row.put("memberCount", memberRepository.findByCommunity_Id(g.getId()).size());
+                    row.put("visibleToMe", !team && (announce || member));
+                    return row;
+                })
+                .collect(Collectors.toList());
+
+        java.util.Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("userId", userId);
+        out.put("totalGroups", groups.size());
+        out.put("visibleToMe", groups.stream().filter(g -> Boolean.TRUE.equals(g.get("visibleToMe"))).count());
+        out.put("groups", groups);
+        return out;
+    }
+
+    /**
      * Who may run Communities: the admin, HR, and the company head by employee
      * code. The same three who may post an announcement, which is the same idea —
      * they speak for the company rather than for a team.

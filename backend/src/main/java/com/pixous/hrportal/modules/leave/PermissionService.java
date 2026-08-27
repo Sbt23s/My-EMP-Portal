@@ -163,9 +163,16 @@ public class PermissionService {
             */
             allowed = u -> "PIX-E100".equalsIgnoreCase(u.getEmployeeCode());
         } else if (iAmTl) {
-            // TL permission request -> HR and CTO Elamaran Subramanian (PIX-E100)
-            allowed = u -> "PIX-E100".equalsIgnoreCase(u.getEmployeeCode())
-                    || hasRole(u, "IT_MGR") || hasRole(u, "IT_HR") || hasRole(u, "SUPER_ADMIN") || hasRole(u, "COMPANY_ADMIN");
+            /*
+              A Team Leader's permission goes to HR, and to HR alone.
+
+              This offered the CTO and every administrator alongside HR, so a
+              Team Leader chose their own approver from five names. A rung that
+              offers a choice is not a rung: the request skips the person whose
+              job it is and lands with whoever was first in the list. The CTO's
+              place in this chain is above HR, not beside them.
+            */
+            allowed = u -> hasRole(u, "IT_MGR") || hasRole(u, "IT_HR") || hasRole(u, "CV_HR");
         } else {
             // Employee permission request -> only their own team's TL.
             //
@@ -253,11 +260,23 @@ public class PermissionService {
         if (p.getUserId().equals(deciderId)) {
             throw ApiException.business("You cannot approve or reject your own permission request");
         }
-        User decider = userRepository.findById(deciderId).orElseThrow(() -> ApiException.notFound("Decider"));
+        /*
+          Only the person the request names may decide it.
+
+          There was an administrator override here: anyone holding SUPER_ADMIN
+          or COMPANY_ADMIN could approve or reject any request, whoever it was
+          addressed to. That quietly made the chain optional -- an employee's
+          hours could be approved by somebody who has never met them, and HR
+          could be bypassed on a Team Leader's request.
+
+          The chain exists so a request reaches somebody who can judge it.
+          Administrators and the CTO still see everything; seeing is not
+          deciding, and the two were conflated.
+        */
         boolean isDirectApprover = p.getRequestedTo() != null && p.getRequestedTo().equals(deciderId);
-        boolean isSysAdmin = hasRole(decider, "SUPER_ADMIN") || hasRole(decider, "COMPANY_ADMIN");
-        if (!isDirectApprover && !isSysAdmin) {
-            throw ApiException.business("Only the assigned approver for this request can approve or reject it");
+        if (!isDirectApprover) {
+            throw ApiException.business(
+                    "Only the approver this request was sent to can approve or reject it.");
         }
         if (!approve && (comment == null || comment.isBlank())) {
             throw ApiException.business("A reason is required to reject a permission request");

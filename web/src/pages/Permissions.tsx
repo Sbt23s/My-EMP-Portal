@@ -182,19 +182,25 @@ export default function PermissionsPage() {
   /** The request open in the details dialog, if any. */
   const [viewRow, setViewRow] = useState<PermissionRow | null>(null);
 
+  /*
+    Who may decide a request: the person it names, and nobody else.
+
+    There was an administrator override here, matching one on the server: an
+    account holding SUPER_ADMIN or COMPANY_ADMIN was offered Approve and Reject
+    on any request that named no approver. That made the chain optional --
+    HR could be bypassed on a Team Leader's request, and an employee's hours
+    decided by somebody who has never met them.
+
+    The chain is: employee to their Team Leader, Team Leader to HR, HR to the
+    CTO. Everyone above still sees every request; seeing is not deciding, and
+    the two had been conflated. The server enforces the same rule, so this
+    hides a button rather than being the control.
+  */
   const canDecideRow = useCallback((r: PermissionRow) => {
     if (r.status !== "PENDING" || isOverdue(r.status, r.requestDate)) return false;
     if (r.userId === user?.id) return false;
-
-    // Direct recipient of the permission request always can approve/reject
-    if (r.requestedTo && user?.id && r.requestedTo === user.id) return true;
-
-    // System Admin override for requests addressed to Admin
-    const isSysAdmin = hasRole("SUPER_ADMIN") || hasRole("COMPANY_ADMIN");
-    if (isSysAdmin && (r.requestedTo === user?.id || !r.requestedTo)) return true;
-
-    return false;
-  }, [user?.id, hasRole]);
+    return !!r.requestedTo && !!user?.id && r.requestedTo === user.id;
+  }, [user?.id]);
   // Which view opens first: everyone's requests for HR and admins, the inbox for
   // an approver, and their own for an employee — who has only that one.
   const [view, setView] = useState<"ALL_EMP" | "TO_ME" | "MINE">(

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
-  LayoutDashboard, Clock, CalendarCheck, CheckSquare, Wallet, Users, Boxes,
+  LayoutDashboard, Clock, Home, CalendarCheck, CheckSquare, Wallet, Users, Boxes,
   LifeBuoy, User, Bell, Menu, X, Moon, Sun, LogOut,
   FileBarChart, ClipboardList, Settings, Map, MessageSquareWarning, FileText,
   FolderOpen, ListTodo, FileArchive, CalendarDays, ChevronDown, Bot, Users2, Eraser, ScrollText,
@@ -99,6 +99,9 @@ const NAV: NavEntry[] = [
     children: [
       { to: "/leave", label: "Leave", icon: CalendarCheck, end: true, excludeRole: ["SUPER_ADMIN", "COMPANY_ADMIN"] },
       { to: "/leave/permissions", label: "Permission", icon: Clock },
+      // Everybody can ask to work from home, so no permission gate --
+      // the same reasoning as Leave and Permission above it.
+      { to: "/leave/wfh", label: "Work From Home", icon: Home },
       { to: "/leave/approvals", label: "Approvals", icon: CheckSquare, anyPermission: ["LEAVE_APPROVE"] },
       { to: "/leave/policies", label: "Leave Policies", icon: Settings, anyPermission: ["ORG_MANAGE"] }
     ]

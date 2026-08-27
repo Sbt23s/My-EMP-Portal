@@ -90,6 +90,7 @@ const LeavePage = safeLazy(() => import("@/pages/Leave"));
 const LeaveApprovalsPage = safeLazy(() => import("@/pages/LeaveApprovals"));
 const LeavePoliciesPage = safeLazy(() => import("@/pages/LeavePolicies"));
 const PermissionsPage = safeLazy(() => import("@/pages/Permissions"));
+const WorkFromHomePage = safeLazy(() => import("@/pages/WorkFromHome"));
 const PayslipsPage = safeLazy(() => import("@/pages/Payslips"));
 const PayrollRunsPage = safeLazy(() => import("@/pages/PayrollRuns"));
 const PayrollRequestsPage = safeLazy(() => import("@/pages/PayrollRequests"));
@@ -179,6 +180,7 @@ export const router = createBrowserRouter([
       },
       { path: "leave", element: page(<LeavePage />) },
       { path: "leave/permissions", element: page(<PermissionsPage />) },
+      { path: "leave/wfh", element: page(<WorkFromHomePage />) },
       {
         path: "leave/approvals",
         element: page(

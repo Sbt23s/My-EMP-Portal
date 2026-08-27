@@ -13,9 +13,10 @@ import type { ApiEnvelope } from "@/types";
 import dayjs from "dayjs";
 
 /**
- * The files and the conversation attached to one leave or permission request.
+ * The files and the conversation attached to a leave, permission or work
+ * from home request.
  *
- * One component for both, because the two differ only in the `type` they pass:
+ * One component for all three, because the two differ only in the `type` they pass:
  * the server keeps them in one table for the same reason. It is used inside a
  * details dialog, so it manages its own data and needs nothing from the page
  * beyond which request it is looking at.
@@ -27,7 +28,7 @@ import dayjs from "dayjs";
  * two requests every few seconds and stops the moment it closes.
  */
 
-type RequestType = "LEAVE" | "PERMISSION";
+type RequestType = "LEAVE" | "PERMISSION" | "WFH";
 
 interface AttachmentView {
   id: number;

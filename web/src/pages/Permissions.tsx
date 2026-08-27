@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { RequestThread } from "@/components/RequestThread";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
@@ -881,6 +882,19 @@ export default function PermissionsPage() {
                 </div>
               </div>
             )}
+
+            {/*
+              Files and conversation, in the dialog where the decision is
+              made. An approver reading a certificate in one place and
+              deciding in another is how a decision gets made without it.
+            */}
+            <div className="border-t pt-4">
+              <RequestThread
+                type="PERMISSION"
+                requestId={viewRow.id}
+                canAttach={viewRow.status === "PENDING"}
+              />
+            </div>
 
             {/*
               The decision, from here, so the approver does not have to close

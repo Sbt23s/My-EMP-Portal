@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { RequestThread } from "@/components/RequestThread";
 import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select } from "@/components/ui/select";
@@ -436,6 +437,18 @@ export default function LeaveApprovalsPage() {
                 </div>
               </div>
             )}
+
+            {/*
+              Files and conversation, in the dialog where the decision is
+              made.
+            */}
+            <div className="mt-4 border-t pt-4">
+              <RequestThread
+                type="LEAVE"
+                requestId={viewModalData.id}
+                canAttach={viewModalData.status === "PENDING"}
+              />
+            </div>
 
             {/*
               The decision, made here rather than from the table row.

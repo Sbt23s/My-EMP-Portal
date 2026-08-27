@@ -39,6 +39,22 @@ public class PermissionService {
             throw ApiException.business("End time must be after start time");
         }
         /*
+         * A permission on a Saturday or Sunday is a mistake, not a request.
+         *
+         * Permission is time off within a working day, so there is no working
+         * day for it to be within. Refused here rather than approved and then
+         * counted against hours nobody was due to work.
+         */
+        if (com.pixous.hrportal.common.WorkCalendar.isWeekend(req.requestDate())) {
+            throw ApiException.business(
+                    "Permission cannot be taken on a "
+                            + req.requestDate().getDayOfWeek().getDisplayName(
+                                    java.time.format.TextStyle.FULL,
+                                    java.util.Locale.ENGLISH)
+                            + ". Saturdays and Sundays are not working days.");
+        }
+
+        /*
          * One permission per person per day.
          *
          * A second request for a day that already has one leaves an approver

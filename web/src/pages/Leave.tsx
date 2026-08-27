@@ -143,7 +143,11 @@ export default function LeavePage() {
           try {
             const form = new FormData();
             form.append("file", file);
-            await api.post(`/requests/LEAVE/${id}/attachments`, form);
+            // Explicit, because the shared axios client defaults to JSON and
+            // that overrides the multipart boundary the browser generates.
+            await api.post(`/requests/LEAVE/${id}/attachments`, form, {
+              headers: { "Content-Type": "multipart/form-data" },
+            });
           } catch {
             failed += 1;
           }

@@ -337,10 +337,39 @@ public class LeaveService {
                             + "Cancel that request first, or choose other dates.");
         }
 
+        /*
+         * A leave that starts or ends on a weekend is a mistake, not a request.
+         *
+         * countWorkingDays below already ignores Saturdays and Sundays, so
+         * picking Saturday to Sunday produced a request for zero days and the
+         * message underneath said only "no working days" -- true, but it did
+         * not say why, and a range that merely begins on a Saturday counted
+         * correctly while still recording a start date nobody works on.
+         *
+         * Said plainly here instead, naming the day, so the person can see
+         * what to change.
+         */
+        if (com.pixous.hrportal.common.WorkCalendar.isWeekend(req.fromDate())) {
+            throw ApiException.business(
+                    "Leave cannot start on a "
+                            + dayName(req.fromDate())
+                            + ". Saturdays and Sundays are not working days — "
+                            + "choose a weekday.");
+        }
+        if (com.pixous.hrportal.common.WorkCalendar.isWeekend(req.toDate())) {
+            throw ApiException.business(
+                    "Leave cannot end on a "
+                            + dayName(req.toDate())
+                            + ". Saturdays and Sundays are not working days — "
+                            + "choose a weekday.");
+        }
+
         BigDecimal workingDays = BigDecimal.valueOf(
                 countWorkingDays(req.fromDate(), req.toDate()));
         if (workingDays.signum() <= 0) {
-            throw ApiException.business("Selected range has no working days");
+            throw ApiException.business(
+                    "That range has no working days in it — every day in it is a "
+                            + "weekend or a public holiday.");
         }
 
         // Quarterly cap: Casual & Sick leave are limited to 1 per 3-month quarter
@@ -961,6 +990,12 @@ public class LeaveService {
      * <p>Only new requests are affected. Requests already approved keep the day
      * count stored on them; nothing is recalculated behind anybody's back.
      */
+    /** "Saturday" / "Sunday", so a message can name the day rather than the rule. */
+    private static String dayName(LocalDate date) {
+        return date.getDayOfWeek().getDisplayName(
+                java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH);
+    }
+
     private long countWorkingDays(LocalDate from, LocalDate to) {
         Set<LocalDate> holidays = holidayRepository
                 .findByHolidayDateBetweenOrderByHolidayDateAsc(from, to).stream()

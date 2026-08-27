@@ -113,7 +113,18 @@ export function RequestThread({
     mutationFn: async (file: File) => {
       const form = new FormData();
       form.append("file", file);
-      return api.post(`${base}/attachments`, form);
+      /*
+        The header has to be said here.
+
+        The shared axios client sets Content-Type: application/json for every
+        request, and that overrides the multipart boundary the browser would
+        otherwise generate -- so the server receives a body it cannot parse and
+        refuses the file. Every other upload in this app passes this the same
+        way.
+      */
+      return api.post(`${base}/attachments`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
     },
     onSuccess: () => {
       toast.success("Attached");

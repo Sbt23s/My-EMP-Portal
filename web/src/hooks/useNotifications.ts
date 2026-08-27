@@ -237,14 +237,44 @@ export function useNotifications(userId?: number) {
       connectHeaders: { Authorization: `Bearer ${tokenStore.access}` },
       reconnectDelay: 5000,
       onConnect: () => {
+        /*
+          What a notification means for the rest of the screen.
+
+          A push already reached the browser -- the toast proves it -- but only
+          the notification feed was refreshed, so a person watching their leave
+          or WFH list still waited for its own poll to notice a decision that
+          had already been made. Mapping the notification's type to the queries
+          it affects makes those lists genuinely live rather than merely
+          frequent, and costs one refetch of data already on screen.
+
+          Unknown types refresh nothing extra: a type this does not recognise
+          is not a reason to refetch the whole application.
+        */
+        const AFFECTED: Record<string, string[]> = {
+          WFH: ["wfh", "attendance", "dashboard"],
+          LEAVE: ["leave", "permissions", "dashboard"],
+          COMPLAINT: ["complaints"],
+          TICKET: ["tickets"],
+          HELPDESK: ["tickets"],
+          TASK: ["tasks"],
+          ASSET: ["assets"],
+          EXPENSE: ["claims"],
+          PAYROLL: ["payroll", "payslips"],
+        };
+
         const onFrame = (body: string) => {
+          let kind: string | undefined;
           try {
             const n = JSON.parse(body) as AppNotification;
             if (n && typeof n.id === "number") toastOnce(n);
+            kind = n?.type?.toUpperCase();
           } catch {
             /* malformed frame — the feed refresh below still picks it up */
           }
           qc.invalidateQueries({ queryKey: ["notifications"] });
+          for (const key of AFFECTED[kind ?? ""] ?? []) {
+            qc.invalidateQueries({ queryKey: [key] });
+          }
         };
 
         client.subscribe(`/topic/notifications/${userId}`, (msg) => onFrame(msg.body));

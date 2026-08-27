@@ -20,6 +20,24 @@ public interface PermissionRequestRepository extends JpaRepository<PermissionReq
     List<PermissionRequest> findByUserIdAndRequestDateAndStatus(
             Long userId, java.time.LocalDate requestDate, String status);
 
+    /*
+      What this person already has on a given day.
+
+      APPROVED and PENDING both count: a request awaiting a decision has
+      already claimed the day, and a second one for the same day would leave
+      an approver deciding between two versions of the same absence. A
+      rejected or cancelled request never claimed it, so it does not block.
+    */
+    @Query("""
+            SELECT p FROM PermissionRequest p
+            WHERE p.userId = :userId
+              AND p.requestDate = :date
+              AND p.status IN ('APPROVED','PENDING')
+            ORDER BY p.fromTime ASC
+            """)
+    List<PermissionRequest> findLiveOnDate(@Param("userId") Long userId,
+                                           @Param("date") java.time.LocalDate date);
+
     @Query("SELECT p FROM PermissionRequest p WHERE p.status = 'PENDING' ORDER BY p.createdAt ASC")
     List<PermissionRequest> findAllPending();
 

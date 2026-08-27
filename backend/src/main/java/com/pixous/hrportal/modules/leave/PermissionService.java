@@ -38,6 +38,26 @@ public class PermissionService {
         if (!to.isAfter(from)) {
             throw ApiException.business("End time must be after start time");
         }
+        /*
+         * One permission per person per day.
+         *
+         * A second request for a day that already has one leaves an approver
+         * choosing between two versions of the same absence, and if both are
+         * approved the hours are counted twice. The repository already had a
+         * query shaped for this question and nothing called it.
+         */
+        List<PermissionRequest> sameDay = repo.findLiveOnDate(userId, req.requestDate());
+        if (!sameDay.isEmpty()) {
+            PermissionRequest existing = sameDay.get(0);
+            throw ApiException.business(
+                    "You already have a permission on " + req.requestDate()
+                            + " from " + existing.getFromTime() + " to "
+                            + existing.getToTime() + " ("
+                            + existing.getStatus().toLowerCase() + "). "
+                            + "Only one permission per day is allowed. "
+                            + "Cancel that request first, or choose another date.");
+        }
+
         BigDecimal hours = BigDecimal.valueOf(Duration.between(from, to).toMinutes())
                 .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
 

@@ -261,6 +261,10 @@ export default function LeaveApprovalsPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1400px] table-fixed text-sm">
               <colgroup>
+                {/* Action first: on a wide table the decision is the reason
+                    somebody opened the page, and it was sitting past ten
+                    columns of context where it had to be scrolled to. */}
+                <col className="w-[110px]" />
                 <col className="w-[190px]" />
                 <col className="w-[130px]" />
                 <col className="w-[130px]" />
@@ -271,10 +275,10 @@ export default function LeaveApprovalsPage() {
                 <col className="w-[130px]" />
                 <col className="w-[120px]" />
                 <col className="w-[100px]" />
-                <col className="w-[130px]" />
               </colgroup>
               <thead>
                 <tr className="border-b bg-muted/50 text-left align-middle text-xs font-bold text-muted-foreground uppercase tracking-wider [&>th]:px-3.5 [&>th]:py-3">
+                  <th>Action</th>
                   <th>Employee</th>
                   <th>Team</th>
                   <th>Leave Type</th>
@@ -285,13 +289,33 @@ export default function LeaveApprovalsPage() {
                   <th>Decided By</th>
                   <th>Applied On</th>
                   <th>Status</th>
-                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {pageRows.map((r) => {
                   return (
                     <tr key={r.id} className="align-top hover:bg-muted/30 transition-colors [&>td]:px-3.5 [&>td]:py-3">
+                      {/*
+                        One button, not three.
+
+                        A tick and a cross in a table row decide somebody's
+                        leave from a list, with no sight of the reason, the
+                        dates or anything they attached. View opens the
+                        request; the decision is made in there, having read
+                        it. A row that cannot be decided still opens, because
+                        reading it is not the same right as deciding it.
+                      */}
+                      <td>
+                        <Button
+                          variant={r.status === "PENDING" && r.canAct ? "default" : "outline"}
+                          size="sm"
+                          className="h-8 gap-1.5 px-3"
+                          onClick={() => setViewModalData(r)}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          {r.status === "PENDING" && r.canAct ? "Review" : "View"}
+                        </Button>
+                      </td>
                       <td>
                         <div className="flex items-center gap-2">
                           <Avatar name={r.employeeName} className="shrink-0 h-9 w-9 bg-primary/10 text-primary font-medium" />
@@ -329,39 +353,6 @@ export default function LeaveApprovalsPage() {
                         }`}>
                           {r.status}
                         </Badge>
-                      </td>
-                      <td className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {r.status === "PENDING" && r.canAct ? (
-                            <>
-                              <Button
-                                size="icon"
-                                className="h-8 w-8 rounded bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-                                disabled={decide.isPending}
-                                onClick={() => decide.mutate({ id: r.id, decision: "APPROVED" })}
-                              >
-                                <Check className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8 rounded text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 shadow-sm"
-                                disabled={decide.isPending}
-                                onClick={() => rejectOne(r.id)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </>
-                          ) : null}
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-8 w-8 rounded text-muted-foreground hover:text-foreground hover:bg-muted shadow-sm"
-                            onClick={() => setViewModalData(r)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
                       </td>
                     </tr>
                   );
@@ -442,6 +433,56 @@ export default function LeaveApprovalsPage() {
                 <div className="font-medium text-rose-600">Rejection Remark</div>
                 <div className="rounded-md bg-rose-50 p-3 text-sm border border-rose-100 text-rose-800">
                   “{viewModalData.decisionComment}”
+                </div>
+              </div>
+            )}
+
+            {/*
+              The decision, made here rather than from the table row.
+
+              This is the point of moving it: the approver has the dates, the
+              reason and the balance in front of them before they choose,
+              instead of pressing a tick beside a name. A rejection still asks
+              for a reason -- the applicant is owed one -- and the buttons are
+              only rendered when the server said this person may decide this
+              request, so a row somebody may read but not act on shows nothing
+              to press.
+            */}
+            {viewModalData.status === "PENDING" && viewModalData.canAct && (
+              <div className="mt-5 border-t pt-4">
+                <div className="mb-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Update status
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
+                    disabled={decide.isPending}
+                    onClick={() => {
+                      decide.mutate({ id: viewModalData.id, decision: "APPROVED" });
+                      setViewModalData(null);
+                    }}
+                  >
+                    {decide.isPending
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : "Approve"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                    disabled={decide.isPending}
+                    onClick={() => {
+                      const reason = window.prompt("Reason for rejection (required):");
+                      if (!reason || !reason.trim()) return;
+                      decide.mutate({
+                        id: viewModalData.id,
+                        decision: "REJECTED",
+                        comment: reason.trim(),
+                      });
+                      setViewModalData(null);
+                    }}
+                  >
+                    Reject
+                  </Button>
                 </div>
               </div>
             )}

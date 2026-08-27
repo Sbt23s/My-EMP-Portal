@@ -308,6 +308,35 @@ public class LeaveService {
             }
         }
 
+        /*
+         * One leave per person per day, whatever its type.
+         *
+         * Somebody who is on Sick Leave on the 27th cannot also be on Casual
+         * Leave on the 27th -- they are one person and it is one day. Nothing
+         * stopped that before: the quarterly cap and the notice period are
+         * per-type, so two different types on the same date passed every
+         * check and produced two leave records for one absence, each
+         * deducting from a different balance.
+         *
+         * Checked against APPROVED and PENDING only. A rejected or cancelled
+         * request never consumed the day, so it must not block a fresh one.
+         */
+        List<LeaveRequest> clashes = requestRepository.findOverlapping(
+                userId, req.fromDate(), req.toDate(), null);
+        if (!clashes.isEmpty()) {
+            LeaveRequest first = clashes.get(0);
+            String typeName = typeRepository.findById(first.getLeaveTypeId())
+                    .map(LeaveType::getName).orElse("leave");
+            String when = first.getFromDate().equals(first.getToDate())
+                    ? "on " + first.getFromDate()
+                    : "from " + first.getFromDate() + " to " + first.getToDate();
+            throw ApiException.business(
+                    "You already have " + typeName + " " + when
+                            + " (" + first.getStatus().toLowerCase() + "). "
+                            + "Only one leave per day is allowed, whatever the type. "
+                            + "Cancel that request first, or choose other dates.");
+        }
+
         BigDecimal workingDays = BigDecimal.valueOf(
                 countWorkingDays(req.fromDate(), req.toDate()));
         if (workingDays.signum() <= 0) {

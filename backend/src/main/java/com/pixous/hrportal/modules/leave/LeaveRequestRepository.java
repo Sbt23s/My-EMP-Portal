@@ -81,6 +81,46 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
             """)
     List<LeaveRequest> findOnLeave(@Param("date") java.time.LocalDate date);
 
+    /*
+      Whether this person already has a leave covering any day in a range.
+
+      Two records overlap when each starts on or before the other ends, which
+      is the whole test -- comparing only the start dates misses a three-day
+      leave that swallows the new one entirely.
+
+      APPROVED and PENDING count; a rejected or cancelled request does not,
+      because those days were never actually taken and the person is free to
+      ask again.
+
+      excludeId lets an edit ignore the row being edited, which would
+      otherwise always overlap itself.
+    */
+    @Query("""
+            SELECT COUNT(r) FROM LeaveRequest r
+            WHERE r.userId = :userId
+              AND r.status IN ('APPROVED','PENDING')
+              AND r.fromDate <= :to AND r.toDate >= :from
+              AND (:excludeId IS NULL OR r.id <> :excludeId)
+            """)
+    long countOverlapping(@Param("userId") Long userId,
+                          @Param("from") java.time.LocalDate from,
+                          @Param("to") java.time.LocalDate to,
+                          @Param("excludeId") Long excludeId);
+
+    /** The clashing leaves themselves, so the message can name them. */
+    @Query("""
+            SELECT r FROM LeaveRequest r
+            WHERE r.userId = :userId
+              AND r.status IN ('APPROVED','PENDING')
+              AND r.fromDate <= :to AND r.toDate >= :from
+              AND (:excludeId IS NULL OR r.id <> :excludeId)
+            ORDER BY r.fromDate ASC
+            """)
+    List<LeaveRequest> findOverlapping(@Param("userId") Long userId,
+                                       @Param("from") java.time.LocalDate from,
+                                       @Param("to") java.time.LocalDate to,
+                                       @Param("excludeId") Long excludeId);
+
     /** All approved or pending leaves overlapping a date range (for the admin calendar). */
     @Query("""
             SELECT r FROM LeaveRequest r

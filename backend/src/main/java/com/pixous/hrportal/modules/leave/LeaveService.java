@@ -655,10 +655,28 @@ public class LeaveService {
 
     /** Who may act on this specific leave: the chosen approver if routed, else the day/role rule. */
     private boolean canApproveLeave(User approver, User applicant, LeaveRequest r) {
-        if (approver != null && ("PIX-E100".equalsIgnoreCase(approver.getEmployeeCode()) || leaveHasRole(approver, "SUPER_ADMIN") || leaveHasRole(approver, "COMPANY_ADMIN"))) {
-            return true;
-        }
+        if (approver == null) return false;
+
+        /*
+          The person the request names decides it, and nobody else.
+
+          There was an override above this: the CTO and anyone holding
+          SUPER_ADMIN or COMPANY_ADMIN could approve or reject any leave,
+          whoever it had been addressed to. That made the chain optional -- an
+          employee chose their Team Leader and somebody else decided it, and
+          HR could be bypassed on a Team Leader's request.
+
+          Everybody above still SEES the whole queue: the listing above keeps
+          adminView and isHR, so nothing disappears from anybody's screen.
+          Seeing is not deciding, and the two had been conflated.
+        */
         if (r.getRequestedTo() != null) return r.getRequestedTo().equals(approver.getId());
+
+        /*
+          Only where a request names nobody does the rung decide it. Older rows
+          predate the approver field, and a leave that can never be actioned is
+          worse than one actioned by the right rung.
+        */
         return applicant != null && canActOnLeave(approver, applicant, r.getWorkingDays());
     }
 

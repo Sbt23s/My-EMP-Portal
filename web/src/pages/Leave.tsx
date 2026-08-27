@@ -55,9 +55,20 @@ export default function LeavePage() {
   const [open, setOpen] = useState(false);
   /** The decided request being read, or null. */
   const [viewing, setViewing] = useState<LeaveRequest | null>(null);
-  // Date range (month granularity): default = start of this year → current month.
+  /*
+    Date range, by month. Default: this year so far, plus the year ahead.
+
+    It used to end at the current month, and a leave is filed by the date it
+    STARTS -- so applying on 27 August for a day in September put the request
+    outside the default range and it vanished the moment it was created. The
+    list read "No leave requests in this range" and looked like the apply had
+    failed.
+
+    Ending a year out covers every leave anybody plans in practice, and the
+    two pickers still narrow it to whatever somebody actually wants to see.
+  */
   const [fromMonth, setFromMonth] = useState(dayjs().startOf("year").format("YYYY-MM"));
-  const [toMonth, setToMonth] = useState(dayjs().format("YYYY-MM"));
+  const [toMonth, setToMonth] = useState(dayjs().add(1, "year").format("YYYY-MM"));
 
   const types = useQuery({
     queryKey: ["leave", "types"],

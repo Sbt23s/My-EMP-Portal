@@ -2,10 +2,11 @@ import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Plus, Eye, Home, Inbox, Search, CheckCircle2, XCircle, Clock,
+  Plus, Eye, Home, Inbox, Search, CheckCircle2, XCircle, Clock, FileSpreadsheet,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
+import * as XLSX from "xlsx";
 
 import { api, apiMessage } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
@@ -154,6 +155,17 @@ export default function WorkFromHomePage() {
 
   const [boardDate, setBoardDate] = useState(todayIso());
 
+  /*
+    The months a list covers.
+
+    Ends a year out rather than at the current month: work from home is asked
+    for ahead of time, so a range ending today hides the request the moment it
+    is made -- the same fault the Leave page had. The pickers narrow it to
+    whatever somebody actually wants.
+  */
+  const [fromMonth, setFromMonth] = useState(dayjs().startOf("year").format("YYYY-MM"));
+  const [toMonth, setToMonth] = useState(dayjs().add(1, "year").format("YYYY-MM"));
+
   const today = useQuery({
     queryKey: ["wfh", "active", boardDate],
     queryFn: async () =>
@@ -177,14 +189,25 @@ export default function WorkFromHomePage() {
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    if (!needle) return rows;
-    return rows.filter((r) =>
+    /*
+      The day board answers "who is at home on this date" and already has its
+      own date, so a month range would be a second filter fighting the first.
+      Only the three list tabs are ranged.
+    */
+    const ranged = tab === "today"
+      ? rows
+      : rows.filter((r) => {
+          const m = String(r.fromDate).slice(0, 7);
+          return m >= fromMonth && m <= toMonth;
+        });
+    if (!needle) return ranged;
+    return ranged.filter((r) =>
       [r.employeeName, r.employeeCode, r.team, r.reason, r.remarks, r.requestedToName]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(needle)));
-  }, [rows, q]);
+  }, [rows, q, tab, fromMonth, toMonth]);
 
-  const paged = usePagedRows(filtered, 15, [tab, q, rows]);
+  const paged = usePagedRows(filtered, 15, [tab, q, rows, fromMonth, toMonth]);
 
   const counts = useMemo(() => {
     const c = { ALL: rows.length, PENDING: 0, APPROVED: 0, REJECTED: 0 };
@@ -224,6 +247,45 @@ export default function WorkFromHomePage() {
     },
     onError: (e) => toast.error(apiMessage(e, "Could not withdraw that request")),
   });
+
+  /*
+    What is on screen, as a spreadsheet.
+
+    Exports the filtered rows rather than everything fetched: the sheet should
+    be the list somebody is looking at, or the filters they set were pointless.
+  */
+  const exportExcel = () => {
+    if (filtered.length === 0) {
+      toast.error("Nothing to export.");
+      return;
+    }
+    const sheet = filtered.map((r, i) => ({
+      "#": i + 1,
+      Employee: r.employeeName,
+      "Employee ID": r.employeeCode || "",
+      Role: r.roleLabel || "",
+      Designation: r.designation || "",
+      Team: r.team || "",
+      From: dayjs(r.fromDate).format("DD MMM YYYY"),
+      To: dayjs(r.toDate).format("DD MMM YYYY"),
+      "Working days": r.workingDays,
+      Reason: r.reason || "",
+      Remarks: r.remarks || "",
+      Status: r.status,
+      "Pending with": r.status === "PENDING" ? (r.requestedToName || "") : "",
+      "Sent to": r.requestedToName || "",
+      "Decided by": r.decidedByName || "",
+      "Decided at": r.decidedAt ? dayjs(r.decidedAt).format("DD MMM YYYY, hh:mm A") : "",
+      Remark: r.decisionComment || "",
+      "Applied on": r.createdAt ? dayjs(r.createdAt).format("DD MMM YYYY, hh:mm A") : "",
+    }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheet), "Work From Home");
+    const tag = tab === "today"
+      ? dayjs(boardDate).format("YYYY-MM-DD")
+      : `${fromMonth}_to_${toMonth}`;
+    XLSX.writeFile(wb, `Work_From_Home_${tab}_${tag}.xlsx`);
+  };
 
   const loading =
     tab === "inbox" ? inbox.isLoading
@@ -340,6 +402,50 @@ export default function WorkFromHomePage() {
             Today
           </Button>
         )}
+
+        {/* A month range on the lists, so a period can be looked at and exported. */}
+        {tab !== "today" && (
+          <>
+            <div className="space-y-1">
+              <Label htmlFor="wfh-from-m" className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                From
+              </Label>
+              <Input
+                id="wfh-from-m"
+                type="month"
+                className="w-40"
+                value={fromMonth}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (!v) return;
+                  setFromMonth(v);
+                  if (v > toMonth) setToMonth(v);
+                }}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="wfh-to-m" className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                To
+              </Label>
+              <Input
+                id="wfh-to-m"
+                type="month"
+                className="w-40"
+                min={fromMonth}
+                value={toMonth}
+                onChange={(e) => e.target.value && setToMonth(e.target.value)}
+              />
+            </div>
+          </>
+        )}
+
+        <Button
+          variant="outline"
+          className="bg-green-600 text-white hover:bg-green-700 hover:text-white"
+          onClick={exportExcel}
+        >
+          <FileSpreadsheet className="mr-1.5 h-4 w-4" /> Export Excel
+        </Button>
       </div>
 
       <Card>

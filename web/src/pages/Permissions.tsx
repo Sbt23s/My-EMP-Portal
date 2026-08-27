@@ -2,7 +2,7 @@ import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Plus, Check, X, Clock, Inbox, Search, AlertTriangle, Ban, TrendingUp, Timer
+  Plus, Check, X, Clock, Eye, Inbox, Search, AlertTriangle, Ban, TrendingUp, Timer
 } from "lucide-react";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
@@ -167,6 +168,18 @@ export default function PermissionsPage() {
   /** Pending request being approved or rejected, and which of the two. */
   const [decideOn, setDecideOn] = useState<{ row: PermissionRow; approve: boolean } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  /*
+    A note the approver leaves with their decision.
+
+    Separate from rejectReason because they are different things: a
+    rejection reason is required and answers "why not", while this is
+    optional and answers "anything else you should know". Both travel in
+    the same comment field, which the server already stores on approval
+    as well as rejection -- nothing here needed adding on that side.
+  */
+  const [approveNote, setApproveNote] = useState("");
+  /** The request open in the details dialog, if any. */
+  const [viewRow, setViewRow] = useState<PermissionRow | null>(null);
 
   const canDecideRow = useCallback((r: PermissionRow) => {
     if (r.status !== "PENDING" || isOverdue(r.status, r.requestDate)) return false;
@@ -650,26 +663,36 @@ export default function PermissionsPage() {
                   {approverPaged.pageRows.map((r) => (
                     <TableRow key={r.id} className="border-b align-top last:border-0 hover:bg-muted/30 transition-colors [&>td]:px-3 [&>td]:py-4">
                       <TableCell className="text-right">
-                        {isOverdue(r.status, r.requestDate) ? (
-                          <span className="text-xs text-muted-foreground">
-                            Not decided in time
-                          </span>
-                        ) : r.status === "PENDING" ? (
-                          <div className="flex items-center justify-end gap-1.5">
-                            <Button size="sm" variant="outline" disabled={decide.isPending}
-                              onClick={() => { setRejectReason(""); setDecideOn({ row: r, approve: false }); }}>
-                              <X className="h-4 w-4" /> Reject
-                            </Button>
-                            <Button size="sm" disabled={decide.isPending}
-                              onClick={() => setDecideOn({ row: r, approve: true })}>
-                              <Check className="h-4 w-4" /> Approve
-                            </Button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            {r.status === "REJECTED" && r.decisionComment ? r.decisionComment : "—"}
-                          </span>
-                        )}
+                        {/*
+                          View is always offered, whatever the status.
+
+                          A decided request still has to be readable -- what
+                          was asked for, when, and what was said back. Before
+                          this, an approved row showed a dash and there was no
+                          way to look at it again from here.
+                        */}
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button size="sm" variant="outline" onClick={() => setViewRow(r)}>
+                            <Eye className="h-4 w-4" /> View
+                          </Button>
+                          {!isOverdue(r.status, r.requestDate) && r.status === "PENDING" && (
+                            <>
+                              <Button size="sm" variant="outline" disabled={decide.isPending}
+                                onClick={() => { setRejectReason(""); setDecideOn({ row: r, approve: false }); }}>
+                                Reject
+                              </Button>
+                              <Button size="sm" disabled={decide.isPending}
+                                onClick={() => { setApproveNote(""); setDecideOn({ row: r, approve: true }); }}>
+                                Approve
+                              </Button>
+                            </>
+                          )}
+                          {isOverdue(r.status, r.requestDate) && (
+                            <span className="text-xs text-muted-foreground">
+                              Not decided in time
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="font-medium">{r.employeeName}<div className="code-chip text-xs text-muted-foreground">{r.employeeCode}</div></TableCell>
                       <TableCell>{r.team || "—"}</TableCell>
@@ -772,6 +795,132 @@ export default function PermissionsPage() {
 
       {/* Approving asks for a confirmation; rejecting asks for a reason, and will
           not proceed without one. */}
+      {/*
+        Everything about one request, in one place.
+
+        The approver was deciding from a table row: eight columns, a reason
+        truncated to 160 pixels, and no sight of who it went to or when it was
+        raised. This shows the lot -- the person, the times, the reason in
+        full, the priority, the current approver, and whatever was said when
+        it was decided -- so a decision is made having read the request rather
+        than having glanced at a line of it.
+      */}
+      {viewRow && (
+        <Dialog open onClose={() => setViewRow(null)} className="max-w-2xl">
+          <DialogHeader
+            title="Permission request"
+            description={`${viewRow.employeeName} · ${viewRow.employeeCode}`}
+          />
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <PermissionStatus status={viewRow.status} requestDate={viewRow.requestDate} />
+              <PriorityBadge priority={viewRow.priority} />
+              {clashing.has(viewRow.id) && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                  <AlertTriangle className="h-2.5 w-2.5" /> Overlapping request
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+              <Field label="Employee">{viewRow.employeeName}</Field>
+              <Field label="Employee ID">
+                <span className="code-chip">{viewRow.employeeCode || "—"}</span>
+              </Field>
+              <Field label="Team">{viewRow.team || "—"}</Field>
+              <Field label="Permission date">
+                {dayjs(viewRow.requestDate).format("dddd, DD MMM YYYY")}
+              </Field>
+              <Field label="Start time">{to12Hour(viewRow.fromTime)}</Field>
+              <Field label="End time">{to12Hour(viewRow.toTime)}</Field>
+              <Field label="Total hours">{viewRow.hours}h</Field>
+              <Field label="Priority">{viewRow.priority || "MEDIUM"}</Field>
+              <Field label="Applied on">
+                {viewRow.createdAt
+                  ? dayjs(viewRow.createdAt).format("DD MMM YYYY, hh:mm A")
+                  : "—"}
+              </Field>
+              <Field label="Current approver">{viewRow.requestedToName || "—"}</Field>
+              {viewRow.status !== "PENDING" && (
+                <>
+                  <Field label="Decided by">{viewRow.decidedByName || "—"}</Field>
+                  <Field label="Decided at">
+                    {viewRow.decidedAt
+                      ? dayjs(viewRow.decidedAt).format("DD MMM YYYY, hh:mm A")
+                      : "—"}
+                  </Field>
+                </>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                Reason
+              </div>
+              <div className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-sm">
+                {viewRow.reason || (
+                  <span className="italic text-muted-foreground">No reason given</span>
+                )}
+              </div>
+            </div>
+
+            {viewRow.decisionComment && (
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  {viewRow.status === "REJECTED" ? "Rejection reason" : "Approver's comment"}
+                </div>
+                <div
+                  className={
+                    "whitespace-pre-wrap rounded-md border p-3 text-sm " +
+                    (viewRow.status === "REJECTED"
+                      ? "border-rose-100 bg-rose-50 text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200"
+                      : "border-emerald-100 bg-emerald-50 text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200")
+                  }
+                >
+                  {viewRow.decisionComment}
+                </div>
+              </div>
+            )}
+
+            {/*
+              The decision, from here, so the approver does not have to close
+              this and find the row again. Offered on the same terms as the
+              row: pending, in time, and only to an approver.
+            */}
+            <div className="flex flex-wrap justify-end gap-2 border-t pt-3">
+              <Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>
+              {isApprover
+                && viewRow.status === "PENDING"
+                && !isOverdue(viewRow.status, viewRow.requestDate) && (
+                <>
+                  <Button
+                    variant="destructive"
+                    disabled={decide.isPending}
+                    onClick={() => {
+                      setRejectReason("");
+                      setDecideOn({ row: viewRow, approve: false });
+                      setViewRow(null);
+                    }}
+                  >
+                    Reject
+                  </Button>
+                  <Button
+                    disabled={decide.isPending}
+                    onClick={() => {
+                      setApproveNote("");
+                      setDecideOn({ row: viewRow, approve: true });
+                      setViewRow(null);
+                    }}
+                  >
+                    Approve
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </Dialog>
+      )}
+
       {decideOn && (
         <Dialog open onClose={() => setDecideOn(null)} className="max-w-md">
           <DialogHeader
@@ -795,7 +944,7 @@ export default function PermissionsPage() {
               )}
             </div>
 
-            {!decideOn.approve && (
+            {!decideOn.approve ? (
               <div className="space-y-1.5">
                 <Label htmlFor="rej">Reason for rejection<Req /></Label>
                 <Input
@@ -806,10 +955,33 @@ export default function PermissionsPage() {
                   placeholder="Tell them why — this is sent to the employee"
                 />
               </div>
+            ) : (
+              /*
+                Optional on an approval, because most approvals need no words
+                and forcing one produces "ok" forever. When there is something
+                to say -- come back by four, clear it with the client first --
+                the employee sees it beside the decision instead of hearing it
+                nowhere.
+              */
+              <div className="space-y-1.5">
+                <Label htmlFor="appnote">Comment <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                <Textarea
+                  id="appnote"
+                  rows={2}
+                  value={approveNote}
+                  onChange={(e) => setApproveNote(e.target.value)}
+                  placeholder="Anything the employee should know — sent with the approval"
+                />
+              </div>
             )}
 
             <div className="flex justify-end gap-2 border-t pt-3">
-              <Button variant="outline" onClick={() => setDecideOn(null)}>Cancel</Button>
+              <Button
+                variant="outline"
+                onClick={() => { setDecideOn(null); setApproveNote(""); }}
+              >
+                Cancel
+              </Button>
               <Button
                 variant={decideOn.approve ? "default" : "destructive"}
                 disabled={decide.isPending || (!decideOn.approve && !rejectReason.trim())}
@@ -821,10 +993,13 @@ export default function PermissionsPage() {
                   decide.mutate({
                     id: decideOn.row.id,
                     status: decideOn.approve ? "APPROVED" : "REJECTED",
-                    comment: decideOn.approve ? undefined : rejectReason.trim()
+                    comment: decideOn.approve
+                      ? (approveNote.trim() || undefined)
+                      : rejectReason.trim()
                   });
                   setDecideOn(null);
                   setRejectReason("");
+                  setApproveNote("");
                 }}
               >
                 {decide.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
@@ -939,5 +1114,22 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
         </div>
       </div>
     </Dialog>
+  );
+}
+
+/**
+ * One labelled fact in the details dialog.
+ *
+ * A dash rather than an empty space when there is nothing: a blank looks like
+ * the page failed to load the value, where a dash says there isn't one.
+ */
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+      <div className="mt-0.5 break-words text-sm font-medium">{children ?? "—"}</div>
+    </div>
   );
 }

@@ -2,6 +2,8 @@ package com.pixous.hrportal.modules.wfh;
 
 import com.pixous.hrportal.common.ApiException;
 import com.pixous.hrportal.common.WorkCalendar;
+import com.pixous.hrportal.modules.attendance.Attendance;
+import com.pixous.hrportal.modules.attendance.AttendanceRepository;
 import com.pixous.hrportal.modules.notification.NotificationService;
 import com.pixous.hrportal.modules.org.Holiday;
 import com.pixous.hrportal.modules.org.HolidayRepository;
@@ -53,6 +55,7 @@ public class WfhService {
     private final WfhRequestRepository repository;
     private final UserRepository userRepository;
     private final HolidayRepository holidayRepository;
+    private final AttendanceRepository attendanceRepository;
     private final NotificationService notificationService;
 
     // ----------------------------------------------------------- applying --
@@ -162,6 +165,10 @@ public class WfhService {
         r.setDecisionComment(comment);
         r.setUpdatedAt(LocalDateTime.now());
         WfhRequest saved = repository.save(r);
+
+        if (approve) {
+            markAttendance(saved);
+        }
 
         String who = userRepository.findById(deciderId).map(User::getName).orElse("Your approver");
         notify(saved.getUserId(),
@@ -365,6 +372,51 @@ public class WfhService {
             days++;
         }
         return days;
+    }
+
+    /**
+     * An approved WFH day is a day at work, so attendance says so.
+     *
+     * <p>The summary already counts WFH as attended --
+     * {@code absent = workingDays - present - wfh} -- but nothing was writing
+     * the record, so an approved request left the person showing as absent for
+     * every day of it, and payroll would have paid them for an absence.
+     *
+     * <p>Written for each working day in the range. Weekends and public
+     * holidays are skipped, because they were never working days and marking
+     * them would inflate the month.
+     *
+     * <p>A day that already has an attendance row is left alone. Somebody who
+     * punched in from the office that morning was at the office, and a WFH
+     * approval arriving later must not overwrite what actually happened --
+     * nor must a re-approval create a second row for one day.
+     *
+     * <p>Never allowed to throw. The decision is already saved and is the
+     * thing that mattered; a failure here leaves attendance to be corrected by
+     * hand, which is recoverable, where losing the approval is not.
+     */
+    private void markAttendance(WfhRequest r) {
+        try {
+            Set<LocalDate> holidays = holidayRepository
+                    .findByHolidayDateBetweenOrderByHolidayDateAsc(r.getFromDate(), r.getToDate())
+                    .stream().map(Holiday::getHolidayDate).collect(Collectors.toSet());
+
+            for (LocalDate d = r.getFromDate(); !d.isAfter(r.getToDate()); d = d.plusDays(1)) {
+                if (WorkCalendar.isWeekend(d)) continue;
+                if (holidays.contains(d)) continue;
+                if (attendanceRepository.findByUserIdAndWorkDate(r.getUserId(), d).isPresent()) {
+                    continue;
+                }
+                Attendance a = new Attendance();
+                a.setUserId(r.getUserId());
+                a.setWorkDate(d);
+                a.setMode("WFH");
+                a.setStatus("WFH");
+                attendanceRepository.save(a);
+            }
+        } catch (Exception ignored) {
+            // See the note above: the approval stands either way.
+        }
     }
 
     /** Never lets a notification failure lose the thing that was saved. */

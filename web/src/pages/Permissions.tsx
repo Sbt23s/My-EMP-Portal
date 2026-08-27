@@ -512,7 +512,16 @@ export default function PermissionsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50/80 dark:bg-slate-900/80">
-                    {isApprover && <TableHead className="text-right">Actions</TableHead>}
+                    {/*
+                      Always present, not only for an approver.
+
+                      The column was rendered only when isApprover, and inside
+                      it the buttons only when the row could still be decided
+                      -- so a decided row showed a dash and everybody else saw
+                      no column at all. Reading a request is not the same right
+                      as deciding one, and every role has the first.
+                    */}
+                    <TableHead>Actions</TableHead>
                     <TableHead sortable>Employee</TableHead>
                     <TableHead sortable>Team</TableHead>
                     <TableHead sortable>Date</TableHead>
@@ -530,31 +539,38 @@ export default function PermissionsPage() {
                 <TableBody>
                   {adminPaged.pageRows.map((r) => (
                     <TableRow key={r.id} className="border-b align-top last:border-0 hover:bg-muted/30 transition-colors [&>td]:px-3 [&>td]:py-4">
-                      {isApprover && (
-                        <TableCell className="text-right">
-                          {canDecideRow(r) ? (
-                            <div className="flex items-center justify-end gap-1.5">
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <Button size="sm" variant="outline" onClick={() => setViewRow(r)}>
+                            <Eye className="h-4 w-4" /> View
+                          </Button>
+                          {/*
+                            canDecideRow is the existing rule and is unchanged:
+                            pending, not overdue, not your own, and addressed to
+                            you. It decides the two buttons; it does not decide
+                            whether the request can be read.
+                          */}
+                          {isApprover && canDecideRow(r) && (
+                            <>
                               <Button
                                 size="sm"
                                 variant="outline"
                                 disabled={decide.isPending}
                                 onClick={() => { setRejectReason(""); setDecideOn({ row: r, approve: false }); }}
                               >
-                                <X className="h-4 w-4" /> Reject
+                                Reject
                               </Button>
                               <Button
                                 size="sm"
                                 disabled={decide.isPending}
-                                onClick={() => setDecideOn({ row: r, approve: true })}
+                                onClick={() => { setApproveNote(""); setDecideOn({ row: r, approve: true }); }}
                               >
-                                <Check className="h-4 w-4" /> Approve
+                                Approve
                               </Button>
-                            </div>
-                          ) : (
-                            <span className="whitespace-nowrap text-xs text-muted-foreground">—</span>
+                            </>
                           )}
-                        </TableCell>
-                      )}
+                        </div>
+                      </TableCell>
                       <TableCell className="font-medium">{r.employeeName}<div className="code-chip text-xs text-muted-foreground">{r.employeeCode}</div></TableCell>
                       <TableCell>{r.team || "—"}</TableCell>
                       <TableCell>{dayjs(r.requestDate).format("DD MMM YYYY")}</TableCell>

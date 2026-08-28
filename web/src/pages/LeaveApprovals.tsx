@@ -31,7 +31,19 @@ export default function LeaveApprovalsPage() {
   const [tab, setTab] = useState<"PENDING" | "APPROVED" | "REJECTED" | "ALL">("ALL");
   const [teamFilter, setTeamFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState<"ALL" | "MY">("ALL");
+  /*
+    Which slice of the queue is on screen.
+
+    ALL      — everything this person is allowed to see
+    ASSIGNED — the requests addressed to them, which are the ones they can act on
+    MY       — the requests they raised themselves
+
+    ASSIGNED is filtered from the rows already fetched rather than asked for
+    separately: /leave/requests-for-me already returns the whole visible queue
+    with requestedTo on every row, so a second call would fetch the same data
+    to answer a question the first one already answers.
+  */
+  const [viewMode, setViewMode] = useState<"ALL" | "ASSIGNED" | "MY">("ALL");
   const [viewModalData, setViewModalData] = useState<any | null>(null);
 
   const pending = useQuery({
@@ -82,7 +94,12 @@ export default function LeaveApprovalsPage() {
     onError: (err) => toast.error(apiMessage(err, "Bulk action failed"))
   });
 
-  const rawRows = viewMode === "ALL" ? (pending.data ?? []) : (myQueue.data ?? []);
+  const allRows = pending.data ?? [];
+  const assignedRows = allRows.filter((r: any) => r.requestedTo === user?.id);
+  const rawRows =
+    viewMode === "ALL" ? allRows
+    : viewMode === "ASSIGNED" ? assignedRows
+    : (myQueue.data ?? []);
 
   const counts = useMemo(() => ({
     ALL: rawRows.length,
@@ -177,6 +194,18 @@ export default function LeaveApprovalsPage() {
           }`}
         >
           All Requests
+        </button>
+        {/*
+          Everybody with an approvals page has requests addressed to them --
+          that is what the page is for -- so this tab is not gated on a role.
+        */}
+        <button
+          onClick={() => setViewMode("ASSIGNED")}
+          className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-colors ${
+            viewMode === "ASSIGNED" ? "bg-card shadow-sm text-primary border" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Assigned to me ({assignedRows.length})
         </button>
         {!isCto && !isAdmin && (
           <button

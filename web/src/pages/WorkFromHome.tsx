@@ -154,6 +154,7 @@ export default function WorkFromHomePage() {
   });
 
   const [boardDate, setBoardDate] = useState(todayIso());
+  const [boardTo, setBoardTo] = useState(todayIso());
 
   /*
     The months a list covers.
@@ -167,9 +168,10 @@ export default function WorkFromHomePage() {
   const [toMonth, setToMonth] = useState(dayjs().add(1, "year").format("YYYY-MM"));
 
   const today = useQuery({
-    queryKey: ["wfh", "active", boardDate],
+    queryKey: ["wfh", "active", boardDate, boardTo],
     queryFn: async () =>
-      (await api.get<ApiEnvelope<WfhRow[]>>(`/wfh/active?date=${boardDate}`)).data.data ?? [],
+      (await api.get<ApiEnvelope<WfhRow[]>>(
+        `/wfh/active-range?from=${boardDate}&to=${boardTo}`)).data.data ?? [],
     enabled: canSeeToday,
     // Shorter than the rest: this is the board somebody leaves open to see who
     // is where, so a decision made elsewhere should show without a refresh.
@@ -282,7 +284,7 @@ export default function WorkFromHomePage() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheet), "Work From Home");
     const tag = tab === "today"
-      ? dayjs(boardDate).format("YYYY-MM-DD")
+      ? (boardDate === boardTo ? boardDate : `${boardDate}_to_${boardTo}`)
       : `${fromMonth}_to_${toMonth}`;
     XLSX.writeFile(wb, `Work_From_Home_${tab}_${tag}.xlsx`);
   };
@@ -354,7 +356,10 @@ export default function WorkFromHomePage() {
           hint={
             tab === "inbox" ? "Sent to you"
             : tab === "all" ? "Across the organisation"
-            : tab === "today" ? dayjs(boardDate).format("DD MMM YYYY")
+            : tab === "today"
+              ? (boardDate === boardTo
+                  ? dayjs(boardDate).format("DD MMM YYYY")
+                  : `${dayjs(boardDate).format("DD MMM")} – ${dayjs(boardTo).format("DD MMM YYYY")}`)
             : "Requests you raised"
           } />
         <StatTile label="Pending" value={counts.PENDING} icon={Clock} fill={TILE_FILLS.amber}
@@ -383,24 +388,50 @@ export default function WorkFromHomePage() {
           shown on that tab, because the other three are not about one day.
         */}
         {tab === "today" && (
-          <div className="space-y-1">
-            <Label htmlFor="wfh-day" className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Day
-            </Label>
-            <Input
-              id="wfh-day"
-              type="date"
-              className="w-44"
-              max={DATE_MAX}
-              value={boardDate}
-              onChange={(e) => setBoardDate(e.target.value || todayIso())}
-            />
-          </div>
-        )}
-        {tab === "today" && boardDate !== todayIso() && (
-          <Button variant="outline" size="sm" onClick={() => setBoardDate(todayIso())}>
-            Today
-          </Button>
+          <>
+            <div className="space-y-1">
+              <Label htmlFor="wfh-day" className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                From
+              </Label>
+              <Input
+                id="wfh-day"
+                type="date"
+                className="w-40"
+                max={DATE_MAX}
+                value={boardDate}
+                onChange={(e) => {
+                  const v = e.target.value || todayIso();
+                  setBoardDate(v);
+                  // Keep the end on or after the start rather than letting an
+                  // impossible window be typed and silently corrected later.
+                  if (v > boardTo) setBoardTo(v);
+                }}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="wfh-day-to" className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                To
+              </Label>
+              <Input
+                id="wfh-day-to"
+                type="date"
+                className="w-40"
+                min={boardDate}
+                max={DATE_MAX}
+                value={boardTo}
+                onChange={(e) => setBoardTo(e.target.value || boardDate)}
+              />
+            </div>
+            {(boardDate !== todayIso() || boardTo !== todayIso()) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { setBoardDate(todayIso()); setBoardTo(todayIso()); }}
+              >
+                Today
+              </Button>
+            )}
+          </>
         )}
 
         {/* A month range on the lists, so a period can be looked at and exported. */}
@@ -467,7 +498,9 @@ export default function WorkFromHomePage() {
                   : tab === "all"
                     ? "Every request across the organisation appears here."
                     : tab === "today"
-                      ? `No approved request covers ${dayjs(boardDate).format("DD MMM YYYY")}.`
+                      ? `No approved request covers ${boardDate === boardTo
+                            ? dayjs(boardDate).format("DD MMM YYYY")
+                            : `${dayjs(boardDate).format("DD MMM")} to ${dayjs(boardTo).format("DD MMM YYYY")}`}.`
                       : "Use “Apply for WFH” to ask to work from home."
               }
             />

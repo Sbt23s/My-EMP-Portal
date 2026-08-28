@@ -242,6 +242,26 @@ public class WfhService {
                 .stream().map(r -> toView(r, viewerId)).toList();
     }
 
+    /**
+     * Who is working from home at any point between two dates.
+     *
+     * <p>Kept beside activeOn rather than replacing it: a single day is still
+     * the question somebody usually asks, and a range that happens to be one
+     * day long answers it identically.
+     */
+    @Transactional(readOnly = true)
+    public List<WfhDtos.WfhView> activeBetween(LocalDate from, LocalDate to, Long viewerId) {
+        LocalDate start = from == null ? LocalDate.now() : from;
+        LocalDate end = to == null ? start : to;
+        if (end.isBefore(start)) {
+            // Swapped rather than refused: a reversed range is somebody
+            // picking the second date first, not an error worth stopping for.
+            LocalDate t = start; start = end; end = t;
+        }
+        return repository.findActiveBetween(start, end)
+                .stream().map(r -> toView(r, viewerId)).toList();
+    }
+
     /** Who a request from this person would go to, so the form can name them. */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> approvers(Long userId) {

@@ -84,6 +84,23 @@ public class WfhController {
         return ApiResponse.ok(service.all(SecurityUtils.currentUserId()));
     }
 
+    /**
+     * Who is at home across a range.
+     *
+     * <p>A separate route from /active so nothing that already calls that one
+     * changes behaviour. Same authorities.
+     */
+    @GetMapping("/active-range")
+    @PreAuthorize("hasAnyAuthority('USER_MANAGE','DASHBOARD_EXEC','ATTENDANCE_TEAM')")
+    @Operation(summary = "Who is working from home between two dates")
+    public ApiResponse<List<WfhDtos.WfhView>> activeRange(
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ApiResponse.ok(service.activeBetween(from, to, SecurityUtils.currentUserId()));
+    }
+
     @GetMapping("/active")
     @PreAuthorize("hasAnyAuthority('USER_MANAGE','DASHBOARD_EXEC','ATTENDANCE_TEAM')")
     @Operation(summary = "Who is working from home on a given day")

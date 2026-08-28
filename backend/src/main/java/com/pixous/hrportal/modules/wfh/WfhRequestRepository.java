@@ -50,4 +50,20 @@ public interface WfhRequestRepository extends JpaRepository<WfhRequest, Long> {
             ORDER BY r.fromDate ASC
             """)
     List<WfhRequest> findActiveOn(@Param("day") LocalDate day);
+
+    /**
+     * Everyone working from home at any point in a range.
+     *
+     * <p>A request counts when it overlaps the window at all -- each starting
+     * on or before the other ends. Asking day by day would miss a three-day
+     * request that begins before the window and runs into it.
+     */
+    @Query("""
+            SELECT r FROM WfhRequest r
+            WHERE r.status = 'APPROVED'
+              AND r.fromDate <= :to AND r.toDate >= :from
+            ORDER BY r.fromDate ASC
+            """)
+    List<WfhRequest> findActiveBetween(@Param("from") LocalDate from,
+                                       @Param("to") LocalDate to);
 }

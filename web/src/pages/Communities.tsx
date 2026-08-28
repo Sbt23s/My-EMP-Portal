@@ -271,6 +271,14 @@ export default function CommunitiesPage() {
       await api.post("/communities", { 
         name: newGroupName, 
         description: newGroupDesc,
+        /*
+         * The server binds this through Lombok, which names the property
+         * "announcement" -- a body saying "isAnnouncement" is quietly
+         * ignored, so the tick box never took effect and every channel was
+         * created as an ordinary private group. Send both names: the one the
+         * server reads, and the original for anything else that expects it.
+         */
+        announcement: isAnnouncement,
         isAnnouncement: isAnnouncement
       });
     },

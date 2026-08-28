@@ -616,9 +616,21 @@ public class LeaveService {
     /** Employee code of the one person who approves HR's own leave and acts as main HR. */
     private static final String HR_LEAVE_APPROVER_CODE = "HR0001";
 
+    /**
+     * Whether the approver {@code a} covers the applicant {@code b}'s team.
+     *
+     * <p>Called only with {@code a} already known to hold IT_TL, so the extra
+     * assignment below is read in that direction: a leader may be given teams
+     * beyond their own designation, which is how a team with no leader of its
+     * own -- QA Testing -- gets one. With nothing assigned this behaves exactly
+     * as it did: designation against designation.
+     */
     private static boolean sameTeam(User a, User b) {
         String at = a.getDesignationTitle();
         String bt = b.getDesignationTitle();
+        if (bt != null && com.pixous.hrportal.modules.user.ExtraTeams.leads(a.getId(), bt)) {
+            return true;
+        }
         return at != null && bt != null && at.trim().equalsIgnoreCase(bt.trim());
     }
 

@@ -357,6 +357,19 @@ public class WfhService {
          */
         String myTeam = me.getDesignationTitle();
         if (myTeam != null && !myTeam.isBlank()) {
+            /*
+             * A Team Leader assigned this team explicitly comes first, ahead of
+             * the designation comparison. That is what gives a team with no
+             * leader of its own -- QA Testing -- an approver instead of falling
+             * through to whoever happens to be first in the pool. With nothing
+             * assigned this finds nobody and the original match below decides.
+             */
+            Optional<User> assigned = pool.stream()
+                    .filter(u -> com.pixous.hrportal.modules.user.ExtraTeams
+                            .leads(u.getId(), myTeam))
+                    .findFirst();
+            if (assigned.isPresent()) return assigned.get();
+
             Optional<User> sameTeam = pool.stream()
                     .filter(u -> myTeam.trim().equalsIgnoreCase(
                             u.getDesignationTitle() == null ? "" : u.getDesignationTitle().trim()))

@@ -20,11 +20,23 @@ import type { ApiEnvelope, PageEnvelope, UserSummary, AttendanceRecord } from "@
 import { MonthlySummaryCard } from "@/components/MonthlySummaryCard";
 import { Users as UsersIcon, UserCheck, UserX, Layers } from "lucide-react";
 
+/** A Team Leader covering a team other than the one their designation names. */
+type ExtraLead = {
+  id: number;
+  userId: number;
+  name: string | null;
+  code: string | null;
+  ownTeam: string | null;
+  teamTitle: string;
+};
+
 const NO_DESIGNATION = "No designation";
 const norm = (s?: string | null) => (s ?? "").trim().toLowerCase();
 
 export default function TeamsPage() {
   const qc = useQueryClient();
+  // Which team the "assign a Team Leader" dialog is open for, if any.
+  const [assignTo, setAssignTo] = useState<string | null>(null);
   const { hasPermission } = useAuth();
   // HR runs the team structure alongside admins — adding and deleting teams,
   // setting a team lead and moving people between teams.
@@ -107,6 +119,45 @@ export default function TeamsPage() {
     onError: (e) => toast.error(apiMessage(e, "Could not delete team"))
   });
 
+  /*
+   * Team Leaders who cover a team other than their own designation.
+   *
+   * A team here is a designation, so a leader normally leads exactly the team
+   * whose designation they carry. That leaves a team with members but no
+   * leader of its own -- QA Testing -- with nobody to approve its requests.
+   * These rows are the extra teams a leader has been given.
+   */
+  const extraLeads = useQuery({
+    queryKey: ["team-leader-extra"],
+    queryFn: async () => {
+      const res = await api.get<ApiEnvelope<ExtraLead[]>>("/team-leaders");
+      return res.data.data ?? [];
+    },
+    staleTime: 30_000
+  });
+
+  /** Assign a Team Leader to another team, or take one back off them. */
+  const assignTeam = useMutation({
+    mutationFn: async ({ userId, teamTitle }: { userId: number; teamTitle: string }) =>
+      api.post(`/team-leaders/${userId}/teams`, { teamTitle }),
+    onSuccess: (r: any) => {
+      toast.success(r?.data?.message ?? "Team Leader assigned");
+      qc.invalidateQueries({ queryKey: ["team-leader-extra"] });
+      setAssignTo(null);
+    },
+    onError: (e) => toast.error(apiMessage(e, "Could not assign the Team Leader"))
+  });
+
+  const unassignTeam = useMutation({
+    mutationFn: async ({ userId, teamTitle }: { userId: number; teamTitle: string }) =>
+      api.delete(`/team-leaders/${userId}/teams?teamTitle=${encodeURIComponent(teamTitle)}`),
+    onSuccess: () => {
+      toast.success("Removed");
+      qc.invalidateQueries({ queryKey: ["team-leader-extra"] });
+    },
+    onError: (e) => toast.error(apiMessage(e, "Could not remove the assignment"))
+  });
+
   // Make / unset an employee as this team's Team Leader (IT_TL role).
   const setLead = useMutation({
     mutationFn: async ({ userId, lead }: { userId: number; lead: boolean }) =>
@@ -148,9 +199,18 @@ export default function TeamsPage() {
     const sized = assignable
       .map((d) => ({ label: d.label, size: d.members.length }))
       .sort((a, b) => b.size - a.size);
+    // A team has a leader if one of its own members holds IT_TL, or if a
+    // leader from elsewhere has been assigned to cover it. Counting only the
+    // first would keep reporting QA Testing as leaderless after somebody had
+    // been put in charge of it.
+    const assignedTo = (label: string) =>
+      (extraLeads.data ?? []).filter(
+        (x) => (x.teamTitle || "").trim().toLowerCase() === label.trim().toLowerCase());
     const leadsIn = (d: typeof assignable[number]) =>
       d.members.filter((m) => (m.roles ?? []).includes("IT_TL"));
-    const withoutLead = assignable.filter((d) => leadsIn(d).length === 0);
+    const hasLead = (d: typeof assignable[number]) =>
+      leadsIn(d).length > 0 || assignedTo(d.label).length > 0;
+    const withoutLead = assignable.filter((d) => !hasLead(d));
     const empty = assignable.filter((d) => d.members.length === 0);
     const inTeams = people.filter((p) => (p.designationTitle || "").trim()).length;
 
@@ -159,7 +219,8 @@ export default function TeamsPage() {
       employees: people.length,
       inTeams,
       unassigned: people.length - inTeams,
-      leads: assignable.reduce((n, d) => n + leadsIn(d).length, 0),
+      leads: assignable.reduce(
+        (n, d) => n + leadsIn(d).length + assignedTo(d.label).length, 0),
       present: people.filter((p) => present.has(p.id)).length,
       absent: people.filter((p) => !present.has(p.id)).length,
       avg: assignable.length ? Math.round((inTeams / assignable.length) * 10) / 10 : 0,
@@ -167,7 +228,7 @@ export default function TeamsPage() {
       withoutLead: withoutLead.map((d) => d.label),
       empty: empty.map((d) => d.label)
     };
-  }, [groups, employees.data, attendance.data]);
+  }, [groups, employees.data, attendance.data, extraLeads.data]);
 
   const summaryText = useMemo(() => {
     const t = teamSummary;
@@ -266,7 +327,27 @@ export default function TeamsPage() {
                     {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                     <span className="font-medium">{d.label}</span>
                     <Badge variant="secondary">{members.length}</Badge>
+                    {/* A Team Leader from another team who covers this one.
+                        Shown beside the name so it is obvious at a glance who
+                        this team's requests actually go to. */}
+                    {(extraLeads.data ?? [])
+                      .filter((x) => norm(x.teamTitle) === norm(d.label))
+                      .map((x) => (
+                        <Badge
+                          key={x.id}
+                          variant="outline"
+                          className="gap-1 border-amber-300 text-amber-700 dark:text-amber-400"
+                          title={`${x.name} leads this team as well as ${x.ownTeam}`}
+                        >
+                          <Star className="h-3 w-3 fill-current" /> {x.name}
+                        </Badge>
+                      ))}
                   </button>
+                  {d.assignable && canManage && d.label !== NO_DESIGNATION && (
+                    <Button size="sm" variant="outline" onClick={() => setAssignTo(d.label)}>
+                      <Star className="h-4 w-4" /> Team Leader
+                    </Button>
+                  )}
                   {d.assignable && canManage && (
                     <Button size="sm" variant="outline" onClick={() => setAddTo(d.label)}>
                       <Plus className="h-4 w-4" /> Add
@@ -436,6 +517,18 @@ export default function TeamsPage() {
           onCreated={() => qc.invalidateQueries({ queryKey: ["org-designations-all"] })}
         />
       )}
+
+      {assignTo && (
+        <AssignLeaderDialog
+          team={assignTo}
+          leaders={(employees.data ?? []).filter((e) => (e.roles ?? []).includes("IT_TL"))}
+          assigned={(extraLeads.data ?? []).filter((x) => norm(x.teamTitle) === norm(assignTo))}
+          busy={assignTeam.isPending || unassignTeam.isPending}
+          onAssign={(userId) => assignTeam.mutate({ userId, teamTitle: assignTo })}
+          onRemove={(userId) => unassignTeam.mutate({ userId, teamTitle: assignTo })}
+          onClose={() => setAssignTo(null)}
+        />
+      )}
     </div>
   );
 }
@@ -530,6 +623,109 @@ function SkillsDialog({ member, onClose, onSaved }: { member: UserSummary; onClo
           {save.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           Save
         </Button>
+      </div>
+    </Dialog>
+  );
+}
+
+/**
+ * Put a Team Leader in charge of a team other than their own.
+ *
+ * A team here is a designation, so a leader normally covers exactly the team
+ * whose designation they carry. That leaves a team like QA Testing -- members,
+ * but nobody holding that designation as a leader -- with no approver for its
+ * leave, permission and work-from-home requests. Assigning a leader here fixes
+ * that without moving anybody between teams or changing anyone's designation.
+ */
+function AssignLeaderDialog({ team, leaders, assigned, busy, onAssign, onRemove, onClose }: {
+  team: string;
+  leaders: UserSummary[];
+  assigned: ExtraLead[];
+  busy: boolean;
+  onAssign: (userId: number) => void;
+  onRemove: (userId: number) => void;
+  onClose: () => void;
+}) {
+  const [chosen, setChosen] = useState<number | null>(null);
+  // A leader whose own designation is this team already covers it; offering to
+  // assign them again would create a row that changes nothing.
+  const own = leaders.filter((l) => norm(l.designationTitle) === norm(team));
+  const already = new Set(assigned.map((a) => a.userId));
+  const options = leaders.filter((l) => norm(l.designationTitle) !== norm(team) && !already.has(l.id));
+
+  return (
+    <Dialog open onClose={onClose} className="max-w-md">
+      <DialogHeader
+        title={`Team Leader for ${team}`}
+        description="Requests from this team go to the leaders listed here."
+      />
+      <div className="mt-3 space-y-4">
+        {own.length > 0 && (
+          <div className="text-sm">
+            <p className="mb-1 text-xs font-medium text-muted-foreground">Leads this team already</p>
+            {own.map((l) => (
+              <p key={l.id} className="flex items-center gap-1.5">
+                <Star className="h-3.5 w-3.5 fill-current text-amber-500" /> {l.name}
+                <span className="text-xs text-muted-foreground">(own team)</span>
+              </p>
+            ))}
+          </div>
+        )}
+
+        {assigned.length > 0 && (
+          <div className="text-sm">
+            <p className="mb-1 text-xs font-medium text-muted-foreground">Also leads this team</p>
+            {assigned.map((a) => (
+              <p key={a.id} className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5">
+                  <Star className="h-3.5 w-3.5 fill-current text-amber-500" /> {a.name}
+                  <span className="text-xs text-muted-foreground">from {a.ownTeam}</span>
+                </span>
+                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-destructive"
+                        disabled={busy} onClick={() => onRemove(a.userId)}>
+                  Remove
+                </Button>
+              </p>
+            ))}
+          </div>
+        )}
+
+        {own.length === 0 && assigned.length === 0 && (
+          <p className="rounded-md bg-amber-50 p-2 text-xs text-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
+            No Team Leader covers this team yet, so its requests have nowhere
+            specific to go. Choose one below.
+          </p>
+        )}
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            Add a Team Leader from another team
+          </label>
+          {options.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No other Team Leader is available to add.</p>
+          ) : (
+            <select
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              value={chosen ?? ""}
+              onChange={(e) => setChosen(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">Choose a Team Leader…</option>
+              {options.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name} — {l.designationTitle || "no team"}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 pt-1">
+          <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button disabled={!chosen || busy} onClick={() => chosen && onAssign(chosen)}>
+            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Star className="mr-2 h-4 w-4" />}
+            Assign
+          </Button>
+        </div>
       </div>
     </Dialog>
   );

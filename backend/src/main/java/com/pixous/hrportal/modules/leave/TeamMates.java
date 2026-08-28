@@ -1,5 +1,6 @@
 package com.pixous.hrportal.modules.leave;
 
+import com.pixous.hrportal.modules.user.ExtraTeams;
 import com.pixous.hrportal.modules.user.User;
 
 /**
@@ -39,6 +40,18 @@ final class TeamMates {
      */
     static boolean sameTeam(User me, User other) {
         String mine = norm(me.getDesignationTitle());
+
+        /*
+         * A Team Leader may be assigned teams beyond their own designation, so
+         * that a team with no leader of its own -- QA Testing -- still has
+         * somebody to approve its requests. Checked before the designation
+         * comparison and only ever adds a match: with no assignment recorded
+         * this is false and the original rule below decides, unchanged.
+         */
+        if (mine != null && ExtraTeams.leads(other.getId(), mine)) {
+            return true;
+        }
+
         if (mine != null) {
             return mine.equals(norm(other.getDesignationTitle()));
         }

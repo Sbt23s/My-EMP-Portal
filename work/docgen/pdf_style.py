@@ -239,12 +239,11 @@ def document(title: str, subtitle: str, lede: str, body: str,
 
     meta = [
         ('Document', title),
-        ('Version', '1.0'),
         ('Date', datetime.date.today().strftime('%d %B %Y')),
-        ('Application', 'PIXOUS HR Portal — backend, web portal and mobile app'),
-        ('Environment', 'Production — pixoushrportal.pixous.info'),
-        ('Prepared by', 'PIXOUS Technologies — Engineering'),
-        ('Classification', 'Confidential — client deliverable'),
+        ('Application', 'My EMP Portal'),
+        ('Environment', 'pixoushrportal.pixous.info'),
+        ('Prepared by', 'AI Engineer'),
+        ('Developed by', 'Sethubala B'),
     ] + (meta_extra or [])
 
     meta_rows = '\n'.join(
@@ -268,9 +267,9 @@ def document(title: str, subtitle: str, lede: str, body: str,
     <div class="cover-meta"><table>{meta_rows}</table></div>
   </div>
   <div class="cover-foot">
-    This document contains confidential information about the PIXOUS HR Portal.
-    Every figure quoted is measured, and the command that produced it is stated
-    beside it.
+    Confidential. This document describes My EMP Portal as deployed at
+    pixoushrportal.pixous.info. Every figure quoted was measured or counted from
+    the application itself.
   </div>
 </section>
 {body}

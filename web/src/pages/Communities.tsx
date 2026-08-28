@@ -107,6 +107,12 @@ function CommunityCard({
           </CardTitle>
           <CardDescription className="mt-1">{c.description}</CardDescription>
           <p className="text-xs text-muted-foreground mt-1">{members?.length ?? 0} members</p>
+          {!isLoading && (members?.length ?? 0) <= 1 && (
+            <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+              Only you are in this group, so nobody else can see it. Add people
+              with Manage members.
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-1.5">
           {/*
@@ -269,7 +275,15 @@ export default function CommunitiesPage() {
       });
     },
     onSuccess: () => {
-      toast.success("Community created");
+      /*
+       * Creating a group only puts you in it. Until members are added nobody
+       * else can see it, which looks exactly like the group failing to save.
+       * Say the next step out loud rather than leaving it to be discovered.
+       */
+      toast.success(
+        "Community created. Open Manage members to add people -- until then only you can see it.",
+        { duration: 6000 },
+      );
       setNewGroupName("");
       setNewGroupDesc("");
       setIsAnnouncement(false);

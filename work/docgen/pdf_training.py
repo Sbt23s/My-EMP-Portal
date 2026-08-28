@@ -273,56 +273,192 @@ section(
 
 # ─────────────────────────────────────────────────────────── 6 ──
 section(
-  h1("6.", "The Other Modules, Briefly"),
-  table(["Module", "What it is for", "Who uses it"],
-        [["Dashboard", "Today at a glance: attendance, pending items, balances",
-          "Everyone"],
-         ["Work Reports", "What you did, day by day, with attachments",
-          "Everyone files; TL and HR review"],
-         ["Tasks", "Work assigned to you, with progress",
-          "Everyone; TL and HR assign"],
-         ["Claims", "Travel and expense claims, with receipts",
-          "Everyone files; HR approves"],
-         ["Assets", "Equipment issued to you; confirm receipt on collection",
-          "Everyone; HR issues"],
-         ["Supports", "Raise an IT or facilities ticket and track it",
-          "Everyone; HR and admins resolve"],
-         ["Complaints", "Raise something with HR or the CTO, confidentially",
-          "Everyone; HR, CTO and admins review"],
-         ["Payslips", "Your monthly pay — view, download or email to yourself",
-          "Employees and Team Leaders"],
-         ["Payroll", "Runs, requests and approvals for the whole company",
-          "HR, CTO, Admin"],
-         ["Chat", "One-to-one and group messaging, with calls",
-          "Everyone"],
-         ["Communities", "Company channels and announcements",
-          "HR and CTO post; everyone reads"],
-         ["Calendar", "Company events and public holidays", "Everyone"],
-         ["Teams", "The staff directory, by team", "Everyone"],
-         ["Employee Attendance", "Who was in, by day or range",
-          "TL for their team; HR and CTO for everyone"],
-         ["Reports", "Exports across attendance, leave and payroll",
-          "TL, HR, CTO"],
-         ["Employees", "Employee records, onboarding, credentials",
-          "HR, CTO, Admin"],
-         ["Audit Log", "Who did what, and when", "System Admin"]],
-        widths=["20%", "44%", "36%"]),
+  h1("6.", "Every Module, Step by Step"),
+  p("Each module below is written the same way: what it is for, then the exact "
+    "clicks. Where a button carries a symbol rather than a word, the symbol is "
+    "named."),
 
-  h2("6.1  Attachments and comments"),
+  h2("6.1  Chat — messages, voice and video calls"),
+  p("One-to-one conversations and group channels, with calling built in."),
+  steps([
+    "Open <b>Chat</b> from the left menu. The left panel lists your "
+    "conversations under <b>Channels &amp; Groups</b> and <b>Personal Chats</b>.",
+    "To start a new one-to-one chat, press <b>New</b> at the top of that panel "
+    "and pick a colleague. The conversation opens immediately.",
+    "Click any conversation to open it. Messages appear on the right.",
+    "Type in the box at the bottom and press <b>Enter</b> to send. "
+    "<b>Shift + Enter</b> starts a new line instead of sending.",
+    "To attach a file, press the <b>paperclip</b> beside the message box, "
+    "choose the file, then press Enter or the send arrow.",
+    "To send a voice note, press and hold the <b>microphone</b> beside the "
+    "message box, speak, and release to send.",
+  ]),
+  table(["To do this", "Press", "What happens"],
+        [["Voice call one person",
+          "the <b>telephone</b> icon at the top right of the conversation",
+          "It rings them. They see an incoming call and answer or decline."],
+         ["Video call one person",
+          "the <b>camera</b> icon beside it",
+          "The same, with video. Your camera light comes on when they answer."],
+         ["Call a whole group",
+          "<b>Group call</b> at the top of the chat list, or the camera icon "
+          "inside a channel",
+          "Everyone in the channel is rung. They join as they answer."],
+         ["Mute yourself mid-call", "the <b>microphone</b> button on the call bar",
+          "It turns red. Others stop hearing you; you still hear them."],
+         ["Turn your camera off", "the <b>camera</b> button on the call bar",
+          "Your tile shows your initials instead of video."],
+         ["Share your screen", "the <b>screen</b> button on the call bar",
+          "Choose a window or the whole screen. Press it again to stop."],
+         ["Leave the call", "the red <b>handset</b> button",
+          "You leave. The call continues for everybody else."]],
+        widths=["24%", "38%", "38%"]),
+  note("A call needs microphone and camera permission. The browser asks once, "
+       "the first time — choose Allow. If you refused earlier, the padlock "
+       "beside the address bar lets you change it.")
+  ,
+  steps([
+    "To reply to one message, hover it and press <b>Reply</b>. Your reply is "
+    "shown attached to theirs.",
+    "To react, hover the message and press the <b>face</b> icon, then pick an "
+    "emoji.",
+    "To pin something important, use the <b>three dots</b> on the message and "
+    "choose <b>Pin</b>. Pinned messages sit at the top of the room.",
+    "To run a poll or schedule a message for later, press <b>Poll, schedule, "
+    "confirmation</b> beside the message box.",
+  ]),
+
+  h2("6.2  Work Reports — what you did each day"),
+  steps([
+    "Open <b>Work Reports</b>. Your entries are grouped by date, newest first.",
+    "Press <b>Add</b> (bottom right) to file one.",
+    "Choose the <b>date</b>, the <b>project</b>, and the <b>hours</b>.",
+    "Describe the work in <b>Task description</b>.",
+    "Attach files if there is something to show, then press <b>Save</b>.",
+    "To correct an entry, press <b>Edit</b> on it. To see what was attached, "
+    "press <b>Files for this entry</b>.",
+  ]),
+  note("A Team Leader or HR sees a <b>My team</b> chip above the list. It "
+       "switches to what the team filed; the Add button hides there, because "
+       "the form files a report as yours."),
+
+  h2("6.3  Tasks — work assigned to you"),
+  steps([
+    "Open <b>Tasks</b>. Each row is one task with its due date and progress.",
+    "Click a task to open it, then drag the <b>progress slider</b> and press "
+    "<b>Save</b>.",
+    "Press <b>Discuss this task</b> to ask a question — the person who "
+    "assigned it is notified.",
+    "A Team Leader or HR sees <b>Assign Task</b>: choose the person, title, "
+    "priority and due date, then <b>Assign</b>.",
+    "An <b>Everyone</b> chip shows every person's tasks. That view is "
+    "read-only — progress belongs to whoever owns the task.",
+    "<b>Export Tasks to Excel</b> saves what is on screen, filters included.",
+  ]),
+
+  h2("6.4  Claims — travel and expenses"),
+  steps([
+    "Open <b>Claims</b>, then press <b>New claim</b>.",
+    "Choose the <b>date</b> and the <b>category</b>.",
+    "For travel, enter <b>starting km</b> and <b>ending km</b> — the distance "
+    "and amount are worked out for you.",
+    "Add bus fare or other costs if there were any.",
+    "Attach the <b>petrol slip</b> or receipt photograph.",
+    "Write a short remark and press <b>Submit</b>.",
+    "Press <b>View</b> on any row to see the whole claim and its receipts.",
+  ]),
+  note("HR sees every claim, can set the per-kilometre rates under <b>TA "
+       "Settings</b>, and can send a filtered report by email with <b>Email "
+       "this claims report</b>."),
+
+  h2("6.5  Assets — equipment issued to you"),
+  steps([
+    "Open <b>Assets</b> to see what is in your name.",
+    "When something new is issued, the row says <b>awaiting confirmation</b>.",
+    "Press <b>Confirm receipt</b> once it is physically in your hands. Until "
+    "you do, the record says it was issued but not collected.",
+    "HR adds equipment with <b>New asset</b>, assigns it, and uses <b>Export "
+    "Assets</b> for a register.",
+  ]),
+
+  h2("6.6  Supports — raising an IT or facilities ticket"),
+  steps([
+    "Open <b>Supports</b>, then press <b>New ticket</b>.",
+    "Give it a <b>title</b> — one line saying what is wrong.",
+    "Choose the <b>type</b> (IT, HR, Facilities, Payroll), <b>category</b> and "
+    "<b>priority</b>.",
+    "Choose <b>Send to</b>. This is required: a ticket addressed to nobody "
+    "sits in nobody's queue.",
+    "Describe the problem, attach a screenshot if it helps, and press "
+    "<b>Submit</b>.",
+    "Click the row later to read replies and answer them.",
+  ]),
+  note("Whoever handles tickets sees three tabs — <b>Assigned to me</b>, "
+       "<b>My tickets</b> and <b>All tickets</b> — and can move a ticket "
+       "through Open, In progress, Awaiting parts, Resolved and Closed."),
+
+  h2("6.7  Complaints — raising something confidentially"),
+  steps([
+    "Open <b>Complaints</b>, then press <b>New Submission</b>.",
+    "Write the <b>subject</b>, choose the <b>category</b> and <b>priority</b>.",
+    "Choose <b>Send to</b> — HR, the System Admin or the CTO. Only that person "
+    "can respond.",
+    "Describe it fully. Tick <b>Submit anonymously</b> to hide your name from "
+    "the reviewer.",
+    "Press <b>Submit Complaint</b>.",
+  ]),
+  note("A reviewer sees <b>To me</b>, <b>Mine</b> and <b>All</b>. Only the "
+       "person a complaint names can respond, and the status moves one way: "
+       "Open → In review → Resolved or Rejected."),
+
+  h2("6.8  Payslips"),
+  steps([
+    "Open <b>Payslips</b>. Each month is one card showing net pay.",
+    "Press <b>View</b> to open the PDF, or <b>Download</b> to save it.",
+    "Press <b>Email this payslip to yourself</b> to have it sent to the "
+    "address on your profile — you never type an address, so it cannot go to "
+    "the wrong person.",
+  ]),
+
+  h2("6.9  Calendar, Teams and Communities"),
+  table(["Module", "What to do"],
+        [["Calendar",
+          "Company events and public holidays by month. Use the arrows to "
+          "change month; click a day to see what is on it."],
+         ["Teams",
+          "The staff directory grouped by team — name, code and designation. "
+          "Use it to find who somebody is before messaging them."],
+         ["Communities",
+          "HR and the CTO create channels here and choose who is in them. "
+          "Tick <b>Announcement Channel</b> to make one everybody can read but "
+          "only HR and the CTO can post to. Members read it in Chat."]],
+        widths=["18%", "82%"]),
+
+  h2("6.10  For managers — Employee Attendance and Reports"),
+  steps([
+    "<b>Employee Attendance</b> shows who was in. Pick a <b>date</b>, or a "
+    "range, and export it.",
+    "A Team Leader sees their own team; HR and the CTO see everybody.",
+    "<b>Reports</b> gathers attendance, leave and payroll into one place. "
+    "Choose the period, then <b>Export Excel</b>.",
+  ]),
+
+  h2("6.11  Attachments and comments — the same everywhere"),
   p("Leave, permission and work-from-home requests all carry the same two "
     "panels, so they behave identically wherever you meet them."),
   bullets([
     "<b>Photos and documents</b> — images, PDF or Word. Up to ten files, 10 MB "
-    "each. Optional everywhere.",
+    "each, and optional everywhere.",
+    "A photograph opens full size when clicked; a PDF or Word file opens in a "
+    "new tab.",
     "<b>Comments</b> — a conversation between the applicant and the approver. "
-    "Both see it; the other person is notified.",
+    "Type and press <b>Enter</b> to send; the other person is notified.",
     "A file may be removed only by whoever uploaded it.",
     "Attaching stays open while a request is pending, so a document can be "
     "added after an approver asks for it.",
   ]),
 ),
 
-# ─────────────────────────────────────────────────────────── 7 ──
 section(
   h1("7.", "Sign-in Details"),
   p("Usernames as they stand today. Passwords are issued separately and are "

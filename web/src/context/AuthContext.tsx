@@ -78,6 +78,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [serverModules, setServerModules] = useState<{
     enabled: string[];
     configured: boolean;
+    /**
+     * Which roles each module is visible to, as the technical-admin screen
+     * saved it. A module absent from this map was never configured and is
+     * shown to everybody it is enabled for, exactly as before.
+     */
+    roles?: Record<string, string[]>;
+    /** Modules whose CTO switch has actually been used. */
+    ctoConfigured?: string[];
   } | null>(null);
   const [branding, setBranding] = useState<BrandingDoc | null>(null);
   const [loading, setLoading] = useState(true);
@@ -300,13 +308,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function load() {
       try {
         const res = await api.get<
-          ApiEnvelope<{ enabled: string[]; configured: boolean; branding?: string }>
+          ApiEnvelope<{
+            enabled: string[];
+            configured: boolean;
+            roles?: Record<string, string[]>;
+            ctoConfigured?: string[];
+            branding?: string;
+          }>
         >("/my-modules");
         const data = res.data?.data;
         if (active && data && Array.isArray(data.enabled)) {
           setServerModules({
             enabled: data.enabled.map((c) => String(c).toUpperCase()),
-            configured: Boolean(data.configured)
+            configured: Boolean(data.configured),
+            // Both are new; an older server sends neither and every module is
+            // then shown as it always was.
+            roles: data.roles ?? undefined,
+            ctoConfigured: Array.isArray(data.ctoConfigured) ? data.ctoConfigured : undefined
           });
           /*
            * Set on every load, including to null.
@@ -335,6 +353,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [user]);
 
+  /**
+   * Whether the signed-in person is covered by a module's visibleRoles list.
+   *
+   * One rule for both paths -- the server's list and the older localStorage
+   * copy -- because the two disagreeing is how a switch comes to mean one thing
+   * on screen and another in the portal.
+   *
+   * The CTO is matched by employee code before the Company Admin check: that
+   * account also carries COMPANY_ADMIN, so reading roles alone would file the
+   * company head as an administrator and its own switch could never decide
+   * anything. And a list saved before the CTO rung existed names no CTO at all,
+   * so an untouched CTO follows whatever Company Admin is allowed -- which is
+   * exactly what it saw before -- rather than silently losing every module.
+   */
+  const matchesVisibleRoles = useCallback(
+    (vRoles: string[], ctoConfigured = false): boolean => {
+      if (!user) return false;
+      const roles = user.roles || [];
+
+      if (user.employeeCode?.toUpperCase() === "PIX-E100") {
+        if (vRoles.includes("CTO")) return true;
+        // No CTO key. Either it was turned off -- in which case the switch has
+        // been used and the answer is no -- or nobody has ever touched it, and
+        // the CTO keeps whatever Company Admin has, as it did before the rung
+        // existed.
+        return ctoConfigured ? false : vRoles.includes("COMPANY_ADMIN");
+      }
+
+      const isCompanyAdmin = roles.includes("SUPER_ADMIN") || roles.includes("COMPANY_ADMIN") || roles.includes("BOARD_ADMIN");
+      const isHrManager = roles.includes("HR_MANAGER") || roles.includes("IT_HR") || roles.includes("CV_HR") || roles.includes("IT_MGR");
+      const isTeamLead = roles.includes("TEAM_LEAD") || roles.includes("IT_TL") || roles.includes("CV_SUP");
+      const isEmployee = roles.includes("EMPLOYEE") || roles.includes("IT_EMP") || roles.includes("CV_EMP");
+
+      if (isCompanyAdmin && vRoles.includes("COMPANY_ADMIN")) return true;
+      if (isHrManager && vRoles.includes("HR_MANAGER")) return true;
+      if (isTeamLead && vRoles.includes("TEAM_LEAD")) return true;
+      if (isEmployee && vRoles.includes("EMPLOYEE")) return true;
+      return false;
+    },
+    [user]
+  );
+
   const hasModule = useCallback(
     (moduleCode: string) => {
       if (!user) return false;
@@ -355,26 +415,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
        * its portal empty.
        */
       if (serverModules?.configured) {
-        return serverModules.enabled.includes(moduleCode.toUpperCase());
+        const code = moduleCode.toUpperCase();
+        if (!serverModules.enabled.includes(code)) return false;
+
+        /*
+         * Then the Role Visibility switches, which the server now returns.
+         *
+         * They were written by the technical-admin screen and never read back,
+         * so turning a module off for a role saved the setting and changed
+         * nothing -- the module stayed on that person's screen. Applied here,
+         * after the enabled check, so a module switched off is still off for
+         * everybody regardless of role.
+         *
+         * A module absent from the map was never configured and is shown, as
+         * it always was. Only an explicit list constrains anybody.
+         */
+        const vRoles = serverModules.roles?.[code];
+        if (!vRoles) return true;
+        return matchesVisibleRoles(vRoles, serverModules.ctoConfigured?.includes(code) === true);
       }
       if (serverModules && !serverModules.configured) {
         return true; // nothing configured server-side: show everything
       }
 
       const lookupId = user.companyId || (user as any).tenantId || "PIX-MASTER";
-
-      const userRoles = user.roles || [];
-      /*
-       * The company head, by employee code rather than by role: that account
-       * also carries COMPANY_ADMIN, so reading the role list alone would file
-       * the CTO as an administrator. The rest of the portal identifies it the
-       * same way.
-       */
-      const isCto = user.employeeCode?.toUpperCase() === "PIX-E100";
-      const isCompanyAdmin = userRoles.includes("SUPER_ADMIN") || userRoles.includes("COMPANY_ADMIN") || userRoles.includes("BOARD_ADMIN");
-      const isHrManager = userRoles.includes("HR_MANAGER") || userRoles.includes("IT_HR") || userRoles.includes("CV_HR") || userRoles.includes("IT_MGR");
-      const isTeamLead = userRoles.includes("TEAM_LEAD") || userRoles.includes("IT_TL") || userRoles.includes("CV_SUP");
-      const isEmployee = userRoles.includes("EMPLOYEE") || userRoles.includes("IT_EMP") || userRoles.includes("CV_EMP");
 
       try {
         const raw = localStorage.getItem("hrp.tech_admin_company_modules");
@@ -386,41 +450,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (!mod) return false;
             if (!mod.enabled) return false;
 
-            const vRoles = mod.visibleRoles || [];
-
-            /*
-             * The CTO is its own rung, checked before Company Admin.
-             *
-             * That account holds COMPANY_ADMIN among its roles, so without this
-             * it would be governed by the Company Admin switch and the CTO
-             * toggle in Tech Admin could never turn anything on or off by
-             * itself.
-             *
-             * A configuration saved before the CTO rung existed lists no "CTO"
-             * key at all. Treating that as "off" would silently take every
-             * module away from the company head, so a stored list that has
-             * never been asked about the CTO falls back to what Company Admin
-             * is allowed -- which is exactly what the CTO saw before. Once
-             * somebody touches the CTO switch the key is present, and from then
-             * on it decides on its own.
-             */
-            if (isCto) {
-              const asked = vRoles.includes("CTO") || mod.ctoConfigured === true;
-              return asked ? vRoles.includes("CTO") : vRoles.includes("COMPANY_ADMIN");
-            }
-
-            if (isCompanyAdmin && vRoles.includes("COMPANY_ADMIN")) return true;
-            if (isHrManager && vRoles.includes("HR_MANAGER")) return true;
-            if (isTeamLead && vRoles.includes("TEAM_LEAD")) return true;
-            if (isEmployee && vRoles.includes("EMPLOYEE")) return true;
-
-            return false;
+            // The same rule the server path uses, so a switch cannot mean one
+            // thing here and another there.
+            return matchesVisibleRoles(mod.visibleRoles || [], mod.ctoConfigured === true);
           }
         }
       } catch (e) {}
       return true;
     },
-    [user, serverModules]
+    [user, serverModules, matchesVisibleRoles]
   );
 
   /**

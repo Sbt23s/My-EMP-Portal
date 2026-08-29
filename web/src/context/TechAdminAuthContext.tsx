@@ -505,7 +505,14 @@ export function TechAdminProvider({ children }: { children: ReactNode }) {
         api.post(`/technical-admin/companies/${tenant.id}/modules`, {
           moduleCode: m.code,
           enabled: m.enabled,
-          featureFlags: JSON.stringify({ visibleRoles: m.visibleRoles ?? [...ALL_ROLES] })
+          // ctoConfigured rides along so the portal can tell "the CTO switch
+          // has never been touched" from "it was turned off" -- both otherwise
+          // look like an absent CTO key, and the first must keep following
+          // Company Admin rather than hiding every module from the company head.
+          featureFlags: JSON.stringify({
+            visibleRoles: m.visibleRoles ?? [...ALL_ROLES],
+            ctoConfigured: m.ctoConfigured === true
+          })
         })
       ));
 

@@ -6,6 +6,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +30,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/my-modules")
 public class MyModulesController {
+
+    private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER =
+            new com.fasterxml.jackson.databind.ObjectMapper();
 
     private final CompanyModuleRepository companyModuleRepository;
 
@@ -96,9 +103,76 @@ public class MyModulesController {
         boolean configured = rows.stream()
                 .anyMatch(r -> !"BRANDING".equalsIgnoreCase(r.getModuleCode()));
 
+        /*
+         * Which roles each module is visible to.
+         *
+         * The technical-admin screen has always written this, inside
+         * featureFlags as {"visibleRoles": [...]}, but nothing ever read it
+         * back -- so every Role Visibility switch was saved and then ignored,
+         * and a module turned off for a role stayed on screen for them. Adding
+         * it here alongside enabled rather than in a request of its own,
+         * because it is needed at the same moment and by the same caller.
+         *
+         * A module with no stored list is simply absent from the map, and the
+         * client shows it as it always did. Only a module somebody has actually
+         * configured constrains anybody.
+         */
+        Map<String, List<String>> roles = new LinkedHashMap<>();
+        List<String> ctoConfigured = new ArrayList<>();
+        for (CompanyModule r : rows) {
+            String code = r.getModuleCode();
+            if (code == null || code.isBlank()) continue;
+            if ("BRANDING".equalsIgnoreCase(code)) continue;
+            String key = code.trim().toUpperCase();
+            List<String> visible = readVisibleRoles(r.getFeatureFlags());
+            if (visible != null) roles.put(key, visible);
+            if (readCtoConfigured(r.getFeatureFlags())) ctoConfigured.add(key);
+        }
+
         return ApiResponse.ok(Map.of(
                 "enabled", enabled,
                 "configured", configured,
+                "roles", roles,
+                // The modules whose CTO switch has actually been used. Anything
+                // not listed here has never been asked, and the CTO keeps
+                // following the Company Admin setting for it.
+                "ctoConfigured", ctoConfigured,
                 "branding", branding));
+    }
+
+    /**
+     * The visibleRoles list out of a module's featureFlags document.
+     *
+     * @return the roles, or null when the document is missing, unreadable or
+     *         carries no list -- all of which mean "never configured", which the
+     *         caller must not confuse with "configured as nobody".
+     */
+    /** Whether the CTO switch has ever been used for this module. */
+    private static boolean readCtoConfigured(String featureFlags) {
+        if (featureFlags == null || featureFlags.isBlank()) return false;
+        try {
+            JsonNode node = MAPPER.readTree(featureFlags).get("ctoConfigured");
+            return node != null && node.asBoolean(false);
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private static List<String> readVisibleRoles(String featureFlags) {
+        if (featureFlags == null || featureFlags.isBlank()) return null;
+        try {
+            JsonNode node = MAPPER.readTree(featureFlags).get("visibleRoles");
+            if (node == null || !node.isArray()) return null;
+            List<String> out = new ArrayList<>();
+            node.forEach(n -> {
+                String v = n.asText(null);
+                if (v != null && !v.isBlank()) out.add(v.trim().toUpperCase());
+            });
+            return out;
+        } catch (Exception ignored) {
+            // A malformed document must not take the portal down, and must not
+            // hide a module either: unreadable is treated as unconfigured.
+            return null;
+        }
     }
 }

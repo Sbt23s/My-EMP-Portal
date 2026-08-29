@@ -19,6 +19,12 @@ build/
 !.env.production.example
 !**/.env.example
 !**/.env.production.example
+# web/.env.production holds no secrets: two empty/relative values that keep a
+# production build pointing at its own origin. Ignored, it protected only the
+# machine it was written on, and a fresh clone would rebuild with the developer
+# .env baked in -- which is how localhost:7060 reached production and broke
+# login for everyone.
+!web/.env.production
 
 # Java / Maven
 target/

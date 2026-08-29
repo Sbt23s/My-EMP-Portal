@@ -496,7 +496,15 @@ export function TechAdminProvider({ children }: { children: ReactNode }) {
             if (!was) return true;
             return (
               m.enabled !== was.enabled ||
-              JSON.stringify(m.visibleRoles) !== JSON.stringify(was.visibleRoles)
+              JSON.stringify(m.visibleRoles) !== JSON.stringify(was.visibleRoles) ||
+              /*
+               * Turning the CTO switch off on a module whose list never named
+               * the CTO leaves visibleRoles identical -- only ctoConfigured
+               * flips. Compared on the two fields alone the row looked
+               * unchanged, was never sent, and the switch appeared to do
+               * nothing while the module stayed on the CTO's screen.
+               */
+              (m.ctoConfigured === true) !== (was.ctoConfigured === true)
             );
           })
         : next;

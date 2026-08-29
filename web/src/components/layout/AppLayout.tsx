@@ -6,7 +6,7 @@ import {
   LifeBuoy, User, Bell, Menu, X, Moon, Sun, LogOut,
   FileBarChart, ClipboardList, Settings, Map, MessageSquareWarning, FileText,
   FolderOpen, ListTodo, FileArchive, CalendarDays, ChevronDown, Bot, Users2, Eraser, ScrollText,
-  PartyPopper, MessageSquare, Building2, FolderGit2, History, ShieldAlert
+  PartyPopper, MessageSquare, Building2, FolderGit2, History, ShieldAlert, Lock
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useBranding } from "@/hooks/useBranding";
@@ -727,7 +727,31 @@ function AppShell() {
         {/* Routed content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           <div className="mx-auto max-w-7xl">
-            <Outlet />
+            {/*
+              A module switched off for this person closes the page, not just
+              the sidebar link. Hiding the link left the page reachable by
+              typing its address, so a module turned off in Tech Admin still
+              opened for the role it was turned off for.
+
+              Every routed page renders through this one Outlet, so the check
+              belongs here rather than repeated on each route. activeModule is
+              null for anything MODULE_ROUTES does not name -- the profile, the
+              dashboard, a 404 -- and those pass through untouched.
+            */}
+            {activeModule && !hasModule(activeModule) ? (
+              <div className="mx-auto max-w-md py-20 text-center">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                  <Lock className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <h2 className="font-display text-lg font-semibold">Not available</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  This module is switched off for your role. Contact your
+                  administrator if you need it.
+                </p>
+              </div>
+            ) : (
+              <Outlet />
+            )}
           </div>
         </main>
       </div>

@@ -52,6 +52,14 @@ export interface CompanyModuleItem {
   category: string;
   enabled: boolean;
   visibleRoles?: string[];
+  /**
+   * Whether the CTO switch has ever been used for this module.
+   *
+   * Absent on every configuration saved before the CTO rung existed, which is
+   * what lets those keep following the Company Admin setting instead of
+   * silently hiding every module from the company head.
+   */
+  ctoConfigured?: boolean;
   /** Created here rather than shipped in defaultModulesTemplate. */
   custom?: boolean;
 }
@@ -87,7 +95,20 @@ interface TechAdminContextValue {
 
 export const TechAdminContext = createContext<TechAdminContextValue | undefined>(undefined);
 
-const ALL_ROLES = ["COMPANY_ADMIN", "HR_MANAGER", "TEAM_LEAD", "EMPLOYEE"];
+/*
+ * The rungs a module can be shown to.
+ *
+ * CTO sits above Company Admin deliberately. The CTO account carries
+ * COMPANY_ADMIN among its roles, so without a rung of its own it was governed
+ * by the Company Admin switch and could not be turned on or off separately --
+ * which is the whole point of listing it. It is matched by employee code
+ * (PIX-E100) ahead of the role check, the same way the rest of the portal
+ * identifies the company head.
+ *
+ * Appended rather than inserted: a stored configuration lists the roles it was
+ * saved with, and every one of those keys still means what it did.
+ */
+const ALL_ROLES = ["COMPANY_ADMIN", "CTO", "HR_MANAGER", "TEAM_LEAD", "EMPLOYEE"];
 
 export const initialCompaniesList: CompanyTenant[] = [
   {
@@ -561,10 +582,33 @@ export function TechAdminProvider({ children }: { children: ReactNode }) {
     const next = currentList(companyId).map(m => {
       if (m.code !== moduleCode) return m;
       const roles = m.visibleRoles || [...ALL_ROLES];
-      return {
+      /*
+       * What the switch is showing right now, which is what the click must
+       * reverse.
+       *
+       * For an untouched CTO that is the Company Admin setting, not the absent
+       * CTO key: the panel renders it that way because that is what the CTO can
+       * actually see. Toggling off the raw key instead would turn the switch ON
+       * for somebody who clicked to turn it off.
+       */
+      const shownOn = roleName === "CTO" && !m.ctoConfigured && !roles.includes("CTO")
+        ? roles.includes("COMPANY_ADMIN")
+        : roles.includes(roleName);
+      const updated = {
         ...m,
-        visibleRoles: roles.includes(roleName) ? roles.filter(r => r !== roleName) : [...roles, roleName]
+        visibleRoles: shownOn ? roles.filter(r => r !== roleName) : [...roles, roleName]
       };
+      /*
+       * Record that the CTO switch has been used at least once.
+       *
+       * A configuration saved before the CTO rung existed carries no "CTO" key,
+       * and the portal reads that absence as "follow Company Admin" so the
+       * company head does not silently lose every module. Turning CTO off
+       * produces exactly the same absence, so without this flag the switch
+       * would appear to do nothing. Once set, the CTO key decides alone.
+       */
+      if (roleName === "CTO") updated.ctoConfigured = true;
+      return updated;
     });
     return persistModules(companyId, next);
   }, [currentList, persistModules]);

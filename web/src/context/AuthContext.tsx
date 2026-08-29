@@ -364,6 +364,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const lookupId = user.companyId || (user as any).tenantId || "PIX-MASTER";
 
       const userRoles = user.roles || [];
+      /*
+       * The company head, by employee code rather than by role: that account
+       * also carries COMPANY_ADMIN, so reading the role list alone would file
+       * the CTO as an administrator. The rest of the portal identifies it the
+       * same way.
+       */
+      const isCto = user.employeeCode?.toUpperCase() === "PIX-E100";
       const isCompanyAdmin = userRoles.includes("SUPER_ADMIN") || userRoles.includes("COMPANY_ADMIN") || userRoles.includes("BOARD_ADMIN");
       const isHrManager = userRoles.includes("HR_MANAGER") || userRoles.includes("IT_HR") || userRoles.includes("CV_HR") || userRoles.includes("IT_MGR");
       const isTeamLead = userRoles.includes("TEAM_LEAD") || userRoles.includes("IT_TL") || userRoles.includes("CV_SUP");
@@ -380,11 +387,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (!mod.enabled) return false;
 
             const vRoles = mod.visibleRoles || [];
+
+            /*
+             * The CTO is its own rung, checked before Company Admin.
+             *
+             * That account holds COMPANY_ADMIN among its roles, so without this
+             * it would be governed by the Company Admin switch and the CTO
+             * toggle in Tech Admin could never turn anything on or off by
+             * itself.
+             *
+             * A configuration saved before the CTO rung existed lists no "CTO"
+             * key at all. Treating that as "off" would silently take every
+             * module away from the company head, so a stored list that has
+             * never been asked about the CTO falls back to what Company Admin
+             * is allowed -- which is exactly what the CTO saw before. Once
+             * somebody touches the CTO switch the key is present, and from then
+             * on it decides on its own.
+             */
+            if (isCto) {
+              const asked = vRoles.includes("CTO") || mod.ctoConfigured === true;
+              return asked ? vRoles.includes("CTO") : vRoles.includes("COMPANY_ADMIN");
+            }
+
             if (isCompanyAdmin && vRoles.includes("COMPANY_ADMIN")) return true;
             if (isHrManager && vRoles.includes("HR_MANAGER")) return true;
             if (isTeamLead && vRoles.includes("TEAM_LEAD")) return true;
             if (isEmployee && vRoles.includes("EMPLOYEE")) return true;
-            
+
             return false;
           }
         }

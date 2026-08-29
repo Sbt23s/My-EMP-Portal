@@ -138,7 +138,10 @@ export function TechAdminModuleManagement() {
     return {
       ...master,
       status: tenantMatch ? tenantMatch.enabled : false,
-      visibleRoles: tenantMatch?.visibleRoles || ["COMPANY_ADMIN", "HR_MANAGER", "TEAM_LEAD", "EMPLOYEE"]
+      visibleRoles: tenantMatch?.visibleRoles || ["COMPANY_ADMIN", "CTO", "HR_MANAGER", "TEAM_LEAD", "EMPLOYEE"],
+      // Carried through so the CTO switch can tell "never asked" from "turned
+      // off": an untouched CTO follows the Company Admin setting.
+      ctoConfigured: tenantMatch?.ctoConfigured === true
     };
   });
 
@@ -399,10 +402,15 @@ export function TechAdminModuleManagement() {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex flex-wrap gap-1">
-                              {["Admin", "HR", "TL", "Employee"].map(roleLabel => {
-                                const roleKeyMap: Record<string, string> = { Admin: "COMPANY_ADMIN", HR: "HR_MANAGER", TL: "TEAM_LEAD", Employee: "EMPLOYEE" };
+                              {["Admin", "CTO", "HR", "TL", "Employee"].map(roleLabel => {
+                                const roleKeyMap: Record<string, string> = { Admin: "COMPANY_ADMIN", CTO: "CTO", HR: "HR_MANAGER", TL: "TEAM_LEAD", Employee: "EMPLOYEE" };
                                 const roleKey = roleKeyMap[roleLabel];
-                                const isVisible = module.visibleRoles.includes(roleKey);
+                                // An untouched CTO shows what it actually gets:
+                                // the Company Admin setting.
+                                const isVisible = roleKey === "CTO" && !module.ctoConfigured
+                                  && !module.visibleRoles.includes("CTO")
+                                  ? module.visibleRoles.includes("COMPANY_ADMIN")
+                                  : module.visibleRoles.includes(roleKey);
                                 return (
                                   <span
                                     key={roleLabel}
@@ -530,11 +538,23 @@ export function TechAdminModuleManagement() {
                     <div className="space-y-4">
                       {[
                         { key: "COMPANY_ADMIN", label: "Company Admin", desc: "Company administrator full view access" },
+                        { key: "CTO", label: "CTO", desc: "Chief Technology Officer executive access" },
                         { key: "HR_MANAGER", label: "HR Manager", desc: "HR management access to this module" },
                         { key: "TEAM_LEAD", label: "Team Lead", desc: "Team leads access to team records" },
                         { key: "EMPLOYEE", label: "Employee", desc: "General employee self-service access" },
                       ].map((item) => {
-                        const isRoleActive = selectedModuleObj.visibleRoles.includes(item.key);
+                        /*
+                         * The CTO switch shows what the CTO can actually see.
+                         * Until somebody uses it, that is whatever Company
+                         * Admin is allowed -- the portal reads an untouched CTO
+                         * the same way, so the switch and the behaviour agree
+                         * rather than the switch reading off while access is
+                         * on.
+                         */
+                        const isRoleActive = item.key === "CTO" && !selectedModuleObj.ctoConfigured
+                          && !selectedModuleObj.visibleRoles.includes("CTO")
+                          ? selectedModuleObj.visibleRoles.includes("COMPANY_ADMIN")
+                          : selectedModuleObj.visibleRoles.includes(item.key);
                         return (
                           <div key={item.key} className="flex items-center justify-between">
                             <div>

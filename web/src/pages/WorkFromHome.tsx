@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ExportExcelButton } from "@/components/ui/export-excel-button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -114,6 +115,13 @@ export default function WorkFromHomePage() {
   const [applyOpen, setApplyOpen] = useState(false);
   const [viewRow, setViewRow] = useState<WfhRow | null>(null);
   const [decideOn, setDecideOn] = useState<{ row: WfhRow; approve: boolean } | null>(null);
+  /*
+    The request the cancel confirmation is asking about, or null when closed.
+    The row is held rather than its id so the dialog can name which request is
+    about to go -- the dates and who it is with -- instead of asking about
+    "this request" and trusting the person to remember which row they clicked.
+  */
+  const [confirmCancel, setConfirmCancel] = useState<WfhRow | null>(null);
   const [decisionNote, setDecisionNote] = useState("");
   const [q, setQ] = useState("");
 
@@ -245,10 +253,10 @@ export default function WorkFromHomePage() {
   const cancel = useMutation({
     mutationFn: async (id: number) => api.post(`/wfh/${id}/cancel`),
     onSuccess: () => {
-      toast.success("Request withdrawn");
+      toast.success("Request cancelled");
       refresh();
     },
-    onError: (e) => toast.error(apiMessage(e, "Could not withdraw that request")),
+    onError: (e) => toast.error(apiMessage(e, "Could not cancel that request")),
   });
 
   /*
@@ -552,11 +560,9 @@ export default function WorkFromHomePage() {
                               size="sm"
                               variant="outline"
                               disabled={cancel.isPending}
-                              onClick={() => {
-                                if (window.confirm("Withdraw this request?")) cancel.mutate(r.id);
-                              }}
+                              onClick={() => setConfirmCancel(r)}
                             >
-                              Withdraw
+                              Cancel
                             </Button>
                           )}
                         </div>
@@ -697,6 +703,32 @@ export default function WorkFromHomePage() {
           </div>
         </Dialog>
       )}
+
+      {/*
+        Cancelling is not undoable, so it is asked in the application's own
+        dialog with the request named in it, the same way leave asks. Called
+        Cancel and not Withdraw because there is one word for this action and
+        the rest of the product had already chosen it.
+      */}
+      <ConfirmDialog
+        open={!!confirmCancel}
+        title="Cancel this work from home request?"
+        description="The request is withdrawn and the approver is no longer asked to decide it. This cannot be undone -- applying again means a new request."
+        detail={confirmCancel ? [
+          ["Dates", dateRange(confirmCancel)],
+          ["Working days", String(confirmCancel.workingDays ?? "—")],
+          ["Requested to", confirmCancel.requestedToName ?? "—"],
+        ] : undefined}
+        confirmLabel="Yes, cancel it"
+        cancelLabel="No, keep it"
+        busy={cancel.isPending}
+        onCancel={() => setConfirmCancel(null)}
+        onConfirm={() => {
+          const id = confirmCancel?.id;
+          setConfirmCancel(null);
+          if (id) cancel.mutate(id);
+        }}
+      />
     </div>
   );
 }

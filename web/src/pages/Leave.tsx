@@ -28,7 +28,7 @@ import {
 import type { ApiEnvelope, PageEnvelope, LeaveType, LeaveBalance, LeaveRequest } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
-import { DATE_MAX, futureYearMin, FUTURE_DATE_MAX } from "@/lib/dates";
+import { todayIso, FUTURE_DATE_MAX } from "@/lib/dates";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 /** Red asterisk shown on every field that must be filled. */
@@ -663,14 +663,14 @@ export default function LeavePage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="fromDate">From<Req /></Label>
-              <Input id="fromDate" type="date" min={futureYearMin()} max={FUTURE_DATE_MAX} {...register("fromDate")} />
+              <Input id="fromDate" type="date" min={todayIso()} max={FUTURE_DATE_MAX} {...register("fromDate")} />
               {errors.fromDate && (
                 <p className="text-xs text-destructive">{errors.fromDate.message}</p>
               )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="toDate">To<Req /></Label>
-              <Input id="toDate" type="date" min={watch("fromDate") || futureYearMin()} max={FUTURE_DATE_MAX} {...register("toDate")} />
+              <Input id="toDate" type="date" min={watch("fromDate") || todayIso()} max={FUTURE_DATE_MAX} {...register("toDate")} />
               {errors.toDate && (
                 <p className="text-xs text-destructive">{errors.toDate.message}</p>
               )}

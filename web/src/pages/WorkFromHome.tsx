@@ -28,7 +28,7 @@ import { usePagedRows, TablePagination } from "@/components/ui/table-pagination"
 import { StatTile, TILE_FILLS } from "@/components/ui/stat-tile";
 import { EmptyState } from "@/components/EmptyState";
 import { useAuth } from "@/hooks/useAuth";
-import { DATE_MAX, todayIso } from "@/lib/dates";
+import { DATE_MAX, FUTURE_DATE_MAX, todayIso } from "@/lib/dates";
 import type { ApiEnvelope } from "@/types";
 
 /**
@@ -787,7 +787,7 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
               id="wfh-from"
               type="date"
               min={todayIso()}
-              max={DATE_MAX}
+              max={FUTURE_DATE_MAX}
               value={fromDate}
               onChange={(e) => {
                 setFromDate(e.target.value);
@@ -803,7 +803,7 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
               id="wfh-to"
               type="date"
               min={fromDate || todayIso()}
-              max={DATE_MAX}
+              max={FUTURE_DATE_MAX}
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
             />

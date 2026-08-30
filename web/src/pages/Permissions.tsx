@@ -28,7 +28,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend
 } from "recharts";
 import { TimePicker12 } from "@/components/ui/time-picker";
-import { todayIso, to12Hour, DATE_MAX } from "@/lib/dates";
+import { todayIso, to12Hour, DATE_MAX, FUTURE_DATE_MAX } from "@/lib/dates";
 
 interface PermissionRow {
   id: number;
@@ -1134,7 +1134,7 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
       <div className="mt-3 space-y-3">
         <div className="space-y-1.5">
           <Label htmlFor="pdate">Date<Req /></Label>
-          <Input id="pdate" type="date" max={DATE_MAX} min={todayIso()} value={requestDate}
+          <Input id="pdate" type="date" min={todayIso()} max={FUTURE_DATE_MAX} value={requestDate}
                  onChange={(e) => setRequestDate(e.target.value)} />
         </div>
         {/* Stacked until there is room for two. Side by side on a narrow

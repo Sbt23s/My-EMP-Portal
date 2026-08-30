@@ -53,22 +53,16 @@ export const DATE_MIN = "2000-01-01";
 export const DATE_MAX = "2099-12-31";
 
 /**
- * The range a *future* date field accepts: this year through 2100.
+ * The upper bound for a date that must be in the future -- leave, work from
+ * home, a permission.
  *
  * DATE_MAX above is the outer edge of plausible for any field at all, which is
- * the right answer for a date of birth and too generous for a leave request --
- * a slipped keypress in the year still produced 5555, and the browser saw
- * nothing wrong with it because it is a real date.
+ * right for a date of birth and too generous here: a slipped keypress in the
+ * year still produced 5555 and the browser saw nothing wrong with it, because
+ * it is a real date.
  *
- * From the first of this year rather than from today: the browser compares the
- * whole value against `min`, so a min of today makes every date in this month
- * before today invalid *while it is being typed*, and the field fights the
- * first digit. Anything genuinely in the past is refused by the server, which
- * knows what "past" means for each kind of request; this only keeps the year
- * sane.
+ * Pair it with todayIso() as the `min`. Both bounds are needed and they answer
+ * different questions -- todayIso() refuses a day already gone, this refuses a
+ * year nobody meant to type.
  */
-export function futureYearMin() {
-  return `${dayjs().year()}-01-01`;
-}
-
 export const FUTURE_DATE_MAX = "2100-12-31";

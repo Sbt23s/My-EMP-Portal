@@ -29,10 +29,14 @@ export const ExportExcelButton = React.forwardRef<
     type="button"
     size="sm"
     className={cn(
-      // One height and one set of colours everywhere. Explicit hover:text-white
-      // because some pages render this over a card whose own hover rule would
-      // otherwise repaint the label on the way past.
-      "h-9 shrink-0 border-0 bg-green-600 text-white shadow-sm",
+      // One height and one set of colours everywhere. 38px because that is the
+      // height of the month, date and select controls this button stands beside
+      // in every toolbar that has them -- at h-9 it sat two pixels short of the
+      // filters and the row read as slightly crooked. self-end keeps it on the
+      // inputs' baseline rather than the labels' in a flex-end toolbar.
+      // Explicit hover:text-white because some pages render this over a card
+      // whose own hover rule would otherwise repaint the label on the way past.
+      "h-[38px] shrink-0 self-end border-0 bg-green-600 text-white shadow-sm",
       "hover:bg-green-700 hover:text-white focus-visible:ring-green-600",
       "dark:bg-green-600 dark:hover:bg-green-700",
       className

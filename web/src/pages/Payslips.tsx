@@ -178,9 +178,7 @@ export default function PayslipsPage() {
                 {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
               </select>
             </div>
-            <div className="flex flex-col justify-end">
-              <ExportExcelButton onClick={exportToExcel} />
-            </div>
+            <ExportExcelButton onClick={exportToExcel} />
           </div>
         }
       />

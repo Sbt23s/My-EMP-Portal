@@ -4,8 +4,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   MapPin, LogIn, LogOut, Building2, Home, HardHat, Calendar,
   Download, Eye, ScanFace, ShieldCheck, ShieldAlert, Sparkles, AlertTriangle,
-  Info, ListTodo, CheckCircle2, UserCog
+  Info, ListTodo, CheckCircle2, UserCog, Clock, Briefcase, XCircle
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import * as XLSX from "xlsx";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
@@ -279,12 +280,27 @@ export default function AttendancePage() {
    */
   const [period, setPeriod] = useState(dayjs().format("YYYY-MM"));
   const [exactDay, setExactDay] = useState("");
+  /**
+   * A custom span, for the questions a single month cannot answer -- the last
+   * fortnight, a notice period, the days either side of a month boundary. It
+   * takes over from the month picker whenever both ends are filled in, and the
+   * month is what everything falls back to.
+   */
+  const [rangeFrom, setRangeFrom] = useState("");
+  const [rangeTo, setRangeTo] = useState("");
+  const rangeActive = !exactDay && !!rangeFrom && !!rangeTo && rangeFrom <= rangeTo;
 
   const periodStart = dayjs(`${period}-01`);
-  const from = exactDay || periodStart.startOf("month").format("YYYY-MM-DD");
-  const to = exactDay || periodStart.endOf("month").format("YYYY-MM-DD");
+  const from = exactDay || (rangeActive ? rangeFrom : periodStart.startOf("month").format("YYYY-MM-DD"));
+  const to = exactDay || (rangeActive ? rangeTo : periodStart.endOf("month").format("YYYY-MM-DD"));
   const month = periodStart.month() + 1;
   const year = periodStart.year();
+  /** What the table and the exported file are showing, in words. */
+  const periodLabel = exactDay
+    ? dayjs(exactDay).format("dddd, DD MMM YYYY")
+    : rangeActive
+      ? `${dayjs(rangeFrom).format("DD MMM YYYY")} — ${dayjs(rangeTo).format("DD MMM YYYY")}`
+      : periodStart.format("MMMM YYYY");
 
   // A punch made on the phone shows on this page without reloading it, which is
   // the difference between two devices agreeing and two devices arguing.
@@ -353,9 +369,13 @@ export default function AttendancePage() {
                    { wch: 13 }, { wch: 10 }, { wch: 46 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Attendance");
+    // The file is named after the span it covers, so a folder of exports stays
+    // readable without opening any of them.
     XLSX.writeFile(wb, exactDay
       ? `My_Attendance_${dayjs(exactDay).format("DD_MMM_YYYY")}.xlsx`
-      : `My_Attendance_${periodStart.format("MMM_YYYY")}.xlsx`);
+      : rangeActive
+        ? `My_Attendance_${dayjs(rangeFrom).format("DD_MMM_YYYY")}_to_${dayjs(rangeTo).format("DD_MMM_YYYY")}.xlsx`
+        : `My_Attendance_${periodStart.format("MMM_YYYY")}.xlsx`);
     toast.success(`Exported ${historyRows.length} day${historyRows.length === 1 ? "" : "s"}`);
   };
 
@@ -557,9 +577,7 @@ export default function AttendancePage() {
       {/* History */}
       <Card className="mt-6">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <CardTitle>
-            {exactDay ? dayjs(exactDay).format("dddd, DD MMM YYYY") : periodStart.format("MMMM YYYY")}
-          </CardTitle>
+          <CardTitle>{periodLabel}</CardTitle>
           <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-1">
               <label className="text-[10px] font-semibold uppercase text-muted-foreground">Month</label>
@@ -568,7 +586,38 @@ export default function AttendancePage() {
                 className="h-9 w-[10.5rem]"
                 max={dayjs().format("YYYY-MM")}
                 value={period}
-                onChange={(e) => { if (e.target.value) { setPeriod(e.target.value); setExactDay(""); } }}
+                onChange={(e) => {
+                  // Picking a month is a whole-month question, so it clears the
+                  // narrower answers rather than fighting them.
+                  if (e.target.value) {
+                    setPeriod(e.target.value);
+                    setExactDay("");
+                    setRangeFrom("");
+                    setRangeTo("");
+                  }
+                }}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold uppercase text-muted-foreground">From date</label>
+              <Input
+                type="date"
+                min={DATE_MIN}
+                className="h-9 w-[10.5rem]"
+                max={rangeTo || dayjs().format("YYYY-MM-DD")}
+                value={rangeFrom}
+                onChange={(e) => { setRangeFrom(e.target.value); setExactDay(""); }}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold uppercase text-muted-foreground">To date</label>
+              <Input
+                type="date"
+                min={rangeFrom || DATE_MIN}
+                className="h-9 w-[10.5rem]"
+                max={dayjs().format("YYYY-MM-DD")}
+                value={rangeTo}
+                onChange={(e) => { setRangeTo(e.target.value); setExactDay(""); }}
               />
             </div>
             <div className="space-y-1">
@@ -581,13 +630,22 @@ export default function AttendancePage() {
                 value={exactDay}
                 onChange={(e) => {
                   setExactDay(e.target.value);
-                  if (e.target.value) setPeriod(dayjs(e.target.value).format("YYYY-MM"));
+                  if (e.target.value) {
+                    setPeriod(dayjs(e.target.value).format("YYYY-MM"));
+                    setRangeFrom("");
+                    setRangeTo("");
+                  }
                 }}
               />
             </div>
-            {(exactDay || period !== dayjs().format("YYYY-MM")) && (
+            {(exactDay || rangeFrom || rangeTo || period !== dayjs().format("YYYY-MM")) && (
               <Button variant="ghost" size="sm" className="h-9"
-                onClick={() => { setPeriod(dayjs().format("YYYY-MM")); setExactDay(""); }}>
+                onClick={() => {
+                  setPeriod(dayjs().format("YYYY-MM"));
+                  setExactDay("");
+                  setRangeFrom("");
+                  setRangeTo("");
+                }}>
                 This month
               </Button>
             )}
@@ -604,7 +662,7 @@ export default function AttendancePage() {
             <EmptyState
               icon={Calendar}
               title="No attendance yet"
-              description="Your punches for this month will appear here."
+              description="Your punches for the selected period will appear here."
             />
           ) : (
             <Table>
@@ -616,7 +674,7 @@ export default function AttendancePage() {
                   <TableHead sortable>Out</TableHead>
                   <TableHead sortable>Mode</TableHead>
                   <TableHead sortable>Status</TableHead>
-                  <TableHead className="text-right">Details</TableHead>
+                  <TableHead className="w-[92px] text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -637,8 +695,8 @@ export default function AttendancePage() {
                           {r.late && <Badge variant="destructive">Late</Badge>}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => setDetail(r)}>
+                      <TableCell className="w-[92px] py-1 text-right">
+                        <Button variant="ghost" size="sm" className="h-8 gap-1 px-2 text-xs" onClick={() => setDetail(r)}>
                           <Eye className="h-3.5 w-3.5" /> View
                         </Button>
                       </TableCell>
@@ -670,38 +728,93 @@ export default function AttendancePage() {
 function DayDetail({ record, code, onClose }: {
   record: AttendanceRecord; code?: string; onClose: () => void;
 }) {
-  const rows: [string, string][] = [
-    ["Employee ID", code || "—"],
-    ["Date", dayjs(record.workDate).format("dddd, DD MMM YYYY")],
-    ["Status", record.late ? `${record.status} (late)` : record.status],
-    ["Mode", record.mode],
-    ["Punch in", record.punchInAt ? dayjs(record.punchInAt).format("h:mm A") : "—"],
-    ["Punch out", record.punchOutAt ? dayjs(record.punchOutAt).format("h:mm A") : "—"],
-    ["Late by", record.lateMinutes ? minutesToHours(record.lateMinutes) : "—"],
-    ["Hours worked", record.workedMinutes ? minutesToHours(record.workedMinutes) : "—"],
-    ["Overtime", record.overtimeMinutes ? minutesToHours(record.overtimeMinutes) : "—"],
-    ["Punch-in location", gpsText(record.inLatitude, record.inLongitude)],
-    ["Punch-out location", gpsText(record.outLatitude, record.outLongitude)],
-    ["At office site", record.withinGeofence === undefined
-      ? "—" : record.withinGeofence ? "Yes" : "No — outside the geofence"]
+  // A work-from-home day has no gate to walk through, so the office questions --
+  // where you punched from, whether you were inside the geofence -- have no
+  // answer worth printing. Each mode is shown the rows that mean something to it.
+  const isWfh = record.mode === "WFH" || record.status === "WFH";
+
+  type Row = { icon: LucideIcon; label: string; value: string; tone?: "good" | "warn" | "plain" };
+  const rows: Row[] = [
+    { icon: UserCog, label: "Employee ID", value: code || "—", tone: "plain" },
+    { icon: Calendar, label: "Date", value: dayjs(record.workDate).format("dddd, DD MMM YYYY"), tone: "plain" },
+    {
+      icon: CheckCircle2, label: "Status",
+      value: record.late ? `${record.status} (late)` : record.status,
+      tone: record.late ? "warn" : "good"
+    },
+    { icon: isWfh ? Home : Building2, label: "Mode", value: record.mode, tone: "good" },
+    { icon: LogIn, label: "Punch in", value: record.punchInAt ? dayjs(record.punchInAt).format("h:mm A") : "—" },
+    { icon: LogOut, label: "Punch out", value: record.punchOutAt ? dayjs(record.punchOutAt).format("h:mm A") : "—" },
+    { icon: Clock, label: "Late by", value: record.lateMinutes ? minutesToHours(record.lateMinutes) : "—",
+      tone: record.lateMinutes ? "warn" : undefined },
+    { icon: Briefcase, label: "Hours worked", value: record.workedMinutes ? minutesToHours(record.workedMinutes) : "—" },
+    { icon: Clock, label: "Overtime", value: record.overtimeMinutes ? minutesToHours(record.overtimeMinutes) : "—" }
   ];
 
+  if (!isWfh) {
+    rows.push(
+      { icon: MapPin, label: "Punch-in location", value: gpsText(record.inLatitude, record.inLongitude) },
+      { icon: MapPin, label: "Punch-out location", value: gpsText(record.outLatitude, record.outLongitude) },
+      {
+        icon: Building2, label: "At office site",
+        value: record.withinGeofence === undefined
+          ? "—" : record.withinGeofence ? "Yes" : "No — outside the geofence",
+        tone: record.withinGeofence === undefined ? undefined : record.withinGeofence ? "good" : "warn"
+      }
+    );
+  } else {
+    rows.push({ icon: Home, label: "Worked from", value: "Home — approved work from home", tone: "plain" });
+  }
+
+  /** A value only gets a chip when it says something; a dash is just a dash. */
+  const chip = (value: string, tone?: Row["tone"]) => {
+    if (value === "—") return "text-muted-foreground";
+    if (tone === "good") return "rounded-md bg-emerald-50 px-2.5 py-1 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300";
+    if (tone === "warn") return "rounded-md bg-amber-50 px-2.5 py-1 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300";
+    if (tone === "plain") return "rounded-md bg-indigo-50 px-2.5 py-1 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300";
+    return "text-foreground";
+  };
+
   return (
-    <Dialog open onClose={onClose} className="max-w-md">
-      <DialogHeader
-        title={dayjs(record.workDate).format("DD MMM YYYY")}
-        description="Everything recorded for this day."
-      />
-      <dl className="divide-y text-sm">
-        {rows.map(([label, value]) => (
-          <div key={label} className="flex items-start justify-between gap-4 py-2">
-            <dt className="text-muted-foreground">{label}</dt>
-            <dd className="text-right font-medium">{value}</dd>
+    <Dialog open onClose={onClose} className="max-w-xl p-0">
+      <div className="rounded-lg bg-gradient-to-b from-indigo-50/70 to-transparent p-6 dark:from-indigo-500/10">
+        <div className="mb-5 flex items-start gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
+            {isWfh ? <Home className="h-7 w-7" /> : <Calendar className="h-7 w-7" />}
           </div>
-        ))}
-      </dl>
-      <div className="flex justify-end pt-3">
-        <Button variant="outline" onClick={onClose}>Close</Button>
+          <div className="pr-8">
+            <h2 className="font-display text-2xl font-bold tracking-tight">
+              {dayjs(record.workDate).format("DD MMM YYYY")}
+            </h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {isWfh ? "Everything recorded for this work-from-home day."
+                     : "Everything recorded for this day at the office."}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border bg-card">
+          <dl className="divide-y">
+            {rows.map(({ icon: Icon, label, value, tone }, i) => (
+              <div key={`${label}-${i}`} className="flex items-center gap-3 px-4 py-2.5">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                  <Icon className="h-4 w-4" />
+                </span>
+                <dt className="flex-1 text-sm text-muted-foreground">{label}</dt>
+                <span className="text-muted-foreground">:</span>
+                <dd className={`min-w-[8rem] text-right text-sm font-semibold tabular-nums ${chip(value, tone)}`}>
+                  {value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        <div className="flex justify-center pt-5">
+          <Button onClick={onClose} className="gap-2 px-8">
+            <XCircle className="h-4 w-4" /> Close
+          </Button>
+        </div>
       </div>
     </Dialog>
   );

@@ -390,12 +390,18 @@ public class LeaveService {
         }
 
         /*
-         * Casual Leave carries a three-month gap, counted from the last day
+         * Casual and Sick Leave carry a three-month gap, counted from the last day
          * actually taken rather than by calendar quarter. The quarterly cap above
          * would let 31 March and 1 April stand as two separate quarters — one day
          * apart — which is not what "one every three months" means.
+         *
+         * Sick Leave had only the calendar-quarter cap above, so the gap it
+         * was meant to keep could be a single day: one taken on 31 March and
+         * another on 1 April fall in different quarters and both passed. The
+         * two types carry the same allowance and the same rule, and there was
+         * no reason for them to be enforced differently.
          */
-        if ("CL".equalsIgnoreCase(type.getCode())) {
+        if ("CL".equalsIgnoreCase(type.getCode()) || "SL".equalsIgnoreCase(type.getCode())) {
             LocalDate lastTaken = requestRepository.findLatestDayTaken(userId, type.getId());
             if (lastTaken != null) {
                 LocalDate availableFrom = lastTaken.plusMonths(3).plusDays(1);

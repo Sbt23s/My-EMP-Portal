@@ -57,6 +57,8 @@ public class WfhService {
     private final HolidayRepository holidayRepository;
     private final AttendanceRepository attendanceRepository;
     private final NotificationService notificationService;
+    private final com.pixous.hrportal.modules.leave.LeaveRequestRepository leaveRequestRepository;
+    private final com.pixous.hrportal.modules.leave.PermissionRequestRepository permissionRequestRepository;
 
     // ----------------------------------------------------------- applying --
 
@@ -107,6 +109,46 @@ public class WfhService {
                     "You already have a work from home request " + when
                             + " (" + first.getStatus().toLowerCase() + "). "
                             + "Cancel that one first, or choose other dates.");
+        }
+
+        /*
+         * Leave already booked on any day of the range.
+         *
+         * Working from home and being on leave are different answers to "were
+         * you working that day", and approving both writes the day into
+         * attendance twice -- once as leave, once as a day worked from home.
+         * Leave and permission already refuse each other; this is the third
+         * side of the same triangle, which was open.
+         */
+        List<com.pixous.hrportal.modules.leave.LeaveRequest> onLeave =
+                leaveRequestRepository.findOverlapping(
+                        userId, req.fromDate(), req.toDate(), null);
+        if (!onLeave.isEmpty()) {
+            com.pixous.hrportal.modules.leave.LeaveRequest l = onLeave.get(0);
+            String when = l.getFromDate().equals(l.getToDate())
+                    ? "on " + l.getFromDate()
+                    : "from " + l.getFromDate() + " to " + l.getToDate();
+            throw ApiException.business(
+                    "You already have leave " + when
+                            + " (" + l.getStatus().toLowerCase() + "). "
+                            + "Work from home cannot be asked for on a day already booked as leave.");
+        }
+
+        /*
+         * And permission, for the same reason read from the other direction:
+         * permission is hours off inside a working day, so the day has to be
+         * one the person is working -- but it was already claimed as hours off
+         * from the office, and this would move the whole day home underneath it.
+         */
+        List<com.pixous.hrportal.modules.leave.PermissionRequest> onPermission =
+                permissionRequestRepository.findLiveInRange(
+                        userId, req.fromDate(), req.toDate());
+        if (!onPermission.isEmpty()) {
+            com.pixous.hrportal.modules.leave.PermissionRequest pr = onPermission.get(0);
+            throw ApiException.business(
+                    "You already have a permission request on " + pr.getRequestDate()
+                            + " (" + pr.getStatus().toLowerCase() + "). "
+                            + "Cancel that first, or choose other dates.");
         }
 
         // The rung, decided here rather than trusted from the payload.
@@ -483,9 +525,15 @@ public class WfhService {
         User decider = r.getDecidedBy() == null ? null
                 : userRepository.findById(r.getDecidedBy()).orElse(null);
 
-        // COMPLETED is shown, not stored: an approved request whose last day
+        // The stored status, as it is. This used to relabel an approved
+        // request COMPLETED once its last day had passed, which answered a
+        // question nobody asked: what matters about a work from home request
+        // is whether it was granted, and "completed" said the calendar had
+        // moved on rather than saying anything about the decision. It was
+        // derived and never stored, so nothing in the database changes with
+        // it -- an approved request simply keeps reading APPROVED.
         // has passed. Deriving it means it is never stale.
-        String status = r.isCompleted(LocalDate.now()) ? "COMPLETED" : r.getStatus();
+        String status = r.getStatus();
 
         return new WfhDtos.WfhView(
                 r.getId(),

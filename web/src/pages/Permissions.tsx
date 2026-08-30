@@ -31,7 +31,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend
 } from "recharts";
 import { TimePicker12 } from "@/components/ui/time-picker";
-import { todayIso, to12Hour, DATE_MAX, FUTURE_DATE_MAX } from "@/lib/dates";
+import { todayIso, to12Hour, DATE_MIN, DATE_MAX, FUTURE_DATE_MAX } from "@/lib/dates";
 
 /*
   The working day permission sits inside, and the most of it one day may take.
@@ -232,6 +232,16 @@ export default function PermissionsPage() {
     queryFn: async () => (await api.get<ApiEnvelope<PermissionRow[]>>("/leave/permissions/all")).data.data
   });
 
+  /*
+    A date range, for the questions the period tiles cannot answer -- a
+    fortnight, a notice period, the days either side of a month boundary.
+    It sits inside `narrow` with the search, so the table, the tile counts
+    and the exported file all move together rather than the file quietly
+    holding rows the table is not showing.
+  */
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+
   /**
    * The search and the period tiles, applied wherever a list is shown. Both are
    * additions: with nothing typed and no period picked, a list is exactly what it
@@ -255,13 +265,23 @@ export default function PermissionsPage() {
         if (period === "WEEK" && (d.isBefore(weekStart, "day") || d.isAfter(weekEnd, "day"))) return false;
         if (period === "MONTH" && !d.isSame(today, "month")) return false;
       }
+      /*
+        The chosen span. Either end works on its own -- "from March" and
+        "up to March" are both questions somebody asks -- so each is checked
+        only when it is filled in.
+      */
+      if (fromDate || toDate) {
+        const day = String(r.requestDate).slice(0, 10);
+        if (fromDate && day < fromDate) return false;
+        if (toDate && day > toDate) return false;
+      }
       return true;
     });
-  }, [q, period]);
+  }, [q, period, fromDate, toDate]);
 
   // Every employee's request — what HR and the admin see under "All employees".
   const adminList = narrow((all.data ?? []).filter((r) => tab === "ALL" || (r.status || "").toUpperCase() === tab));
-  const adminPaged = usePagedRows(adminList, 15, [tab, all.data, q, period]);
+  const adminPaged = usePagedRows(adminList, 15, [tab, all.data, q, period, fromDate, toDate]);
 
   const mine = useQuery({
     queryKey: ["permissions", "me"],
@@ -275,15 +295,23 @@ export default function PermissionsPage() {
   });
 
   const myList = narrow((mine.data ?? []).filter((r) => tab === "ALL" || (r.status || "").toUpperCase() === tab));
-  const myPaged = usePagedRows(myList, 15, [tab, mine.data, q, period]);
+  const myPaged = usePagedRows(myList, 15, [tab, mine.data, q, period, fromDate, toDate]);
 
   const approverList = narrow((pending.data ?? []).filter((r) => tab === "ALL" || (r.status || "").toUpperCase() === tab));
-  const approverPaged = usePagedRows(approverList, 15, [tab, pending.data, q, period]);
+  const approverPaged = usePagedRows(approverList, 15, [tab, pending.data, q, period, fromDate, toDate]);
 
   // Counts for the tiles — of whichever view the Team Leader is looking at.
   const tileRows = view === "MINE" ? (mine.data ?? [])
     : view === "ALL_EMP" ? (all.data ?? [])
       : (pending.data ?? []);
+  /*
+    What the export writes: the rows the table is showing, after the search,
+    the period and the date range. Exporting `tileRows` would have written the
+    whole unfiltered list under a filename naming a range it did not respect.
+  */
+  const exportRows = view === "MINE" ? myList
+    : view === "ALL_EMP" ? adminList : approverList;
+
   const counts = {
     ALL: tileRows.length,
     PENDING: tileRows.filter((r) => r.status === "PENDING").length,
@@ -426,10 +454,10 @@ export default function PermissionsPage() {
               thing as asking for time off.
             */}
             <ExportExcelButton
-              disabled={tileRows.length === 0}
-              title={tileRows.length ? "Download these requests as a spreadsheet" : "Nothing to export"}
+              disabled={exportRows.length === 0}
+              title={exportRows.length ? "Download these requests as a spreadsheet" : "Nothing to export"}
               onClick={() => exportPermissions(
-                tileRows,
+                exportRows,
                 view === "MINE" ? "my_permissions"
                   : view === "ALL_EMP" ? "all_permissions" : "pending_permissions",
                 view === "MINE" ? "My permission requests"
@@ -516,10 +544,37 @@ export default function PermissionsPage() {
                 />
               </div>
             </div>
-            {(q.trim() || period) && (
+            <div className="flex flex-col">
+              <label htmlFor="perm-from" className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
+                From date
+              </label>
+              <Input
+                id="perm-from"
+                type="date"
+                className="h-[38px] w-[10.5rem]"
+                min={DATE_MIN}
+                max={toDate || undefined}
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="perm-to" className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
+                To date
+              </label>
+              <Input
+                id="perm-to"
+                type="date"
+                className="h-[38px] w-[10.5rem]"
+                min={fromDate || DATE_MIN}
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+              />
+            </div>
+            {(q.trim() || period || fromDate || toDate) && (
               <button
                 type="button"
-                onClick={() => { setQ(""); setPeriod(""); }}
+                onClick={() => { setQ(""); setPeriod(""); setFromDate(""); setToDate(""); }}
                 className="h-[38px] self-end rounded-md border px-3 text-xs font-medium text-muted-foreground hover:bg-muted"
               >
                 Clear search

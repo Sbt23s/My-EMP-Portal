@@ -3,7 +3,9 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Eye, Home, Inbox, Search, CheckCircle2, XCircle, Clock, FileSpreadsheet,
+  User, Users, IdCard, CalendarDays, CalendarCheck, UserCheck,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
@@ -59,7 +61,7 @@ interface WfhRow {
   workingDays: number;
   reason?: string;
   remarks?: string;
-  /** PENDING | APPROVED | REJECTED | CANCELLED | COMPLETED */
+  /** PENDING | APPROVED | REJECTED | CANCELLED */
   status: string;
   requestedTo?: number;
   requestedToName?: string;
@@ -84,9 +86,7 @@ function StatusBadge({ status }: { status: string }) {
         ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
         : status === "CANCELLED"
           ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-          : status === "COMPLETED"
-            ? "bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300"
-            : "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300";
+          : "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300";
   return (
     <Badge className={`border-0 text-[10px] font-bold uppercase tracking-wider ${tone}`}>
       {status}
@@ -224,10 +224,8 @@ export default function WorkFromHomePage() {
   const counts = useMemo(() => {
     const c = { ALL: rows.length, PENDING: 0, APPROVED: 0, REJECTED: 0 };
     rows.forEach((r) => {
-      // COMPLETED is an approved request whose days have passed, so it counts
-      // as approved -- a separate tile for it would split one fact in two.
       if (r.status === "PENDING") c.PENDING += 1;
-      else if (r.status === "APPROVED" || r.status === "COMPLETED") c.APPROVED += 1;
+      else if (r.status === "APPROVED") c.APPROVED += 1;
       else if (r.status === "REJECTED") c.REJECTED += 1;
     });
     return c;
@@ -519,7 +517,7 @@ export default function WorkFromHomePage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Action</TableHead>
+                    <TableHead className="w-px whitespace-nowrap">Action</TableHead>
                     {/*
                       Whose request it is matters on every list except the one
                       showing only your own.
@@ -537,7 +535,10 @@ export default function WorkFromHomePage() {
                 <TableBody>
                   {paged.pageRows.map((r) => (
                     <TableRow key={r.id} className="align-top [&>td]:px-3 [&>td]:py-3.5">
-                      <TableCell>
+                      {/* Only as wide as the buttons in it. The column was
+                          taking a share of the table's spare width and holding
+                          it as blank space to the right of a single button. */}
+                      <TableCell className="w-px whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           <ViewButton onClick={() => setViewRow(r)} />
                           {/* canAct is the server's answer, not a role guess. */}
@@ -883,10 +884,21 @@ function DetailsDialog({
 }) {
   return (
     <Dialog open onClose={onClose} className="max-w-2xl">
-      <DialogHeader
-        title="Work from home request"
-        description={`${row.employeeName}${row.employeeCode ? ` · ${row.employeeCode}` : ""}`}
-      />
+      {/* The heading carries the icon and the name, so the first line says
+          what this is and whose it is without being read twice. */}
+      <div className="mb-4 flex items-start gap-4 pr-8">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
+          <Home className="h-7 w-7" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="font-display text-2xl font-bold tracking-tight">
+            Work from home request
+          </h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {row.employeeName}{row.employeeCode ? ` · ${row.employeeCode}` : ""}
+          </p>
+        </div>
+      </div>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={row.status} />
@@ -898,27 +910,27 @@ function DetailsDialog({
         </div>
 
         <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-          <Field label="Employee">{row.employeeName}</Field>
-          <Field label="Employee ID">
+          <Field icon={User} label="Employee">{row.employeeName}</Field>
+          <Field icon={IdCard} label="Employee ID">
             <span className="code-chip">{row.employeeCode || "—"}</span>
           </Field>
-          <Field label="Team">{row.team || "—"}</Field>
-          <Field label="Designation">{row.designation || "—"}</Field>
-          <Field label="From">{dayjs(row.fromDate).format("dddd, DD MMM YYYY")}</Field>
-          <Field label="To">{dayjs(row.toDate).format("dddd, DD MMM YYYY")}</Field>
-          <Field label="Working days">{row.workingDays}</Field>
-          <Field label="Applied on">
+          <Field icon={Users} label="Team">{row.team || "—"}</Field>
+          <Field icon={CalendarDays} label="Designation">{row.designation || "—"}</Field>
+          <Field icon={CalendarDays} label="From">{dayjs(row.fromDate).format("dddd, DD MMM YYYY")}</Field>
+          <Field icon={CalendarDays} label="To">{dayjs(row.toDate).format("dddd, DD MMM YYYY")}</Field>
+          <Field icon={Clock} label="Working days">{row.workingDays}</Field>
+          <Field icon={CalendarCheck} label="Applied on">
             {row.createdAt ? dayjs(row.createdAt).format("DD MMM YYYY, hh:mm A") : "—"}
           </Field>
-          <Field label="Current approver">
+          <Field icon={UserCheck} label="Current approver">
             {row.requestedToName
               ? `${row.requestedToRole ? row.requestedToRole + " · " : ""}${row.requestedToName}`
               : "—"}
           </Field>
           {row.status !== "PENDING" && (
             <>
-              <Field label="Decided by">{row.decidedByName || "—"}</Field>
-              <Field label="Decided at">
+              <Field icon={UserCheck} label="Decided by">{row.decidedByName || "—"}</Field>
+              <Field icon={CalendarCheck} label="Decided at">
                 {row.decidedAt ? dayjs(row.decidedAt).format("DD MMM YYYY, hh:mm A") : "—"}
               </Field>
             </>
@@ -992,13 +1004,25 @@ function DetailsDialog({
  * A dash rather than a blank when there is nothing: an empty space looks like
  * the page failed to load the value, where a dash says there isn't one.
  */
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, icon: Icon, children }: {
+  label: string;
+  /** Optional leading tile, so the fields read as a list rather than a wall. */
+  icon?: LucideIcon;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="min-w-0">
-      <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-        {label}
+    <div className="flex min-w-0 items-start gap-3">
+      {Icon && (
+        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+          <Icon className="h-4 w-4" />
+        </span>
+      )}
+      <div className="min-w-0">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+          {label}
+        </div>
+        <div className="mt-0.5 break-words text-sm font-medium">{children ?? "—"}</div>
       </div>
-      <div className="mt-0.5 break-words text-sm font-medium">{children ?? "—"}</div>
     </div>
   );
 }

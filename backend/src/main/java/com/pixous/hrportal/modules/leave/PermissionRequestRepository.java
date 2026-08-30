@@ -38,6 +38,23 @@ public interface PermissionRequestRepository extends JpaRepository<PermissionReq
     List<PermissionRequest> findLiveOnDate(@Param("userId") Long userId,
                                            @Param("date") java.time.LocalDate date);
 
+    /**
+     * The same question over a span rather than a single day, for callers that
+     * hold a range -- work from home asks whether any day of its range already
+     * carries a permission. Same status filter: a rejected or cancelled
+     * request never claimed the day, so it does not block one.
+     */
+    @Query("""
+            SELECT p FROM PermissionRequest p
+            WHERE p.userId = :userId
+              AND p.requestDate BETWEEN :from AND :to
+              AND p.status IN ('APPROVED','PENDING')
+            ORDER BY p.requestDate ASC
+            """)
+    List<PermissionRequest> findLiveInRange(@Param("userId") Long userId,
+                                            @Param("from") java.time.LocalDate from,
+                                            @Param("to") java.time.LocalDate to);
+
     @Query("SELECT p FROM PermissionRequest p WHERE p.status = 'PENDING' ORDER BY p.createdAt ASC")
     List<PermissionRequest> findAllPending();
 

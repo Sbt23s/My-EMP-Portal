@@ -31,13 +31,24 @@ export function TimePicker12({
   id,
   value,
   onChange,
-  disabled
+  disabled,
+  minTime,
+  maxTime
 }: {
   id?: string;
   /** 24-hour "HH:mm", or "" while the time is still incomplete. */
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  /**
+   * Optional 24-hour "HH:mm" bounds. Hours outside them are dropped from the
+   * list and the meridiem is narrowed with them, so a window that is entirely
+   * in the afternoon does not offer AM at all. Given, the picker can only
+   * produce a time the form would accept; left off, it behaves as it always
+   * did -- other screens ask for times this rule has nothing to say about.
+   */
+  minTime?: string;
+  maxTime?: string;
 }) {
   const initial = split(value);
   const [hour, setHour] = useState(initial.hour);
@@ -56,6 +67,31 @@ export function TimePicker12({
       setMinute("");
     }
   }, [value]);
+
+  /*
+    The hours the bounds leave available, in each meridiem. Worked out from the
+    bounds rather than listed by hand so a change to the working day is one
+    number, not a second list to keep in step with the first.
+  */
+  const toMinutes = (t?: string) => {
+    if (!t) return undefined;
+    const [h, m] = t.split(":").map(Number);
+    return Number.isNaN(h) ? undefined : h * 60 + (m || 0);
+  };
+  const lo = toMinutes(minTime);
+  const hi = toMinutes(maxTime);
+  /** Is any minute of this 12-hour-clock hour inside the window? */
+  const hourAllowed = (h12: number, p: string) => {
+    if (lo === undefined && hi === undefined) return true;
+    const h24 = (h12 % 12) + (p === "PM" ? 12 : 0);
+    const start = h24 * 60;
+    const end = start + 59;
+    if (lo !== undefined && end < lo) return false;
+    if (hi !== undefined && start > hi) return false;
+    return true;
+  };
+  const periods = ["AM", "PM"].filter((p) => HOURS.some((h) => hourAllowed(h, p)));
+  const hoursFor = (p: string) => HOURS.filter((h) => hourAllowed(h, p));
 
   const emit = (h: string, m: string, p: string) => {
     // Only a complete time is worth reporting; anything less stays empty so the
@@ -80,7 +116,7 @@ export function TimePicker12({
         onChange={(e) => { setHour(e.target.value); emit(e.target.value, minute || "00", period); if (!minute) setMinute("00"); }}
       >
         <option value="">--</option>
-        {HOURS.map((h) => (
+        {hoursFor(period).map((h) => (
           <option key={h} value={h}>{h}</option>
         ))}
       </Select>
@@ -104,8 +140,9 @@ export function TimePicker12({
         value={period}
         onChange={(e) => { setPeriod(e.target.value); emit(hour, minute, e.target.value); }}
       >
-        <option value="AM">AM</option>
-        <option value="PM">PM</option>
+        {periods.map((p) => (
+          <option key={p} value={p}>{p}</option>
+        ))}
       </Select>
     </div>
   );

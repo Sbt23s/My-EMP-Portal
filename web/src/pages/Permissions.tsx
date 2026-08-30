@@ -2,8 +2,10 @@ import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useCallback, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Plus, Check, X, Clock, Eye, Paperclip, Inbox, Search, AlertTriangle, Ban, TrendingUp, Timer
+  Plus, Check, X, Clock, Paperclip, Inbox, Search, AlertTriangle, Ban, TrendingUp, Timer,
+  ShieldCheck, User, Users, IdCard, CalendarDays, CalendarCheck, Flag, UserCheck
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
@@ -12,6 +14,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ExportExcelButton } from "@/components/ui/export-excel-button";
+import { ViewButton } from "@/components/ui/view-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RequestThread } from "@/components/RequestThread";
@@ -29,6 +32,21 @@ import {
 } from "recharts";
 import { TimePicker12 } from "@/components/ui/time-picker";
 import { todayIso, to12Hour, DATE_MAX, FUTURE_DATE_MAX } from "@/lib/dates";
+
+/*
+  The working day permission sits inside, and the most of it one day may take.
+  The server enforces both -- these are here so the form can offer only what
+  would be accepted, and say why before the request is sent rather than after.
+*/
+const WORK_START = "09:00";
+const WORK_END = "18:00";
+const MAX_PERMISSION_MINUTES = 120;
+
+/** "HH:mm" as minutes past midnight, or null when it is not a time yet. */
+function minutesOf(hhmm: string): number | null {
+  const [h, m] = hhmm.split(":").map(Number);
+  return Number.isNaN(h) ? null : h * 60 + (m || 0);
+}
 
 interface PermissionRow {
   id: number;
@@ -543,9 +561,7 @@ export default function PermissionsPage() {
                     <TableRow key={r.id} className="border-b align-top last:border-0 hover:bg-muted/30 transition-colors [&>td]:px-3 [&>td]:py-4">
                       <TableCell>
                         <div className="flex items-center gap-1.5">
-                          <Button size="sm" variant="outline" onClick={() => setViewRow(r)}>
-                            <Eye className="h-4 w-4" /> View
-                          </Button>
+                          <ViewButton onClick={() => setViewRow(r)} />
                           {/*
                             canDecideRow is the existing rule and is unchanged:
                             pending, not overdue, not your own, and addressed to
@@ -687,9 +703,7 @@ export default function PermissionsPage() {
                           way to look at it again from here.
                         */}
                         <div className="flex items-center justify-end gap-1.5">
-                          <Button size="sm" variant="outline" onClick={() => setViewRow(r)}>
-                            <Eye className="h-4 w-4" /> View
-                          </Button>
+                          <ViewButton onClick={() => setViewRow(r)} />
                           {!isOverdue(r.status, r.requestDate) && r.status === "PENDING" && (
                             <>
                               <Button size="sm" variant="outline" disabled={decide.isPending}
@@ -781,9 +795,7 @@ export default function PermissionsPage() {
                 {myPaged.pageRows.map((r) => (
                   <TableRow key={r.id} className="border-b border-slate-100 dark:border-slate-800 align-top last:border-0 hover:bg-slate-50/60 dark:hover:bg-slate-800/60 transition-colors [&>td]:px-3 [&>td]:py-4">
                     <TableCell>
-                      <Button size="sm" variant="outline" onClick={() => setViewRow(r)}>
-                        <Eye className="h-4 w-4" /> View
-                      </Button>
+                      <ViewButton onClick={() => setViewRow(r)} />
                     </TableCell>
                     <TableCell className="font-medium text-slate-800 dark:text-slate-200">{dayjs(r.requestDate).format("DD MMM YYYY")}</TableCell>
                     <TableCell className="tabular-nums">{to12Hour(r.fromTime)} – {to12Hour(r.toTime)}</TableCell>
@@ -830,10 +842,21 @@ export default function PermissionsPage() {
       */}
       {viewRow && (
         <Dialog open onClose={() => setViewRow(null)} className="max-w-2xl">
-          <DialogHeader
-            title="Permission request"
-            description={`${viewRow.employeeName} · ${viewRow.employeeCode}`}
-          />
+          {/* The heading carries the icon and the name, so the first line of
+              the dialog says what this is and whose it is at a glance. */}
+          <div className="mb-4 flex items-start gap-4 pr-8">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
+              <ShieldCheck className="h-7 w-7" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="font-display text-2xl font-bold tracking-tight">
+                Permission Request
+              </h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {viewRow.employeeName} · {viewRow.employeeCode}
+              </p>
+            </div>
+          </div>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <PermissionStatus status={viewRow.status} requestDate={viewRow.requestDate} />
@@ -846,28 +869,28 @@ export default function PermissionsPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-              <Field label="Employee">{viewRow.employeeName}</Field>
-              <Field label="Employee ID">
+              <Field icon={User} label="Employee">{viewRow.employeeName}</Field>
+              <Field icon={IdCard} label="Employee ID">
                 <span className="code-chip">{viewRow.employeeCode || "—"}</span>
               </Field>
-              <Field label="Team">{viewRow.team || "—"}</Field>
-              <Field label="Permission date">
+              <Field icon={Users} label="Team">{viewRow.team || "—"}</Field>
+              <Field icon={CalendarDays} label="Permission date">
                 {dayjs(viewRow.requestDate).format("dddd, DD MMM YYYY")}
               </Field>
-              <Field label="Start time">{to12Hour(viewRow.fromTime)}</Field>
-              <Field label="End time">{to12Hour(viewRow.toTime)}</Field>
-              <Field label="Total hours">{viewRow.hours}h</Field>
-              <Field label="Priority">{viewRow.priority || "MEDIUM"}</Field>
-              <Field label="Applied on">
+              <Field icon={Clock} label="Start time">{to12Hour(viewRow.fromTime)}</Field>
+              <Field icon={Clock} label="End time">{to12Hour(viewRow.toTime)}</Field>
+              <Field icon={Timer} label="Total hours">{viewRow.hours}h</Field>
+              <Field icon={Flag} label="Priority">{viewRow.priority || "MEDIUM"}</Field>
+              <Field icon={CalendarCheck} label="Applied on">
                 {viewRow.createdAt
                   ? dayjs(viewRow.createdAt).format("DD MMM YYYY, hh:mm A")
                   : "—"}
               </Field>
-              <Field label="Current approver">{viewRow.requestedToName || "—"}</Field>
+              <Field icon={UserCheck} label="Current approver">{viewRow.requestedToName || "—"}</Field>
               {viewRow.status !== "PENDING" && (
                 <>
-                  <Field label="Decided by">{viewRow.decidedByName || "—"}</Field>
-                  <Field label="Decided at">
+                  <Field icon={UserCheck} label="Decided by">{viewRow.decidedByName || "—"}</Field>
+                  <Field icon={CalendarCheck} label="Decided at">
                     {viewRow.decidedAt
                       ? dayjs(viewRow.decidedAt).format("DD MMM YYYY, hh:mm A")
                       : "—"}
@@ -1125,8 +1148,22 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
     onError: (e) => toast.error(apiMessage(e, "Could not submit permission"))
   });
 
+  /*
+    Two hours is the most a day's permission may carry; past that it is leave,
+    which is a different request with a different approval path and a balance
+    to come out of. Checked here as well as on the server so the reason appears
+    while the range is still on screen and can be changed.
+  */
+  // Saturday and Sunday have no working day for permission to sit inside.
+  const isWeekendDate = !!requestDate && [0, 6].includes(dayjs(requestDate).day());
+
+  const fromMins = fromTime ? minutesOf(fromTime) : null;
+  const toMins = toTime ? minutesOf(toTime) : null;
+  const spanMinutes = fromMins !== null && toMins !== null ? toMins - fromMins : null;
+  const tooLong = spanMinutes !== null && spanMinutes > MAX_PERMISSION_MINUTES;
+
   const valid = !!requestDate && !!fromTime && !!toTime && !!requestedTo && !!reason.trim()
-    && toTime > fromTime;
+    && toTime > fromTime && !tooLong && !isWeekendDate;
 
   return (
     <Dialog open onClose={onClose} className="max-w-md">
@@ -1136,19 +1173,56 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
           <Label htmlFor="pdate">Date<Req /></Label>
           <Input id="pdate" type="date" min={todayIso()} max={FUTURE_DATE_MAX} value={requestDate}
                  onChange={(e) => setRequestDate(e.target.value)} />
+          {/* A date input cannot grey out weekends, so the day is named as soon
+              as one is picked. The server refuses it either way; this is so the
+              refusal is not the first anyone hears of it. */}
+          {isWeekendDate && (
+            <p className="text-xs text-destructive">
+              {dayjs(requestDate).format("dddd")}s are not working days —
+              permission can only be taken on a working day.
+            </p>
+          )}
         </div>
-        {/* Stacked until there is room for two. Side by side on a narrow
-            dialog gave each time picker half the width it needs. */}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
+        {/*
+          One row, always. This was sm:grid-cols-2, and the dialog is narrower
+          than the sm breakpoint -- so the rule never applied and From sat above
+          To on every screen. They are a pair and read as one range, so they
+          stay side by side and each picker is given the room to stay legible.
+
+          Bounded to the working day: permission is time off inside one, so the
+          picker offers 9 to 6 and nothing else. Refusing 2am after the fact is
+          worse than never offering it.
+        */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className="min-w-0 space-y-1.5">
             <Label htmlFor="pfrom">From<Req /></Label>
-            <TimePicker12 id="pfrom" value={fromTime} onChange={setFromTime} />
+            <TimePicker12
+              id="pfrom"
+              value={fromTime}
+              onChange={setFromTime}
+              minTime={WORK_START}
+              maxTime={WORK_END}
+            />
           </div>
-          <div className="space-y-1.5">
+          <div className="min-w-0 space-y-1.5">
             <Label htmlFor="pto">To<Req /></Label>
-            <TimePicker12 id="pto" value={toTime} onChange={setToTime} />
+            <TimePicker12
+              id="pto"
+              value={toTime}
+              onChange={setToTime}
+              minTime={WORK_START}
+              maxTime={WORK_END}
+            />
           </div>
         </div>
+        {tooLong && (
+          <p className="text-xs text-destructive">
+            Permission is limited to 2 hours a day. That range is{" "}
+            {Math.floor((spanMinutes as number) / 60)}h
+            {(spanMinutes as number) % 60 ? ` ${(spanMinutes as number) % 60}m` : ""} —
+            apply for leave instead.
+          </p>
+        )}
         <div className="space-y-1.5">
           <Label htmlFor="pto-user">Request to<Req /></Label>
           <select
@@ -1157,7 +1231,13 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
             value={requestedTo}
             onChange={(e) => setRequestedTo(e.target.value)}
           >
-            <option value="">{approvers.isLoading ? "Loading…" : "Select approver"}</option>
+            {/* The approver is decided by the workflow, not chosen here, so
+                there is no empty "select" state to leave sitting in the field. */}
+            {(approvers.data ?? []).length === 0 && (
+              <option value="">
+                {approvers.isLoading ? "Loading…" : "No approver available"}
+              </option>
+            )}
             {(approvers.data ?? []).map((a: any) => (
               <option key={a.id} value={a.id}>
                 {a.role ? `${a.role} - ${a.name}` : a.name} ({a.code})
@@ -1174,9 +1254,9 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
             value={priority}
             onChange={(e) => setPriority(e.target.value)}
           >
-            <option value="LOW">Low — can wait</option>
-            <option value="MEDIUM">Medium — normal</option>
-            <option value="HIGH">High — urgent</option>
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
           </select>
         </div>
         <div className="space-y-1.5">
@@ -1289,13 +1369,26 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
  * A dash rather than an empty space when there is nothing: a blank looks like
  * the page failed to load the value, where a dash says there isn't one.
  */
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, icon: Icon, children }: {
+  label: string;
+  /** Optional leading tile. Fields that carry one read as a list of facts
+      rather than a wall of small print. */
+  icon?: LucideIcon;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="min-w-0">
-      <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-        {label}
+    <div className="flex min-w-0 items-start gap-3">
+      {Icon && (
+        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+          <Icon className="h-4 w-4" />
+        </span>
+      )}
+      <div className="min-w-0">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+          {label}
+        </div>
+        <div className="mt-0.5 break-words text-sm font-medium">{children ?? "—"}</div>
       </div>
-      <div className="mt-0.5 break-words text-sm font-medium">{children ?? "—"}</div>
     </div>
   );
 }

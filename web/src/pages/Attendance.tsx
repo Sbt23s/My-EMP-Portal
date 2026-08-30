@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   MapPin, LogIn, LogOut, Building2, Home, HardHat, Calendar,
-  Download, Eye, ScanFace, ShieldCheck, ShieldAlert, Sparkles, AlertTriangle,
+  Download, ScanFace, ShieldCheck, ShieldAlert, Sparkles, AlertTriangle,
   Info, ListTodo, CheckCircle2, UserCog, Clock, Briefcase, XCircle
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -17,6 +17,7 @@ import { PageLoader } from "@/components/ui/page-loader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ExportExcelButton } from "@/components/ui/export-excel-button";
+import { ViewButton } from "@/components/ui/view-button";
 import { Badge, statusVariant } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -621,7 +622,7 @@ export default function AttendancePage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-semibold uppercase text-muted-foreground">Exact date</label>
+              <label className="text-[10px] font-semibold uppercase text-muted-foreground">date</label>
               <Input
                 type="date"
                 min={DATE_MIN}
@@ -668,18 +669,24 @@ export default function AttendancePage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {/* Action first: it is the column people came to use, and at
+                      the far right it was the one thing a narrow screen cut
+                      off. */}
+                  <TableHead className="w-[92px]">Action</TableHead>
                   <TableHead sortable>Date</TableHead>
                   <TableHead sortable>Employee ID</TableHead>
                   <TableHead sortable>In</TableHead>
                   <TableHead sortable>Out</TableHead>
                   <TableHead sortable>Mode</TableHead>
                   <TableHead sortable>Status</TableHead>
-                  <TableHead className="w-[92px] text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {historyPaged.pageRows.map((r) => (
                     <TableRow key={r.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800">
+                      <TableCell className="w-[92px] py-1">
+<ViewButton onClick={() => setDetail(r)} />
+                      </TableCell>
                       <TableCell className="font-medium text-slate-800 dark:text-slate-200">
                         {dayjs(r.workDate).format("ddd, DD MMM")}
                       </TableCell>
@@ -695,11 +702,7 @@ export default function AttendancePage() {
                           {r.late && <Badge variant="destructive">Late</Badge>}
                         </div>
                       </TableCell>
-                      <TableCell className="w-[92px] py-1 text-right">
-                        <Button variant="ghost" size="sm" className="h-8 gap-1 px-2 text-xs" onClick={() => setDetail(r)}>
-                          <Eye className="h-3.5 w-3.5" /> View
-                        </Button>
-                      </TableCell>
+
                     </TableRow>
                   ))}
               </TableBody>

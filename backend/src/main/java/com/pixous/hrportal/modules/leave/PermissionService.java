@@ -21,7 +21,15 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PermissionService {
 
+    /** The working day permission has to sit inside. */
+    private static final LocalTime WORK_DAY_START = LocalTime.of(9, 0);
+    private static final LocalTime WORK_DAY_END = LocalTime.of(18, 0);
+
+    /** The most time off one day's permission may carry. */
+    private static final long MAX_PERMISSION_MINUTES = 120;
+
     private final PermissionRequestRepository repo;
+    private final LeaveRequestRepository leaveRequestRepository;
     private final UserRepository userRepository;
     private final com.pixous.hrportal.modules.notification.NotificationService notificationService;
     private final com.pixous.hrportal.common.SmsService smsService;
@@ -72,6 +80,49 @@ public class PermissionService {
                             + existing.getStatus().toLowerCase() + "). "
                             + "Only one permission per day is allowed. "
                             + "Cancel that request first, or choose another date.");
+        }
+
+        /*
+         * Permission is time off inside the working day, so it has to fall
+         * inside one. Without this the form would take 2am to 4am and the
+         * hours were counted as time off from a day that had not started.
+         */
+        if (from.isBefore(WORK_DAY_START) || to.isAfter(WORK_DAY_END)) {
+            throw ApiException.business(
+                    "Permission can only be taken between 9:00 AM and 6:00 PM.");
+        }
+
+        /*
+         * Two hours is the most in one day. Beyond that it stops being short
+         * time off and becomes leave, which is a different request with a
+         * different approval path and a balance to come out of.
+         */
+        long minutes = Duration.between(from, to).toMinutes();
+        if (minutes > MAX_PERMISSION_MINUTES) {
+            throw ApiException.business(
+                    "Permission is limited to 2 hours a day. That range is "
+                            + describeMinutes(minutes)
+                            + " — apply for leave instead.");
+        }
+
+        /*
+         * Leave already booked on the day means the person is not at work to
+         * take time off from. Both records would otherwise stand, and the day
+         * would be counted once as leave and again as permission hours.
+         *
+         * Read from the leave side deliberately: it is the record that already
+         * knows about ranges, and its query already ignores rejected and
+         * cancelled requests, which never consumed the day.
+         */
+        List<com.pixous.hrportal.modules.leave.LeaveRequest> onLeave =
+                leaveRequestRepository.findOverlapping(
+                        userId, req.requestDate(), req.requestDate(), null);
+        if (!onLeave.isEmpty()) {
+            com.pixous.hrportal.modules.leave.LeaveRequest l = onLeave.get(0);
+            throw ApiException.business(
+                    "You already have leave on " + req.requestDate()
+                            + " (" + l.getStatus().toLowerCase() + "). "
+                            + "Permission cannot be taken on a day already booked as leave.");
         }
 
         BigDecimal hours = BigDecimal.valueOf(Duration.between(from, to).toMinutes())
@@ -307,6 +358,17 @@ public class PermissionService {
     }
 
     /** One of HIGH | MEDIUM | LOW; anything else reads as MEDIUM. */
+    /**
+     * "2h 30m" rather than "150", so the message says the thing the person
+     * chose in the units they chose it in.
+     */
+    private static String describeMinutes(long minutes) {
+        long h = minutes / 60;
+        long m = minutes % 60;
+        if (h == 0) return m + "m";
+        return m == 0 ? h + "h" : h + "h " + m + "m";
+    }
+
     private static String normalisePriority(String raw) {
         String p = raw == null ? "" : raw.trim().toUpperCase();
         return switch (p) {

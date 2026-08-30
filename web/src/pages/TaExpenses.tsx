@@ -2,7 +2,7 @@ import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Map, Plus, Settings, Upload, ImagePlus, Pencil, Clock, Check, X, Download, Mail } from "lucide-react";
+import { Map, Plus, Settings, Upload, ImagePlus, Pencil, Clock, Check, X, Mail } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { ExportExcelButton } from "@/components/ui/export-excel-button";
 import { Textarea } from "@/components/ui/textarea";
 
 const EXPENSE_CATEGORIES = [
@@ -273,15 +274,11 @@ export default function TaExpensesPage() {
               not a different query that happens to be called the same thing.
             */
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
+              <ExportExcelButton
                 disabled={rows.length === 0}
                 onClick={exportClaims}
                 title={rows.length ? "Download these claims as a spreadsheet" : "Nothing to export"}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Export Excel
-              </Button>
+              />
               <Button
                 variant="outline"
                 disabled={rows.length === 0}

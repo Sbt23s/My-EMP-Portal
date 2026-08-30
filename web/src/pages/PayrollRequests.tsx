@@ -9,6 +9,7 @@ import { api, apiMessage } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
+import { ExportExcelButton } from "@/components/ui/export-excel-button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
@@ -365,14 +366,10 @@ export default function PayrollPage() {
               <FileText className="mr-1.5 h-4 w-4" /> My Payslips
             </Button>
           )}
-          <Button
-            variant="default"
-            className="h-9 font-semibold"
+          <ExportExcelButton
             onClick={() => exportSalaryDetails()}
             disabled={rows.length === 0}
-          >
-            <Download className="mr-1.5 h-4 w-4" /> Export Excel
-          </Button>
+          />
         </div>
       </div>
 

@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ExportExcelButton } from "@/components/ui/export-excel-button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, resolvePhotoUrl } from "@/components/ui/avatar";
 import { Select } from "@/components/ui/select";
@@ -534,16 +535,12 @@ export default function EmployeesPage() {
             {canManage && (
               <div className="flex flex-wrap items-center gap-2">
                 {/* Recommended Action Order: Export Excel -> Roles & Logins -> Import Excel -> Add Employee */}
-                <Button
-                  onClick={exportEmployees}
-                  disabled={exporting}
-                  className="rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm text-xs h-9 px-3"
-                >
-                  {exporting
-                    ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                    : <Download className="mr-1.5 h-3.5 w-3.5" />}
-                  Export Excel
-                </Button>
+                {/* This export can take a moment, so it says so while it runs.
+                    The shared button renders its own icon; the spinner replaces
+                    the label rather than the icon. */}
+                <ExportExcelButton onClick={exportEmployees} disabled={exporting}>
+                  {exporting ? "Exporting…" : "Export Excel"}
+                </ExportExcelButton>
                 <Button
                   variant="outline"
                   onClick={() => setImportOpen(true)}

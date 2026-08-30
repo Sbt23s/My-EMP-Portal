@@ -192,6 +192,21 @@ export function useNotifications(userId?: number) {
               },
               React.createElement("span", { className: "text-base" }, "🔔"),
               React.createElement("span", { className: "font-medium pr-6" }, `+${rest} more unread notification${rest === 1 ? "" : "s"}`),
+              /*
+               * Close all, because dismissing a stack one X at a time is the
+               * complaint this answers. toast.dismiss() with no id closes every
+               * open toast; it only hides them, so nothing is marked read and
+               * the bell keeps its count -- dismissing a popup is not the same
+               * as having read the notification.
+               */
+              React.createElement(
+                "button",
+                {
+                  onClick: (e: any) => { e.stopPropagation(); toast.dismiss(); },
+                  className: "ml-1 mr-5 shrink-0 rounded border border-white/25 px-2 py-0.5 text-xs font-medium text-[hsl(210_40%_98%)] transition-colors hover:bg-white/20"
+                },
+                "Close all"
+              ),
               React.createElement(
                 "button",
                 {

@@ -255,8 +255,22 @@ public class AttendanceService {
         LocalDate to = from.withDayOfMonth(from.lengthOfMonth());
         List<Attendance> records = attendanceRepository
                 .findByUserIdAndWorkDateBetweenOrderByWorkDateDesc(userId, from, to);
-        long present = records.stream().filter(a -> "PRESENT".equals(a.getStatus())).count();
         long wfh = records.stream().filter(a -> "WFH".equals(a.getStatus())).count();
+        /*
+         * An approved work-from-home day is a day worked, so it counts as
+         * present. Payroll already treats it that way -- it reads attendance,
+         * and the WFH approval writes a row there -- but this summary counted
+         * only the literal "PRESENT" status, so the card read 0 present beside
+         * 1 WFH for somebody who had worked.
+         *
+         * WFH keeps its own count, which is the point: the two numbers answer
+         * different questions, "how many days did you work" and "how many of
+         * those were from home". The absent line below subtracts present and
+         * wfh separately and must keep doing so -- adding WFH into present
+         * without that care would subtract it twice and invent an absence.
+         */
+        long presentOnly = records.stream().filter(a -> "PRESENT".equals(a.getStatus())).count();
+        long present = presentOnly + wfh;
         long late = records.stream().filter(Attendance::isLate).count();
         int overtime = records.stream()
                 .mapToInt(a -> a.getOvertimeMinutes() == null ? 0 : a.getOvertimeMinutes()).sum();
@@ -281,7 +295,9 @@ public class AttendanceService {
                 workingDays++;
             }
         }
-        long absent = Math.max(0, workingDays - present - wfh);
+        // present already includes wfh, so subtracting both would count a
+        // work-from-home day twice and invent an absence for a day worked.
+        long absent = Math.max(0, workingDays - present);
         return new AttendanceSummary(month, year, present, wfh, late, absent,
                 overtime, lateMinutesTotal, workingDays);
     }

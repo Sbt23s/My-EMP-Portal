@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ExportExcelButton } from "@/components/ui/export-excel-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
@@ -1602,9 +1603,7 @@ function AdminTasks({ isAdmin, assignsToAnyone = false, isHR, isTL = false, canA
                 .map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
             {showAllControls && (
-              <Button variant="outline" onClick={() => setShowExport(true)}>
-                <Download className="mr-1.5 h-4 w-4" /> Export Excel
-              </Button>
+              <ExportExcelButton onClick={() => setShowExport(true)} />
             )}
             {canAssign && (
               <Button onClick={() => setShowAssign(true)}>

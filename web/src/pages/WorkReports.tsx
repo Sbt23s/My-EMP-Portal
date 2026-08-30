@@ -17,6 +17,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ExportExcelButton } from "@/components/ui/export-excel-button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatTile } from "@/components/ui/stat-tile";
@@ -269,13 +270,11 @@ export default function WorkReportsPage() {
         <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">To</label>
         <input type="date" max={DATE_MAX} className="h-[38px] rounded-md border border-input bg-background px-3 text-sm shadow-sm" value={toDate} min={fromDate} onChange={(e) => setToDate(e.target.value)} />
       </div>
-      <Button
-        onClick={exportRangeExcel}
-        className="flex h-[38px] items-center gap-1.5 rounded-md bg-green-600 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-green-700"
-      >
-        <FileSpreadsheet className="h-4 w-4" />
+      {/* The label hides on a narrow screen here, where this button sits in a
+          crowded toolbar; the icon alone still reads as export. */}
+      <ExportExcelButton onClick={exportRangeExcel}>
         <span className="hidden sm:inline">Export Excel</span>
-      </Button>
+      </ExportExcelButton>
     </div>
   );
 

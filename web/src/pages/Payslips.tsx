@@ -9,6 +9,7 @@ import { api, apiMessage } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
+import { ExportExcelButton } from "@/components/ui/export-excel-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn, formatMoney, monthName } from "@/lib/utils";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
@@ -178,10 +179,7 @@ export default function PayslipsPage() {
               </select>
             </div>
             <div className="flex flex-col justify-end">
-              <Button variant="outline" className="h-[38px] gap-2" onClick={exportToExcel}>
-                <Download className="h-4 w-4" />
-                Export Excel
-              </Button>
+              <ExportExcelButton onClick={exportToExcel} />
             </div>
           </div>
         }

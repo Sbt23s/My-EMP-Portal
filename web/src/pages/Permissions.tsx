@@ -7,11 +7,11 @@ import {
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
-import { FileSpreadsheet } from "lucide-react";
 import { api, apiMessage } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ExportExcelButton } from "@/components/ui/export-excel-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RequestThread } from "@/components/RequestThread";
@@ -498,17 +498,13 @@ export default function PermissionsPage() {
                   (employees, Team Leaders and HR)
                 </span>
               </span>
-              <Button
-                size="sm"
+              <ExportExcelButton
                 onClick={() => exportPermissions(
                   adminList,
                   `history_${tab.toLowerCase()}`,
                   `Permission history — ${tab === "ALL" ? "all requests" : tab.toLowerCase()}`
                 )}
-                className="bg-green-600 text-white hover:bg-green-700"
-              >
-                <FileSpreadsheet className="mr-1.5 h-4 w-4" /> Export Excel
-              </Button>
+              />
             </div>
             {all.isLoading ? (
               <Skeleton className="h-32" />
@@ -635,16 +631,12 @@ export default function PermissionsPage() {
             <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
               <span className="text-sm font-semibold">Pending my approval</span>
               <div className="flex flex-wrap items-center gap-2">
-              <Button
-                size="sm"
+              <ExportExcelButton
                 onClick={() => exportPermissions(
                   (pending.data ?? []).filter((r) => tab === "ALL" || r.status === tab),
                   tab.toLowerCase()
                 )}
-                className="bg-green-600 text-white hover:bg-green-700"
-              >
-                <FileSpreadsheet className="mr-1.5 h-4 w-4" /> Export Excel
-              </Button>
+              />
               {/* For a Team Leader the tiles above are the status filter already. */}
               <div className={cn("flex gap-1 rounded-full border bg-muted/60 p-1", tiled && "hidden")}>
                 {(["ALL", "PENDING", "APPROVED", "REJECTED", "CANCELLED"] as const).map((t) => (

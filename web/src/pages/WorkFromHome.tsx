@@ -12,6 +12,7 @@ import { api, apiMessage } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ExportExcelButton } from "@/components/ui/export-excel-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -470,13 +471,7 @@ export default function WorkFromHomePage() {
           </>
         )}
 
-        <Button
-          variant="outline"
-          className="bg-green-600 text-white hover:bg-green-700 hover:text-white"
-          onClick={exportExcel}
-        >
-          <FileSpreadsheet className="mr-1.5 h-4 w-4" /> Export Excel
-        </Button>
+        <ExportExcelButton onClick={exportExcel} />
       </div>
 
       <Card>

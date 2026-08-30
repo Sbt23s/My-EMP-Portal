@@ -2738,7 +2738,12 @@ export default function DashboardPage() {
           <EmployeeToday userName={user?.name} d={d} punch={punch} org={isHrOrg ? hrOrg.data : undefined} />
 
 
-          <AdvancedAnalytics userId={user?.id} />
+          {/*
+            AI-Powered Insights removed at the client's request, for every role.
+            The component and its query are left in place so the panel can be
+            restored by putting this one line back -- deleting them would make
+            that a rewrite rather than a line.
+          */}
 
           <div className="mt-8 grid gap-6 lg:grid-cols-3">
             {/* Advanced Leave balances chart */}
@@ -2822,8 +2827,11 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </div>
-          {/* Who is absent belongs to the organisation view HR already has above. */}
-          {!isHrOrg && <TodayOnLeaveCard />}
+          {/*
+            Absent Today removed at the client's request, for every role. Kept
+            the same way as the insights panel above: the component stays, only
+            the render is gone, so restoring it is one line.
+          */}
         </>
       ) : (
         <Card className="border-destructive/20 bg-destructive/5">

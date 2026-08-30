@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { PageLoader } from "@/components/ui/page-loader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ExportExcelButton } from "@/components/ui/export-excel-button";
 import { Badge, statusVariant } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -590,10 +591,10 @@ export default function AttendancePage() {
                 This month
               </Button>
             )}
-            <Button variant="outline" size="sm" className="h-9"
-              disabled={historyRows.length === 0} onClick={exportMonth}>
-              <Download className="h-4 w-4" /> Export Excel
-            </Button>
+            <ExportExcelButton
+              disabled={historyRows.length === 0}
+              onClick={exportMonth}
+            />
           </div>
         </CardHeader>
         <CardContent>

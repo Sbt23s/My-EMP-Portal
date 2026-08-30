@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { RequestThread } from "@/components/RequestThread";
-import { CheckCircle2, Clock, CalendarDays, AlertTriangle, Eye, X, Plus, Paperclip, CalendarX2, FileSpreadsheet } from "lucide-react";
+import { CheckCircle2, Clock, CalendarDays, AlertTriangle, Eye, X, Plus, Paperclip, CalendarX2 } from "lucide-react";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ExportExcelButton } from "@/components/ui/export-excel-button";
 import { Badge, statusVariant } from "@/components/ui/badge";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
@@ -313,9 +314,7 @@ export default function LeavePage() {
                 className="rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
-            <Button variant="outline" onClick={exportExcel} className="bg-green-600 text-white hover:bg-green-700 border-0">
-              <FileSpreadsheet className="mr-1.5 h-4 w-4" /> Export Excel
-            </Button>
+            <ExportExcelButton onClick={exportExcel} />
             <Button onClick={() => setOpen(true)}>
               <Plus className="h-4 w-4" /> Apply for leave
             </Button>

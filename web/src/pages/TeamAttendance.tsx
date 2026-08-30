@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ExportExcelButton } from "@/components/ui/export-excel-button";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { resolvePhotoUrl } from "@/components/ui/avatar";
 import { PhotoLightbox } from "@/components/PhotoLightbox";
@@ -822,14 +823,10 @@ export default function TeamAttendancePage() {
           />
         </div>
 
-        <button
+        <ExportExcelButton
           onClick={exportToExcel}
-          className="flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95 shrink-0"
           title="Export this date range to Excel"
-        >
-          <FileSpreadsheet className="h-4 w-4" />
-          <span>Export Excel</span>
-        </button>
+        />
       </div>
 
       {!validRange ? (

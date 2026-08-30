@@ -115,10 +115,23 @@ echo '--- recent log ---'
 sudo docker logs --tail 12 hrportal-backend 2>&1 | tail -12
 "@
 
-Step "Running on the server (this takes a few minutes)"
-ssh -i $Key -o StrictHostKeyChecking=accept-new "ubuntu@$Server" $remote
+# The here-string inherits this file's CRLF endings, and bash reads the
+# carriage return as part of each command, so cd ~/hr-portal looks for a
+# directory whose name ends in one. Harmless while this was a single long
+# line; not once it had an if in it.
+$remote = $remote.Replace([string][char]13 + [string][char]10, [string][char]10)
 
-if ($LASTEXITCODE -ne 0) {
+Step "Running on the server (this takes a few minutes)"
+# Docker writes its build progress to stderr, and PowerShell turns a native
+# command's stderr into error records -- enough on its own to leave
+# $LASTEXITCODE at 255 after a deploy that worked. Merging the streams here
+# means the exit code is the remote script's own verdict and nothing else,
+# which is the only reason the check below is worth making.
+$deployLog = & ssh -i $Key -o StrictHostKeyChecking=accept-new "ubuntu@$Server" $remote 2>&1
+$sshExit = $LASTEXITCODE
+$deployLog | ForEach-Object { Write-Host $_ }
+
+if ($sshExit -ne 0) {
     Die "Deploy failed -- read the output above. The live site still runs the previous release."
 }
 

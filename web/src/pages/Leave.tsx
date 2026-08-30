@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { RequestThread } from "@/components/RequestThread";
-import { CheckCircle2, Clock, CalendarDays, AlertTriangle, Eye, X, Plus, Paperclip, CalendarX2, User, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, CalendarDays, AlertTriangle, X, Plus, Paperclip, CalendarX2, User, XCircle } from "lucide-react";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ExportExcelButton } from "@/components/ui/export-excel-button";
+import { ViewButton } from "@/components/ui/view-button";
 import { Badge, statusVariant } from "@/components/ui/badge";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
@@ -466,16 +467,10 @@ export default function LeavePage() {
                              download button that used to sit here had no handler
                              at all -- it looked like it produced a document and
                              did nothing. */
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 rounded text-primary"
+                          <ViewButton
                             title="View this request"
-                            aria-label="View this request"
                             onClick={() => setViewing(r)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          />
                         )}
                       </div>
                     </TableCell>

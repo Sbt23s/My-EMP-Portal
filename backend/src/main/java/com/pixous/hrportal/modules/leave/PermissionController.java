@@ -35,6 +35,23 @@ public class PermissionController {
         return ApiResponse.ok(service.approvers(SecurityUtils.currentUserId()));
     }
 
+    /**
+     * Whether a date is free for a permission request, and why not if it is
+     * not.
+     *
+     * <p>Read-only, and it decides nothing: apply() runs the same checks and
+     * remains the authority. This exists so the form can say what is wrong
+     * while the date is still on screen, rather than after a submit that was
+     * never going to be accepted.
+     */
+    @GetMapping("/availability")
+    public ApiResponse<Map<String, Object>> availability(
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(
+                    iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
+            java.time.LocalDate date) {
+        return ApiResponse.ok(service.availability(SecurityUtils.currentUserId(), date));
+    }
+
     @PostMapping("/{id}/cancel")
     public ApiResponse<Void> cancel(@PathVariable Long id) {
         service.cancel(SecurityUtils.currentUserId(), id);

@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ExportExcelButton } from "@/components/ui/export-excel-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ViewButton } from "@/components/ui/view-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -310,9 +311,17 @@ export default function WorkFromHomePage() {
         title="Work From Home"
         subtitle="Ask to work from home, and track where the request is."
         actions={
-          <Button onClick={() => setApplyOpen(true)}>
-            <Plus className="mr-1.5 h-4 w-4" /> Apply for WFH
-          </Button>
+          <>
+            {/* Beside Apply, where the page's actions are. Down in the filter
+                row it read as another filter rather than something to click,
+                and on a narrow screen it wrapped away from both. It still
+                exports `filtered` -- what is on screen after the search box
+                and the month range, not a different query of the same name. */}
+            <ExportExcelButton onClick={exportExcel} />
+            <Button onClick={() => setApplyOpen(true)}>
+              <Plus className="mr-1.5 h-4 w-4" /> Apply for WFH
+            </Button>
+          </>
         }
       />
 
@@ -478,8 +487,6 @@ export default function WorkFromHomePage() {
             </div>
           </>
         )}
-
-        <ExportExcelButton onClick={exportExcel} />
       </div>
 
       <Card>
@@ -532,9 +539,7 @@ export default function WorkFromHomePage() {
                     <TableRow key={r.id} className="align-top [&>td]:px-3 [&>td]:py-3.5">
                       <TableCell>
                         <div className="flex items-center gap-1.5">
-                          <Button size="sm" variant="outline" onClick={() => setViewRow(r)}>
-                            <Eye className="h-4 w-4" /> View
-                          </Button>
+                          <ViewButton onClick={() => setViewRow(r)} />
                           {/* canAct is the server's answer, not a role guess. */}
                           {r.canAct && (
                             <>

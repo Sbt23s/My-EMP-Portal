@@ -369,6 +369,56 @@ public class PermissionService {
         return m == 0 ? h + "h" : h + "h " + m + "m";
     }
 
+    /**
+     * Whether a date can carry a permission request, and the reason when it
+     * cannot.
+     *
+     * <p>The same three questions apply() asks, asked without writing
+     * anything: is it a working day, is there already a permission on it, and
+     * is the person on leave. apply() still runs all of them -- this is so the
+     * form can say so while the date is still on screen, and a stale answer
+     * here can only be wrong in the direction of letting a submit through to
+     * the check that actually decides.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> availability(Long userId, java.time.LocalDate date) {
+        java.util.Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("date", date.toString());
+
+        if (com.pixous.hrportal.common.WorkCalendar.isWeekend(date)) {
+            out.put("available", false);
+            out.put("reason", date.getDayOfWeek().getDisplayName(
+                            java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH)
+                    + "s are not working days — permission can only be taken on a working day.");
+            return out;
+        }
+
+        List<com.pixous.hrportal.modules.leave.LeaveRequest> onLeave =
+                leaveRequestRepository.findOverlapping(userId, date, date, null);
+        if (!onLeave.isEmpty()) {
+            com.pixous.hrportal.modules.leave.LeaveRequest l = onLeave.get(0);
+            out.put("available", false);
+            out.put("reason", "You have already applied for leave on this date ("
+                    + l.getStatus().toLowerCase()
+                    + "). Permission cannot be taken on a day already booked as leave.");
+            return out;
+        }
+
+        List<PermissionRequest> sameDay = repo.findLiveOnDate(userId, date);
+        if (!sameDay.isEmpty()) {
+            PermissionRequest existing = sameDay.get(0);
+            out.put("available", false);
+            out.put("reason", "You already have a permission on this date, "
+                    + existing.getFromTime() + " to " + existing.getToTime()
+                    + " (" + existing.getStatus().toLowerCase()
+                    + "). Only one permission per day is allowed.");
+            return out;
+        }
+
+        out.put("available", true);
+        return out;
+    }
+
     private static String normalisePriority(String raw) {
         String p = raw == null ? "" : raw.trim().toUpperCase();
         return switch (p) {

@@ -414,11 +414,34 @@ export default function PermissionsPage() {
             exist to configure the portal rather than to work shifts, and a
             permission request from one has nobody above it to approve.
           */
-          !isSystemAdmin ? (
-            <Button onClick={() => setOpen(true)}>
-              <Plus className="mr-1.5 h-4 w-4" /> Apply for permission
-            </Button>
-          ) : null
+          <div className="flex flex-wrap items-center gap-2">
+            {/*
+              Export what is on screen. tileRows is whichever list the view
+              shows -- an employee's own requests, everyone's, or the ones
+              waiting on this person -- so the file matches the page rather
+              than being a second query that happens to share its name.
+
+              Not behind isSystemAdmin: that flag is about raising a request,
+              and reading a list you are already looking at is not the same
+              thing as asking for time off.
+            */}
+            <ExportExcelButton
+              disabled={tileRows.length === 0}
+              title={tileRows.length ? "Download these requests as a spreadsheet" : "Nothing to export"}
+              onClick={() => exportPermissions(
+                tileRows,
+                view === "MINE" ? "my_permissions"
+                  : view === "ALL_EMP" ? "all_permissions" : "pending_permissions",
+                view === "MINE" ? "My permission requests"
+                  : view === "ALL_EMP" ? "All permission requests" : "Pending my approval"
+              )}
+            />
+            {!isSystemAdmin && (
+              <Button onClick={() => setOpen(true)}>
+                <Plus className="mr-1.5 h-4 w-4" /> Apply for permission
+              </Button>
+            )}
+          </div>
         }
       />
 
@@ -1157,13 +1180,33 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
   // Saturday and Sunday have no working day for permission to sit inside.
   const isWeekendDate = !!requestDate && [0, 6].includes(dayjs(requestDate).day());
 
+  /*
+    Is this date free at all?
+
+    Leave already booked on the day, or a permission already on it, are things
+    only the server knows -- the form cannot see either. Asked as soon as a
+    date is picked so the answer arrives while the date is still on screen and
+    can be changed, rather than after a submit that was never going to be
+    accepted. apply() runs the same checks and remains the authority; this only
+    moves the news earlier.
+  */
+  const availability = useQuery({
+    queryKey: ["permission-availability", requestDate],
+    enabled: !!requestDate && !isWeekendDate,
+    queryFn: async () =>
+      (await api.get<ApiEnvelope<{ available: boolean; reason?: string }>>(
+        `/leave/permissions/availability?date=${requestDate}`)).data.data,
+  });
+  const dateBlocked = availability.data?.available === false;
+  const dateBlockedReason = availability.data?.reason;
+
   const fromMins = fromTime ? minutesOf(fromTime) : null;
   const toMins = toTime ? minutesOf(toTime) : null;
   const spanMinutes = fromMins !== null && toMins !== null ? toMins - fromMins : null;
   const tooLong = spanMinutes !== null && spanMinutes > MAX_PERMISSION_MINUTES;
 
   const valid = !!requestDate && !!fromTime && !!toTime && !!requestedTo && !!reason.trim()
-    && toTime > fromTime && !tooLong && !isWeekendDate;
+    && toTime > fromTime && !tooLong && !isWeekendDate && !dateBlocked;
 
   return (
     <Dialog open onClose={onClose} className="max-w-md">
@@ -1181,6 +1224,9 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
               {dayjs(requestDate).format("dddd")}s are not working days —
               permission can only be taken on a working day.
             </p>
+          )}
+          {!isWeekendDate && dateBlocked && (
+            <p className="text-xs text-destructive">{dateBlockedReason}</p>
           )}
         </div>
         {/*

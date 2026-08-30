@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExportExcelButton } from "@/components/ui/export-excel-button";
+import { ViewButton } from "@/components/ui/view-button";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { resolvePhotoUrl } from "@/components/ui/avatar";
 import { PhotoLightbox } from "@/components/PhotoLightbox";
@@ -983,10 +984,8 @@ export default function TeamAttendancePage() {
                           most recent punch. Switch to "Day by day" for the rest. */}
                       <td className="whitespace-nowrap px-4 py-2.5 text-right">
                         {s.latest ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 text-[11px]"
+                          <ViewButton
+                            className="text-[11px]"
                             title={`Full detail of their punch on ${dayjs(s.latest.workDate).format("DD MMM")}`}
                             onClick={() => setDetailOf({
                               record: s.latest!,
@@ -995,9 +994,7 @@ export default function TeamAttendancePage() {
                               team: (s.user.designationTitle || "").trim() || "No team",
                               date: s.latest!.workDate
                             })}
-                          >
-                            <Eye className="mr-1 h-3 w-3" /> View
-                          </Button>
+                          />
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
@@ -1208,10 +1205,8 @@ export default function TeamAttendancePage() {
 
                     <td className="whitespace-nowrap px-4 py-2.5 text-right">
                       {att ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 px-2 text-[11px]"
+                        <ViewButton
+                          className="text-[11px]"
                           onClick={() => setDetailOf({
                             record: att,
                             name: getUserName(row.userId),
@@ -1219,9 +1214,7 @@ export default function TeamAttendancePage() {
                             team: teamOf(row.userId),
                             date: row._date
                           })}
-                        >
-                          <Eye className="mr-1 h-3 w-3" /> View
-                        </Button>
+                        />
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
                       )}

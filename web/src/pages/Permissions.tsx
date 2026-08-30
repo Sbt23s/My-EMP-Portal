@@ -915,6 +915,7 @@ export default function PermissionsPage() {
                 type="PERMISSION"
                 requestId={viewRow.id}
                 canAttach={viewRow.status === "PENDING"}
+                canComment={viewRow.status === "PENDING"}
               />
             </div>
 

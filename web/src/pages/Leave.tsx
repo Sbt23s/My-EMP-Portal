@@ -1,11 +1,11 @@
 import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { RequestThread } from "@/components/RequestThread";
-import { CheckCircle2, Clock, CalendarDays, AlertTriangle, Eye, X, Plus, Paperclip, CalendarX2 } from "lucide-react";
+import { CheckCircle2, Clock, CalendarDays, AlertTriangle, Eye, X, Plus, Paperclip, CalendarX2, User, XCircle } from "lucide-react";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
@@ -28,7 +28,8 @@ import {
 import type { ApiEnvelope, PageEnvelope, LeaveType, LeaveBalance, LeaveRequest } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
-import { todayIso, DATE_MAX } from "@/lib/dates";
+import { DATE_MAX, futureYearMin, FUTURE_DATE_MAX } from "@/lib/dates";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 /** Red asterisk shown on every field that must be filled. */
 function Req() {
@@ -99,10 +100,34 @@ export default function LeavePage() {
     formState: { errors }
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
-  // Days in the selected range (calendar) — used to fetch valid approvers.
+  /*
+    Working days in the selected range -- what decides who approves it.
+
+    This counted calendar days, so 28 Aug to 31 Aug came to four and the
+    request was routed to HR under the "more than 3 days" rule. Only two of
+    those days are worked: the Saturday and the Sunday in the middle are not
+    leave, the server does not count them, and the approval belongs to the
+    Team Leader. The two sides disagreed about the same request, and the side
+    the applicant could see was the wrong one.
+
+    Weekends only. Public holidays are rows in a table the server reads and
+    this does not, so a holiday inside a range can still round the count up by
+    one here; the server remains the authority on the number that is stored.
+  */
   const fromV = watch("fromDate");
   const toV = watch("toDate");
-  const dayCount = fromV && toV ? Math.max(1, dayjs(toV).diff(dayjs(fromV), "day") + 1) : 1;
+  const dayCount = useMemo(() => {
+    if (!fromV || !toV) return 1;
+    const from = dayjs(fromV);
+    const to = dayjs(toV);
+    if (!from.isValid() || !to.isValid() || to.isBefore(from)) return 1;
+    let days = 0;
+    for (let d = from; !d.isAfter(to, "day"); d = d.add(1, "day")) {
+      const dow = d.day();
+      if (dow !== 0 && dow !== 6) days++;
+    }
+    return Math.max(1, days);
+  }, [fromV, toV]);
   const approvers = useQuery({
     queryKey: ["leave-approvers", dayCount],
     enabled: open,
@@ -126,6 +151,15 @@ export default function LeavePage() {
     area first: somebody who picks a file and then cancels should leave
     nothing behind on the server.
   */
+  /*
+    The request the cancel confirmation is asking about, or null when it is
+    closed. The row is held rather than just its id so the dialog can show
+    which leave is about to go -- the type and the dates -- instead of asking
+    about "this leave request" and trusting the person to remember which row
+    they clicked.
+  */
+  const [confirmCancel, setConfirmCancel] = useState<any | null>(null);
+
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -301,7 +335,7 @@ export default function LeavePage() {
                 value={fromMonth}
                 max={toMonth}
                 onChange={(e) => setFromMonth(e.target.value)}
-                className="rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                className="h-[38px] rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
             <div className="flex flex-col">
@@ -311,7 +345,7 @@ export default function LeavePage() {
                 value={toMonth}
                 min={fromMonth}
                 onChange={(e) => setToMonth(e.target.value)}
-                className="rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                className="h-[38px] rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
             <ExportExcelButton onClick={exportExcel} />
@@ -422,9 +456,7 @@ export default function LeavePage() {
                             variant="outline"
                             className="h-8 rounded px-2 text-foreground"
                             disabled={cancel.isPending}
-                            onClick={() => {
-                              if (window.confirm("Cancel this leave request?")) cancel.mutate(r.id);
-                            }}
+                            onClick={() => setConfirmCancel(r)}
                           >
                             <X className="mr-1 h-3 w-3" /> Cancel
                           </Button>
@@ -493,59 +525,92 @@ export default function LeavePage() {
 
       {/* Reading a decided request. */}
       {viewing && (
-        <Dialog open onClose={() => setViewing(null)}>
-          <DialogHeader
-            title="Leave request"
-            description={`${viewing.leaveTypeName} · ${dayjs(viewing.fromDate).format("DD MMM YYYY")} – ${dayjs(viewing.toDate).format("DD MMM YYYY")}`}
-          />
-          <div className="mt-3 space-y-3 text-sm">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Status</p>
-                <Badge className={`mt-1 border-0 uppercase tracking-wider text-[10px] font-bold ${
-                  viewing.status === "APPROVED" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                  : viewing.status === "REJECTED" ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"
-                  : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                }`}>
-                  {viewing.status}
-                </Badge>
+        <Dialog open onClose={() => setViewing(null)} className="max-w-xl p-0" hideCloseButton>
+          <div className="rounded-lg bg-gradient-to-b from-indigo-50/70 to-transparent p-6 dark:from-indigo-500/10">
+            <button
+              type="button"
+              onClick={() => setViewing(null)}
+              aria-label="Close"
+              className="absolute right-4 top-4 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="mb-5 flex items-start gap-4">
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
+                <CalendarDays className="h-7 w-7" />
+              </span>
+              <div className="pr-8">
+                <h2 className="font-display text-2xl font-bold tracking-tight">
+                  Leave Request — {viewing.leaveTypeName}
+                </h2>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Requested dates: {dayjs(viewing.fromDate).format("dddd, DD MMM YYYY")}
+                  {viewing.fromDate !== viewing.toDate
+                    && ` — ${dayjs(viewing.toDate).format("dddd, DD MMM YYYY")}`}
+                </p>
               </div>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Working days</p>
-                <p className="mt-1 font-semibold tabular-nums">{viewing.workingDays}</p>
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Applied on</p>
-                <p className="mt-1 tabular-nums">{dayjs(viewing.createdAt).format("DD MMM YYYY")}</p>
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Requested to</p>
-                <p className="mt-1">{viewing.requestedToName || "—"}</p>
-              </div>
-              {viewing.decidedByName && (
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Decided by</p>
-                  <p className="mt-1">{viewing.decidedByName}</p>
-                </div>
-              )}
-              {viewing.decidedAt && (
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Decided on</p>
-                  <p className="mt-1 tabular-nums">{dayjs(viewing.decidedAt).format("DD MMM YYYY")}</p>
-                </div>
-              )}
             </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Reason</p>
-              <p className="mt-1 whitespace-pre-wrap">{viewing.reason || "—"}</p>
+
+            <div className="rounded-xl border bg-card">
+              <dl className="divide-y">
+                {([
+                  [CheckCircle2, "Status", viewing.status, "status"],
+                  [CalendarDays, "Date range", viewing.fromDate === viewing.toDate
+                    ? dayjs(viewing.fromDate).format("DD MMM YYYY")
+                    : `${dayjs(viewing.fromDate).format("DD MMM")} – ${dayjs(viewing.toDate).format("DD MMM YYYY")}`, "plain"],
+                  [CalendarDays, "Applied on", dayjs(viewing.createdAt).format("ddd, DD MMM YYYY"), "plain"],
+                  [Clock, "Working days",
+                    `${viewing.workingDays} ${Number(viewing.workingDays) === 1 ? "Day" : "Days"}`, "plain"],
+                  [User, "Requested to", viewing.requestedToName || "—", "plain"],
+                  ...(viewing.decidedByName
+                    ? [[User, "Decided by", viewing.decidedByName, "plain"]] : []),
+                  ...(viewing.decidedAt
+                    ? [[CalendarDays, "Decided on", dayjs(viewing.decidedAt).format("ddd, DD MMM YYYY"), "plain"]] : []),
+                ] as [any, string, string, string][]).map(([Icon, label, value, tone], i) => (
+                  <div key={`${label}-${i}`} className="flex items-center gap-3 px-4 py-2.5">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <dt className="flex-1 text-sm text-muted-foreground">{label}</dt>
+                    <span className="text-muted-foreground">:</span>
+                    <dd className="min-w-[8rem] text-right text-sm font-semibold">
+                      {tone === "status" ? (
+                        <Badge className={`border-0 uppercase tracking-wider text-[10px] font-bold ${
+                          viewing.status === "APPROVED" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                          : viewing.status === "REJECTED" ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"
+                          : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                        }`}>
+                          {viewing.status}
+                        </Badge>
+                      ) : value === "—" ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        <span className="rounded-md bg-indigo-50 px-2.5 py-1 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+                          {value}
+                        </span>
+                      )}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
             </div>
+
+            <div className="mt-4">
+              <p className="mb-1.5 text-sm font-semibold">Reason for Leave</p>
+              <p className="whitespace-pre-wrap rounded-lg border bg-muted/30 px-3 py-2.5 text-sm">
+                {viewing.reason || "—"}
+              </p>
+            </div>
+
             {viewing.status === "REJECTED" && (
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Remark</p>
-                <p className="mt-1 whitespace-pre-wrap">{viewing.decisionComment || "—"}</p>
+              <div className="mt-4">
+                <p className="mb-1.5 text-sm font-semibold">Remark</p>
+                <p className="whitespace-pre-wrap rounded-lg border bg-rose-50/60 px-3 py-2.5 text-sm dark:bg-rose-900/15">
+                  {viewing.decisionComment || "—"}
+                </p>
               </div>
             )}
-          </div>
 
           {/*
             The same files and conversation the approver sees.
@@ -561,11 +626,15 @@ export default function LeavePage() {
               type="LEAVE"
               requestId={viewing.id}
               canAttach={viewing.status === "PENDING"}
+              canComment={viewing.status === "PENDING"}
             />
           </div>
 
-          <div className="mt-5 flex justify-end">
-            <Button variant="outline" onClick={() => setViewing(null)}>Close</Button>
+            <div className="mt-5 flex justify-center">
+              <Button onClick={() => setViewing(null)} className="gap-2 px-8">
+                <XCircle className="h-4 w-4" /> Close
+              </Button>
+            </div>
           </div>
         </Dialog>
       )}
@@ -594,14 +663,14 @@ export default function LeavePage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="fromDate">From<Req /></Label>
-              <Input id="fromDate" type="date" max={DATE_MAX} min={todayIso()} {...register("fromDate")} />
+              <Input id="fromDate" type="date" min={futureYearMin()} max={FUTURE_DATE_MAX} {...register("fromDate")} />
               {errors.fromDate && (
                 <p className="text-xs text-destructive">{errors.fromDate.message}</p>
               )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="toDate">To<Req /></Label>
-              <Input id="toDate" type="date" max={DATE_MAX} min={watch("fromDate") || todayIso()} {...register("toDate")} />
+              <Input id="toDate" type="date" min={watch("fromDate") || futureYearMin()} max={FUTURE_DATE_MAX} {...register("toDate")} />
               {errors.toDate && (
                 <p className="text-xs text-destructive">{errors.toDate.message}</p>
               )}
@@ -610,7 +679,19 @@ export default function LeavePage() {
           <div className="space-y-1.5">
             <Label htmlFor="requestedTo">Request to<Req /></Label>
             <Select id="requestedTo" {...register("requestedTo")}>
-              <option value="">{approvers.isLoading ? "Loading…" : "Select approver"}</option>
+              {/*
+                  No "Select approver" option. The approver is not a choice --
+                  the workflow decides it from the number of working days, and
+                  the server sends back the one person it will go to. Offering
+                  it as a selection implied a decision the applicant does not
+                  have, and left an empty value that failed validation on
+                  submit for a field nobody could have filled differently.
+              */}
+              {(approvers.data ?? []).length === 0 && (
+                <option value="">
+                  {approvers.isLoading ? "Loading…" : "No approver for these dates"}
+                </option>
+              )}
               {(approvers.data ?? []).map((a: any) => (
                 <option key={a.id} value={a.id}>
                   {/* "TL - Priya Raman" rather than a bare name: the applicant
@@ -734,6 +815,34 @@ export default function LeavePage() {
           </div>
         </form>
       </Dialog>
+
+      {/*
+        Cancelling is not undoable, so it is asked in the application's own
+        dialog with the request named in it -- which leave, which dates --
+        rather than in a browser box that can only say "this leave request".
+      */}
+      <ConfirmDialog
+        open={!!confirmCancel}
+        title="Cancel this leave request?"
+        description="The request is withdrawn and the approver is no longer asked to decide it. This cannot be undone -- applying again means a new request."
+        detail={confirmCancel ? [
+          ["Leave type", confirmCancel.leaveTypeName ?? "—"],
+          ["Dates", confirmCancel.fromDate === confirmCancel.toDate
+            ? dayjs(confirmCancel.fromDate).format("DD MMM YYYY")
+            : `${dayjs(confirmCancel.fromDate).format("DD MMM YYYY")} — ${dayjs(confirmCancel.toDate).format("DD MMM YYYY")}`],
+          ["Working days", String(confirmCancel.workingDays ?? "—")],
+          ["Requested to", confirmCancel.requestedToName ?? "—"],
+        ] : undefined}
+        confirmLabel="Yes, cancel it"
+        cancelLabel="No, keep it"
+        busy={cancel.isPending}
+        onCancel={() => setConfirmCancel(null)}
+        onConfirm={() => {
+          const id = confirmCancel?.id;
+          setConfirmCancel(null);
+          if (id) cancel.mutate(id);
+        }}
+      />
     </div>
   );
 }

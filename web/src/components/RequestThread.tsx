@@ -63,10 +63,17 @@ export function RequestThread({
   requestId,
   /** Hides the upload control where the request is no longer open to change. */
   canAttach = true,
+  /**
+   * Hides the composer once the request has been decided. Existing comments
+   * stay, and stay readable -- the conversation is the record of how the
+   * decision was reached, so it is closed rather than removed.
+   */
+  canComment = true,
 }: {
   type: RequestType;
   requestId: number;
   canAttach?: boolean;
+  canComment?: boolean;
 }) {
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -299,8 +306,9 @@ export function RequestThread({
             <div className="h-12 animate-pulse rounded bg-muted/50" />
           ) : thread.length === 0 ? (
             <p className="py-2 text-center text-xs text-muted-foreground">
-              No comments yet. Ask a question or add a note — the other person
-              is told about it.
+              {canComment
+                ? "No comments yet. Ask a question or add a note — the other person is told about it."
+                : "No comments were left on this request."}
             </p>
           ) : (
             thread.map((c) => {
@@ -338,6 +346,14 @@ export function RequestThread({
           <div ref={endOfThread} />
         </div>
 
+        {!canComment ? (
+          /* Decided requests are closed to new comments. Said out loud rather
+             than by an input that simply is not there, so its absence reads as
+             a rule and not as something failing to load. */
+          <p className="mt-2 rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+            This request has been decided, so the conversation is closed.
+          </p>
+        ) : (
         <div className="mt-2 flex items-end gap-2">
           <Textarea
             rows={1}
@@ -368,6 +384,7 @@ export function RequestThread({
             )}
           </Button>
         </div>
+        )}
       </div>
 
       <PhotoLightbox src={lightbox} onClose={() => setLightbox(null)} />

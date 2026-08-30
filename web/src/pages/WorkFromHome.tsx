@@ -932,7 +932,7 @@ function DetailsDialog({
           for it to work here.
         */}
         <div className="border-t pt-4">
-          <RequestThread type="WFH" requestId={row.id} canAttach={row.status === "PENDING"} />
+          <RequestThread type="WFH" requestId={row.id} canAttach={row.status === "PENDING"} canComment={row.status === "PENDING"} />
         </div>
 
         <div className="flex flex-wrap justify-end gap-2 border-t pt-3">

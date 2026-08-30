@@ -476,6 +476,7 @@ export default function LeaveApprovalsPage() {
                 type="LEAVE"
                 requestId={viewModalData.id}
                 canAttach={viewModalData.status === "PENDING"}
+                canComment={viewModalData.status === "PENDING"}
               />
             </div>
 

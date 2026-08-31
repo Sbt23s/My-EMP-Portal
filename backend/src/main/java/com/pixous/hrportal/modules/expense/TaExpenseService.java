@@ -191,6 +191,37 @@ public class TaExpenseService {
         return toResponse(expense);
     }
 
+    /**
+     * Withdraw a claim the person raised themselves.
+     *
+     * <p>Separate from delete, which removes the row: a claim that was raised
+     * and then withdrawn is a thing that happened, and an approver who saw it
+     * in their queue should find out what became of it rather than find it
+     * gone. So the row stays and its status becomes CANCELLED.
+     *
+     * <p>Only the person who raised it, and only while it is still pending --
+     * the same two rules editing already carries. Once HR has decided, the
+     * decision is theirs to change, not the claimant's to erase.
+     */
+    @Transactional
+    public void cancelTaExpense(Long currentUserId, Long id) {
+        TaExpense expense = taExpenseRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("TA Expense"));
+        if (!expense.getUserId().equals(currentUserId)) {
+            throw new ApiException(ErrorCode.ACCESS_DENIED,
+                    "You can only cancel your own claim");
+        }
+        if ("CANCELLED".equalsIgnoreCase(expense.getStatus())) {
+            throw ApiException.business("This claim is already cancelled.");
+        }
+        if (!"PENDING".equalsIgnoreCase(expense.getStatus())) {
+            throw ApiException.business(
+                    "This claim has already been reviewed and can no longer be cancelled.");
+        }
+        expense.setStatus("CANCELLED");
+        taExpenseRepository.save(expense);
+    }
+
     @Transactional
     public void deleteTaExpense(Long currentUserId, Long id, boolean isAdmin) {
         TaExpense expense = taExpenseRepository.findById(id)

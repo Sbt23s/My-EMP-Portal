@@ -6,6 +6,7 @@ import { Map, Plus, Settings, Upload, ImagePlus, Pencil, Clock, Check, X, Mail }
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/EmptyState";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -61,6 +62,8 @@ export default function TaExpensesPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [viewRow, setViewRow] = useState<any | null>(null);
   const [decideRow, setDecideRow] = useState<any | null>(null);
+  /** The claim the cancel confirmation is asking about, or null when closed. */
+  const [confirmCancel, setConfirmCancel] = useState<any | null>(null);
 
   // Settings
   const settingsQuery = useQuery({
@@ -72,6 +75,25 @@ export default function TaExpensesPage() {
   const taList = useQuery({
     queryKey: ["ta-expenses", listKey],
     queryFn: async () => (await api.get(`/ta-expenses/${listKey}`)).data.data
+  });
+
+  /*
+    Withdrawing a claim raised by mistake.
+
+    A cancel, not a delete: the row stays and its status becomes CANCELLED, so
+    an approver who already saw it in their queue finds out what became of it
+    rather than finding it gone. The server allows it only to the person who
+    raised it and only while it is still pending -- the same two rules editing
+    already carries.
+  */
+  const cancelClaim = useMutation({
+    mutationFn: async (id: number) => { await api.post(`/ta-expenses/${id}/cancel`); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ta-expenses"] });
+      setConfirmCancel(null);
+      toast.success("Claim cancelled");
+    },
+    onError: (e) => toast.error(apiMessage(e, "Could not cancel that claim")),
   });
 
   const updateStatus = useMutation({
@@ -422,6 +444,22 @@ export default function TaExpensesPage() {
                             Review
                           </Button>
                         )}
+                        {/* The person who raised it can withdraw it while it is
+                            still pending -- a claim entered by mistake should
+                            not need an approver to clear it. Shown on the same
+                            terms the Edit button uses, minus the HR case: HR
+                            reviewing somebody else's claim decides it rather
+                            than cancelling it. */}
+                        {row.status === "PENDING" && !canApprove && scope === "MINE" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={cancelClaim.isPending}
+                            onClick={() => setConfirmCancel(row)}
+                          >
+                            <X className="mr-1 h-3.5 w-3.5" /> Cancel
+                          </Button>
+                        )}
                         {/* Claims can only be edited while PENDING, by HR or the creator */}
                         {(row.status === "PENDING" && (canEditAnyClaim || (!canApprove && scope === "MINE"))) && (
                           <Button
@@ -554,6 +592,25 @@ export default function TaExpensesPage() {
           pending={updateStatus.isPending}
         />
       )}
+
+      {/* Cancelling cannot be undone, so it is asked in the application's own
+          dialog with the claim named in it -- the same way leave and work from
+          home ask. */}
+      <ConfirmDialog
+        open={!!confirmCancel}
+        title="Cancel this claim?"
+        description="The claim is withdrawn and HR is no longer asked to decide it. This cannot be undone -- claiming again means a new entry."
+        detail={confirmCancel ? [
+          ["Date", dayjs(confirmCancel.date).format("DD MMM YYYY")],
+          ["Category", confirmCancel.category || "—"],
+          ["Amount", `₹${Number(confirmCancel.grossTotal ?? 0).toLocaleString("en-IN")}`],
+        ] : undefined}
+        confirmLabel="Yes, cancel it"
+        cancelLabel="No, keep it"
+        busy={cancelClaim.isPending}
+        onCancel={() => setConfirmCancel(null)}
+        onConfirm={() => { if (confirmCancel?.id) cancelClaim.mutate(confirmCancel.id); }}
+      />
     </div>
   );
 }

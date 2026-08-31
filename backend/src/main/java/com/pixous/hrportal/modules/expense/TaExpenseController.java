@@ -77,6 +77,13 @@ public class TaExpenseController {
                 id, body.get("status"), body.get("comment"), SecurityUtils.currentUserId()));
     }
 
+    @PostMapping("/{id}/cancel")
+    @Operation(summary = "Withdraw a claim you raised, while it is still pending")
+    public ApiResponse<Void> cancel(@PathVariable Long id) {
+        taExpenseService.cancelTaExpense(SecurityUtils.currentUserId(), id);
+        return ApiResponse.message("Claim cancelled");
+    }
+
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a TA expense entry")
     public ApiResponse<Void> delete(@PathVariable Long id) {

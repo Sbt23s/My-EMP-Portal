@@ -351,7 +351,7 @@ export default function HelpdeskPage() {
           </Select>
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Exact date</label>
+          <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Date</label>
           <Input type="date" min={DATE_MIN} max={DATE_MAX} value={day} onChange={(e) => setDay(e.target.value)} className="w-40" />
         </div>
         {filtersOn && (

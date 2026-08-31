@@ -206,7 +206,16 @@ export default function TaExpensesPage() {
    */
   const sendClaimsEmail = async () => {
     const to = emailTo.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[A-Za-z]{2}$/.test(to)) {
+    /*
+      The last part had no + on it, so the top-level domain had to be exactly
+      two letters: .in and .uk passed, .com and .info did not. Every address on
+      this system is a gmail.com one, so the check rejected essentially every
+      address anybody would type.
+
+      Two or more letters now. Deliberately loose beyond that -- the real test
+      of an address is whether the mail arrives, and the server reports that.
+    */
+    if (!/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/.test(to)) {
       toast.error("Enter a valid email address.");
       return;
     }

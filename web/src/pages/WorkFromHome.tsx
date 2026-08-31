@@ -337,7 +337,13 @@ export default function WorkFromHomePage() {
         ];
         if (showInbox) {
           tabs.push(["inbox",
-            `Pending my approval (${inboxRows.filter((r) => r.canAct).length})`]);
+            /*
+              Assigned to me: everything sent here, not only what is still
+              waiting. The count read canAct while the tab showed every row, so
+              a tab saying zero opened onto a list of decided requests -- the
+              number and the rows behind it were answering different questions.
+            */
+            `Assigned to me (${inboxRows.length})`]);
         }
         if (canSeeAll) tabs.push(["all", `All requests (${(all.data ?? []).length})`]);
         if (canSeeToday) tabs.push(["today", `Working from home (${(today.data ?? []).length})`]);

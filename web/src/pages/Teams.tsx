@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { PageLoader } from "@/components/ui/page-loader";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
@@ -44,6 +45,14 @@ export default function TeamsPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [addTo, setAddTo] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  /*
+    The team the delete confirmation is asking about, or null when closed.
+
+    Held with its member count rather than looked up again when the dialog
+    renders: what the person clicked is what the dialog should describe, even
+    if the roster refetches underneath it a moment later.
+  */
+  const [confirmDelete, setConfirmDelete] = useState<{ label: string; members: number } | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
   const designations = useQuery({
@@ -359,12 +368,7 @@ export default function TeamsPage() {
                       variant="outline"
                       className="text-destructive hover:bg-destructive/10"
                       disabled={deleteTeam.isPending}
-                      onClick={() => {
-                        const msg = members.length > 0
-                          ? `Delete "${d.label}"? ${members.length} member(s) will be moved to "No designation".`
-                          : `Delete the "${d.label}" team?`;
-                        if (window.confirm(msg)) deleteTeam.mutate(d.label);
-                      }}
+                      onClick={() => setConfirmDelete({ label: d.label, members: members.length })}
                     >
                       <X className="h-4 w-4" /> Delete
                     </Button>
@@ -529,6 +533,33 @@ export default function TeamsPage() {
           onClose={() => setAssignTo(null)}
         />
       )}
+
+      {/*
+        Deleting a team moves everybody in it to "No designation", which is a
+        larger thing than the word Delete suggests -- so it is asked in the
+        application's own dialog with the count in front of the person, the way
+        leave, work from home and claims ask.
+      */}
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title={confirmDelete ? `Delete the "${confirmDelete.label}" team?` : ""}
+        description={confirmDelete && confirmDelete.members > 0
+          ? `The ${confirmDelete.members} ${confirmDelete.members === 1 ? "person" : "people"} in it move to "No designation" — nobody is removed from the company. This cannot be undone.`
+          : "This cannot be undone."}
+        detail={confirmDelete ? [
+          ["Team", confirmDelete.label],
+          ["Members", String(confirmDelete.members)],
+        ] : undefined}
+        confirmLabel="Yes, delete it"
+        cancelLabel="No, keep it"
+        busy={deleteTeam.isPending}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          const label = confirmDelete?.label;
+          setConfirmDelete(null);
+          if (label) deleteTeam.mutate(label);
+        }}
+      />
     </div>
   );
 }

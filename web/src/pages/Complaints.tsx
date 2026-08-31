@@ -296,7 +296,7 @@ function MySubmissions() {
           </Select>
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Exact date</label>
+          <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Date</label>
           <Input type="date" min={DATE_MIN} max={DATE_MAX} value={day} onChange={(e) => { setDay(e.target.value); paged.setPage(0); }} className="w-40" />
         </div>
         {filtersOn && (
@@ -554,6 +554,46 @@ function AllComplaints() {
 
   const paged = usePagedRows(filtered, 10, [statusTab, year, month, day, inPeriod]);
   const rows = paged.pageRows;
+
+  /*
+    The complaints the filters leave, as a spreadsheet.
+
+    Carries the columns HR sees and the employee's own export does not -- who
+    raised it and who answered -- so the file matches this table rather than
+    the other one.
+  */
+  const exportAllComplaints = async () => {
+    if (filtered.length === 0) { toast.error("Nothing to export."); return; }
+    const XLSX = await import("xlsx");
+    const headers = ["#", "Ticket ID", "Raised by", "Employee ID", "Sent to", "Subject",
+                     "Category", "Priority", "Status", "Response", "Answered by",
+                     "Raised on", "Resolved on"];
+    const body = filtered.map((c, i) => [
+      i + 1,
+      c.referenceCode ?? "",
+      c.raisedByName ?? "",
+      c.raisedByCode ?? "",
+      c.requestedToName || "HR & Admin",
+      c.subject ?? "",
+      c.category ?? "",
+      c.priority ?? "",
+      (c.status ?? "").replace("_", " "),
+      c.hrResponse ?? "",
+      c.handledByName ?? "",
+      c.createdAt ? dayjs(c.createdAt).format("DD MMM YYYY") : "",
+      c.resolvedAt ? dayjs(c.resolvedAt).format("DD MMM YYYY") : "",
+    ]);
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...body]);
+    ws["!cols"] = [{ wch: 5 }, { wch: 18 }, { wch: 22 }, { wch: 13 }, { wch: 18 },
+                   { wch: 34 }, { wch: 18 }, { wch: 10 }, { wch: 14 }, { wch: 40 },
+                   { wch: 20 }, { wch: 14 }, { wch: 14 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Complaints");
+    const tag = [year === "all" ? "" : year, month === "all" ? "" : month, day || ""]
+      .filter(Boolean).join("_") || "All";
+    XLSX.writeFile(wb, `All_Complaints_${tag}.xlsx`);
+    toast.success(`Exported ${filtered.length} complaint${filtered.length === 1 ? "" : "s"}`);
+  };
   const filtersOn = year !== "all" || month !== "all" || !!day || statusTab !== "ALL";
 
   const filterBar = (
@@ -619,7 +659,7 @@ function AllComplaints() {
           </Select>
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Exact date</label>
+          <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Date</label>
           <Input type="date" min={DATE_MIN} max={DATE_MAX} value={day} onChange={(e) => { setDay(e.target.value); paged.setPage(0); }} className="w-40" />
         </div>
         {filtersOn && (
@@ -633,6 +673,12 @@ function AllComplaints() {
         <span className="ml-auto text-xs text-muted-foreground">
           {filtered.length} of {all.length} complaint{all.length === 1 ? "" : "s"}
         </span>
+        {/* Exports what the filters leave, so the file matches the page. */}
+        <ExportExcelButton
+          disabled={filtered.length === 0}
+          title={filtered.length ? "Download these complaints as a spreadsheet" : "Nothing to export"}
+          onClick={exportAllComplaints}
+        />
       </div>
     </>
   );

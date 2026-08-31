@@ -378,7 +378,7 @@ export default function PermissionsPage() {
       ? [["ALL_EMP", `All Requests (${(all.data ?? []).length})`] as const]
       : []),
     ...(isApprover
-      ? [["TO_ME", `Pending My Approval (${(pending.data ?? []).length})`] as const]
+      ? [["TO_ME", `Assigned to me (${(pending.data ?? []).length})`] as const]
       : []),
     [["MINE", `My Requests (${(mine.data ?? []).length})`] as const][0]
   ];
@@ -470,7 +470,7 @@ export default function PermissionsPage() {
                 view === "MINE" ? "my_permissions"
                   : view === "ALL_EMP" ? "all_permissions" : "pending_permissions",
                 view === "MINE" ? "My permission requests"
-                  : view === "ALL_EMP" ? "All permission requests" : "Pending my approval"
+                  : view === "ALL_EMP" ? "All permission requests" : "Assigned to me"
               )}
             />
             {!isSystemAdmin && (
@@ -717,7 +717,7 @@ export default function PermissionsPage() {
         <Card>
           <CardContent className="p-0">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
-              <span className="text-sm font-semibold">Pending my approval</span>
+              <span className="text-sm font-semibold">Assigned to me</span>
               <div className="flex flex-wrap items-center gap-2">
               <ExportExcelButton
                 onClick={() => exportPermissions(

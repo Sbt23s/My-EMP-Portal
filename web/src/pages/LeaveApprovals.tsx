@@ -141,21 +141,34 @@ export default function LeaveApprovalsPage() {
   const toggleAll = () =>
     setSelected(allSelected ? new Set() : new Set(actable.map((r) => r.id)));
 
-  const promptReason = () => {
-    const reason = window.prompt("Reason for rejection (required):");
-    if (reason === null) return null;
-    if (!reason.trim()) { toast.error("Rejection reason is required"); return null; }
-    return reason.trim();
-  };
-  const rejectOne = (id: number) => {
-    const comment = promptReason();
-    if (comment === null) return;
-    decide.mutate({ id, decision: "REJECTED", comment });
+  /*
+    Asking why, in the application's own dialog.
+
+    This was window.prompt, which draws in the browser's chrome, cannot show
+    which request is being turned down, and on a bulk rejection could not say
+    how many. Permission already asks this properly; this is the same dialog.
+
+    What is being rejected: one request by id, or the whole selection.
+  */
+  const [rejecting, setRejecting] = useState<
+    { kind: "one"; id: number; name?: string } | { kind: "bulk"; count: number } | null
+  >(null);
+  const [rejectReason, setRejectReason] = useState("");
+
+  const rejectOne = (id: number, name?: string) => {
+    setRejectReason("");
+    setRejecting({ kind: "one", id, name });
   };
   const rejectBulk = () => {
-    const comment = promptReason();
-    if (comment === null) return;
-    bulk.mutate({ decision: "REJECTED", comment });
+    setRejectReason("");
+    setRejecting({ kind: "bulk", count: selected.size });
+  };
+  const confirmReject = () => {
+    const comment = rejectReason.trim();
+    if (!comment) return;
+    if (rejecting?.kind === "one") decide.mutate({ id: rejecting.id, decision: "REJECTED", comment });
+    else if (rejecting?.kind === "bulk") bulk.mutate({ decision: "REJECTED", comment });
+    setRejecting(null);
   };
 
   return (
@@ -471,11 +484,18 @@ export default function LeaveApprovalsPage() {
               Files and conversation, in the dialog where the decision is
               made.
             */}
+            {/*
+              The person who applied attaches the certificate; an approver
+              reads it. canAttach was true for any pending request, so an
+              approver could add a document to somebody else's leave and it
+              would sit there under their name.
+            */}
             <div className="mt-4 border-t pt-4">
               <RequestThread
                 type="LEAVE"
                 requestId={viewModalData.id}
-                canAttach={viewModalData.status === "PENDING"}
+                canAttach={viewModalData.status === "PENDING"
+                  && viewModalData.userId === user?.id}
                 canComment={viewModalData.status === "PENDING"}
               />
             </div>
@@ -514,13 +534,7 @@ export default function LeaveApprovalsPage() {
                     className="flex-1 border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
                     disabled={decide.isPending}
                     onClick={() => {
-                      const reason = window.prompt("Reason for rejection (required):");
-                      if (!reason || !reason.trim()) return;
-                      decide.mutate({
-                        id: viewModalData.id,
-                        decision: "REJECTED",
-                        comment: reason.trim(),
-                      });
+                      rejectOne(viewModalData.id, viewModalData.employeeName);
                       setViewModalData(null);
                     }}
                   >
@@ -529,6 +543,44 @@ export default function LeaveApprovalsPage() {
                 </div>
               </div>
             )}
+          </div>
+        </Dialog>
+      )}
+
+      {/* Why a request is being turned down, asked the way permission asks it. */}
+      {rejecting && (
+        <Dialog open onClose={() => setRejecting(null)} className="max-w-md">
+          <DialogHeader
+            title={rejecting.kind === "bulk"
+              ? `Reject ${rejecting.count} request${rejecting.count === 1 ? "" : "s"}?`
+              : "Reject this request?"}
+            description={rejecting.kind === "one" && rejecting.name
+              ? `${rejecting.name} will see the reason you give.`
+              : "The reason is sent to everyone whose request this turns down."}
+          />
+          <div className="mt-3 space-y-1.5">
+            <label htmlFor="rej-reason" className="text-sm font-medium">
+              Reason for rejection <span className="text-destructive">*</span>
+            </label>
+            <Input
+              id="rej-reason"
+              autoFocus
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Tell them why — this is sent to the employee"
+              onKeyDown={(e) => { if (e.key === "Enter" && rejectReason.trim()) confirmReject(); }}
+            />
+          </div>
+          <div className="mt-5 flex justify-end gap-2 border-t pt-4">
+            <Button variant="outline" onClick={() => setRejecting(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={!rejectReason.trim() || decide.isPending || bulk.isPending}
+              onClick={confirmReject}
+            >
+              {(decide.isPending || bulk.isPending) && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              Reject
+            </Button>
           </div>
         </Dialog>
       )}

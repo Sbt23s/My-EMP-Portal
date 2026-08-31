@@ -361,17 +361,26 @@ export default function PermissionsPage() {
   /** Requests that run into another of the same person's, on the same day. */
   const clashing = useMemo(() => overlappingIds(tileRows), [tileRows]);
 
-  /** The views this role actually has. A single one needs no toggle. */
+  /*
+    The views this role has, each with what it holds. A single one needs no
+    toggle.
+
+    My Requests was hidden from anyone who sees all requests, on the reasoning
+    that an administrator reviews requests rather than making them. But HR asks
+    for an hour off like everybody else, and their own requests were then
+    findable only by hunting for their name in the company-wide list.
+
+    The counts come from the same three queries the tiles and the table read,
+    so a number on a tab and the rows behind it cannot disagree.
+  */
   const views = [
     ...(seesAll
-      ? [["ALL_EMP", "All Requests"] as const]
+      ? [["ALL_EMP", `All Requests (${(all.data ?? []).length})`] as const]
       : []),
     ...(isApprover
-      ? [["TO_ME", "Pending My Approval"] as const]
+      ? [["TO_ME", `Pending My Approval (${(pending.data ?? []).length})`] as const]
       : []),
-    ...(!seesAll
-      ? [["MINE", "My Requests"] as const]
-      : [])
+    [["MINE", `My Requests (${(mine.data ?? []).length})`] as const][0]
   ];
 
   const decide = useMutation({

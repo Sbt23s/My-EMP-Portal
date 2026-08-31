@@ -639,32 +639,17 @@ export default function PermissionsPage() {
                     <TableRow key={r.id} className="border-b align-top last:border-0 hover:bg-muted/30 transition-colors [&>td]:px-3 [&>td]:py-4">
                       <TableCell>
                         <div className="flex items-center gap-1.5">
-                          <ViewButton onClick={() => setViewRow(r)} />
                           {/*
-                            canDecideRow is the existing rule and is unchanged:
-                            pending, not overdue, not your own, and addressed to
-                            you. It decides the two buttons; it does not decide
-                            whether the request can be read.
+                            View only. Approving from the row meant deciding
+                            somebody's hours off from a truncated reason and a
+                            date -- the dialog behind this button carries the
+                            same two buttons with the whole request in front of
+                            them, which is where a decision belongs.
+
+                            canDecideRow is untouched and still governs the pair
+                            inside the dialog.
                           */}
-                          {isApprover && canDecideRow(r) && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={decide.isPending}
-                                onClick={() => { setRejectReason(""); setDecideOn({ row: r, approve: false }); }}
-                              >
-                                Reject
-                              </Button>
-                              <Button
-                                size="sm"
-                                disabled={decide.isPending}
-                                onClick={() => { setApproveNote(""); setDecideOn({ row: r, approve: true }); }}
-                              >
-                                Approve
-                              </Button>
-                            </>
-                          )}
+                          <ViewButton onClick={() => setViewRow(r)} />
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{r.employeeName}<div className="code-chip text-xs text-muted-foreground">{r.employeeCode}</div></TableCell>
@@ -782,18 +767,6 @@ export default function PermissionsPage() {
                         */}
                         <div className="flex items-center justify-end gap-1.5">
                           <ViewButton onClick={() => setViewRow(r)} />
-                          {!isOverdue(r.status, r.requestDate) && r.status === "PENDING" && (
-                            <>
-                              <Button size="sm" variant="outline" disabled={decide.isPending}
-                                onClick={() => { setRejectReason(""); setDecideOn({ row: r, approve: false }); }}>
-                                Reject
-                              </Button>
-                              <Button size="sm" disabled={decide.isPending}
-                                onClick={() => { setApproveNote(""); setDecideOn({ row: r, approve: true }); }}>
-                                Approve
-                              </Button>
-                            </>
-                          )}
                           {isOverdue(r.status, r.requestDate) && (
                             <span className="text-xs text-muted-foreground">
                               Not decided in time
@@ -1012,11 +985,19 @@ export default function PermissionsPage() {
               deciding in another is how a decision gets made without it.
             */}
             <div className="border-t pt-4">
+              {/*
+                No comment box on permission. It is hours off inside one day,
+                decided in a sitting -- the conversation an attachment or a
+                back-and-forth belongs to is leave, not this. Comments already
+                left stay readable; what is gone is the box for new ones, and
+                with nothing to explain there is no notice either.
+              */}
               <RequestThread
                 type="PERMISSION"
                 requestId={viewRow.id}
                 canAttach={viewRow.status === "PENDING"}
-                canComment={viewRow.status === "PENDING"}
+                canComment={false}
+                closedNotice={false}
               />
             </div>
 
@@ -1260,8 +1241,30 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
   const spanMinutes = fromMins !== null && toMins !== null ? toMins - fromMins : null;
   const tooLong = spanMinutes !== null && spanMinutes > MAX_PERMISSION_MINUTES;
 
-  const valid = !!requestDate && !!fromTime && !!toTime && !!requestedTo && !!reason.trim()
-    && toTime > fromTime && !tooLong && !isWeekendDate && !dateBlocked;
+  /*
+    Why Submit is off, in the order somebody fills the form in.
+
+    It was a single boolean over nine conditions, and only two of them said
+    anything on screen -- so a form that looked complete could sit there with a
+    greyed-out button and nothing to read. The first unmet condition is named
+    here and shown beside the button.
+
+    The rules themselves are unchanged; what is new is that they can be seen.
+  */
+  const blockedBecause: string | null =
+    !requestDate ? "Choose the date you need the time off."
+    : isWeekendDate ? `${dayjs(requestDate).format("dddd")}s are not working days — choose a working day.`
+    : availability.isLoading ? "Checking that date…"
+    : dateBlocked ? (dateBlockedReason ?? "That date is not available.")
+    : !fromTime ? "Choose the time you are leaving."
+    : !toTime ? "Choose the time you are back."
+    : toTime <= fromTime ? "The end time has to be after the start time."
+    : tooLong ? "Permission is limited to 2 hours a day — apply for leave instead."
+    : !requestedTo ? "There is nobody set up to approve your requests. Ask HR to assign an approver."
+    : !reason.trim() ? "Give a reason for the request."
+    : null;
+
+  const valid = blockedBecause === null;
 
   return (
     <Dialog open onClose={onClose} className="max-w-md">
@@ -1459,6 +1462,11 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
             {apply.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Submit
           </Button>
         </div>
+        {/* Beside the button that will not work, which is where somebody is
+            looking when they wonder why. */}
+        {blockedBecause && !apply.isPending && (
+          <p className="mt-2 text-right text-xs text-muted-foreground">{blockedBecause}</p>
+        )}
       </div>
     </Dialog>
   );

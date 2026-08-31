@@ -69,11 +69,18 @@ export function RequestThread({
    * decision was reached, so it is closed rather than removed.
    */
   canComment = true,
+  closedNotice = true,
 }: {
   type: RequestType;
   requestId: number;
   canAttach?: boolean;
   canComment?: boolean;
+  /**
+   * Whether to explain why commenting is off. True where the thread is closed
+   * because the request was decided; false where this screen never offered
+   * commenting in the first place and has nothing to account for.
+   */
+  closedNotice?: boolean;
 }) {
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -347,12 +354,20 @@ export function RequestThread({
         </div>
 
         {!canComment ? (
-          /* Decided requests are closed to new comments. Said out loud rather
-             than by an input that simply is not there, so its absence reads as
-             a rule and not as something failing to load. */
-          <p className="mt-2 rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-            This request has been decided, so the conversation is closed.
-          </p>
+          /*
+            Two reasons the box is not here, and they are not the same.
+
+            A decided request is closed, and that is worth saying out loud so
+            the absence reads as a rule rather than as something failing to
+            load. A screen that simply does not offer commenting has nothing to
+            explain -- and saying "this request has been decided" on a pending
+            one would be a plain untruth.
+          */
+          closedNotice === false ? null : (
+            <p className="mt-2 rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+              This request has been decided, so the conversation is closed.
+            </p>
+          )
         ) : (
         <div className="mt-2 flex items-end gap-2">
           <Textarea

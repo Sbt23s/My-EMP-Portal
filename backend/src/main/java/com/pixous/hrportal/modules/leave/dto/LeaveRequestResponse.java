@@ -15,7 +15,16 @@ public record LeaveRequestResponse(
         String requestedToName, String decidedByName,
         String team, String employeeCode,
         /** Role of whoever it went to, and of whoever decided — shown beside their names. */
-        String requestedToRole, String decidedByRole
+        String requestedToRole, String decidedByRole,
+        /**
+         * Who it was sent to, by id.
+         *
+         * The name and the role were both here and the id was not, so a screen
+         * asking "is this one mine" had nothing to compare against -- the
+         * approvals page filtered on a field that did not exist, and its
+         * Assigned to me tab read zero however many requests were waiting.
+         */
+        Long requestedTo
 ) {
     public static LeaveRequestResponse from(LeaveRequest r, String employeeName, String leaveTypeName) {
         return from(r, employeeName, leaveTypeName, null, false);
@@ -57,6 +66,6 @@ public record LeaveRequestResponse(
                 r.getWorkingDays(), r.getReason(), r.getAttachmentPath(), r.getStatus(),
                 r.getDecidedBy(), r.getDecidedAt(), r.getDecisionComment(), r.getCreatedAt(),
                 applicantRole, canAct, requestedToName, decidedByName, team, employeeCode,
-                requestedToRole, decidedByRole);
+                requestedToRole, decidedByRole, r.getRequestedTo());
     }
 }

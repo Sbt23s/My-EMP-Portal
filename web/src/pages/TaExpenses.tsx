@@ -49,14 +49,13 @@ export default function TaExpensesPage() {
   // HR and admins review every claim; a Team Leader may view their team's but
   // not act on them; everyone else sees only their own.
   const canApprove = hasPermission("USER_MANAGE", "CLAIM_APPROVE", "DASHBOARD_EXEC");
-  const isTeamLeader = hasRole("IT_TL") && !canApprove;
   const canManage = canApprove;
   // Correcting someone else's claim is HR's job alone. Admin and the company
   // head look at the same list, but read-only.
   const isCompanyHead = user?.employeeCode === "PIX-E100";
   const canEditAnyClaim =
     hasRole("IT_MGR", "IT_HR", "CV_HR") && !isCompanyHead && !hasPermission("USER_MANAGE");
-  const [scope, setScope] = useState<"MINE" | "TEAM">("MINE");
+
   const [statusTab, setStatusTab] = useState<"ALL" | "PENDING" | "APPROVED" | "REJECTED">("ALL");
   const [q, setQ] = useState("");
   const [showSettings, setShowSettings] = useState(false);
@@ -71,7 +70,7 @@ export default function TaExpensesPage() {
     queryFn: async () => (await api.get("/settings")).data.data
   });
 
-  const listKey = canApprove ? "all" : isTeamLeader && scope === "TEAM" ? "team" : "me";
+  const listKey = canApprove ? "all" : "me";
   const taList = useQuery({
     queryKey: ["ta-expenses", listKey],
     queryFn: async () => (await api.get(`/ta-expenses/${listKey}`)).data.data
@@ -236,7 +235,7 @@ export default function TaExpensesPage() {
   };
 
   // Paged like every other table, with the numbers and rows-per-page.
-  const paged = usePagedRows(rows, 15, [statusTab, q, scope, taList.data]);
+  const paged = usePagedRows(rows, 15, [statusTab, q, taList.data]);
 
   const counts = useMemo(() => {
     const all: any[] = taList.data ?? [];
@@ -278,8 +277,7 @@ export default function TaExpensesPage() {
         title="Claims"
         subtitle={
           canApprove ? "Every employee's expense claims — review and decide."
-            : isTeamLeader && scope === "TEAM" ? "Your team's claims — view only."
-              : "Travel allowance and expense claims."
+            : "Travel allowance and expense claims."
         }
         actions={
           !canApprove ? (
@@ -315,32 +313,18 @@ export default function TaExpensesPage() {
         }
       />
 
-      {/* A Team Leader switches between their own claims and their team's */}
-      {isTeamLeader && (
-          <div className="mb-4 inline-flex rounded-full border bg-muted/60 p-1">
-            {([["MINE", "My claims"], ["TEAM", "Team claims"]] as const).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setScope(key)}
-                className={
-                  "rounded-full px-4 py-1.5 text-xs font-semibold transition-colors " +
-                  (scope === key ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground")
-                }
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-      )}
+      {/*
+        The Team claims tab is gone, and with only "My claims" left there is
+        nothing to switch between -- a one-option switcher is a control that
+        cannot be used. A Team Leader sees their own claims here.
+
+      */}
 
       {/* Counts for whichever list is open — each tile is also its filter. */}
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <StatTile
               label="All claims" value={counts.ALL} icon={Map} fill={TILE_FILLS.violet}
-              hint={canApprove ? "Across every team"
-                : scope === "TEAM" ? "Raised by your team" : "Raised by you"}
+              hint={canApprove ? "Across every team" : "Raised by you"}
               active={statusTab === "ALL"} onClick={() => setStatusTab("ALL")}
             />
             <StatTile
@@ -386,7 +370,7 @@ export default function TaExpensesPage() {
             </div>
             <Input
               placeholder={
-                canApprove || (isTeamLeader && scope === "TEAM")
+                canApprove
                   ? "Search employee, category or location…"
                   : "Search category or location…"
               }
@@ -407,8 +391,7 @@ export default function TaExpensesPage() {
                   statusTab !== "ALL"
                     ? "Pick another status above to see the rest."
                     : canApprove ? "Employee claims will appear here."
-                      : isTeamLeader && scope === "TEAM" ? "Your team hasn't raised any claims yet."
-                        : "Add your first claim using the button above."
+                      : "Add your first claim using the button above."
                 }
               />
             </div>
@@ -464,7 +447,7 @@ export default function TaExpensesPage() {
                           </Button>
                         )}
                         {/* Claims can only be edited while PENDING, by HR or the creator */}
-                        {(row.status === "PENDING" && (canEditAnyClaim || (!canApprove && scope === "MINE"))) && (
+                        {(row.status === "PENDING" && (canEditAnyClaim || !canApprove)) && (
                           <Button
                             size="sm"
                             variant="outline"

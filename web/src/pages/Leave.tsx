@@ -137,9 +137,21 @@ export default function LeavePage() {
         `/leave/approvers?days=${dayCount}`)).data.data
   });
 
+  /*
+    Fill in the approver the field is already showing.
+
+    With no empty "select" option, the first entry is displayed the moment the
+    list loads -- but displaying is not choosing, so no change event fires and
+    the value stays empty. The form then refuses to submit for want of an
+    approver while naming the one it is pointing at.
+
+    This ran only when there was exactly one approver, which covered the common
+    case and left the same silent failure whenever there were two.
+  */
   useEffect(() => {
-    if (approvers.data && approvers.data.length === 1 && !watch("requestedTo")) {
-      reset({ ...watch(), requestedTo: String(approvers.data[0].id) });
+    const list = approvers.data;
+    if (list && list.length > 0 && !watch("requestedTo")) {
+      reset({ ...watch(), requestedTo: String(list[0].id) });
     }
   }, [approvers.data, reset, watch]);
 

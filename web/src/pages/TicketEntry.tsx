@@ -26,10 +26,10 @@ const MAX_MB = 10;
 const CATEGORIES = ["Hardware", "Software", "Network", "Access / Login", "Facility", "Other"];
 const TYPES = [{ value: "IT", label: "IT" }, { value: "FACILITY", label: "Facility" }];
 const PRIORITIES = [
-  { value: "LOW", label: "Low — can wait" },
-  { value: "MEDIUM", label: "Medium — normal" },
-  { value: "HIGH", label: "High — blocking me" },
-  { value: "CRITICAL", label: "Critical — work stopped" }
+  { value: "LOW", label: "Low" },
+  { value: "MEDIUM", label: "Medium" },
+  { value: "HIGH", label: "High" },
+  { value: "CRITICAL", label: "Critical" }
 ];
 const MODULES = [
   "Attendance", "Leave", "Payroll", "Tasks", "Work Reports",

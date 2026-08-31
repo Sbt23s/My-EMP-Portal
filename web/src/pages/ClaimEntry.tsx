@@ -8,6 +8,7 @@ import {
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
+import { TN_DISTRICTS } from "@/lib/districts";
 import { PageHeader } from "@/components/PageHeader";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
@@ -438,11 +439,26 @@ export default function ClaimEntryPage() {
                 </Select>
               </Field>
               <Field label="Location / city *">
+                {/*
+                  Type to narrow, or open the list and pick.
+
+                  A datalist rather than a select: the field still holds plain
+                  text, so an older claim whose location is not one of the
+                  thirty-eight opens showing what it really says instead of
+                  snapping to something near it. What it adds is that typing
+                  "coi" offers Coimbatore, so the same place is spelled the
+                  same way by everybody.
+                */}
                 <Input
-                  placeholder="e.g. Madurai"
+                  list="tn-districts"
+                  autoComplete="off"
+                  placeholder="Type or pick a district"
                   value={form.location}
                   onChange={(e) => set("location", e.target.value)}
                 />
+                <datalist id="tn-districts">
+                  {TN_DISTRICTS.map((d) => <option key={d} value={d} />)}
+                </datalist>
               </Field>
             </div>
 
@@ -463,22 +479,12 @@ export default function ClaimEntryPage() {
                       <Input type="text" inputMode="numeric" maxLength={6} value={form.endingKm}
                         onChange={(e) => setDistance("endingKm", e.target.value)} placeholder="0" />
                     </Field>
-                    <Field
-                      label="Hills KM"
-                      hint={totals.totalKm <= 0
-                        ? undefined
-                        : `Rate ₹${totals.hillsRate}/km · up to ${hillsCap} KM`}
-                    >
+                    <Field label="Hills KM">
                       <Input type="text" inputMode="numeric" maxLength={6} value={form.hillsKm}
                         disabled={totals.totalKm <= 0}
                         onChange={(e) => setKm("hillsKm", e.target.value)} placeholder="0" />
                     </Field>
-                    <Field
-                      label="Plains KM"
-                      hint={totals.totalKm <= 0
-                        ? undefined
-                        : `Rate ₹${totals.plainsRate}/km · up to ${plainsCap} KM`}
-                    >
+                    <Field label="Plains KM">
                       <Input type="text" inputMode="numeric" maxLength={6} value={form.plainsKm}
                         disabled={totals.totalKm <= 0}
                         onChange={(e) => setKm("plainsKm", e.target.value)} placeholder="0" />

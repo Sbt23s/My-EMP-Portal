@@ -327,6 +327,8 @@ function MyWorkReports({
   scope: "MINE" | "TEAM"; setScope: (s: "MINE" | "TEAM") => void;
 }) {
   void onExport;
+  /** One search box over the work log, applied as it is typed. */
+  const [search, setSearch] = useState("");
   const [draft, setDraft] = useState<DraftRow>(emptyDraft());
 
   const mine = useQuery({
@@ -391,8 +393,30 @@ function MyWorkReports({
   }
 
   const allRows = mine.data ?? [];
+
+  /*
+    One box across everything on the row: the project, what was worked on, the
+    person and their code, and the date in the two shapes it is read in --
+    "29 Aug 2026" as the table prints it and 2026-08-29 as it is stored -- so
+    typing either finds it.
+  */
+  const needle = search.trim().toLowerCase();
+  const matches = (r: typeof allRows[number]) => {
+    if (!needle) return true;
+    return [
+      r.projectName,
+      r.taskDescription,
+      r.employeeName,
+      r.employeeCode,
+      r.workDate,
+      r.workDate ? dayjs(r.workDate).format("DD MMM YYYY") : "",
+      r.workHours != null ? `${r.workHours}h` : "",
+    ].filter(Boolean).join(" ").toLowerCase().includes(needle);
+  };
+
   const rows = allRows
     .filter(r => r.workDate && r.workDate >= fromDate && r.workDate <= toDate)
+    .filter(matches)
     .sort((a, b) => String(b.workDate).localeCompare(String(a.workDate))); // newest first
   const totalHours = rows.reduce((s, r) => s + (Number(r.workHours) || 0), 0);
 
@@ -588,7 +612,7 @@ function MyWorkReports({
   // Pagination — 15 rows per page.
   const PAGE_SIZE = 15;
   // The shared hook, so this table gains the page numbers and rows-per-page.
-  const paged = usePagedRows(rows, PAGE_SIZE, [fromDate, toDate]);
+  const paged = usePagedRows(rows, PAGE_SIZE, [fromDate, toDate, search]);
   const { page, setPage, totalPages, pageRows } = paged;
   const pageSafe = page;
 
@@ -884,8 +908,17 @@ function MyWorkReports({
       {/* Recent Work Log */}
       <div className="grid gap-4">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle>Recent Work Log</CardTitle>
+            <div className="relative w-full sm:w-80">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="h-9 pl-9"
+                placeholder="Search project, task, employee or date…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             {mine.isLoading ? (
@@ -893,8 +926,10 @@ function MyWorkReports({
             ) : rows.length === 0 ? (
               <EmptyState
                 icon={ClipboardList}
-                title="No entries yet"
-                description="Add your first work report using the form above."
+                title={search.trim() ? "Nothing matches that search" : "No entries yet"}
+                description={search.trim()
+                  ? "Try a different word, or clear the search to see everything."
+                  : "Add your first work report using the form above."}
               />
             ) : (
               <div className="overflow-x-auto rounded-lg border">
@@ -1563,9 +1598,23 @@ function TeamWorkReports({ fromDate, toDate }: { fromDate: string; toDate: strin
         });
       })
     );
+    /*
+      Everything on the row, not three of its columns. This searched the name,
+      the code and the project, so looking for a task or a date found nothing
+      and read as the search being broken rather than narrow. The date is
+      matched in both the shape the table prints and the one it is stored in.
+    */
     const needle = q.trim().toLowerCase();
     const filtered = needle
-      ? out.filter((r) => `${r.employeeName} ${r.employeeCode} ${r.projectName}`.toLowerCase().includes(needle))
+      ? out.filter((r) => [
+          r.employeeName,
+          r.employeeCode,
+          r.projectName,
+          r.taskDescription,
+          r.workDate,
+          r.workDate ? dayjs(r.workDate).format("DD MMM YYYY") : "",
+          r.workHours != null ? `${r.workHours}h` : "",
+        ].filter(Boolean).join(" ").toLowerCase().includes(needle))
       : out;
     return filtered.sort((a, b) => b.workDate.localeCompare(a.workDate));
   }, [team.data, fromDate, toDate, q]);

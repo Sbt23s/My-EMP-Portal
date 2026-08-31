@@ -1167,7 +1167,7 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
     mutationFn: async () => {
       const created = await api.post("/leave/permissions", {
         requestDate, fromTime, toTime, reason, priority,
-        requestedTo: requestedTo ? Number(requestedTo) : null
+        requestedTo: selectedApprover ? Number(selectedApprover) : null
       });
 
       // After the request is safely created, so a rejected file never costs
@@ -1233,6 +1233,22 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
       (await api.get<ApiEnvelope<{ available: boolean; reason?: string }>>(
         `/leave/permissions/availability?date=${requestDate}`)).data.data,
   });
+  /*
+    The approver the field is showing.
+
+    Removing the empty "Select approver" option meant the first real option was
+    displayed from the moment the list loaded -- but nothing had been chosen,
+    so no change event fired and requestedTo stayed "". The form then refused
+    to submit, complaining there was nobody to approve, while naming the person
+    it was pointing at.
+
+    So the shown value is derived rather than waiting to be picked: whatever
+    was chosen, or the first option the list offers.
+  */
+  const approverOptions = approvers.data ?? [];
+  const selectedApprover = requestedTo
+    || (approverOptions.length > 0 ? String(approverOptions[0].id) : "");
+
   const dateBlocked = availability.data?.available === false;
   const dateBlockedReason = availability.data?.reason;
 
@@ -1260,7 +1276,7 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
     : !toTime ? "Choose the time you are back."
     : toTime <= fromTime ? "The end time has to be after the start time."
     : tooLong ? "Permission is limited to 2 hours a day — apply for leave instead."
-    : !requestedTo ? "There is nobody set up to approve your requests. Ask HR to assign an approver."
+    : !selectedApprover ? "There is nobody set up to approve your requests. Ask HR to assign an approver."
     : !reason.trim() ? "Give a reason for the request."
     : null;
 
@@ -1332,7 +1348,7 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
           <select
             id="pto-user"
             className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-            value={requestedTo}
+            value={selectedApprover}
             onChange={(e) => setRequestedTo(e.target.value)}
           >
             {/* The approver is decided by the workflow, not chosen here, so

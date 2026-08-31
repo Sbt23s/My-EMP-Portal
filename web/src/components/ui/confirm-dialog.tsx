@@ -2,6 +2,7 @@ import * as React from "react";
 import { AlertTriangle } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 /**
  * A confirmation the application draws itself.
@@ -24,6 +25,8 @@ export function ConfirmDialog({
   confirmLabel = "Yes, continue",
   cancelLabel = "No, go back",
   busy = false,
+  confirmPhrase,
+  confirmPhraseLabel,
   onConfirm,
   onCancel,
 }: {
@@ -35,10 +38,28 @@ export function ConfirmDialog({
   confirmLabel?: string;
   cancelLabel?: string;
   busy?: boolean;
+  /**
+   * A word the person must type before the action is allowed -- a username, a
+   * team name. For the handful of actions that delete something real and
+   * cannot be undone: a yes/no box is one stray click away, and typing is
+   * deliberate in a way that clicking is not. Left off, the dialog is an
+   * ordinary confirmation.
+   */
+  confirmPhrase?: string;
+  /** What to call the phrase in the prompt, e.g. "username". */
+  confirmPhraseLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const [typed, setTyped] = React.useState("");
+
+  // A fresh dialog starts empty, so a phrase typed for one record cannot be
+  // left sitting in the box when the next one opens.
+  React.useEffect(() => { if (open) setTyped(""); }, [open, confirmPhrase]);
+
   if (!open) return null;
+
+  const phraseOk = !confirmPhrase || typed.trim() === confirmPhrase;
 
   return (
     <Dialog open onClose={busy ? () => {} : onCancel} className="max-w-md" hideCloseButton>
@@ -65,6 +86,23 @@ export function ConfirmDialog({
         </dl>
       )}
 
+      {confirmPhrase && (
+        <div className="mt-4 space-y-1.5">
+          <label htmlFor="confirm-phrase" className="text-sm">
+            Type <span className="font-semibold">{confirmPhrase}</span>
+            {confirmPhraseLabel ? ` (the ${confirmPhraseLabel})` : ""} to confirm:
+          </label>
+          <Input
+            id="confirm-phrase"
+            autoFocus
+            autoComplete="off"
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            placeholder={confirmPhrase}
+          />
+        </div>
+      )}
+
       <div className="mt-5 flex justify-end gap-2">
         {/* Going back is the safe answer, so it is the plain one and it is
             first in the tab order. */}
@@ -74,7 +112,7 @@ export function ConfirmDialog({
         <Button
           type="button"
           onClick={onConfirm}
-          disabled={busy}
+          disabled={busy || !phraseOk}
           className="bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-600"
         >
           {busy ? "Working…" : confirmLabel}

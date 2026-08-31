@@ -1555,6 +1555,15 @@ function getMockUserById(id: number): Profile | null {
 function EmployeeDetail({ id, onClose }: { id: number | null; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [showOffboard, setShowOffboard] = useState(false);
+  /*
+    Resetting a login. Two prompts in a row gave no way back from the second
+    one and hid the password as it was typed into a browser box -- and there
+    was nothing on screen to say whose account was being changed.
+  */
+  const [resetLoginFor, setResetLoginFor] = useState<any | null>(null);
+  const [resetUsername, setResetUsername] = useState("");
+  const [resetPassword, setResetPassword] = useState("");
+  const [savingLogin, setSavingLogin] = useState(false);
   const [relievingDate, setRelievingDate] = useState("");
   const [reason, setReason] = useState("");
   const [downloading, setDownloading] = useState(false);
@@ -1741,6 +1750,7 @@ function EmployeeDetail({ id, onClose }: { id: number | null; onClose: () => voi
   }
 
   return (
+    <>
     <Dialog className="max-w-2xl" open={id != null} onClose={() => { onClose(); setShowOffboard(false); }}>
       {detail.isLoading || !p ? (
         <Skeleton className="h-48" />
@@ -1960,24 +1970,10 @@ function EmployeeDetail({ id, onClose }: { id: number | null; onClose: () => voi
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={async () => {
-                      const username = window.prompt("New login username:", p.username || "");
-                      if (username === null) return;
-                      const password = window.prompt("New password (leave blank to keep current):", "");
-                      if (password === null) return;
-                      if (!username.trim() && !password.trim()) {
-                        toast.error("Enter a username or password");
-                        return;
-                      }
-                      try {
-                        await api.post(`/users/${p.id}/credentials`, {
-                          username: username.trim() || undefined,
-                          password: password.trim() || undefined
-                        });
-                        toast.success("Login updated");
-                      } catch (err) {
-                        toast.error(apiMessage(err, "Could not update login"));
-                      }
+                    onClick={() => {
+                      setResetUsername(p.username || "");
+                      setResetPassword("");
+                      setResetLoginFor(p);
                     }}
                   >
                     Reset Login
@@ -2078,6 +2074,70 @@ function EmployeeDetail({ id, onClose }: { id: number | null; onClose: () => voi
         </>
       )}
     </Dialog>
+
+    {/* Resetting a login: whose account, both fields at once, and a way back
+        from either of them. */}
+    {resetLoginFor && (
+      <Dialog open onClose={() => setResetLoginFor(null)} className="max-w-md">
+        <DialogHeader
+          title="Reset login"
+          description={`${resetLoginFor.name} · ${resetLoginFor.employeeCode ?? ""}`}
+        />
+        <div className="mt-3 space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="rl-user">Username</Label>
+            <Input
+              id="rl-user"
+              autoFocus
+              autoComplete="off"
+              value={resetUsername}
+              onChange={(e) => setResetUsername(e.target.value)}
+              placeholder="Login username"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="rl-pass">
+              New password <span className="font-normal text-muted-foreground">(leave blank to keep the current one)</span>
+            </Label>
+            <Input
+              id="rl-pass"
+              type="password"
+              autoComplete="new-password"
+              value={resetPassword}
+              onChange={(e) => setResetPassword(e.target.value)}
+              placeholder="Leave blank to keep current"
+            />
+          </div>
+        </div>
+        <div className="mt-5 flex justify-end gap-2 border-t pt-4">
+          <Button variant="outline" onClick={() => setResetLoginFor(null)} disabled={savingLogin}>
+            Cancel
+          </Button>
+          <Button
+            disabled={savingLogin || (!resetUsername.trim() && !resetPassword.trim())}
+            onClick={async () => {
+              setSavingLogin(true);
+              try {
+                await api.post(`/users/${resetLoginFor.id}/credentials`, {
+                  username: resetUsername.trim() || undefined,
+                  password: resetPassword.trim() || undefined,
+                });
+                toast.success("Login updated");
+                setResetLoginFor(null);
+              } catch (err) {
+                toast.error(apiMessage(err, "Could not update login"));
+              } finally {
+                setSavingLogin(false);
+              }
+            }}
+          >
+            {savingLogin && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+            Save login
+          </Button>
+        </div>
+      </Dialog>
+    )}
+    </>
   );
 }
 

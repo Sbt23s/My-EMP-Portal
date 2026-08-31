@@ -5,7 +5,7 @@ import {
   Mic, MicOff, Video, VideoOff, MonitorUp, Users, PhoneOff, UserPlus, X, Search
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useGroupCall, MAX_GROUP_PARTICIPANTS, type GroupParticipant } from "@/hooks/useGroupCall";
+import { useGroupCall, maxParticipants, type GroupParticipant } from "@/hooks/useGroupCall";
 import { useAuth } from "@/hooks/useAuth";
 
 function initials(name?: string) {
@@ -371,7 +371,7 @@ export function GroupCallOverlay() {
                 Add someone
               </span>
               <span className="ml-auto text-[11px] text-slate-500">
-                {Math.max(0, MAX_GROUP_PARTICIPANTS - g.memberIds.length)} slots left
+                {Math.max(0, maxParticipants(g.isVideo) - g.memberIds.length)} slots left
               </span>
             </div>
 
@@ -404,7 +404,9 @@ export function GroupCallOverlay() {
                     </p>
                   );
                 }
-                const full = g.memberIds.length >= MAX_GROUP_PARTICIPANTS;
+                // A voice call holds far more people than a video one, so the
+                // panel follows the call it is actually in.
+                const full = g.memberIds.length >= maxParticipants(g.isVideo);
                 return available.map((c) => (
                   <button
                     key={c.id}

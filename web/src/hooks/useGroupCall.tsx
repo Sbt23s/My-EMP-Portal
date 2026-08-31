@@ -30,8 +30,34 @@ import { useCalls, playRingtone, type CallSignal } from "@/hooks/useCalls";
  * transport underneath it would not change the interface it presents.
  */
 
-/** The point past which a mesh stops being usable. See the note above. */
+/**
+ * The point past which a mesh stops being usable, for video. See above.
+ */
 export const MAX_GROUP_PARTICIPANTS = 6;
+
+/**
+ * The same ceiling for a call with no cameras, which is a different number
+ * because audio is a different order of magnitude.
+ *
+ * Video at the reduced group resolution is roughly 400 kbit/s per stream, so
+ * six people is about 2 Mbit/s up and that is the honest limit. Opus voice is
+ * nearer 40 kbit/s, so twenty-five people is about 1 Mbit/s up -- less than a
+ * six-way video call costs. The mesh is the same mesh; only what it carries
+ * has changed.
+ *
+ * Twenty-five rather than everybody. It covers a company of this size with
+ * room to spare, and it stops short of the point where a mesh's connection
+ * count, rather than its bandwidth, becomes the problem: at twenty-five each
+ * browser holds twenty-four peer connections, which is a lot but is a number
+ * browsers manage. An all-hands beyond that wants an SFU, and pretending
+ * otherwise would break the call in front of everybody.
+ */
+export const MAX_AUDIO_PARTICIPANTS = 25;
+
+/** The ceiling that applies to a call, given whether it carries video. */
+export function maxParticipants(video: boolean) {
+  return video ? MAX_GROUP_PARTICIPANTS : MAX_AUDIO_PARTICIPANTS;
+}
 
 /**
  * Group video is captured smaller than a one-to-one call on purpose.
@@ -405,7 +431,7 @@ export function GroupCallProvider({ children }: { children: React.ReactNode }) {
         // Somebody is here, so the caller's own "nobody answered" clock stops.
         stopRinging();
         if (peersRef.current.has(senderId)) return;
-        if (peersRef.current.size + 1 >= MAX_GROUP_PARTICIPANTS) {
+        if (peersRef.current.size + 1 >= maxParticipants(isVideoRef.current)) {
           void sendSignal(senderId, "g-full", { roomId: room });
           return;
         }
@@ -560,9 +586,12 @@ export function GroupCallProvider({ children }: { children: React.ReactNode }) {
       toast.error("There is nobody else in this room to call.");
       return;
     }
-    if (others.length + 1 > MAX_GROUP_PARTICIPANTS) {
+    const ceiling = maxParticipants(video);
+    if (others.length + 1 > ceiling) {
       toast.error(
-        `Group calls take up to ${MAX_GROUP_PARTICIPANTS} people. This room has ${others.length + 1}.`
+        video
+          ? `Video calls take up to ${MAX_GROUP_PARTICIPANTS} people. This room has ${others.length + 1} — try an audio call.`
+          : `Audio calls take up to ${MAX_AUDIO_PARTICIPANTS} people. This room has ${others.length + 1}.`
       );
       return;
     }

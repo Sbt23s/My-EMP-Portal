@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,6 +43,8 @@ export function OfficeLocationsCard() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<OfficeLocation | null>(null);
   const [adding, setAdding] = useState(false);
+  /** The location the remove confirmation is asking about, or null when closed. */
+  const [confirmRemove, setConfirmRemove] = useState<OfficeLocation | null>(null);
 
   const offices = useQuery({
     queryKey: ["office-locations"],
@@ -146,12 +149,7 @@ export function OfficeLocationsCard() {
                       variant="outline"
                       className="h-7 border-destructive/40 px-2 text-[11px] text-destructive hover:bg-destructive/10"
                       disabled={remove.isPending}
-                      onClick={() => {
-                        if (window.confirm(
-                          `Remove "${o.name}"? Punches already recorded there keep pointing at it, `
-                          + `but new punches will no longer be named with it.`
-                        )) remove.mutate(o.id);
-                      }}
+                      onClick={() => setConfirmRemove(o)}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
@@ -184,6 +182,25 @@ export function OfficeLocationsCard() {
           }}
         />
       )}
+
+      {/* Removing a site is asked in the application's own dialog, so the
+          consequence -- old punches keep their name, new ones lose it -- is
+          readable rather than crammed into a browser box. */}
+      <ConfirmDialog
+        open={!!confirmRemove}
+        title={confirmRemove ? `Remove "${confirmRemove.name}"?` : ""}
+        description="Punches already recorded there keep pointing at it, but new punches will no longer be named with it. This cannot be undone."
+        detail={confirmRemove ? [["Location", confirmRemove.name]] : undefined}
+        confirmLabel="Yes, remove it"
+        cancelLabel="No, keep it"
+        busy={remove.isPending}
+        onCancel={() => setConfirmRemove(null)}
+        onConfirm={() => {
+          const id = confirmRemove?.id;
+          setConfirmRemove(null);
+          if (id) remove.mutate(id);
+        }}
+      />
     </Card>
   );
 }

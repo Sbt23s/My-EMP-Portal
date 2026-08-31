@@ -1,6 +1,7 @@
 import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import toast from "react-hot-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -323,8 +324,11 @@ export function TechAdminUsers() {
    * is an administrator, not an employee who is also an administrator, and
    * leaving the old role on would keep them in the employee count.
    */
+  /** The user a confirmation is asking about, and which action it is for. */
+  const [confirmAction, setConfirmAction] =
+    useState<{ kind: "admin" | "delete"; user: any } | null>(null);
+
   const handleMakeAdmin = async (u: any) => {
-    if (!window.confirm(`Make ${u.name} the company administrator of ${u.companyName}?`)) return;
     try {
       await api.put(`/users/${u.id}`, { roles: ["COMPANY_ADMIN"] });
       toast.success(`${u.name} is now a company administrator`);
@@ -338,20 +342,13 @@ export function TechAdminUsers() {
   };
 
   const handleDeleteUser = async (u: any) => {
-    // This button used to remove the row from localStorage, which is to say it
-    // removed nothing: the account stayed exactly where it was. Now it deletes
-    // the real record, so the confirmation has to be worth something. A yes/no
-    // box is one stray click away from removing a colleague's account and there
-    // is no undo -- typing the username is deliberate in a way that clicking OK
-    // is not.
-    const typed = window.prompt(
-     `Permanently delete ${u.name}?\n\nThis removes the account and cannot be undone.\n\nType the username "${u.username}" to confirm:`
-    );
-    if (typed === null) return;
-    if (typed.trim() !== u.username) {
-      toast.error("Username did not match. Nothing was deleted.");
-      return;
-    }
+    /*
+      Deleting is real and cannot be undone, so the confirmation has to be
+      worth something. A yes/no box is one stray click away from removing a
+      colleague's account -- typing the username is deliberate in a way that
+      clicking OK is not, and the dialog keeps that requirement rather than
+      trading it for a box that merely looks nicer.
+    */
     try {
       await api.delete(`/users/${u.id}`);
       toast.success(`User ${u.name} deleted`);
@@ -906,7 +903,7 @@ export function TechAdminUsers() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleMakeAdmin(u)}
+                        onClick={() => setConfirmAction({ kind: "admin", user: u })}
                         className={`h-7 text-xs font-semibold ${isDark ? "text-emerald-400 hover:bg-emerald-400/10" : "text-emerald-600 hover:bg-emerald-400/20"}`}
                       >
                         Make Company Admin
@@ -931,7 +928,7 @@ export function TechAdminUsers() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDeleteUser(u)}
+                      onClick={() => setConfirmAction({ kind: "delete", user: u })}
                       className={`h-7 text-xs ${isDark ? 'text-red-400 hover:bg-red-400/10' : 'text-red-400 hover:bg-red-50'}`}
                     >
                       Delete
@@ -1196,6 +1193,40 @@ export function TechAdminUsers() {
           </div>
         </div>
       )}
+
+      {/*
+        Both of these change somebody's account, and one of them cannot be
+        undone -- so they are asked in the application's own dialog with the
+        person named, and deleting still requires the username typed out.
+      */}
+      <ConfirmDialog
+        open={!!confirmAction}
+        title={confirmAction?.kind === "delete"
+          ? `Permanently delete ${confirmAction.user.name}?`
+          : confirmAction
+            ? `Make ${confirmAction.user.name} a company administrator?`
+            : ""}
+        description={confirmAction?.kind === "delete"
+          ? "This removes the account and everything tied to it. It cannot be undone."
+          : "Their existing role is replaced, not added to — an administrator is an administrator rather than an employee who is also one, so they leave the employee count."}
+        detail={confirmAction ? [
+          ["Name", confirmAction.user.name ?? "—"],
+          ["Username", confirmAction.user.username ?? "—"],
+          ["Company", confirmAction.user.companyName ?? "—"],
+        ] : undefined}
+        confirmPhrase={confirmAction?.kind === "delete" ? confirmAction.user.username : undefined}
+        confirmPhraseLabel="username"
+        confirmLabel={confirmAction?.kind === "delete" ? "Yes, delete it" : "Yes, make them admin"}
+        cancelLabel="No, go back"
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={() => {
+          const a = confirmAction;
+          setConfirmAction(null);
+          if (!a) return;
+          if (a.kind === "delete") handleDeleteUser(a.user);
+          else handleMakeAdmin(a.user);
+        }}
+      />
     </div>
   );
 }

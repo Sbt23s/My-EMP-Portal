@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { useGroupCall, MAX_GROUP_PARTICIPANTS } from "@/hooks/useGroupCall";
+import { useGroupCall, MAX_GROUP_PARTICIPANTS, MAX_AUDIO_PARTICIPANTS } from "@/hooks/useGroupCall";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { Avatar } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -2232,7 +2232,7 @@ export default function ChatPage() {
         <Dialog open onClose={() => setGroupCallOpen(false)} className="max-w-md">
           <DialogHeader
             title="Start a group call"
-            description={`Choose up to ${MAX_GROUP_PARTICIPANTS - 1} people. Everyone you pick will ring at once.`}
+            description={`Choose up to ${MAX_AUDIO_PARTICIPANTS - 1} people for a voice call, or ${MAX_GROUP_PARTICIPANTS - 1} for video. Everyone you pick will ring at once.`}
           />
           <div className="px-4">
             <Input
@@ -2247,7 +2247,11 @@ export default function ChatPage() {
               .filter((c) => c.name?.toLowerCase().includes(groupCallSearch.toLowerCase()))
               .map((c) => {
                 const picked = groupCallPick.includes(c.id);
-                const full = groupCallPick.length >= MAX_GROUP_PARTICIPANTS - 1;
+                // The audio ceiling, because that is the higher of the two --
+                // Video below refuses on its own if too many are picked, which
+                // is better than a list that will not let you pick the people
+                // you wanted to call in the first place.
+                const full = groupCallPick.length >= MAX_AUDIO_PARTICIPANTS - 1;
                 return (
                   <label
                     key={c.id}
@@ -2315,7 +2319,11 @@ export default function ChatPage() {
                 <Phone className="mr-1.5 h-4 w-4" /> Voice
               </Button>
               <Button
-                disabled={groupCallPick.length === 0}
+                disabled={groupCallPick.length === 0
+                  || groupCallPick.length > MAX_GROUP_PARTICIPANTS - 1}
+                title={groupCallPick.length > MAX_GROUP_PARTICIPANTS - 1
+                  ? `Video takes ${MAX_GROUP_PARTICIPANTS} people at most — voice handles this many.`
+                  : undefined}
                 onClick={() => { setGroupCallOpen(false); void startAdHocGroupCall(true); }}
               >
                 <Video className="mr-1.5 h-4 w-4" /> Video

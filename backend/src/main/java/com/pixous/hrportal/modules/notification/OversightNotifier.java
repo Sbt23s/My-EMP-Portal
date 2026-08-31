@@ -32,6 +32,9 @@ public class OversightNotifier {
     /** The company head, who receives a copy of every request in the portal. */
     private static final String CTO_CODE = "PIX-E100";
 
+    /** The platform administrator account, which keeps the portal running. */
+    private static final String SYSTEM_ADMIN_CODE = "ADM0001";
+
     private final UserRepository userRepository;
     private final NotificationService notificationService;
 
@@ -42,6 +45,34 @@ public class OversightNotifier {
      * being notified of one's own decision is noise that teaches people to
      * ignore the bell.
      */
+    /**
+     * Whether this account is allowed to read every request in the portal,
+     * whoever it was addressed to.
+     *
+     * <p>Keyed on the account rather than on a permission, because the
+     * permissions do not separate these people. HR holds USER_MANAGE -- they
+     * manage employee records, which is what the permission is for -- so a
+     * check on USER_MANAGE let HR read the complaints somebody had
+     * deliberately addressed past them to the CTO. That was the bug this was
+     * meant to fix, reintroduced by the exception written for it.
+     *
+     * <p>The CTO sees everything because the buck stops there. The platform
+     * administrator sees everything because a queue they cannot see is one
+     * they cannot repair. Nobody else does, HR included.
+     */
+    public boolean seesEveryRequest(Long userId) {
+        if (userId == null) return false;
+        try {
+            return userRepository.findById(userId)
+                    .map(u -> CTO_CODE.equalsIgnoreCase(u.getEmployeeCode())
+                            || SYSTEM_ADMIN_CODE.equalsIgnoreCase(u.getEmployeeCode()))
+                    .orElse(false);
+        } catch (Exception e) {
+            log.warn("Could not resolve oversight for {}: {}", userId, e.getMessage());
+            return false;
+        }
+    }
+
     public void notifyCto(Long actorId, String title, String body, String type, String link) {
         try {
             userRepository.findByEmployeeCode(CTO_CODE)

@@ -270,8 +270,8 @@ public class HelpdeskService {
          * raised: a ticket names its recipient, and choosing the CTO over HR is
          * a real choice somebody makes for a reason.
          */
-        boolean seesEverything =
-                com.pixous.hrportal.security.SecurityUtils.hasAuthority("USER_MANAGE");
+        // Keyed on the account, not on USER_MANAGE -- see ComplaintService.
+        boolean seesEverything = oversight.seesEveryRequest(viewerId);
         Page<Ticket> result;
         if (seesEverything) {
             result = statusFilter != null

@@ -194,8 +194,10 @@ public class ComplaintService {
     public PageResponse<ComplaintResponse> all(Long viewerId, String status, String kind, int page, int size) {
         String statusFilter = (status == null || status.isBlank()) ? null : status.toUpperCase();
         String kindFilter = (kind == null || kind.isBlank()) ? null : kind.toUpperCase();
-        boolean seesEverything =
-                com.pixous.hrportal.security.SecurityUtils.hasAuthority("USER_MANAGE");
+        // Keyed on the account, not on USER_MANAGE -- HR holds that permission
+        // for managing employee records, and checking it here handed them the
+        // complaints addressed past them to the CTO.
+        boolean seesEverything = oversight.seesEveryRequest(viewerId);
         Page<ComplaintNeed> result = seesEverything
                 ? repository.filterAll(statusFilter, kindFilter, PageRequest.of(page, size))
                 : repository.filterForViewer(statusFilter, kindFilter, viewerId,

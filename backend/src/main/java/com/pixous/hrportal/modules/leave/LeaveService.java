@@ -45,6 +45,7 @@ public class LeaveService {
     private final com.pixous.hrportal.modules.attendance.AttendanceRepository attendanceRepository;
     private final NotificationService notificationService;
     private final com.pixous.hrportal.common.SmsService smsService;
+    private final com.pixous.hrportal.modules.notification.OversightNotifier oversight;
 
     // ---------- Reference data ----------
 
@@ -455,6 +456,11 @@ public class LeaveService {
         } else {
             approvers = userRepository.findByPermission("LEAVE_APPROVE");
         }
+        // A copy to the CTO, who follows every request without being in the
+        // approval chain for most of them.
+        oversight.notifyCto(user.getId(), "New leave request",
+                user.getName() + " applied for " + label, "LEAVE", "/leave/approvals");
+
         for (User approver : approvers) {
             notificationService.createAndPush(
                     approver.getId(),
@@ -989,6 +995,15 @@ public class LeaveService {
 
         User employee = userRepository.findById(lr.getUserId()).orElse(null);
         String empName = employee != null ? employee.getName() : "?";
+
+        // The decision and who made it -- the half oversight could not see
+        // from the request alone.
+        oversight.notifyCto(managerId, "Leave " + normalized.toLowerCase(),
+                empName + "'s " + typeName + " (" + lr.getFromDate() + " to "
+                        + lr.getToDate() + ") was " + normalized.toLowerCase() + " by "
+                        + userRepository.findById(managerId).map(User::getName)
+                                .orElse("their approver") + ".",
+                "LEAVE", "/leave/approvals");
 
         // Real-time SMS to the employee about the approval decision (fire-and-forget).
         if (employee != null && employee.getPhone() != null && !employee.getPhone().isBlank()) {

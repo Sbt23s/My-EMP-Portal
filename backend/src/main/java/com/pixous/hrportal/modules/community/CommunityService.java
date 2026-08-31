@@ -480,10 +480,25 @@ public class CommunityService {
     private void notifyMembers(CommunityGroup group, User sender, String title, String body) {
         // Team rooms live on the Teams page; everything else opens in Chat.
         String link = isTeamRoom(group) ? "/teams" : "/chat?c=" + group.getId();
-        List<User> recipients = memberRepository.findByCommunity_Id(group.getId()).stream()
-                .map(CommunityMember::getUser).filter(Objects::nonNull)
-                .filter(u -> !u.getId().equals(sender.getId()))
-                .toList();
+        /*
+          Who hears about it.
+
+          Normally the group's members. The announcement channel is the
+          exception, and it matters: everybody can read it, but hardly anybody
+          is a member of it -- so notifying members meant an announcement
+          reached the one or two people who happened to have been added, and
+          the company-wide message nobody was told about was the whole point
+          of the channel.
+        */
+        List<User> recipients = group.isAnnouncement()
+                ? userRepository.findAll().stream()
+                        .filter(User::isEnabled)
+                        .filter(u -> !u.getId().equals(sender.getId()))
+                        .toList()
+                : memberRepository.findByCommunity_Id(group.getId()).stream()
+                        .map(CommunityMember::getUser).filter(Objects::nonNull)
+                        .filter(u -> !u.getId().equals(sender.getId()))
+                        .toList();
 
         recipients.forEach(u -> notificationService.createAndPush(
                 u.getId(), title, body, "CHAT", link));

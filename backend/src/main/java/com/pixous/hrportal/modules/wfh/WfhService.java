@@ -57,6 +57,7 @@ public class WfhService {
     private final HolidayRepository holidayRepository;
     private final AttendanceRepository attendanceRepository;
     private final NotificationService notificationService;
+    private final com.pixous.hrportal.modules.notification.OversightNotifier oversight;
     private final com.pixous.hrportal.modules.leave.LeaveRequestRepository leaveRequestRepository;
     private final com.pixous.hrportal.modules.leave.PermissionRequestRepository permissionRequestRepository;
 
@@ -171,6 +172,12 @@ public class WfhService {
         r.setRequestedTo(approver.getId());
         WfhRequest saved = repository.save(r);
 
+        // A copy to the CTO, who follows every request in the portal.
+        oversight.notifyCto(userId, "New work from home request",
+                me.getName() + " asked to work from home "
+                        + describe(saved.getFromDate(), saved.getToDate()),
+                "WFH", "/leave/wfh");
+
         notify(approver.getId(),
                 "Work from home request pending",
                 me.getName() + " asked to work from home "
@@ -213,6 +220,14 @@ public class WfhService {
         }
 
         String who = userRepository.findById(deciderId).map(User::getName).orElse("Your approver");
+
+        // The decision and who made it.
+        oversight.notifyCto(deciderId,
+                approve ? "Work from home approved" : "Work from home rejected",
+                userRepository.findById(saved.getUserId()).map(User::getName).orElse("Someone")
+                        + "'s request for " + describe(saved.getFromDate(), saved.getToDate())
+                        + " was " + (approve ? "approved" : "rejected") + " by " + who + ".",
+                "WFH", "/leave/wfh");
         notify(saved.getUserId(),
                 approve ? "Work from home approved" : "Work from home rejected",
                 who + " " + (approve ? "approved" : "rejected") + " your request for "

@@ -33,6 +33,7 @@ public class ComplaintService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final com.pixous.hrportal.common.SmsService smsService;
+    private final com.pixous.hrportal.modules.notification.OversightNotifier oversight;
 
     /** Text a user if we have a usable mobile number for them. */
     private void sms(Long userId, String message) {
@@ -71,6 +72,13 @@ public class ComplaintService {
             userRepository.findByPermission("USER_MANAGE").forEach(u -> everyone.put(u.getId(), u));
             targets = java.util.List.copyOf(everyone.values());
         }
+
+        // A copy to the CTO, whoever the complaint was addressed to. This is
+        // deliberately the one place oversight reaches past the recipient: a
+        // complaint about HR goes to the CTO, and one about anybody else
+        // should still be visible to the person who has to act on a pattern.
+        oversight.notifyCto(userId, "New " + label + ": " + saved.getReferenceCode(),
+                submitter + " submitted a " + label, "COMPLAINT", "/complaints");
 
         targets.forEach(staff -> {
             if (!staff.getId().equals(userId)) {
@@ -254,6 +262,13 @@ public class ComplaintService {
                 saved.getReferenceCode() + " updated",
                 "Your submission is now " + status.toLowerCase().replace('_', ' '),
                 "COMPLAINT", "/complaints");
+
+        // And the outcome.
+        oversight.notifyCto(staffId, saved.getReferenceCode() + " updated",
+                safeName(saved.getRaisedBy()) + "'s submission is now "
+                        + status.toLowerCase().replace('_', ' ') + ".",
+                "COMPLAINT", "/complaints");
+
         sms(saved.getRaisedBy(), saved.getReferenceCode() + " is now "
                 + status.toLowerCase().replace('_', ' ') + ".");
 

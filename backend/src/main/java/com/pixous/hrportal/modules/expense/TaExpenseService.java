@@ -18,15 +18,18 @@ public class TaExpenseService {
     private final UserRepository userRepository;
     private final com.pixous.hrportal.modules.notification.NotificationService notificationService;
     private final com.pixous.hrportal.common.SmsService smsService;
+    private final com.pixous.hrportal.modules.notification.OversightNotifier oversight;
 
     public TaExpenseService(TaExpenseRepository taExpenseRepository,
                             UserRepository userRepository,
                             com.pixous.hrportal.modules.notification.NotificationService notificationService,
-                            com.pixous.hrportal.common.SmsService smsService) {
+                            com.pixous.hrportal.common.SmsService smsService,
+                            com.pixous.hrportal.modules.notification.OversightNotifier oversight) {
         this.taExpenseRepository = taExpenseRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
         this.smsService = smsService;
+        this.oversight = oversight;
     }
 
     @Transactional
@@ -56,6 +59,10 @@ public class TaExpenseService {
         String who = userRepository.findById(userId).map(User::getName).orElse("An employee");
         String detail = who + " submitted a claim for " + expense.getDate()
                 + (expense.getGrossTotal() != null ? " — Rs." + expense.getGrossTotal() : "");
+        // A copy to the CTO: a claim is money out, and the person who signs
+        // for the company should see it asked for as well as decided.
+        oversight.notifyCto(userId, "New expense claim", detail, "CLAIM", "/ta-expenses");
+
         for (User hr : approvers().values()) {
             notificationService.createAndPush(hr.getId(),
                     "New expense claim", detail, "CLAIM", "/ta-expenses");
@@ -203,6 +210,16 @@ public class TaExpenseService {
                     + (comment != null && !comment.isBlank() ? ": " + comment : ".");
             notificationService.createAndPush(expense.getUserId(),
                     "Claim " + verb, detail, "CLAIM", "/ta-expenses");
+
+            // The decision, with who made it and the amount at stake.
+            oversight.notifyCto(deciderId, "Claim " + verb,
+                    userRepository.findById(expense.getUserId()).map(User::getName)
+                            .orElse("Someone") + "'s claim for " + expense.getDate()
+                            + (expense.getGrossTotal() != null ? " (Rs." + expense.getGrossTotal() + ")" : "")
+                            + " was " + verb + " by "
+                            + userRepository.findById(deciderId).map(User::getName)
+                                    .orElse("an approver") + ".",
+                    "CLAIM", "/ta-expenses");
             userRepository.findById(expense.getUserId())
                     .filter(u -> u.getPhone() != null && !u.getPhone().isBlank())
                     .ifPresent(u -> smsService.send(u.getPhone(), "Pixous HR: " + detail));

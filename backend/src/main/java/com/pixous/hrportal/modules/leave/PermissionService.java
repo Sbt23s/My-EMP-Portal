@@ -33,6 +33,7 @@ public class PermissionService {
     private final UserRepository userRepository;
     private final com.pixous.hrportal.modules.notification.NotificationService notificationService;
     private final com.pixous.hrportal.common.SmsService smsService;
+    private final com.pixous.hrportal.modules.notification.OversightNotifier oversight;
 
     @Transactional
     public PermissionResponse apply(Long userId, PermissionApplyRequest req) {
@@ -146,6 +147,11 @@ public class PermissionService {
                     + " (" + req.fromTime() + "–" + req.toTime() + ")";
             notificationService.createAndPush(req.requestedTo(),
                     "New permission request", detail, "PERMISSION", "/leave/permissions");
+
+            // A copy to the CTO, who follows every request in the portal
+            // without being in the approval chain for most of them.
+            oversight.notifyCto(userId, "New permission request", detail,
+                    "PERMISSION", "/leave/permissions");
             userRepository.findById(req.requestedTo())
                     .filter(u -> u.getPhone() != null && !u.getPhone().isBlank())
                     .ifPresent(u -> smsService.send(u.getPhone(),
@@ -351,6 +357,16 @@ public class PermissionService {
                 + (comment != null && !comment.isBlank() ? ": " + comment : ".");
         notificationService.createAndPush(p.getUserId(),
                 "Permission " + verb, detail, "PERMISSION", "/leave/permissions");
+
+        // The decision, not just the request: who decided and what they
+        // decided is the half the CTO could not see before.
+        String applicant = userRepository.findById(p.getUserId())
+                .map(User::getName).orElse("Someone");
+        oversight.notifyCto(deciderId, "Permission " + verb,
+                applicant + "'s permission for " + p.getRequestDate() + " was " + verb
+                        + " by " + userRepository.findById(deciderId)
+                                .map(User::getName).orElse("their approver") + ".",
+                "PERMISSION", "/leave/permissions");
         userRepository.findById(p.getUserId())
                 .filter(u -> u.getPhone() != null && !u.getPhone().isBlank())
                 .ifPresent(u -> smsService.send(u.getPhone(), "Pixous HR: " + detail));

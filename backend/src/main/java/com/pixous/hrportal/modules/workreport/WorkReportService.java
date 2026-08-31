@@ -23,6 +23,7 @@ public class WorkReportService {
 
     private final WorkReportRepository repository;
     private final UserRepository userRepository;
+    private final com.pixous.hrportal.modules.notification.OversightNotifier oversight;
 
     // ---------------- Employee (own rows) ----------------
 
@@ -43,6 +44,15 @@ public class WorkReportService {
         w.setUserId(userId);
         apply(w, req);
         WorkReport saved = repository.save(w);
+
+        // HR, the administrators and the CTO. Work reports are the record of
+        // what the company did with its day, and all three read them -- so
+        // this is the one notification that goes wider than the CTO alone.
+        oversight.notifyOversight(userId, "Work report logged",
+                user.getName() + " logged " + saved.getWorkHours() + "h on "
+                        + saved.getProjectName() + " (" + saved.getWorkDate() + ")",
+                "WORK_REPORT", "/work-reports");
+
         return WorkReportResponse.from(saved, user.getName(), user.getEmployeeCode());
     }
 

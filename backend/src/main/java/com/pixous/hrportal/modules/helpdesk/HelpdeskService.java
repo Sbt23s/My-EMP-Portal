@@ -30,6 +30,7 @@ public class HelpdeskService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final com.pixous.hrportal.common.SmsService smsService;
+    private final com.pixous.hrportal.modules.notification.OversightNotifier oversight;
 
     /** Text a user if we have a usable mobile number for them. */
     private void sms(Long userId, String message) {
@@ -138,6 +139,11 @@ public class HelpdeskService {
         t.setSlaDueAt(slaDue(t.getPriority()));
         if (req.assignedTo() != null) t.setAssignedTo(req.assignedTo());
         Ticket saved = ticketRepository.save(t);
+
+        // A copy to the CTO, whoever the ticket was addressed to.
+        oversight.notifyCto(userId, "New support request " + saved.getTicketCode(),
+                safeName(userId) + " raised: " + saved.getTitle(),
+                "HELPDESK", "/helpdesk");
         // Notify the HR this request is addressed to.
         if (saved.getAssignedTo() != null && !saved.getAssignedTo().equals(userId)) {
             notificationService.createAndPush(saved.getAssignedTo(),
@@ -351,6 +357,14 @@ public class HelpdeskService {
         notificationService.createAndPush(t.getRaisedBy(),
                 "Ticket " + t.getTicketCode() + " " + status.toLowerCase().replace('_', ' '),
                 "Your ticket status changed to " + status,
+                "HELPDESK", "/helpdesk");
+
+        // And the status change, so oversight follows the whole life of a
+        // ticket rather than only its arrival.
+        oversight.notifyCto(actorId, "Ticket " + t.getTicketCode() + " "
+                        + status.toLowerCase().replace('_', ' '),
+                safeName(t.getRaisedBy()) + "'s ticket " + t.getTicketCode()
+                        + " is now " + status + ".",
                 "HELPDESK", "/helpdesk");
         sms(t.getRaisedBy(), "Your support ticket " + t.getTicketCode() + " is now " + status + ".");
         return toResponse(t);

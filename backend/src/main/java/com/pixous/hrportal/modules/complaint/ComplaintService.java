@@ -182,6 +182,35 @@ public class ComplaintService {
         return toResponse(find(id));
     }
 
+    /**
+     * Withdraw a complaint you raised, while nobody has acted on it.
+     *
+     * <p>The row stays and its status becomes CANCELLED rather than being
+     * deleted: a reviewer who has already seen it should find out what became
+     * of it instead of finding it gone.
+     *
+     * <p>Only the raiser, and only while it is still OPEN. Once HR has taken
+     * it into review the handling is theirs, and withdrawing it out from
+     * under them is not the raiser's to do.
+     */
+    @Transactional
+    public void cancelOwn(Long userId, Long id) {
+        ComplaintNeed c = find(id);
+        if (!userId.equals(c.getRaisedBy())) {
+            throw ApiException.business("You can only cancel complaints you raised");
+        }
+        if ("CANCELLED".equalsIgnoreCase(c.getStatus())) {
+            throw ApiException.business("This complaint is already cancelled.");
+        }
+        if (!"OPEN".equalsIgnoreCase(c.getStatus())) {
+            throw ApiException.business(
+                    "This complaint is already " + c.getStatus().toLowerCase().replace('_', ' ')
+                            + " — it can no longer be cancelled.");
+        }
+        c.setStatus("CANCELLED");
+        repository.save(c);
+    }
+
     @Transactional
     public ComplaintResponse respond(Long staffId, Long id, ComplaintDecisionRequest req) {
         ComplaintNeed c = find(id);

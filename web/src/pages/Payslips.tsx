@@ -86,10 +86,17 @@ export default function PayslipsPage() {
     }
   }
 
-  async function exportToExcel() {
+  /*
+    The rows on screen, not every payslip ever issued. This exported the lot
+    while the filename and the page both said otherwise -- picking March and
+    exporting gave you the year.
+
+    Takes the list as an argument because this is declared above it.
+  */
+  async function exportToExcel(list: any[]) {
     try {
+      if (list.length === 0) { toast.error("Nothing to export."); return; }
       const XLSX = await import("xlsx");
-      const list = payslips.data ?? [];
       const headers = ["Month/Year", "Pay Date", "Gross Pay", "Deductions", "Net Pay", "Status"];
       const body = list.map((p) => {
         const payDate = dayjs(`${p.payYear}-${p.payMonth}-01`).endOf("month").format("DD MMM YYYY");
@@ -106,15 +113,37 @@ export default function PayslipsPage() {
       const ws = XLSX.utils.aoa_to_sheet([headers, ...body]);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "My Salary Details");
-      XLSX.writeFile(wb, "My_Salary_Details.xlsx");
+      // Named for what was picked, so two exports of different months do not
+      // arrive as the same file.
+      const tag = fMonth === "all" && fYear === "all"
+        ? "All"
+        : [fMonth === "all" ? "" : monthName(Number(fMonth)),
+           fYear === "all" ? "" : String(fYear)].filter(Boolean).join("_");
+      XLSX.writeFile(wb, `My_Salary_Details_${tag}.xlsx`);
     } catch (err) {
       toast.error("Failed to export Excel");
     }
   }
 
-  // Derived metrics for the top tiles
+  /*
+    The rows the month and year pickers leave, which is what the whole page --
+    tiles, table and export -- is about.
+  */
+  const list = (payslips.data ?? []).filter(
+    (p) =>
+      (fMonth === "all" || p.payMonth === Number(fMonth)) &&
+      (fYear === "all" || p.payYear === Number(fYear))
+  );
+
+  /*
+    The tiles, for whatever the pickers are showing.
+
+    They read the filtered list now. They used to read every payslip and take
+    the newest of them, so choosing March left the figures sitting on August:
+    the table below changed and the five numbers above it did not, and nothing
+    on screen said they were answering a different question.
+  */
   const metrics = useMemo(() => {
-    const list = payslips.data ?? [];
     if (list.length === 0) {
       return { ctc: 0, net: 0, gross: 0, deductions: 0, ytd: 0, latestLabel: "" };
     }
@@ -128,9 +157,15 @@ export default function PayslipsPage() {
     const latest = sorted[0];
     const latestLabel = `${monthName(latest.payMonth).slice(0, 3)} ${latest.payYear}`;
     
-    // YTD calculation for the current year
-    const ytd = list
-      .filter((p) => p.payYear === CUR_YEAR)
+    /*
+      Year to date stays a whole-year figure and so keeps reading every
+      payslip: narrowing it to the chosen month would make it the month's net
+      pay under a label that says otherwise. It follows the year picker, since
+      "to date" in a year you are not looking at is not a useful number.
+    */
+    const ytdYear = fYear === "all" ? CUR_YEAR : Number(fYear);
+    const ytd = (payslips.data ?? [])
+      .filter((p) => p.payYear === ytdYear)
       .reduce((sum, p) => sum + p.netPay, 0);
 
     return {
@@ -141,14 +176,9 @@ export default function PayslipsPage() {
       ytd,
       latestLabel
     };
-  }, [payslips.data]);
+  }, [list, payslips.data, fYear]);
 
-  const list = (payslips.data ?? []).filter(
-    (p) =>
-      (fMonth === "all" || p.payMonth === Number(fMonth)) &&
-      (fYear === "all" || p.payYear === Number(fYear))
-  );
-  
+
   // Sort list newest first for the table
   const sortedList = [...list].sort((a, b) => {
     if (a.payYear !== b.payYear) return b.payYear - a.payYear;
@@ -178,7 +208,10 @@ export default function PayslipsPage() {
                 {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
               </select>
             </div>
-            <ExportExcelButton onClick={exportToExcel} />
+            <ExportExcelButton
+              disabled={list.length === 0}
+              onClick={() => exportToExcel(sortedList)}
+            />
           </div>
         }
       />

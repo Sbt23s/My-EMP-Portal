@@ -77,6 +77,12 @@ public class HelpdeskController {
                 "Ticket updated");
     }
 
+    @PostMapping("/{id}/cancel")
+    public ApiResponse<Void> cancel(@PathVariable Long id) {
+        service.cancelOwn(SecurityUtils.currentUserId(), id);
+        return ApiResponse.message("Ticket cancelled");
+    }
+
     @GetMapping("/{id}")
     public ApiResponse<TicketResponse> get(@PathVariable Long id) {
         return ApiResponse.ok(service.get(id));

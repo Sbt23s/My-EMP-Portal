@@ -2,10 +2,13 @@ import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useMemo, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { Plus, Inbox, ChevronLeft, ChevronRight, Send,
-  Clock, CheckCircle, XCircle
+  Clock, CheckCircle, XCircle, X
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
+import { ViewButton } from "@/components/ui/view-button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ExportExcelButton } from "@/components/ui/export-excel-button";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { PageLoader } from "@/components/ui/page-loader";
@@ -152,6 +155,30 @@ function MySubmissions() {
   const [year, setYear] = useState("all");
   const [month, setMonth] = useState("all");
   const [day, setDay] = useState("");
+  /** The complaint open for reading, or null. */
+  const [viewRow, setViewRow] = useState<ComplaintNeed | null>(null);
+  /** The complaint the cancel confirmation is asking about, or null. */
+  const [confirmCancel, setConfirmCancel] = useState<ComplaintNeed | null>(null);
+
+  const mineQc = useQueryClient();
+
+  /*
+    Withdrawing a complaint raised by mistake.
+
+    A cancel, not a delete: the row stays and its status becomes CANCELLED, so
+    a reviewer who has already seen it finds out what became of it rather than
+    finding it gone. The server allows it only to the raiser and only while it
+    is still open.
+  */
+  const cancelComplaint = useMutation({
+    mutationFn: async (id: number) => { await api.post(`/complaints/${id}/cancel`); },
+    onSuccess: () => {
+      mineQc.invalidateQueries({ queryKey: ["complaints"] });
+      setConfirmCancel(null);
+      toast.success("Complaint cancelled");
+    },
+    onError: (e) => toast.error(apiMessage(e, "Could not cancel that complaint")),
+  });
 
   const query = useQuery({
     queryKey: ["complaints", "mine"],
@@ -204,6 +231,34 @@ function MySubmissions() {
 
   const paged = usePagedRows(filtered, 10, [statusTab, year, month, day, inPeriod]);
   const rows = paged.pageRows;
+
+  /** The complaints the filters leave, as a spreadsheet. */
+  const exportComplaints = async () => {
+    if (filtered.length === 0) { toast.error("Nothing to export."); return; }
+    const XLSX = await import("xlsx");
+    const headers = ["#", "Ticket ID", "Subject", "Category", "Priority",
+                     "Sent to", "Status", "Response", "Raised on"];
+    const body = filtered.map((c, i) => [
+      i + 1,
+      c.referenceCode ?? "",
+      c.subject ?? "",
+      c.category ?? "",
+      c.priority ?? "",
+      c.requestedToName || "HR & Admin",
+      (c.status ?? "").replace("_", " "),
+      c.hrResponse ?? "",
+      c.createdAt ? dayjs(c.createdAt).format("DD MMM YYYY") : "",
+    ]);
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...body]);
+    ws["!cols"] = [{ wch: 5 }, { wch: 18 }, { wch: 34 }, { wch: 18 }, { wch: 10 },
+                   { wch: 20 }, { wch: 14 }, { wch: 40 }, { wch: 14 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Complaints");
+    const tag = [year === "all" ? "" : year, month === "all" ? "" : month, day || ""]
+      .filter(Boolean).join("_") || "All";
+    XLSX.writeFile(wb, `My_Complaints_${tag}.xlsx`);
+    toast.success(`Exported ${filtered.length} complaint${filtered.length === 1 ? "" : "s"}`);
+  };
   const filtersOn = year !== "all" || month !== "all" || !!day || statusTab !== "ALL";
 
   const filterBar = (
@@ -255,6 +310,12 @@ function MySubmissions() {
         <span className="ml-auto text-xs text-muted-foreground">
           {filtered.length} of {all.length} complaint{all.length === 1 ? "" : "s"}
         </span>
+        {/* Exports what the filters leave, so the file matches the page. */}
+        <ExportExcelButton
+          disabled={filtered.length === 0}
+          title={filtered.length ? "Download these complaints as a spreadsheet" : "Nothing to export"}
+          onClick={exportComplaints}
+        />
       </div>
     </>
   );
@@ -284,7 +345,8 @@ function MySubmissions() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="pl-6">Reference</TableHead>
+                <TableHead className="w-px whitespace-nowrap pl-6">Action</TableHead>
+                <TableHead>Ticket ID</TableHead>
                 <TableHead>Subject</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Priority</TableHead>
@@ -296,7 +358,21 @@ function MySubmissions() {
             <TableBody>
               {rows.map((c) => (
                 <TableRow key={c.id}>
-                  <TableCell className="pl-6 font-medium code-chip">{c.referenceCode}</TableCell>
+                  <TableCell className="w-px whitespace-nowrap py-1 pl-6">
+                    <div className="flex items-center gap-1">
+                      <ViewButton onClick={() => setViewRow(c)} />
+                      {/* Once HR has taken it into review the handling is
+                          theirs, so withdrawing stops there. */}
+                      {c.status === "OPEN" && (
+                        <Button variant="outline" size="sm" className="shrink-0"
+                          disabled={cancelComplaint.isPending}
+                          onClick={() => setConfirmCancel(c)}>
+                          <X className="mr-1 h-3.5 w-3.5" /> Cancel
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-medium code-chip">{c.referenceCode}</TableCell>
                   <TableCell className="max-w-[240px]">
                     <div className="font-medium">{c.subject}</div>
                     {c.description && (
@@ -346,6 +422,34 @@ function MySubmissions() {
           />
         </CardContent>
       </Card>
+
+      {/* Reading your own complaint. The same dialog HR uses, in the read-only
+          mode it already supports -- there is nothing here to decide. */}
+      {viewRow && (
+        <RespondDialog
+          complaint={viewRow}
+          readOnly
+          onClose={() => setViewRow(null)}
+          onSaved={() => setViewRow(null)}
+        />
+      )}
+
+      {/* Cancelling cannot be undone, so it is asked in the application's own
+          dialog with the complaint named in it. */}
+      <ConfirmDialog
+        open={!!confirmCancel}
+        title="Cancel this complaint?"
+        description="The complaint is withdrawn and nobody is asked to review it. This cannot be undone -- raising it again means a new submission."
+        detail={confirmCancel ? [
+          ["Ticket", confirmCancel.referenceCode || "—"],
+          ["Subject", confirmCancel.subject || "—"],
+        ] : undefined}
+        confirmLabel="Yes, cancel it"
+        cancelLabel="No, keep it"
+        busy={cancelComplaint.isPending}
+        onCancel={() => setConfirmCancel(null)}
+        onConfirm={() => { if (confirmCancel?.id) cancelComplaint.mutate(confirmCancel.id); }}
+      />
     </div>
   );
 }
@@ -652,7 +756,13 @@ function SubmitDialog({ onClose }: { onClose: () => void }) {
   const [priority, setPriority] = useState("MEDIUM");
   const [targetRoleId, setTargetRoleId] = useState("");
   const [description, setDescription] = useState("");
-  const [anonymous, setAnonymous] = useState(false);
+  /*
+    The anonymous option is no longer offered, so this stays false. The field
+    is still sent: the server and the existing complaints both understand it,
+    and older anonymous complaints keep working exactly as they did. What was
+    removed is the choice on this form, not the concept behind it.
+  */
+  const anonymous = false;
 
   const recs = useQuery({
     queryKey: ["complaints", "recipients"],
@@ -721,9 +831,11 @@ function SubmitDialog({ onClose }: { onClose: () => void }) {
         <div className="space-y-1">
           <Label htmlFor="tgt">Send to</Label>
           <Select id="tgt" value={selectedTargetRoleId} onChange={(e) => setTargetRoleId(e.target.value)}>
+            {/* The server labels these "CTO (PIX-E100)". The list is one person
+                per role, so the code identifies nothing the role does not. */}
             {(recs.data ?? []).map((r) => (
               <option key={r.id} value={r.id}>
-                {r.name}
+                {(r.name || "").replace(/\s*\([^)]*\)\s*$/, "").trim() || r.name}
               </option>
             ))}
           </Select>
@@ -739,17 +851,6 @@ function SubmitDialog({ onClose }: { onClose: () => void }) {
             placeholder="Describe the complaint in detail..."
           />
         </div>
-        <div className="flex items-center gap-2 pt-1">
-          <input
-            type="checkbox"
-            id="anon"
-            checked={anonymous}
-            onChange={(e) => setAnonymous(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
-          />
-          <Label htmlFor="anon" className="text-xs cursor-pointer">Submit anonymously (your name will be hidden from reviewers)</Label>
-        </div>
-
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
           <Button type="submit" disabled={submit.isPending}>

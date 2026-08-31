@@ -98,6 +98,19 @@ export default function TicketEntryPage() {
       )).data.data
   });
 
+  /*
+    "CTO", not "CTO (PIX-E100) (PIX-E100)".
+
+    The server builds the name with the employee code already inside it, and
+    this list is one person per role, so the code identifies nothing the role
+    does not. Falls back to the name as sent if it is not in that shape.
+  */
+  const roleLabel = (u: { name?: string; designation?: string; code?: string }) =>
+    (u.designation || "").trim()
+      || (u.name || "").replace(/\s*\([^)]*\)\s*$/, "").trim()
+      || u.name
+      || "";
+
   const filteredAgents = useMemo(() => {
     let list = hrUsers.data ?? [];
     if (isTL || !hasRole("SUPER_ADMIN", "COMPANY_ADMIN", "IT_MGR", "IT_HR", "CV_HR")) {
@@ -262,8 +275,12 @@ export default function TicketEntryPage() {
             </Field>
             <Field label="Request to" required icon={UserRound}>
               <Select value={selectedAssignedTo} onChange={(e) => set("assignedTo", e.target.value)}>
+                {/* The server already labels these "CTO (PIX-E100)", so
+                    appending the code again printed it twice. The role is what
+                    the person is choosing between -- there is one of each --
+                    so the code is dropped and the role kept. */}
                 {filteredAgents.map((u) => (
-                  <option key={u.id} value={u.id}>{u.name}{u.code ? ` (${u.code})` : ""}</option>
+                  <option key={u.id} value={u.id}>{roleLabel(u)}</option>
                 ))}
               </Select>
             </Field>

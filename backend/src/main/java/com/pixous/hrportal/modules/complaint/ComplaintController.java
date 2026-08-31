@@ -64,6 +64,13 @@ public class ComplaintController {
         return ApiResponse.ok(service.get(id));
     }
 
+    @PostMapping("/{id}/cancel")
+    @Operation(summary = "Withdraw a complaint you raised, while it is still open")
+    public ApiResponse<Void> cancel(@PathVariable Long id) {
+        service.cancelOwn(SecurityUtils.currentUserId(), id);
+        return ApiResponse.message("Complaint cancelled");
+    }
+
     @PostMapping("/{id}/respond")
     @PreAuthorize("hasAnyAuthority('USER_MANAGE','COMPLAINT_MANAGE')")
     @Operation(summary = "HR/Admin: respond to / update a complaint's status")

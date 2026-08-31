@@ -4,12 +4,15 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, LifeBuoy, Send, Star, MessageSquare,
-  Ticket as TicketIcon, Clock, AlertTriangle, CheckCircle, Lock, Paperclip, Inbox,
-  Eye, Pencil
+  Ticket as TicketIcon, Clock, CheckCircle, Paperclip, Inbox,
+  Eye, Pencil, X
 } from "lucide-react";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
+import { ViewButton } from "@/components/ui/view-button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ExportExcelButton } from "@/components/ui/export-excel-button";
 import { useAuth } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
@@ -32,7 +35,25 @@ import { StatTile, TILE_FILLS } from "@/components/ui/stat-tile";
 import type { ApiEnvelope, PageEnvelope, Ticket } from "@/types";
 import { DATE_MIN, DATE_MAX } from "@/lib/dates";
 
+/*
+  Every status the server knows, in lifecycle order.
+
+  Left complete on purpose: the transition rule below reads positions in this
+  array, and older tickets still hold AWAITING_PARTS or CLOSED. Dropping them
+  here would renumber the lifecycle and leave those tickets with a status the
+  page could not place.
+*/
 const STATUSES = ["OPEN", "IN_PROGRESS", "AWAITING_PARTS", "RESOLVED", "CLOSED"];
+
+/*
+  What the page offers. Awaiting parts and Closed are not put in front of
+  anyone any more -- a ticket is open, being worked on, or resolved. A ticket
+  already sitting in one of the two still displays it; what is withdrawn is
+  the offer to move a ticket there, not the ability to read one.
+*/
+const OFFERED_STATUSES = STATUSES.filter(
+  (s) => s !== "AWAITING_PARTS" && s !== "CLOSED"
+);
 
 const isImageFile = (path: string) => /\.(png|jpe?g|gif|webp|bmp)$/i.test(path);
 
@@ -41,9 +62,7 @@ const TICKET_TILES = [
   { key: "ALL", label: "All", icon: TicketIcon, fill: TILE_FILLS.violet, hint: "Every ticket in this period" },
   { key: "OPEN", label: "Open", icon: Inbox, fill: TILE_FILLS.blue, hint: "Raised, not picked up yet" },
   { key: "IN_PROGRESS", label: "In progress", icon: Clock, fill: TILE_FILLS.amber, hint: "Being worked on" },
-  { key: "AWAITING_PARTS", label: "Awaiting parts", icon: AlertTriangle, fill: TILE_FILLS.orange, hint: "Waiting on something external" },
-  { key: "RESOLVED", label: "Resolved", icon: CheckCircle, fill: TILE_FILLS.green, hint: "Fixed, awaiting your rating" },
-  { key: "CLOSED", label: "Closed", icon: Lock, fill: TILE_FILLS.slate, hint: "Finished and closed" }
+  { key: "RESOLVED", label: "Resolved", icon: CheckCircle, fill: TILE_FILLS.green, hint: "Fixed, awaiting your rating" }
 ] as const;
 
 const MONTHS = [
@@ -86,6 +105,29 @@ export default function HelpdeskPage() {
   const [openId, setOpenId] = useState<number | null>(null);
   // The ticket open in the edit form.
   const [editTicket, setEditTicket] = useState<Ticket | null>(null);
+  /** The ticket the cancel confirmation is asking about, or null when closed. */
+  const [confirmCancel, setConfirmCancel] = useState<Ticket | null>(null);
+
+  const listQc = useQueryClient();
+
+  /*
+    Withdrawing a ticket raised by mistake.
+
+    A cancel, not a delete: the row stays and its status becomes CANCELLED, so
+    an agent who has already seen it in their queue finds out what became of it
+    rather than finding it gone. The server allows it only to the person who
+    raised it and only while nobody has picked it up -- the same two rules
+    editing already carries.
+  */
+  const cancelTicket = useMutation({
+    mutationFn: async (id: number) => { await api.post(`/tickets/${id}/cancel`); },
+    onSuccess: () => {
+      listQc.invalidateQueries({ queryKey: ["tickets"] });
+      setConfirmCancel(null);
+      toast.success("Ticket cancelled");
+    },
+    onError: (e) => toast.error(apiMessage(e, "Could not cancel that ticket")),
+  });
 
   const mine = useQuery({
     queryKey: ["tickets", "mine"],
@@ -157,6 +199,36 @@ export default function HelpdeskPage() {
   }, [inPeriod, statusTab]);
 
   const paged = usePagedRows(list, 15, [tab, year, month, day, statusTab, rawList]);
+
+  /** The tickets the filters leave, as a spreadsheet. */
+  const exportTickets = async () => {
+    if (list.length === 0) { toast.error("Nothing to export."); return; }
+    const XLSX = await import("xlsx");
+    const headers = ["#", "Ticket ID", "Subject", "Type", "Category", "Priority",
+                     "Status", "Requested to", "Raised by", "Date"];
+    const body = list.map((t, i) => [
+      i + 1,
+      t.ticketCode ?? "",
+      t.title ?? "",
+      t.type ?? "",
+      t.category ?? "",
+      t.priority ?? "",
+      t.status ?? "",
+      t.assignedToName ?? "",
+      t.raisedByName ?? "",
+      t.createdAt ? dayjs(t.createdAt).format("DD MMM YYYY") : "",
+    ]);
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...body]);
+    ws["!cols"] = [{ wch: 5 }, { wch: 18 }, { wch: 34 }, { wch: 10 }, { wch: 16 },
+                   { wch: 10 }, { wch: 14 }, { wch: 22 }, { wch: 22 }, { wch: 14 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Tickets");
+    // Named for what was picked, so two exports do not arrive as one file.
+    const tag = [year === "all" ? "" : year, month === "all" ? "" : month, day || ""]
+      .filter(Boolean).join("_") || "All";
+    XLSX.writeFile(wb, `Support_Tickets_${tag}.xlsx`);
+    toast.success(`Exported ${list.length} ticket${list.length === 1 ? "" : "s"}`);
+  };
   const filtersOn = year !== "all" || month !== "all" || !!day;
 
   /*
@@ -200,11 +272,21 @@ export default function HelpdeskPage() {
             a recipient, and there is nobody above them to send one to.
             Everyone else, HR included, raises their own.
           */
-          !isSystemAdminOrCto && (
-            <Button onClick={() => navigate("/helpdesk/new")}>
-              <Plus className="h-4 w-4" /> New ticket
-            </Button>
-          )
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Exports what is on screen -- the tab, the year, month and exact
+                date, and the status tile -- so the file matches the page
+                rather than being a second query of the same name. */}
+            <ExportExcelButton
+              disabled={list.length === 0}
+              title={list.length ? "Download these tickets as a spreadsheet" : "Nothing to export"}
+              onClick={exportTickets}
+            />
+            {!isSystemAdminOrCto && (
+              <Button onClick={() => navigate("/helpdesk/new")}>
+                <Plus className="h-4 w-4" /> New ticket
+              </Button>
+            )}
+          </div>
         }
       />
 
@@ -317,7 +399,7 @@ export default function HelpdeskPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right pr-6">Action</TableHead>
+                  <TableHead className="w-px whitespace-nowrap">Action</TableHead>
                   <TableHead className="pl-6">Ticket ID</TableHead>
                   <TableHead>Employee ID</TableHead>
                   <TableHead>Employee Name</TableHead>
@@ -395,7 +477,7 @@ export default function HelpdeskPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right pr-6">Action</TableHead>
+                  <TableHead className="w-px whitespace-nowrap">Action</TableHead>
                   <TableHead className="pl-6">Ticket ID</TableHead>
                   <TableHead>Subject</TableHead>
                   <TableHead>Type</TableHead>
@@ -413,21 +495,26 @@ export default function HelpdeskPage() {
                     onClick={() => setOpenId(t.id)}
                   >
                     <TableCell
-                      className="text-right pr-6"
+                      className="w-px whitespace-nowrap py-1"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="outline" size="sm" className="shrink-0"
-                          onClick={() => setOpenId(t.id)}>
-                          <Eye className="mr-1 h-3.5 w-3.5" /> View
-                        </Button>
+                      <div className="flex items-center gap-1">
+                        <ViewButton onClick={() => setOpenId(t.id)} />
                         {/* Once an agent has picked the ticket up its details are
-                            what they are working from, so editing stops there. */}
+                            what they are working from, so editing stops there --
+                            and so does withdrawing it out from under them. */}
                         {t.status === "OPEN" && (
-                          <Button variant="outline" size="sm" className="shrink-0"
-                            onClick={() => setEditTicket(t)}>
-                            <Pencil className="mr-1 h-3.5 w-3.5 text-primary" /> Edit
-                          </Button>
+                          <>
+                            <Button variant="outline" size="sm" className="shrink-0"
+                              onClick={() => setEditTicket(t)}>
+                              <Pencil className="mr-1 h-3.5 w-3.5 text-primary" /> Edit
+                            </Button>
+                            <Button variant="outline" size="sm" className="shrink-0"
+                              disabled={cancelTicket.isPending}
+                              onClick={() => setConfirmCancel(t)}>
+                              <X className="mr-1 h-3.5 w-3.5" /> Cancel
+                            </Button>
+                          </>
                         )}
                       </div>
                     </TableCell>
@@ -461,6 +548,23 @@ export default function HelpdeskPage() {
       {editTicket && (
         <EditTicketDialog ticket={editTicket} onClose={() => setEditTicket(null)} />
       )}
+
+      {/* Cancelling cannot be undone, so it is asked in the application's own
+          dialog with the ticket named in it, the way the other modules ask. */}
+      <ConfirmDialog
+        open={!!confirmCancel}
+        title="Cancel this ticket?"
+        description="The ticket is withdrawn and nobody is asked to work on it. This cannot be undone -- raising it again means a new ticket."
+        detail={confirmCancel ? [
+          ["Ticket", confirmCancel.ticketCode || "—"],
+          ["Subject", confirmCancel.title || "—"],
+        ] : undefined}
+        confirmLabel="Yes, cancel it"
+        cancelLabel="No, keep it"
+        busy={cancelTicket.isPending}
+        onCancel={() => setConfirmCancel(null)}
+        onConfirm={() => { if (confirmCancel?.id) cancelTicket.mutate(confirmCancel.id); }}
+      />
     </div>
   );
 }
@@ -544,13 +648,26 @@ function EditTicketDialog({ ticket, onClose }: { ticket: Ticket; onClose: () => 
           </div>
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium">Requested to{star}</label>
-          <Select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)}>
-            <option value="">{hrUsers.isLoading ? "Loading…" : "Select HR"}</option>
+          <label className="text-sm font-medium">Requested to</label>
+          {/*
+            Fixed once the ticket exists. Moving it here would hand the ticket
+            to somebody else without the person it was taken from being told,
+            and the one who had been reading it would simply stop seeing it.
+            Reassigning is the agent's action on the ticket, not an edit to the
+            request. Shown rather than hidden, because who it is with is part
+            of what is being edited even when it cannot be changed.
+          */}
+          <Select value={assignedTo} disabled>
+            <option value="">{hrUsers.isLoading ? "Loading…" : "—"}</option>
             {(hrUsers.data ?? []).map((u) => (
-              <option key={u.id} value={u.id}>{u.name}{u.code ? ` (${u.code})` : ""}</option>
+              <option key={u.id} value={u.id}>
+                {(u.name || "").replace(/\s*\([^)]*\)\s*$/, "").trim() || u.name}
+              </option>
             ))}
           </Select>
+          <p className="text-[11px] text-muted-foreground">
+            This cannot be changed after the ticket is raised.
+          </p>
         </div>
         <p className="text-[11px] text-muted-foreground">
           Attachments stay as they are — add anything new as a reply on the ticket.
@@ -713,7 +830,7 @@ function TicketDetail({
           {isAgent && (isAssignedToMe || !t?.assignedTo) && (
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <span className="text-xs font-medium text-muted-foreground">Set status:</span>
-              {STATUSES.map((s) => (
+              {OFFERED_STATUSES.map((s) => (
                 <Button
                   key={s}
                   variant={t.status === s ? "default" : "outline"}

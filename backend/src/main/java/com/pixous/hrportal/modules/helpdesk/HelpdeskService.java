@@ -157,6 +157,36 @@ public class HelpdeskService {
      *
      * The code, the category and the status are not the raiser's to change.
      */
+    /**
+     * Withdraw a ticket you raised, while nobody has picked it up.
+     *
+     * <p>The row stays and its status becomes CANCELLED rather than being
+     * deleted: an agent who has seen it in their queue should find out what
+     * became of it instead of finding it gone.
+     *
+     * <p>The same two rules editing carries -- yours, and still OPEN. Once an
+     * agent has started work the ticket is what they are working from, and
+     * withdrawing it out from under them is not the raiser's to do.
+     */
+    @Transactional
+    public void cancelOwn(Long userId, Long ticketId) {
+        Ticket t = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> ApiException.notFound("Ticket"));
+        if (!userId.equals(t.getRaisedBy())) {
+            throw ApiException.business("You can only cancel tickets you raised");
+        }
+        if ("CANCELLED".equalsIgnoreCase(t.getStatus())) {
+            throw ApiException.business("This ticket is already cancelled.");
+        }
+        if (!"OPEN".equalsIgnoreCase(t.getStatus())) {
+            throw ApiException.business(
+                    "This ticket is already " + t.getStatus().toLowerCase().replace('_', ' ')
+                            + " — it can no longer be cancelled.");
+        }
+        t.setStatus("CANCELLED");
+        ticketRepository.save(t);
+    }
+
     @Transactional
     public TicketResponse updateOwn(Long userId, Long ticketId, TicketRequest req) {
         Ticket t = ticketRepository.findById(ticketId)

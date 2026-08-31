@@ -472,12 +472,28 @@ export default function ChatPage() {
   const cancelledRef = useRef(false);
   const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  /*
+    The channels and groups this person is in.
+
+    Being added to a group happens on somebody else's screen -- HR or the CTO
+    adds you -- so nothing here knows it happened. With refetchOnMount off and
+    a five minute staleTime, the list was answered from cache on every visit
+    and a new group did not appear until the cache expired or the session was
+    restarted, which read as the group never arriving.
+
+    Polled instead, and refetched when the tab is looked at again, which is
+    when a missing group is actually noticed.
+  */
   const { data: myGroups, isLoading: groupsLoading } = useQuery({
     queryKey: ["my_communities"],
     queryFn: async () => {
       const res = await api.get<CommunityGroup[]>("/communities/me");
       return res.data;
-    }
+    },
+    refetchInterval: 20000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 
   const {

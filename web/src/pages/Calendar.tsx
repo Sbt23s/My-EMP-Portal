@@ -5,7 +5,7 @@ import dayjs, { type Dayjs } from "dayjs";
 import {
   ChevronLeft, ChevronRight, CalendarDays, RefreshCw, Palmtree, Plane, CalendarCheck, Plus,
   ListTodo, AlertTriangle, Trash2, Search, Users, MapPin, Check, X,
-  Cake, Award, PartyPopper, GraduationCap, Clock
+  Cake, Award, PartyPopper, GraduationCap, Clock, Home
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
@@ -19,7 +19,7 @@ import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { todayIso, DATE_MIN, DATE_MAX } from "@/lib/dates";
+import { todayIso, to12Hour, DATE_MIN, DATE_MAX } from "@/lib/dates";
 
 interface Holiday {
   id: number;
@@ -153,6 +153,68 @@ export default function CalendarPage() {
       return res.data?.content ?? [];
     }
   });
+
+  /*
+    Approved permission and work from home, for the person looking.
+
+    Both were missing from the calendar entirely: a day could be an approved
+    WFH day and show nothing at all, so the one place meant to answer "where
+    is everyone on the 14th" could not answer it. Only approved ones are
+    drawn -- a pending request is not yet a fact about the day.
+
+    Polled, because both are decided on somebody else's screen.
+  */
+  const myPermissions = useQuery({
+    queryKey: ["calendar", "permissions", "me"],
+    placeholderData: keepPreviousData,
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+    queryFn: async () =>
+      (await api.get<ApiEnvelope<any[]>>("/leave/permissions/me")).data.data ?? []
+  });
+
+  const myWfh = useQuery({
+    queryKey: ["calendar", "wfh", "me"],
+    placeholderData: keepPreviousData,
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+    queryFn: async () =>
+      (await api.get<ApiEnvelope<any[]>>("/wfh/me")).data.data ?? []
+  });
+
+  /** Approved permission by day: "YYYY-MM-DD" -> the requests on it. */
+  const permissionByDay = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    (myPermissions.data ?? [])
+      .filter((r) => String(r.status ?? "").toUpperCase() === "APPROVED")
+      .forEach((r) => {
+        const key = String(r.requestDate ?? "").slice(0, 10);
+        if (key) (map[key] ??= []).push(r);
+      });
+    return map;
+  }, [myPermissions.data]);
+
+  /** Approved WFH by day. A request carries a range, so every day in it counts. */
+  const wfhByDay = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    (myWfh.data ?? [])
+      .filter((r) => {
+        const st = String(r.status ?? "").toUpperCase();
+        // COMPLETED is an approved request whose days have passed.
+        return st === "APPROVED" || st === "COMPLETED";
+      })
+      .forEach((r) => {
+        const from = dayjs(String(r.fromDate).slice(0, 10));
+        const to = dayjs(String(r.toDate ?? r.fromDate).slice(0, 10));
+        if (!from.isValid() || !to.isValid()) return;
+        for (let d = from; !d.isAfter(to, "day"); d = d.add(1, "day")) {
+          (map[d.format("YYYY-MM-DD")] ??= []).push(r);
+        }
+      });
+    return map;
+  }, [myWfh.data]);
 
   // Anyone who is allowed to see the whole task list sees due dates here:
   // the admin, HR, and Team Leaders. Only the admin may act on them.
@@ -595,6 +657,8 @@ export default function CalendarPage() {
                     const hs = holidaysByDate[ds] ?? [];
                     const ls = leavesByDate[ds] ?? [];
                     const ts = tasksByDate[ds] ?? [];
+                    const ps = permissionByDay[ds] ?? [];
+                    const ws = wfhByDay[ds] ?? [];
                     const es = eventsByDate[ds] ?? [];
                     const isSelected = ds === selected;
                     const shownH = hs.slice(0, 1);
@@ -630,6 +694,11 @@ export default function CalendarPage() {
                           if (ls.some((l) => l.status === "APPROVED")) dots.push("bg-emerald-500");      // Approved leave
                           if (ls.some((l) => l.status === "PENDING")) dots.push("bg-amber-500");         // Pending leave
                           if (ts.length > 0) dots.push("bg-sky-500");                                    // Task due
+                          // Two colours, because the two mean different things:
+                          // a WFH day is a day worked, a permission is hours off
+                          // inside one.
+                          if (ws.length > 0) dots.push("bg-teal-500");                                   // Work from home
+                          if (ps.length > 0) dots.push("bg-fuchsia-500");                                // Permission
                           // One dot per kind of event on this day, in a fixed
                           // order so the same day always reads the same way.
                           (Object.keys(EVENT_STYLE) as CalendarEvent["type"][]).forEach((t) => {
@@ -935,6 +1004,56 @@ export default function CalendarPage() {
                       ))}
                     </div>
                   )}
+                  {(wfhByDay[selected] ?? []).length > 0 && (
+                    <div className="space-y-2">
+                      <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                        Work From Home ({(wfhByDay[selected] ?? []).length})
+                      </div>
+                      {(wfhByDay[selected] ?? []).map((w: any) => (
+                        <div key={`wfh-${w.id}`} className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50/60 p-2.5 dark:border-teal-900/40 dark:bg-teal-950/20">
+                          <Home className="mt-0.5 h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">{w.employeeName || "Work from home"}</span>
+                              <Badge variant="success" className="text-[9px]">APPROVED</Badge>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {dayjs(w.fromDate).format("DD MMM")} – {dayjs(w.toDate).format("DD MMM")}
+                              {w.workingDays ? ` · ${w.workingDays} day${w.workingDays === 1 ? "" : "s"}` : ""}
+                            </div>
+                            {w.reason && (
+                              <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{w.reason}</div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {(permissionByDay[selected] ?? []).length > 0 && (
+                    <div className="space-y-2">
+                      <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                        Permission ({(permissionByDay[selected] ?? []).length})
+                      </div>
+                      {(permissionByDay[selected] ?? []).map((pm: any) => (
+                        <div key={`perm-${pm.id}`} className="flex items-start gap-2 rounded-lg border border-fuchsia-200 bg-fuchsia-50/60 p-2.5 dark:border-fuchsia-900/40 dark:bg-fuchsia-950/20">
+                          <Clock className="mt-0.5 h-4 w-4 shrink-0 text-fuchsia-600 dark:text-fuchsia-400" />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">{pm.employeeName || "Permission"}</span>
+                              <Badge variant="success" className="text-[9px]">APPROVED</Badge>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {to12Hour(pm.fromTime)} – {to12Hour(pm.toTime)}
+                              {pm.hours ? ` · ${pm.hours}h` : ""}
+                            </div>
+                            {pm.reason && (
+                              <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{pm.reason}</div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {selTasks.length > 0 && (
                     <div className="space-y-2">
                       <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
@@ -1128,6 +1247,12 @@ export default function CalendarPage() {
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Pending leave
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-teal-500" /> Work from home
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-fuchsia-500" /> Permission
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-full bg-sky-500" /> Task due

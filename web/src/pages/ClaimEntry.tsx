@@ -115,9 +115,18 @@ export default function ClaimEntryPage() {
     number input at all, so neither the character set nor the length was
     actually held. This keeps digits and nothing else.
   */
+  /*
+    Digits, six at most.
+
+    An odometer reading of 258888888888 is a slipped key, not a journey, and
+    the distance it implies runs the allowance into the crores -- so the
+    ceiling is held as the number is typed rather than argued about later.
+    Six digits still covers any real reading.
+  */
+  const sixDigits = (raw: string) => raw.replace(/\D/g, "").slice(0, 6);
+
   const setMoney = <K extends keyof typeof form>(k: K, raw: string) => {
-    const digits = raw.replace(/\D/g, "").slice(0, 6);
-    set(k, digits as (typeof form)[K]);
+    set(k, sixDigits(raw) as (typeof form)[K]);
   };
 
   const slipInput = useRef<HTMLInputElement>(null);
@@ -218,6 +227,7 @@ export default function ClaimEntryPage() {
 
   /** Keeps a km entry inside its cap, so a larger number cannot be typed in. */
   const setKm = (key: "hillsKm" | "plainsKm", raw: string) => {
+    raw = sixDigits(raw);
     if (raw === "") { set(key, ""); return; }
     const cap = key === "hillsKm" ? hillsCap : plainsCap;
     set(key, String(Math.max(0, Math.min(num(raw), cap))));
@@ -229,6 +239,7 @@ export default function ClaimEntryPage() {
    * than left overstating the claim.
    */
   const setDistance = (key: "startingKm" | "endingKm", raw: string) => {
+    raw = sixDigits(raw);
     setForm((f) => {
       const next = { ...f, [key]: raw };
       const total = Math.max(0, num(next.endingKm) - num(next.startingKm));
@@ -332,8 +343,21 @@ export default function ClaimEntryPage() {
         ? api.post("/ta-expenses", payload)
         : api.put(`/ta-expenses/${editId}`, payload);
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["ta-expenses"] });
+    onSuccess: async () => {
+      /*
+        Wait for the list to actually come back before leaving.
+
+        invalidateQueries only refetches queries that are mounted, and the
+        claims list is not -- this page is. So the invalidation marked it stale
+        and nothing fetched; arriving back on the list, refetchOnMount is off
+        and staleTime is five minutes, so the cache answered and the new claim
+        was missing until a manual reload.
+
+        refetchQueries fetches whether or not anything is mounted, and awaiting
+        it means the navigation lands on a list that already has the row rather
+        than one that will have it shortly.
+      */
+      await qc.refetchQueries({ queryKey: ["ta-expenses"] });
       toast.success(editId === null ? "Claim submitted for approval" : "Claim updated");
       navigate("/ta-expenses");
     },
@@ -432,11 +456,11 @@ export default function ClaimEntryPage() {
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <Field label="Starting KM">
-                      <Input type="number" min="0" value={form.startingKm}
+                      <Input type="text" inputMode="numeric" maxLength={6} value={form.startingKm}
                         onChange={(e) => setDistance("startingKm", e.target.value)} placeholder="0" />
                     </Field>
                     <Field label="Ending KM">
-                      <Input type="number" min="0" value={form.endingKm}
+                      <Input type="text" inputMode="numeric" maxLength={6} value={form.endingKm}
                         onChange={(e) => setDistance("endingKm", e.target.value)} placeholder="0" />
                     </Field>
                     <Field
@@ -445,7 +469,7 @@ export default function ClaimEntryPage() {
                         ? undefined
                         : `Rate ₹${totals.hillsRate}/km · up to ${hillsCap} KM`}
                     >
-                      <Input type="number" min="0" max={hillsCap} value={form.hillsKm}
+                      <Input type="text" inputMode="numeric" maxLength={6} value={form.hillsKm}
                         disabled={totals.totalKm <= 0}
                         onChange={(e) => setKm("hillsKm", e.target.value)} placeholder="0" />
                     </Field>
@@ -455,7 +479,7 @@ export default function ClaimEntryPage() {
                         ? undefined
                         : `Rate ₹${totals.plainsRate}/km · up to ${plainsCap} KM`}
                     >
-                      <Input type="number" min="0" max={plainsCap} value={form.plainsKm}
+                      <Input type="text" inputMode="numeric" maxLength={6} value={form.plainsKm}
                         disabled={totals.totalKm <= 0}
                         onChange={(e) => setKm("plainsKm", e.target.value)} placeholder="0" />
                     </Field>

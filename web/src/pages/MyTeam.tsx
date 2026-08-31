@@ -509,12 +509,15 @@ export default function MyTeamPage() {
 
         {/* ---------------- side rail ---------------- */}
         <div className="space-y-5">
-          <TeamChatRail
-            group={teamRoom.data}
-            teamName={teamName}
-            loading={teamRoom.isLoading}
-            failed={teamRoom.isError}
-          />
+          {/*
+            Team chat is not shown here for any role. The rail is the roster
+            and what is coming up; a second place to message the same people
+            was one more inbox to remember to check, and Chat already holds
+            the conversation.
+
+            The component and its query are left in place so restoring this is
+            putting one element back rather than rebuilding it.
+          */}
 
           <Card>
             <CardContent className="p-0">

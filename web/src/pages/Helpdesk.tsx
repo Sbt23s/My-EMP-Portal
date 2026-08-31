@@ -102,6 +102,15 @@ export default function HelpdeskPage() {
   const [tab, setTab] = useState<"mine" | "queue" | "all">(
     isAgent ? "queue" : canSeeAll ? "all" : "mine"
   );
+
+  /*
+    A tab that is no longer offered must not stay selected. The CTO has no My
+    tickets tab, and somebody sitting on it when this shipped would otherwise
+    be left looking at an empty list with no lit tab to explain it.
+  */
+  const activeTab = tab === "mine" && isSystemAdminOrCto
+    ? (isAgent ? "queue" : "all")
+    : tab;
   const [openId, setOpenId] = useState<number | null>(null);
   // The ticket open in the edit form.
   const [editTicket, setEditTicket] = useState<Ticket | null>(null);
@@ -137,20 +146,20 @@ export default function HelpdeskPage() {
 
   const queue = useQuery({
     queryKey: ["tickets", "queue"],
-    enabled: isAgent && tab === "queue",
+    enabled: isAgent && activeTab === "queue",
     queryFn: async () =>
       (await api.get<PageEnvelope<Ticket>>("/tickets/assigned-to-me?size=50")).data.content
   });
 
   const all = useQuery({
     queryKey: ["tickets", "all"],
-    enabled: canSeeAll && tab === "all",
+    enabled: canSeeAll && activeTab === "all",
     queryFn: async () =>
       (await api.get<PageEnvelope<Ticket>>("/tickets/all?size=200")).data.content
   });
 
-  const rawList = tab === "queue" ? queue.data ?? [] : tab === "all" ? all.data ?? [] : mine.data ?? [];
-  const loading = tab === "queue" ? queue.isLoading : tab === "all" ? all.isLoading : mine.isLoading;
+  const rawList = activeTab === "queue" ? queue.data ?? [] : activeTab === "all" ? all.data ?? [] : mine.data ?? [];
+  const loading = activeTab === "queue" ? queue.isLoading : activeTab === "all" ? all.isLoading : mine.isLoading;
 
   // Look back over a year, a month, or a single day.
   const [year, setYear] = useState("all");
@@ -222,7 +231,7 @@ export default function HelpdeskPage() {
       String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? "")));
   }, [inPeriod, statusTab, priority, type, q]);
 
-  const paged = usePagedRows(list, 15, [tab, year, month, day, statusTab, priority, type, q, rawList]);
+  const paged = usePagedRows(list, 15, [activeTab, year, month, day, statusTab, priority, type, q, rawList]);
 
   /** The tickets the filters leave, as a spreadsheet. */
   const exportTickets = async () => {
@@ -268,10 +277,23 @@ export default function HelpdeskPage() {
     HELPDESK_AGENT, which HR, the CTO and the administrators all hold. Only the
     tab that reaches it was missing.
   */
+  /*
+    Each tab carries what is behind it, read from the same three queries the
+    tiles and the table use -- so a number on a tab and the rows it opens onto
+    cannot disagree.
+  */
   const tabs = [
-    ...(isAgent ? [{ id: "queue" as const, label: "Assigned to me" }] : []),
-    ...(canSeeAll ? [{ id: "all" as const, label: "All tickets" }] : []),
-    { id: "mine" as const, label: "My tickets" },
+    ...(isAgent ? [{ id: "queue" as const, label: `Assigned to me (${(queue.data ?? []).length})` }] : []),
+    ...(canSeeAll ? [{ id: "all" as const, label: `All tickets (${(all.data ?? []).length})` }] : []),
+    /*
+      The CTO and the administrators raise no tickets -- every recipient
+      dropdown offers them and there is nobody above them to send one to, which
+      is why the New ticket button is already hidden from them. A My tickets
+      tab that can only ever read zero is a tab that is never right.
+    */
+    ...(!isSystemAdminOrCto
+      ? [{ id: "mine" as const, label: `My tickets (${(mine.data ?? []).length})` }]
+      : []),
   ];
 
   const tickets = all.data ?? [];
@@ -327,7 +349,7 @@ export default function HelpdeskPage() {
               onClick={() => setTab(t.id)}
               className={cn(
                 "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
-                tab === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                activeTab === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground"
               )}
             >
               {t.label}
@@ -436,21 +458,21 @@ export default function HelpdeskPage() {
           title={
             statusTab !== "ALL" || filtersOn
               ? "Nothing matches these filters"
-              : tab === "queue" ? "Your queue is clear"
-                : tab === "all" ? "No tickets in the system"
+              : activeTab === "queue" ? "Your queue is clear"
+                : activeTab === "all" ? "No tickets in the system"
                   : "No tickets yet"
           }
           description={
             statusTab !== "ALL" || filtersOn
               ? "Try another status tile, or widen the date range above."
-              : tab === "queue"
+              : activeTab === "queue"
                 ? "Tickets assigned to you will show up here."
-                : tab === "all"
+                : activeTab === "all"
                   ? "Once employees raise tickets they will all appear here."
                   : "Raise a ticket for IT support or on-site facilities."
           }
         />
-      ) : canSeeAll || tab === "queue" ? (
+      ) : canSeeAll || activeTab === "queue" ? (
         <Card>
           <CardContent className="p-0">
             <Table>

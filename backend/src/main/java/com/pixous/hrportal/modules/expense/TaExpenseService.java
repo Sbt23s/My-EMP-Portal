@@ -167,6 +167,25 @@ public class TaExpenseService {
         if (!normalized.equals("APPROVED") && !normalized.equals("REJECTED") && !normalized.equals("PENDING")) {
             throw ApiException.business("Status must be APPROVED, REJECTED or PENDING");
         }
+        /*
+         * Nobody decides their own claim.
+         *
+         * HR holds CLAIM_APPROVE and is also somebody who buys petrol, so the
+         * approve and reject buttons appeared on their own rows and worked.
+         * A claim is money out of the company, and the person asking for it
+         * cannot also be the one who agrees to it -- that is the whole point
+         * of an approval step.
+         *
+         * Checked here rather than in the page: the page can only decide what
+         * to draw, and the endpoint is what actually pays out.
+         */
+        if (deciderId != null && deciderId.equals(expense.getUserId())
+                && !normalized.equals("PENDING")) {
+            throw ApiException.business(
+                    "You cannot " + normalized.toLowerCase()
+                            + " your own claim. It has to be decided by somebody else.");
+        }
+
         if (normalized.equals("REJECTED") && (comment == null || comment.isBlank())) {
             throw ApiException.business("A reason is required to reject a claim");
         }

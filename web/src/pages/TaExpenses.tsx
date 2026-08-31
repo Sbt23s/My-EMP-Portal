@@ -439,18 +439,21 @@ export default function TaExpensesPage() {
                           against a column header that sat above nothing. */}
                       <div className="flex items-center justify-center gap-2">
                         <ViewButton onClick={() => setViewRow(row)} />
-                        {canApprove && row.status === "PENDING" && (
+                        {/* Not on your own claim. HR holds CLAIM_APPROVE and
+                            also buys petrol, so Review appeared on their own
+                            rows -- and a claim is money out, so the person
+                            asking cannot be the one who agrees. The server
+                            refuses it either way; this stops offering it. */}
+                        {canApprove && row.status === "PENDING" && row.userId !== user?.id && (
                           <Button size="sm" variant="outline" onClick={() => setDecideRow(row)}>
                             Review
                           </Button>
                         )}
-                        {/* The person who raised it can withdraw it while it is
-                            still pending -- a claim entered by mistake should
-                            not need an approver to clear it. Shown on the same
-                            terms the Edit button uses, minus the HR case: HR
-                            reviewing somebody else's claim decides it rather
-                            than cancelling it. */}
-                        {row.status === "PENDING" && !canApprove && scope === "MINE" && (
+                        {/* Withdrawing your own claim is yours to do whatever
+                            role you hold: HR raising a claim is an employee
+                            asking for money back, and they could not cancel a
+                            mistake because canApprove was true of them. */}
+                        {row.status === "PENDING" && row.userId === user?.id && (
                           <Button
                             size="sm"
                             variant="outline"

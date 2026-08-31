@@ -254,11 +254,26 @@ public class HelpdeskService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<TicketResponse> allTickets(String status, int page, int size) {
+    public PageResponse<TicketResponse> allTickets(Long viewerId, String status, int page, int size) {
         var pageable = PageRequest.of(page, size);
-        Page<Ticket> result = (status != null && !status.isBlank())
-                ? ticketRepository.findByStatusOrderByCreatedAtDesc(status.toUpperCase(), pageable)
-                : ticketRepository.findAllByOrderByCreatedAtDesc(pageable);
+        String statusFilter = (status == null || status.isBlank()) ? null : status.toUpperCase();
+        /*
+         * A system administrator sees every ticket -- they hold USER_MANAGE to
+         * keep the portal running, and a queue they cannot see is one they
+         * cannot fix. An agent sees what was addressed to them, plus what they
+         * raised: a ticket names its recipient, and choosing the CTO over HR is
+         * a real choice somebody makes for a reason.
+         */
+        boolean seesEverything =
+                com.pixous.hrportal.security.SecurityUtils.hasAuthority("USER_MANAGE");
+        Page<Ticket> result;
+        if (seesEverything) {
+            result = statusFilter != null
+                    ? ticketRepository.findByStatusOrderByCreatedAtDesc(statusFilter, pageable)
+                    : ticketRepository.findAllByOrderByCreatedAtDesc(pageable);
+        } else {
+            result = ticketRepository.findForViewer(statusFilter, viewerId, pageable);
+        }
         return PageResponse.from(result.map(this::toResponseNoComments));
     }
 

@@ -66,7 +66,7 @@ public class HelpdeskController {
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
-        return service.allTickets(status, page, size);
+        return service.allTickets(SecurityUtils.currentUserId(), status, page, size);
     }
 
     /** The raiser edits their own ticket while it is still open. */

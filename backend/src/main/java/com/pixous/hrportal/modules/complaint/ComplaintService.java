@@ -168,12 +168,30 @@ public class ComplaintService {
         return PageResponse.from(result.map(this::toResponse));
     }
 
+    /**
+     * The review queue, as the person asking is entitled to see it.
+     *
+     * <p>A complaint names who it is for. HR and the CTO are both offered as
+     * recipients, and choosing between them is a real choice -- somebody
+     * complaining about HR sends it to the CTO precisely so HR does not read
+     * it. This returned every complaint to anyone holding COMPLAINT_MANAGE,
+     * so it did.
+     *
+     * <p>A system administrator still sees everything: they hold USER_MANAGE
+     * to keep the portal running, and a queue they cannot see is one they
+     * cannot fix. Everybody else sees what was addressed to them, plus what
+     * they raised themselves.
+     */
     @Transactional(readOnly = true)
-    public PageResponse<ComplaintResponse> all(String status, String kind, int page, int size) {
+    public PageResponse<ComplaintResponse> all(Long viewerId, String status, String kind, int page, int size) {
         String statusFilter = (status == null || status.isBlank()) ? null : status.toUpperCase();
         String kindFilter = (kind == null || kind.isBlank()) ? null : kind.toUpperCase();
-        Page<ComplaintNeed> result =
-                repository.filterAll(statusFilter, kindFilter, PageRequest.of(page, size));
+        boolean seesEverything =
+                com.pixous.hrportal.security.SecurityUtils.hasAuthority("USER_MANAGE");
+        Page<ComplaintNeed> result = seesEverything
+                ? repository.filterAll(statusFilter, kindFilter, PageRequest.of(page, size))
+                : repository.filterForViewer(statusFilter, kindFilter, viewerId,
+                        PageRequest.of(page, size));
         return PageResponse.from(result.map(this::toResponse));
     }
 

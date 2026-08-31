@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, LifeBuoy, Send, Star, MessageSquare,
   Ticket as TicketIcon, Clock, CheckCircle, Paperclip, Inbox,
-  Eye, Pencil, X
+  Eye, Pencil, X, Search
 } from "lucide-react";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
@@ -165,6 +165,10 @@ export default function HelpdeskPage() {
   }, [rawList]);
 
   const [statusTab, setStatusTab] = useState("ALL");
+  const [priority, setPriority] = useState("all");
+  const [type, setType] = useState("all");
+  /** One box across the ticket, the person and the code. */
+  const [q, setQ] = useState("");
 
   // Date-filtered but status-agnostic, so the tiles keep counting the whole
   // period while a status tile is selected.
@@ -189,16 +193,36 @@ export default function HelpdeskPage() {
     return c;
   }, [inPeriod]);
 
+  /*
+    The rest of what the table shows, made filterable.
+
+    Status, the date pickers and the tiles were already here; priority, type
+    and the search were not, so narrowing to "the high-priority IT tickets from
+    Karpagavalli" meant reading the page rather than filtering it. Everything
+    is optional and they combine, so the list is exactly what is left after
+    each one is applied -- and the export reads this same list.
+  */
   const list = useMemo(() => {
-    const filtered = statusTab === "ALL"
-      ? inPeriod
-      : inPeriod.filter((t) =>
-          (t.status === "ON_HOLD" ? "AWAITING_PARTS" : t.status) === statusTab);
+    const needle = q.trim().toLowerCase();
+    const filtered = inPeriod.filter((t) => {
+      const status = t.status === "ON_HOLD" ? "AWAITING_PARTS" : t.status;
+      if (statusTab !== "ALL" && status !== statusTab) return false;
+      if (priority !== "all" && (t.priority ?? "") !== priority) return false;
+      if (type !== "all" && (t.type ?? "") !== type) return false;
+      if (needle) {
+        const hay = [
+          t.ticketCode, t.title, t.category, t.type, t.priority,
+          t.raisedByName, t.raisedByCode, t.assignedToName,
+        ].filter(Boolean).join(" ").toLowerCase();
+        if (!hay.includes(needle)) return false;
+      }
+      return true;
+    });
     return [...filtered].sort((a, b) =>
       String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? "")));
-  }, [inPeriod, statusTab]);
+  }, [inPeriod, statusTab, priority, type, q]);
 
-  const paged = usePagedRows(list, 15, [tab, year, month, day, statusTab, rawList]);
+  const paged = usePagedRows(list, 15, [tab, year, month, day, statusTab, priority, type, q, rawList]);
 
   /** The tickets the filters leave, as a spreadsheet. */
   const exportTickets = async () => {
@@ -354,10 +378,43 @@ export default function HelpdeskPage() {
           <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Date</label>
           <Input type="date" min={DATE_MIN} max={DATE_MAX} value={day} onChange={(e) => setDay(e.target.value)} className="w-40" />
         </div>
-        {filtersOn && (
+        <div className="space-y-1">
+          <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Priority</label>
+          <Select value={priority} onChange={(e) => setPriority(e.target.value)} className="w-32">
+            <option value="all">All</option>
+            {EDIT_PRIORITIES.map((p) => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Type</label>
+          <Select value={type} onChange={(e) => setType(e.target.value)} className="w-32">
+            <option value="all">All</option>
+            {EDIT_TYPES.map((t) => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Search</label>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="w-64 pl-9"
+              placeholder="Ticket, subject, employee or category…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+        </div>
+        {(filtersOn || priority !== "all" || type !== "all" || q.trim()) && (
           <Button
             variant="outline"
-            onClick={() => { setYear("all"); setMonth("all"); setDay(""); }}
+            onClick={() => {
+              setYear("all"); setMonth("all"); setDay("");
+              setPriority("all"); setType("all"); setQ("");
+            }}
           >
             Reset
           </Button>

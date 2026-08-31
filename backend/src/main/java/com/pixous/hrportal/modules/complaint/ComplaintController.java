@@ -55,7 +55,7 @@ public class ComplaintController {
             @RequestParam(required = false) String kind,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.ok(service.all(status, kind, page, size));
+        return ApiResponse.ok(service.all(SecurityUtils.currentUserId(), status, kind, page, size));
     }
 
     @GetMapping("/{id}")

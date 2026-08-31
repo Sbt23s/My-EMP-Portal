@@ -102,6 +102,24 @@ export default function ClaimEntryPage() {
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
+  /*
+    A rupee amount, as it is typed.
+
+    Six digits is the ceiling -- a claim beyond ~10 lakh is a slipped keypress,
+    and letting it through means an approver reading a number nobody meant.
+    Refused as it is typed rather than on submit: an amount that cannot be
+    entered needs no error message.
+
+    A bare `type="number"` was not enough on its own. It accepts "e", "+" and
+    "-" (they are valid in a number), and a `maxLength` does nothing on a
+    number input at all, so neither the character set nor the length was
+    actually held. This keeps digits and nothing else.
+  */
+  const setMoney = <K extends keyof typeof form>(k: K, raw: string) => {
+    const digits = raw.replace(/\D/g, "").slice(0, 6);
+    set(k, digits as (typeof form)[K]);
+  };
+
   const slipInput = useRef<HTMLInputElement>(null);
   const photosInput = useRef<HTMLInputElement>(null);
   const [uploadingSlip, setUploadingSlip] = useState(false);
@@ -459,12 +477,24 @@ export default function ClaimEntryPage() {
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <Field label="Bus fare (₹)">
-                    <Input type="number" min="0" value={form.busFare}
-                      onChange={(e) => set("busFare", e.target.value)} placeholder="0" />
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={form.busFare}
+                      onChange={(e) => setMoney("busFare", e.target.value)}
+                      placeholder="0"
+                    />
                   </Field>
                   <Field label="Other expenses (₹)">
-                    <Input type="number" min="0" value={form.others}
-                      onChange={(e) => set("others", e.target.value)} placeholder="0" />
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={form.others}
+                      onChange={(e) => setMoney("others", e.target.value)}
+                      placeholder="0"
+                    />
                   </Field>
                   <Field label="Total claim (₹)">
                     <div className="flex h-10 items-center rounded-md border bg-primary/5 px-3 text-base font-bold tabular-nums text-primary">
@@ -493,8 +523,14 @@ export default function ClaimEntryPage() {
                     </Field>
                   )}
                   <Field label="Amount (₹) *">
-                    <Input type="number" min="0" value={form.amount}
-                      onChange={(e) => set("amount", e.target.value)} placeholder="0" />
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={form.amount}
+                      onChange={(e) => setMoney("amount", e.target.value)}
+                      placeholder="0"
+                    />
                   </Field>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-primary/5 px-3.5 py-2.5">

@@ -315,8 +315,17 @@ export default function MyTeamPage() {
     <div>
       <PageHeader title="Teams" subtitle="Your team and everyone in it." />
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_340px]">
-        {/* ---------------- main column ---------------- */}
+      {/*
+        One column, full width.
+
+        This was a 1fr/340px split with the team chat filling the rail. The
+        chat is gone, and what was left was a single small card holding a
+        third of the page while the roster -- eight columns of names, emails
+        and phone numbers, the thing people come here for -- was squeezed into
+        what remained. Coming up now sits under the roster at full width,
+        where it reads as the footnote it is.
+      */}
+      <div className="space-y-5">
         <div className="space-y-5">
           {/* Team header + pulse narrative */}
           <Card>
@@ -507,7 +516,7 @@ export default function MyTeamPage() {
 
         </div>
 
-        {/* ---------------- side rail ---------------- */}
+        {/* ---------------- below the roster ---------------- */}
         <div className="space-y-5">
           {/*
             Team chat is not shown here for any role. The rail is the roster
@@ -533,9 +542,9 @@ export default function MyTeamPage() {
                     Nothing in the next 30 days.
                   </p>
                 ) : (
-                  <div className="divide-y divide-border/60">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {teamCelebrations.map((c) => (
-                      <div key={`${c.type}-${c.userId}`} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                      <div key={`${c.type}-${c.userId}`} className="flex items-center gap-3 rounded-lg border p-3">
                         <Avatar name={c.name} className="h-8 w-8 text-[11px]" />
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-sm font-medium">{c.name}</div>

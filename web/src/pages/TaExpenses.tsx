@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ViewButton } from "@/components/ui/view-button";
 import { EmptyState } from "@/components/EmptyState";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,7 +38,6 @@ import { usePagedRows, TablePagination } from "@/components/ui/table-pagination"
 
 const inr = (n: number) =>
   "₹" + (Number(n) || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
-import { Eye } from "lucide-react";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 
@@ -419,7 +419,7 @@ export default function TaExpensesPage() {
                   {/* Named, and first. The action column carried no heading at
                       all, so the control at the end of ten columns had nothing
                       above it to say what it was. */}
-                  <TableHead>Action</TableHead>
+                  <TableHead className="px-4 text-center">Action</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Employee</TableHead>
                   <TableHead>Category</TableHead>
@@ -434,11 +434,11 @@ export default function TaExpensesPage() {
               <TableBody>
                 {paged.pageRows.map((row: any) => (
                   <TableRow key={row.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button size="sm" variant="ghost" className="text-primary hover:bg-primary/10" onClick={() => setViewRow(row)}>
-                          <Eye className="mr-1 h-4 w-4" /> View
-                        </Button>
+                    <TableCell className="px-4 py-2">
+                      {/* Centred, and given room: the buttons were flush left
+                          against a column header that sat above nothing. */}
+                      <div className="flex items-center justify-center gap-2">
+                        <ViewButton onClick={() => setViewRow(row)} />
                         {canApprove && row.status === "PENDING" && (
                           <Button size="sm" variant="outline" onClick={() => setDecideRow(row)}>
                             Review

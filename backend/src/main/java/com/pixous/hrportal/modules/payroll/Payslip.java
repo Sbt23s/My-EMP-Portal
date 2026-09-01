@@ -71,6 +71,16 @@ public class Payslip {
     @Column(name = "pdf_path")
     private String pdfPath;
 
+    /**
+     * How many times this payslip has been generated.
+     *
+     * <p>Regenerating a month overwrites the figures in place, so a number
+     * somebody has already been shown can change. The revision says that it
+     * did; the audit log says who and when.
+     */
+    @Column(nullable = false)
+    private Integer revision = 1;
+
     @Column(name = "generated_at")
     private LocalDateTime generatedAt = LocalDateTime.now();
 

@@ -19,7 +19,9 @@ public record PayslipResponse(
         String bankName, String bankAccount, String designation, String department,
         LocalDate payDate, Integer workingDays,
         BigDecimal performancePay, BigDecimal expensesPay,
-        BigDecimal salaryAdvance, BigDecimal healthInsurance, String source
+        BigDecimal salaryAdvance, BigDecimal healthInsurance, String source,
+        /** How many times this payslip has been generated. 1 unless it was regenerated. */
+        Integer revision
 ) {
     public static PayslipResponse from(Payslip p, String name, String code) {
         return new PayslipResponse(p.getId(), p.getUserId(), name, code,
@@ -33,6 +35,7 @@ public record PayslipResponse(
                 p.getBankName(), p.getBankAccount(), p.getDesignation(), p.getDepartment(),
                 p.getPayDate(), p.getWorkingDays(),
                 p.getPerformancePay(), p.getExpensesPay(),
-                p.getSalaryAdvance(), p.getHealthInsurance(), p.getSource());
+                p.getSalaryAdvance(), p.getHealthInsurance(), p.getSource(),
+                p.getRevision());
     }
 }

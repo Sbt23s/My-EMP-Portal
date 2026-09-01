@@ -51,6 +51,8 @@ public class PayslipService {
     private final NotificationService notificationService;
     private final BankDetailRepository bankDetailRepository;
     private final DesignationRepository designationRepository;
+    private final com.pixous.hrportal.modules.audit.AuditService auditService;
+    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
     private final DepartmentRepository departmentRepository;
 
     @Transactional
@@ -74,9 +76,20 @@ public class PayslipService {
                 .orElseThrow(() -> ApiException.business(
                         "No active salary structure for " + user.getName()));
 
-        Payslip p = payslipRepository
+        /*
+         * A payslip that already exists for this month is being regenerated,
+         * not created. The figures are about to be overwritten in place, so
+         * the revision counts up: without it a number somebody was shown last
+         * week could change with nothing on the record saying it had.
+         */
+        Payslip existing = payslipRepository
                 .findByUserIdAndPayMonthAndPayYear(req.userId(), req.month(), req.year())
-                .orElseGet(Payslip::new);
+                .orElse(null);
+        boolean regenerating = existing != null;
+        Payslip p = existing != null ? existing : new Payslip();
+        if (regenerating) {
+            p.setRevision((p.getRevision() == null ? 1 : p.getRevision()) + 1);
+        }
         p.setUserId(req.userId());
         p.setPayMonth(req.month());
         p.setPayYear(req.year());
@@ -222,6 +235,23 @@ public class PayslipService {
         String pdfPath = reportService.renderPayslipPdf(saved, user);
         saved.setPdfPath(pdfPath);
 
+        /*
+         * Salary is money and the figures can be regenerated, so who did it
+         * and when is worth keeping. Recorded after the PDF exists, so a run
+         * that failed halfway does not leave a log line claiming otherwise.
+         */
+        auditService.record(
+                com.pixous.hrportal.security.SecurityUtils.currentUserId(),
+                "PAYROLL",
+                regenerating ? "PAYSLIP_REGENERATED" : "PAYSLIP_GENERATED",
+                (regenerating ? "Regenerated" : "Generated") + " the "
+                        + java.time.Month.of(req.month()) + " " + req.year()
+                        + " payslip for " + user.getName()
+                        + " (net " + saved.getNetPay() + ", revision " + saved.getRevision() + ")",
+                "PAYSLIP", saved.getId(),
+                String.format("PS-%d-%02d-%s", req.year(), req.month(),
+                        user.getEmployeeCode() == null ? user.getId() : user.getEmployeeCode()));
+
         return PayslipResponse.from(saved, user.getName(), user.getEmployeeCode());
     }
 
@@ -365,6 +395,13 @@ public class PayslipService {
         PayrollRun savedRun = payrollRunRepository.save(run);
 
         List<User> activeUsers = userRepository.findByEnabledTrue();
+        int total = activeUsers.size();
+        int done = 0;
+        int failed = 0;
+        java.util.List<java.util.Map<String, Object>> failures = new java.util.ArrayList<>();
+
+        publishProgress(savedRun.getId(), 0, total, 0, null);
+
         for (User u : activeUsers) {
             try {
                 GeneratePayslipRequest req = new GeneratePayslipRequest(u.getId(), month, year, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
@@ -372,11 +409,75 @@ public class PayslipService {
                 Payslip p = payslipRepository.findById(resp.id()).orElseThrow();
                 p.setPayrollRunId(savedRun.getId());
                 payslipRepository.save(p);
+                done++;
             } catch (Exception e) {
-                // skip users without active salary structures etc.
+                /*
+                 * One employee failing must not stop the other thirty. The
+                 * usual cause is no active salary structure, which is a thing
+                 * to go and fix rather than a reason to abandon the run -- so
+                 * the name and the reason are collected and reported at the
+                 * end instead of being swallowed.
+                 */
+                failed++;
+                failures.add(java.util.Map.of(
+                        "userId", u.getId(),
+                        "name", u.getName() == null ? "" : u.getName(),
+                        "employeeCode", u.getEmployeeCode() == null ? "" : u.getEmployeeCode(),
+                        "reason", e.getMessage() == null ? "Could not be calculated" : e.getMessage()));
             }
+            publishProgress(savedRun.getId(), done + failed, total, failed, u.getName());
         }
+
+        auditService.record(runBy, "PAYROLL", "PAYROLL_RUN",
+                "Ran " + java.time.Month.of(month) + " " + year + " payroll: "
+                        + done + " generated, " + failed + " failed",
+                "PAYROLL_RUN", savedRun.getId(),
+                java.time.Month.of(month) + " " + year);
+
+        publishDone(savedRun.getId(), done, failed, total, failures);
         return getRun(savedRun.getId());
+    }
+
+    /**
+     * Say where the run has got to, so the page can count up without asking.
+     *
+     * <p>Broadcast rather than sent to one person: a payroll run is watched by
+     * whoever started it and often by somebody else at the same time, and the
+     * numbers are not private -- they are counts, not salaries.
+     *
+     * <p>Nothing here throws. A progress bar that fails must not take the
+     * payroll down with it.
+     */
+    private void publishProgress(Long runId, int done, int total, int failed, String current) {
+        try {
+            java.util.Map<String, Object> body = new java.util.HashMap<>();
+            body.put("runId", runId);
+            body.put("done", done);
+            body.put("total", total);
+            body.put("failed", failed);
+            body.put("current", current == null ? "" : current);
+            body.put("finished", false);
+            messagingTemplate.convertAndSend("/topic/payroll", body);
+        } catch (Exception ignored) {
+            // See above: progress is a courtesy beside the work.
+        }
+    }
+
+    /** The final tally, including who could not be calculated and why. */
+    private void publishDone(Long runId, int done, int failed, int total,
+                             java.util.List<java.util.Map<String, Object>> failures) {
+        try {
+            java.util.Map<String, Object> body = new java.util.HashMap<>();
+            body.put("runId", runId);
+            body.put("done", done);
+            body.put("total", total);
+            body.put("failed", failed);
+            body.put("failures", failures);
+            body.put("finished", true);
+            messagingTemplate.convertAndSend("/topic/payroll", body);
+        } catch (Exception ignored) {
+            // See above.
+        }
     }
 
     @Transactional

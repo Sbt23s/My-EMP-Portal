@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Play, Check, CheckCircle2, FileText} from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
+import { usePayrollProgress } from "@/hooks/usePayrollProgress";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,11 +28,19 @@ export default function PayrollRunsPage() {
       (await api.get<ApiEnvelope<PayrollRunResponse[]>>("/payroll/runs")).data.data
   });
 
+  /*
+    The run announces each payslip as it finishes, so a request that only
+    returns at the end does not look like a page that has hung.
+  */
+  const { progress, reset: resetProgress } = usePayrollProgress();
+
   const generateMutation = useMutation({
     mutationFn: async () => {
       return (await api.post<ApiEnvelope<PayrollRunResponse>>(`/payroll/runs?month=${generateMonth}&year=${generateYear}`)).data.data;
     },
     onSuccess: () => {
+      // The counter has said its piece by now; what is left is the tally,
+      // which the progress panel below keeps until the next run starts.
       toast.success("Payroll run generated successfully");
       queryClient.invalidateQueries({ queryKey: ["payroll-runs"] });
     },
@@ -102,7 +111,7 @@ export default function PayrollRunsPage() {
               onChange={(e) => setGenerateYear(parseInt(e.target.value))}
             />
             <Button 
-              onClick={() => generateMutation.mutate()} 
+              onClick={() => { resetProgress(); generateMutation.mutate(); }} 
               disabled={generateMutation.isPending}
             >
               {generateMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
@@ -111,6 +120,67 @@ export default function PayrollRunsPage() {
           </div>
         )}
       </div>
+
+      {/*
+        The run as it happens, and the tally when it stops. Kept on screen
+        after it finishes rather than cleared: the useful part -- who could not
+        be calculated -- arrives at the very end, and clearing it would take
+        that away at the moment it became worth reading.
+      */}
+      {progress && (
+        <div className="mb-4 rounded-lg border bg-card p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="font-semibold">
+                {progress.finished ? "Payroll run finished" : "Generating payroll…"}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {progress.done} of {progress.total} generated
+                {progress.failed > 0 && ` · ${progress.failed} could not be calculated`}
+                {!progress.finished && progress.current ? ` · ${progress.current}` : ""}
+              </div>
+            </div>
+            <div className="text-2xl font-bold tabular-nums">
+              {progress.done}/{progress.total}
+            </div>
+          </div>
+
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-300"
+              style={{
+                width: `${progress.total > 0
+                  ? Math.round(((progress.done + progress.failed) / progress.total) * 100)
+                  : 0}%`,
+              }}
+            />
+          </div>
+
+          {/* Named, with the reason, because "2 failed" is not something
+              anybody can act on. Almost always a missing salary structure. */}
+          {progress.finished && (progress.failures?.length ?? 0) > 0 && (
+            <div className="mt-4 space-y-1.5">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                Needs attention ({progress.failures!.length})
+              </div>
+              {progress.failures!.map((f) => (
+                <div key={f.userId}
+                     className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-sm dark:border-amber-900/40 dark:bg-amber-950/20">
+                  <span className="font-medium">{f.name}</span>
+                  {f.employeeCode && (
+                    <span className="ml-1.5 text-xs text-muted-foreground">{f.employeeCode}</span>
+                  )}
+                  <div className="text-xs text-muted-foreground">{f.reason}</div>
+                </div>
+              ))}
+              <p className="pt-1 text-xs text-muted-foreground">
+                Configure the missing salary, then generate that employee&apos;s
+                payslip on its own — the rest of the run is already done.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {runs.isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

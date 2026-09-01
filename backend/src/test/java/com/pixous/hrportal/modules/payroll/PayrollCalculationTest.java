@@ -89,6 +89,32 @@ class PayrollCalculationTest {
         assertThat(isUnpaid(null)).isTrue();
     }
 
+    @Test
+    @DisplayName("A first generation is revision 1, a regeneration counts up")
+    void revisionCountsUp() {
+        // The figures are overwritten in place when a month is regenerated, so
+        // a number somebody was already shown can change. The revision is what
+        // says it did.
+        assertThat(nextRevision(null, false)).isEqualTo(1);
+        assertThat(nextRevision(1, true)).isEqualTo(2);
+        assertThat(nextRevision(2, true)).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("A payslip with no revision recorded is treated as the first")
+    void missingRevisionIsOne() {
+        // Rows that predate the column have no value. Treating null as zero
+        // would make the next regeneration revision 1 -- the same number a
+        // first generation carries, which is the one thing it must not be.
+        assertThat(nextRevision(null, true)).isEqualTo(2);
+    }
+
+    /** The rule the service applies when saving. */
+    private static int nextRevision(Integer current, boolean regenerating) {
+        if (!regenerating) return 1;
+        return (current == null ? 1 : current) + 1;
+    }
+
     /** The rule countMonth applies, as a function of the stored status. */
     private static boolean isUnpaid(String status) {
         if (status == null) return true;

@@ -5,20 +5,51 @@ const BASE = import.meta.env.VITE_API_URL || "";
 export const TOKEN_KEY = "hrp.accessToken";
 export const REFRESH_KEY = "hrp.refreshToken";
 
+/** The technical-admin console keeps its session under its own keys. */
+const TECH_TOKEN_KEY = "hrp.techAdmin.accessToken";
+const TECH_REFRESH_KEY = "hrp.techAdmin.refreshToken";
+
+/**
+ * Which portal this tab is showing.
+ *
+ * The technical-admin console and the employee portal are two different
+ * sign-ins served from one origin, so they shared one pair of localStorage
+ * keys and one session: signing into either overwrote the other, and the tab
+ * left behind started failing on its next request. localStorage is shared
+ * across every tab of an origin, so this was not even limited to one window
+ * -- opening the console logged you out of the portal next door.
+ *
+ * Reading the path per call rather than once at module load: these keys are
+ * asked for after navigation, and a value captured at import time would still
+ * name whichever portal the tab happened to open on.
+ */
+function onTechAdminRoute(): boolean {
+  try {
+    return window.location.pathname.startsWith("/tech-admin");
+  } catch {
+    return false;
+  }
+}
+
+const accessKey = () => (onTechAdminRoute() ? TECH_TOKEN_KEY : TOKEN_KEY);
+const refreshKey = () => (onTechAdminRoute() ? TECH_REFRESH_KEY : REFRESH_KEY);
+
 export const tokenStore = {
   get access() {
-    return localStorage.getItem(TOKEN_KEY);
+    return localStorage.getItem(accessKey());
   },
   get refresh() {
-    return localStorage.getItem(REFRESH_KEY);
+    return localStorage.getItem(refreshKey());
   },
   set(access: string, refresh: string) {
-    localStorage.setItem(TOKEN_KEY, access);
-    localStorage.setItem(REFRESH_KEY, refresh);
+    localStorage.setItem(accessKey(), access);
+    localStorage.setItem(refreshKey(), refresh);
   },
   clear() {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(REFRESH_KEY);
+    // Only this portal's session. Signing out of the console must not sign
+    // you out of the employee portal in the next tab.
+    localStorage.removeItem(accessKey());
+    localStorage.removeItem(refreshKey());
   }
 };
 

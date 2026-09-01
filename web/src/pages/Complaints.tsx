@@ -467,6 +467,14 @@ function AllComplaints() {
   const [actingOn, setActingOn] = useState<ComplaintNeed | null>(null);
   const { user: me } = useAuth();
   /*
+    The CTO and the administrators are where complaints end up, not where they
+    start: every recipient dropdown offers them and there is nobody above them
+    to address one to, which is why the New Submission button is already hidden
+    from them. A My requests tab that can only ever read zero goes with it.
+  */
+  const isSystemAdminOrCto = me?.employeeCode?.toUpperCase() === "PIX-E100"
+    || (me?.roles ?? []).some((r) => r === "SUPER_ADMIN" || r === "COMPANY_ADMIN");
+  /*
     Whose complaints to show.
 
     A complaint names the person it was addressed to, and every reviewer saw
@@ -478,6 +486,13 @@ function AllComplaints() {
     list stays one tap away for anyone overseeing the lot.
   */
   const [scope, setScope] = useState<"me" | "mine" | "all">("me");
+
+  /*
+    A tab that is no longer offered must not stay selected. Somebody sitting on
+    My requests when this shipped would otherwise see an empty list with no lit
+    tab to explain it.
+  */
+  const activeScope = scope === "mine" && isSystemAdminOrCto ? "me" : scope;
 
   const query = useQuery({
     queryKey: ["complaints", "all"],
@@ -511,7 +526,7 @@ function AllComplaints() {
   const addressedToMe = everything.filter((c) => c.requestedTo === me?.id);
   const raisedByMe = everything.filter((c) => c.raisedBy === me?.id);
   const all =
-    scope === "me" ? addressedToMe : scope === "mine" ? raisedByMe : everything;
+    activeScope === "me" ? addressedToMe : activeScope === "mine" ? raisedByMe : everything;
 
   /*
     Who may actually decide a complaint: the person it was addressed to, and
@@ -621,17 +636,19 @@ function AllComplaints() {
       */}
       <div className="flex gap-1 rounded-lg border bg-muted/60 p-1 w-fit">
         {([
-          ["me", `Addressed to me (${addressedToMe.length})`],
-          ["mine", `My requests (${raisedByMe.length})`],
-          ["all", `All complaints (${everything.length})`],
-        ] as const).map(([key, label]) => (
+          ["me", `Addressed to me (${addressedToMe.length})`] as const,
+          ...(isSystemAdminOrCto
+            ? []
+            : [["mine", `My requests (${raisedByMe.length})`] as const]),
+          ["all", `All complaints (${everything.length})`] as const,
+        ]).map(([key, label]) => (
           <button
             key={key}
             type="button"
             onClick={() => { setScope(key); paged.setPage(0); }}
             className={
               "rounded-md px-3 py-1.5 text-sm font-medium transition-colors " +
-              (scope === key
+              (activeScope === key
                 ? "bg-background shadow-sm text-foreground"
                 : "text-muted-foreground hover:text-foreground")
             }

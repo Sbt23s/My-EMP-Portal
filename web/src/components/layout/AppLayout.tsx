@@ -127,6 +127,7 @@ const NAV: NavEntry[] = [
   { to: "/assets", label: "Assets", icon: Boxes, moduleCode: "ASSETS" },
   { to: "/helpdesk", label: "Supports", icon: LifeBuoy, moduleCode: "HELPDESK" },
   { to: "/complaints", label: "Complaints", icon: MessageSquareWarning, moduleCode: "HELPDESK" },
+  { to: "/discipline", label: "Discipline", icon: ShieldAlert, moduleCode: "HELPDESK" },
   { to: "/reports", label: "Reports", icon: FileBarChart, anyPermission: ["REPORT_VIEW"], excludeRole: ["SUPER_ADMIN", "COMPANY_ADMIN"], moduleCode: "REPORTS" },
   { to: "/chat", label: "Chat", icon: MessageSquareWarning, moduleCode: "CHAT" },
   /*

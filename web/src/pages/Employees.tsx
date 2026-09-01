@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ViewButton } from "@/components/ui/view-button";
 import { ExportExcelButton } from "@/components/ui/export-excel-button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, resolvePhotoUrl } from "@/components/ui/avatar";
@@ -411,9 +412,7 @@ export default function EmployeesPage() {
         header: () => <div className="text-right">Actions</div>,
         cell: (info) => (
           <div className="flex items-center justify-end gap-1">
-            <Button variant="ghost" size="sm" className="h-8 px-2 text-xs gap-1 font-medium" onClick={() => setDetailId(info.row.original.id)}>
-              <Eye className="h-3.5 w-3.5" /> View
-            </Button>
+            <ViewButton onClick={() => setDetailId(info.row.original.id)} />
             {canManage && info.row.original.profileStatus !== "OFFBOARDED" && (
               <Button
                 variant="ghost"

@@ -92,8 +92,19 @@ public class PayslipService {
         BigDecimal hra = salary.getHra();
         BigDecimal allowances = salary.getAllowances();
 
+        /*
+         * A day's pay is a working day's pay, not a calendar day's.
+         *
+         * Dividing by 30 makes an absence cost less than the day was worth --
+         * somebody paid 20,000 for 26 working days earns 769 a day, and
+         * deducting 667 for missing one leaves the company paying for time
+         * nobody worked. Weekends and public holidays are already excluded
+         * from the count, so this is the figure both sides would recognise.
+         */
+        AttendanceMonth att = countMonth(req.userId(), req.month(), req.year());
+        int workingDays = Math.max(1, att.workingDays());
         BigDecimal perDayGross = basic.add(hra).add(allowances)
-                .divide(BigDecimal.valueOf(daysInMonth(req.month(), req.year())), 2, RoundingMode.HALF_UP);
+                .divide(BigDecimal.valueOf(workingDays), 2, RoundingMode.HALF_UP);
 
         // Overtime pay = hourly rate * OT hours
         BigDecimal otHours = BigDecimal.valueOf(
@@ -102,9 +113,18 @@ public class PayslipService {
                 .divide(OT_HOURLY_DIVISOR, 2, RoundingMode.HALF_UP);
         BigDecimal overtimePay = hourlyRate.multiply(otHours).setScale(2, RoundingMode.HALF_UP);
 
-        // Loss of Pay is now entered manually by the admin (attendance-driven
-        // auto-LOP is disabled so the two can't double-count).
-        BigDecimal lopDays = BigDecimal.ZERO;
+        /*
+         * Absences come from attendance rather than from a box somebody fills
+         * in. The figure was being typed in every month, which meant payroll
+         * agreed with the attendance register only when somebody copied it
+         * across correctly.
+         *
+         * A manual amount still exists and is added on top: it is how a
+         * one-off correction is made without editing the attendance history.
+         * The two do not double-count because they measure different things --
+         * this one counts days, that one is a rupee figure.
+         */
+        BigDecimal lopDays = BigDecimal.valueOf(att.unpaidDays());
 
         // Performance pay — an extra earning entered by the admin.
         BigDecimal performance = amt(req.performancePay());
@@ -123,7 +143,11 @@ public class PayslipService {
         BigDecimal pt = salary.getPtAmount();
         BigDecimal tds = amt(req.tds());
         BigDecimal advance = amt(req.advanceDeduction());
-        BigDecimal lop = amt(req.lopDeduction());
+        // What the absent days cost, at a working day's rate.
+        BigDecimal absentDeduction = perDayGross.multiply(lopDays)
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal lop = amt(req.lopDeduction()).add(absentDeduction)
+                .setScale(2, RoundingMode.HALF_UP);
         // Manual loss-of-pay is grouped with any other deductions for storage.
         BigDecimal otherDed = amt(req.otherDeductions()).add(lop).setScale(2, RoundingMode.HALF_UP);
 
@@ -181,10 +205,15 @@ public class PayslipService {
 
         // 4. Pay Date & Working Days
         p.setPayDate(LocalDate.now());
-        p.setWorkingDays(daysInMonth(req.month(), req.year()));
+        // Working days, not calendar days: this is what the per-day rate is
+        // derived from, so showing 30 beside a rate built on 26 would make the
+        // payslip fail its own arithmetic.
+        p.setWorkingDays(att.workingDays());
 
         // 5. Attendance-driven LOP days count
-        BigDecimal lopDaysVal = BigDecimal.valueOf(computeLopDays(req.userId(), req.month(), req.year()));
+        // The same count the deduction was built from, so the days shown and
+        // the money taken cannot disagree.
+        BigDecimal lopDaysVal = lopDays;
         p.setLopDays(lopDaysVal);
 
         Payslip saved = payslipRepository.save(p);
@@ -518,6 +547,73 @@ public class PayslipService {
 
     private int daysInMonth(int month, int year) {
         return YearMonth.of(year, month).lengthOfMonth();
+    }
+
+    /** What one employee's month looked like, as payroll needs to see it. */
+    public record AttendanceMonth(
+            int calendarDays, int workingDays, int presentDays,
+            int paidDays, int unpaidDays, int holidays, int wfhDays) {
+    }
+
+    /**
+     * Count a month from the attendance register.
+     *
+     * <p>Separate from computeLopDays below, which asks a narrower question:
+     * it counts a day as worked only if somebody punched in, so an approved
+     * work-from-home day or a day of paid leave reads as an absence. Fine for
+     * the report it feeds; wrong for pay.
+     *
+     * <p>Here a day is paid if it was worked, worked from home, or covered by
+     * leave that carries pay. Only a working day with none of those is
+     * deducted. Future days in the current month are skipped, so a run on the
+     * 10th does not treat the rest of the month as absence; working days are
+     * counted over the whole month regardless, so a day's pay does not change
+     * depending on when payroll is run.
+     */
+    private AttendanceMonth countMonth(Long userId, int month, int year) {
+        YearMonth ym = YearMonth.of(year, month);
+        LocalDate start = ym.atDay(1);
+        LocalDate monthEnd = ym.atEndOfMonth();
+        LocalDate end = monthEnd;
+        LocalDate today = LocalDate.now();
+        if (end.isAfter(today)) end = today;
+
+        Set<LocalDate> holidays = holidayRepository
+                .findByHolidayDateBetweenOrderByHolidayDateAsc(start, monthEnd).stream()
+                .map(Holiday::getHolidayDate).collect(Collectors.toSet());
+
+        int workingDays = 0;
+        int holidayCount = 0;
+        for (LocalDate d = start; !d.isAfter(monthEnd); d = d.plusDays(1)) {
+            if (com.pixous.hrportal.common.WorkCalendar.isWeekend(d)) continue;
+            if (holidays.contains(d)) { holidayCount++; continue; }
+            workingDays++;
+        }
+
+        java.util.Map<LocalDate, String> byDay = new java.util.HashMap<>();
+        if (!end.isBefore(start)) {
+            attendanceRepository
+                    .findByUserIdAndWorkDateBetweenOrderByWorkDateDesc(userId, start, end)
+                    .forEach(a -> byDay.put(a.getWorkDate(),
+                            a.getStatus() == null ? "" : a.getStatus().toUpperCase()));
+        }
+
+        int present = 0, paid = 0, unpaid = 0, wfh = 0;
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            if (com.pixous.hrportal.common.WorkCalendar.isWeekend(d)) continue;
+            if (holidays.contains(d)) continue;
+            String status = byDay.get(d);
+            if (status == null) { unpaid++; continue; }
+            switch (status) {
+                case "WFH" -> { present++; wfh++; }
+                case "PRESENT", "LATE", "HALF_DAY" -> present++;
+                case "LEAVE", "PAID_LEAVE", "ON_LEAVE" -> paid++;
+                default -> unpaid++;
+            }
+        }
+
+        return new AttendanceMonth(ym.lengthOfMonth(), workingDays, present,
+                paid, unpaid, holidayCount, wfh);
     }
 
     /** Working days in the month with neither attendance nor approved leave. */

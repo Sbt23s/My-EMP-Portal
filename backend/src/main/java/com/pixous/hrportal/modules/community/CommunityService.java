@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class CommunityService {
 
     /** Prefix used to name the hidden 2-member rooms that back private 1:1 chats. */
@@ -135,8 +136,12 @@ public class CommunityService {
 
     /**
      * Find-or-create the private channel for the caller's team, and make sure
-     * every teammate is a member. These rooms live only on the Teams page —
-     * they are kept out of the Chat listing so that page stays as it is.
+     * every teammate is a member.
+     *
+     * <p>Called when the chat list is built, so being on a team is by itself
+     * enough to have the team's conversation -- nobody has to visit a page to
+     * bring it into existence. Idempotent: the room is found by name and each
+     * teammate is added only if they are not already in it.
      */
     @Transactional
     public CommunityDTOs.GroupResponse openTeamRoom(Long userId) {
@@ -168,14 +173,39 @@ public class CommunityService {
                 group.getCreatedBy().getId(), group.getCreatedAt(), false);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<CommunityDTOs.GroupResponse> getUserCommunities(Long userId) {
+        /*
+         * Make sure this person's team room exists before listing.
+         *
+         * openTeamRoom creates the room and enrols everyone on the team, and
+         * nothing in the web app ever called it -- so for most people the room
+         * simply did not exist, and being put on a team produced no
+         * conversation anywhere. Doing it here means membership alone is
+         * enough: whoever is on a team sees that team's group the next time
+         * Chat loads, without anyone opening a page first.
+         *
+         * It is idempotent -- the room is looked up by name and members are
+         * added only if missing -- and it must not be able to break the chat
+         * list, so a failure here leaves the rest of the listing intact.
+         */
+        try {
+            openTeamRoom(userId);
+        } catch (Exception e) {
+            log.debug("No team room for {}: {}", userId, e.getMessage());
+        }
         // A group belongs to the people who were added to it, so only those
         // people see it here. The company announcement channel is the exception:
         // it is meant for all staff, and only admin and HR can post to it.
-        // Team rooms are excluded — they are reached from the Teams page instead.
+        //
+        // Team rooms are listed too, for the people actually in them. They used
+        // to be filtered out on the grounds that the Teams page reaches them --
+        // but somebody who has been added to a team looks for that conversation
+        // in Chat, alongside every other conversation they are part of, and
+        // finding nothing there reads as having been left out of the team. The
+        // membership check below is what keeps them private; excluding them
+        // from the list only hid them from their own members.
         return groupRepository.findAll().stream()
-                .filter(g -> !isTeamRoom(g))
                 .filter(g -> isDirect(g) || g.isAnnouncement()
                         || memberRepository.isMember(g.getId(), userId))
                 .map(g -> {
@@ -198,7 +228,8 @@ public class CommunityService {
                         return toDirectResponse(g, partner);
                     }
                     return new CommunityDTOs.GroupResponse(
-                            g.getId(), g.getName(), g.getDescription(), g.getCreatedBy().getId(), g.getCreatedAt(), g.isAnnouncement()
+                            g.getId(), displayName(g), g.getDescription(),
+                            g.getCreatedBy().getId(), g.getCreatedAt(), g.isAnnouncement()
                     );
                 })
                 .filter(Objects::nonNull)
@@ -474,6 +505,32 @@ public class CommunityService {
     /** True for the private per-team rooms surfaced on the Teams page. */
     private static boolean isTeamRoom(CommunityGroup group) {
         return group.getName() != null && group.getName().startsWith(TEAM_PREFIX);
+    }
+
+    /**
+     * The name to show a person, rather than the one used to find the row.
+     *
+     * <p>A team room is stored as {@code __team__ai engineer} so it can be
+     * looked up from a designation. That prefix is plumbing: now that these
+     * rooms appear in Chat next to ordinary conversations, it is stripped and
+     * the title cased, so the list reads "AI Engineer Team" instead of leaking
+     * the naming scheme.
+     */
+    private static String displayName(CommunityGroup group) {
+        if (!isTeamRoom(group)) return group.getName();
+        String title = group.getName().substring(TEAM_PREFIX.length()).trim();
+        if (title.isEmpty()) return "Team";
+        StringBuilder out = new StringBuilder();
+        for (String word : title.split("\\s+")) {
+            if (word.isEmpty()) continue;
+            if (out.length() > 0) out.append(' ');
+            // Left alone when it is already capitalised, so an acronym written
+            // as "AI" is not flattened to "Ai".
+            out.append(word.equals(word.toUpperCase())
+                    ? word
+                    : Character.toUpperCase(word.charAt(0)) + word.substring(1));
+        }
+        return out + " Team";
     }
 
     /** Push a chat notification to every member except the sender, deep-linked to the room. */

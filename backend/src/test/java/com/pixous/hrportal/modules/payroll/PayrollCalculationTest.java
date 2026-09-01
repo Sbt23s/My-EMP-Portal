@@ -4,6 +4,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.math.RoundingMode;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -107,6 +108,48 @@ class PayrollCalculationTest {
         // would make the next regeneration revision 1 -- the same number a
         // first generation carries, which is the one thing it must not be.
         assertThat(nextRevision(null, true)).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("A month is paid at the salary that applied to it")
+    void salaryFollowsTheMonth() {
+        // 20,000 from June, 25,000 from October. September is a June-salary
+        // month and stays one however many raises come after it -- reading the
+        // active structure instead would rewrite September the moment October
+        // was configured.
+        LocalDate june = LocalDate.of(2026, 6, 1);
+        LocalDate october = LocalDate.of(2026, 10, 1);
+
+        assertThat(effectiveOn(september(), june, october)).isEqualTo(june);
+        assertThat(effectiveOn(LocalDate.of(2026, 10, 31), june, october)).isEqualTo(october);
+        // The day it takes effect counts as the new one.
+        assertThat(effectiveOn(october, june, october)).isEqualTo(october);
+    }
+
+    @Test
+    @DisplayName("A structure with no effective date always applied")
+    void undatedStructureApplies() {
+        // Rows filled in before the column existed have no date. Treating them
+        // as never applying would leave those employees unpayable.
+        assertThat(effectiveOn(september(), null, null)).isNull();
+    }
+
+    private static LocalDate september() {
+        return LocalDate.of(2026, 9, 30);
+    }
+
+    /**
+     * Which of two structures governs a date: the latest one that had already
+     * taken effect. Null stands for "no date recorded", which always applies.
+     */
+    private static LocalDate effectiveOn(LocalDate asOf, LocalDate a, LocalDate b) {
+        LocalDate best = null;
+        for (LocalDate d : new LocalDate[] { a, b }) {
+            if (d == null) continue;
+            if (d.isAfter(asOf)) continue;
+            if (best == null || d.isAfter(best)) best = d;
+        }
+        return best;
     }
 
     /** The rule the service applies when saving. */

@@ -41,6 +41,7 @@ public class DisciplineService {
     private final NotificationService notificationService;
     private final OversightNotifier oversight;
     private final com.pixous.hrportal.common.SmsService smsService;
+    private final com.pixous.hrportal.common.MailService mailService;
 
     // ------------------------------------------------------------------ create
 
@@ -264,6 +265,13 @@ public class DisciplineService {
         if (remarks != null) {
             notify(saved.getEmployeeId(), "Message from the CTO on " + saved.getReferenceCode(),
                     remarks.length() > 160 ? remarks.substring(0, 157) + "..." : remarks);
+            userRepository.findById(saved.getEmployeeId()).ifPresent(emp ->
+                    email(emp, "Message from the CTO on " + saved.getReferenceCode(),
+                            "<p>Dear " + emp.getName() + ",</p>"
+                                    + "<p>The CTO has reviewed discipline record "
+                                    + saved.getReferenceCode() + " and left this message:</p>"
+                                    + "<blockquote>" + escape(remarks) + "</blockquote>"
+                                    + "<p>Regards,<br/>HR Team<br/>Pixous Technologies</p>"));
             sms(saved.getEmployeeId(), "Pixous HR: a message about discipline record "
                     + saved.getReferenceCode() + " is waiting in the portal.");
         }
@@ -297,6 +305,16 @@ public class DisciplineService {
     }
 
     private void notifyEmployeeRaised(DisciplineRecord d, User employee, String reporter) {
+        email(employee, "Discipline record " + d.getReferenceCode(),
+                "<p>Dear " + employee.getName() + ",</p>"
+                        + "<p>A discipline record has been created for you by "
+                        + reporter + ".</p>"
+                        + "<p><b>Reference:</b> " + d.getReferenceCode() + "<br/>"
+                        + "<b>Subject:</b> " + d.getSubject() + "<br/>"
+                        + "<b>Severity:</b> " + d.getSeverity() + "</p>"
+                        + "<p>Please sign in to the portal to read it in full and "
+                        + "respond if you wish.</p>"
+                        + "<p>Regards,<br/>HR Team<br/>Pixous Technologies</p>");
         notify(employee.getId(), "New discipline record " + d.getReferenceCode(),
                 "A discipline record has been created for you by " + reporter
                         + ". Subject: " + d.getSubject()
@@ -323,6 +341,29 @@ public class DisciplineService {
         } catch (Exception e) {
             log.warn("Discipline notification failed for {}: {}", userId, e.getMessage());
         }
+    }
+
+    /**
+     * Email, alongside the portal notification.
+     *
+     * <p>Never throws and never blocks: the record is saved and the employee
+     * has already been told in the portal, so an unreachable mail server must
+     * not undo either.
+     */
+    private void email(User employee, String subject, String bodyHtml) {
+        try {
+            if (employee != null && employee.getEmail() != null && !employee.getEmail().isBlank()) {
+                mailService.trySend(employee.getEmail(), subject, bodyHtml);
+            }
+        } catch (Exception e) {
+            log.warn("Discipline email failed: {}", e.getMessage());
+        }
+    }
+
+    /** Keeps a quoted remark from breaking the surrounding HTML. */
+    private static String escape(String text) {
+        if (text == null) return "";
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 
     private void sms(Long userId, String message) {

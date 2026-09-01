@@ -358,6 +358,16 @@ function CreateDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () =
 
   const chosen = options.find((u) => String(u.id) === employeeId);
 
+  /*
+    The signer's title.
+
+    AuthUser carries no designation, so the preview had a blank line where the
+    saved letter shows one -- what was on screen while writing did not match
+    what arrived. The issuer is in the same list of people already loaded, so
+    the title comes from there rather than from a second request.
+  */
+  const me = options.find((u) => u.id === user?.id);
+
   const save = useMutation({
     mutationFn: async (send: boolean) =>
       api.post("/appreciation", {
@@ -448,7 +458,7 @@ function CreateDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () =
             achievement={achievement}
             message={message}
             issuedByName={user?.name || "—"}
-            issuedByRole=""
+            issuedByRole={me?.designationTitle || ""}
           />
         </div>
       </div>

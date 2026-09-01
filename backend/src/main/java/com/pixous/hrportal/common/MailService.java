@@ -75,6 +75,36 @@ public class MailService {
      * that callers sending a payslip do not have to know a MIME type, while a
      * caller forwarding whatever the browser produced can say what it has.
      */
+    /**
+     * Send one message, and say whether it went.
+     *
+     * <p>Unlike the two below, this never throws. It exists for the mails
+     * that accompany something already saved -- a discipline record, an
+     * appreciation letter -- where the thing itself has happened and the
+     * employee has already been notified in the portal. Failing the whole
+     * operation because a mail server was unreachable would lose the record
+     * to protect the courtesy.
+     *
+     * @return true when the message was handed to the server
+     */
+    public boolean trySend(String to, String subject, String bodyHtml) {
+        if (!isConfigured() || to == null || to.isBlank()) return false;
+        try {
+            MimeMessage message = sender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+            helper.setFrom(from);
+            helper.setTo(to.trim());
+            helper.setSubject(subject);
+            helper.setText(bodyHtml, true);
+            sender.send(message);
+            log.info("Sent '{}' to {}", subject, to);
+            return true;
+        } catch (Exception e) {
+            log.warn("Could not send '{}' to {}: {}", subject, to, e.getMessage());
+            return false;
+        }
+    }
+
     public void sendAttachment(String to, String subject, String bodyHtml,
                                String attachmentName, String contentType, byte[] data) {
         if (!isConfigured()) {

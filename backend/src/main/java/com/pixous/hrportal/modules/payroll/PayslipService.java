@@ -72,7 +72,23 @@ public class PayslipService {
             }
         }
 
-        SalaryStructure salary = salaryRepository.findByUserIdAndActiveTrue(req.userId())
+        /*
+         * The structure that applied to the month being paid, not the one
+         * that applies today.
+         *
+         * Reading the active structure meant a raise in October changed the
+         * September payslip the moment it was regenerated -- a historical
+         * payslip moving when nothing about that month moved. The month's
+         * last day is the date asked about, so a structure that took effect
+         * partway through the month still governs it.
+         */
+        java.time.LocalDate asOf = YearMonth.of(req.year(), req.month()).atEndOfMonth();
+        SalaryStructure salary = salaryRepository.findEffectiveOn(req.userId(), asOf)
+                .stream().findFirst()
+                // Falling back to the active structure keeps an employee
+                // whose only row starts after this month payable, rather than
+                // failing the run over a date that was filled in later.
+                .or(() -> salaryRepository.findByUserIdAndActiveTrue(req.userId()))
                 .orElseThrow(() -> ApiException.business(
                         "No active salary structure for " + user.getName()));
 
@@ -382,7 +398,12 @@ public class PayslipService {
 
     @Transactional
     public PayrollRunResponse generateBatch(int month, int year, Long runBy) {
-        if (payrollRunRepository.findByPayMonthAndPayYear(month, year).isPresent()) {
+        var priorRun = payrollRunRepository.findByPayMonthAndPayYear(month, year);
+        if (priorRun.isPresent() && "FINALIZED".equals(priorRun.get().getStatus())) {
+            throw ApiException.business(
+                    "That month is finalised. The figures are what was paid, so they cannot be regenerated.");
+        }
+        if (priorRun.isPresent()) {
             throw ApiException.business("Payroll run for this month already exists");
         }
         
@@ -489,6 +510,42 @@ public class PayslipService {
         }
         run.setStatus("CONFIRMED");
         payrollRunRepository.save(run);
+        return getRun(runId);
+    }
+
+    /**
+     * Close a payroll run for good.
+     *
+     * <p>The last state. Up to here a run can be regenerated -- attendance
+     * gets corrected, a salary structure is filled in, and the figures should
+     * follow. Once it is finalised the month is paid and the numbers are what
+     * was paid, so regenerating would rewrite history rather than correct it.
+     *
+     * <p>Reopening is deliberately not offered here. A month that has to
+     * change after payment is an exception that should involve somebody
+     * deciding, not a button.
+     */
+    @Transactional
+    public PayrollRunResponse finaliseRun(Long runId, Long actorId) {
+        PayrollRun run = payrollRunRepository.findById(runId)
+                .orElseThrow(() -> ApiException.notFound("Payroll run"));
+        if ("FINALIZED".equals(run.getStatus())) {
+            throw ApiException.business("This run is already finalised.");
+        }
+        if (!"FINANCE_APPROVED".equals(run.getStatus())) {
+            throw ApiException.business(
+                    "A run is finalised after finance has approved it. This one is "
+                            + run.getStatus().toLowerCase().replace('_', ' ') + ".");
+        }
+        run.setStatus("FINALIZED");
+        payrollRunRepository.save(run);
+
+        auditService.record(actorId, "PAYROLL", "PAYROLL_FINALIZED",
+                "Finalised the " + java.time.Month.of(run.getPayMonth()) + " "
+                        + run.getPayYear() + " payroll",
+                "PAYROLL_RUN", run.getId(),
+                java.time.Month.of(run.getPayMonth()) + " " + run.getPayYear());
+
         return getRun(runId);
     }
 

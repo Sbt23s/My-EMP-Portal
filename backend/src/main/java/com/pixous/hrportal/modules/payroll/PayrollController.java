@@ -191,6 +191,13 @@ public class PayrollController {
         return ApiResponse.ok(service.financeApproveRun(id, SecurityUtils.currentUserId()), "Payroll run approved by finance");
     }
 
+    @PostMapping("/runs/{id}/finalise")
+    @PreAuthorize("hasAuthority('PAYROLL_APPROVE')")
+    public ApiResponse<PayrollRunResponse> finaliseRun(@PathVariable Long id) {
+        return ApiResponse.ok(service.finaliseRun(id, SecurityUtils.currentUserId()),
+                "Payroll run finalised");
+    }
+
     @GetMapping("/runs")
     @PreAuthorize("hasAnyAuthority('PAYROLL_RUN', 'PAYROLL_APPROVE')")
     public ApiResponse<List<PayrollRunSummary>> listRuns() {

@@ -32,6 +32,7 @@ public class AppreciationService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final com.pixous.hrportal.common.SmsService smsService;
+    private final com.pixous.hrportal.common.MailService mailService;
 
     // ------------------------------------------------------------------ write
 
@@ -158,6 +159,30 @@ public class AppreciationService {
     }
 
     private void notifyIssued(AppreciationLetter a, User employee, String issuer) {
+        /*
+         * The letter goes by email as well as into the portal. It is the kind
+         * of thing people forward and keep, and one that only ever lived
+         * behind a login would mostly go unread.
+         *
+         * Never throws: the letter is saved and the employee has already been
+         * notified, so an unreachable mail server must not undo either.
+         */
+        try {
+            if (employee.getEmail() != null && !employee.getEmail().isBlank()) {
+                mailService.trySend(employee.getEmail(),
+                        "Appreciation Letter " + a.getReferenceCode() + " - Pixous Technologies",
+                        "<p>Dear " + employee.getName() + ",</p>"
+                                + "<p>" + issuer + " has issued an appreciation letter to you "
+                                + "in recognition of <b>" + escape(a.getAchievement()) + "</b>.</p>"
+                                + "<blockquote>" + escape(a.getMessage()).replace("\n", "<br/>")
+                                + "</blockquote>"
+                                + "<p>You can read and download the full letter in the "
+                                + "employee portal.</p>"
+                                + "<p>Congratulations,<br/>HR Team<br/>Pixous Technologies</p>");
+            }
+        } catch (Exception e) {
+            log.warn("Appreciation email failed: {}", e.getMessage());
+        }
         notify(employee.getId(), "Appreciation letter received",
                 issuer + " has issued an appreciation letter to you: " + a.getAchievement() + ".");
         try {
@@ -169,6 +194,12 @@ public class AppreciationService {
         } catch (Exception e) {
             log.warn("Appreciation SMS failed: {}", e.getMessage());
         }
+    }
+
+    /** Keeps a quoted message from breaking the surrounding HTML. */
+    private static String escape(String text) {
+        if (text == null) return "";
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 
     /** Never lets a notification failure lose the letter that was saved. */

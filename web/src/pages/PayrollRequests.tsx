@@ -430,6 +430,28 @@ export default function PayrollPage() {
         />
       </div>
 
+      {/*
+        The reason a row reads zero, said out loud.
+
+        Payroll is calculated from a salary structure, and an employee without
+        one produces a payslip of nothing -- which on the table looks
+        indistinguishable from somebody who earns nothing. Naming the count,
+        and how to fix it, is the difference between a page that looks broken
+        and one that is waiting on data.
+      */}
+      {canRun && payrollCounts.missing > 0 && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50/70 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+          <div className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+            {payrollCounts.missing} of {payrollCounts.total} employees have no salary configured
+          </div>
+          <div className="mt-0.5 text-xs text-amber-800/80 dark:text-amber-200/70">
+            Their gross and net read zero until one is set, and Generate stays
+            disabled for them. Use <b>Set salary</b> on the row — it is entered
+            once and every following month is calculated from it.
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <Skeleton className="h-64 w-full rounded-xl" />
       ) : rows.length === 0 ? (
@@ -558,10 +580,24 @@ export default function PayrollPage() {
                           ) : (
                             canRun && (
                               <>
-                                <Button variant="outline" size="sm" onClick={() => setSalaryFor(e)} title={s ? "Edit Salary" : "Set Salary"}>
-                                  <IndianRupee className="h-3.5 w-3.5" />
+                                {/*
+                                  Labelled, because a bare rupee icon beside a
+                                  word is a puzzle: twenty-eight of thirty-two
+                                  employees had no salary configured and this
+                                  was the button that would have set it.
+                                */}
+                                <Button
+                                  variant={s ? "outline" : "default"}
+                                  size="sm"
+                                  className="shrink-0"
+                                  onClick={() => setSalaryFor(e)}
+                                  title={s ? "Change this employee's salary" : "This employee has no salary configured"}
+                                >
+                                  <IndianRupee className="mr-1 h-3.5 w-3.5" />
+                                  {s ? "Salary" : "Set salary"}
                                 </Button>
-                                <Button size="sm" disabled={!s} onClick={() => setGenFor(e)} title={s ? "Generate Payslip" : "Set salary first"}>
+                                <Button size="sm" disabled={!s} onClick={() => setGenFor(e)}
+                                        title={s ? "Generate Payslip" : "Set a salary first"}>
                                   Generate
                                 </Button>
                               </>

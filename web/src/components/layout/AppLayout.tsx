@@ -117,6 +117,13 @@ const NAV: NavEntry[] = [
     moduleCode: "PAYROLL",
     children: [
       { to: "/payroll/requests", label: "Payroll", icon: FileText, anyPermission: ["PAYROLL_RUN"] },
+      /*
+        Payroll history was routed and guarded but had no way in -- the page
+        existed and nothing linked to it, so the month-by-month runs, their
+        approval state and the generate-all button were all unreachable.
+      */
+      { to: "/payroll/run", label: "Payroll History", icon: History,
+        anyPermission: ["PAYROLL_RUN", "PAYROLL_APPROVE"] },
       { to: "/payslips", label: "Payslips", icon: Wallet, excludeRole: ["SUPER_ADMIN", "COMPANY_ADMIN", "IT_MGR", "IT_HR"] }
     ]
   },

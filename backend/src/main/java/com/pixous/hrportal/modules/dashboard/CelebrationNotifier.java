@@ -34,21 +34,49 @@ public class CelebrationNotifier {
                 .filter(u -> !"OFFBOARDED".equalsIgnoreCase(u.getProfileStatus()))
                 .toList();
 
+        /*
+         * Who each celebration belongs to.
+         *
+         * This job runs on a timer, so there is no signed-in user and the
+         * tenant filter is inactive -- every query here sees every company at
+         * once. That is what this method needs in order to cover all of them
+         * in one pass, and it is also how one company's birthdays ended up
+         * announced inside another's portal: the notification went to every
+         * active employee on the platform rather than to the celebrant's own
+         * colleagues.
+         *
+         * The celebration itself does not carry a company, so it is taken from
+         * the celebrant's own row, which is the authority on it.
+         */
+        java.util.Map<Long, Long> companyOfUser = active.stream()
+                .filter(u -> u.getCompanyId() != null)
+                .collect(java.util.stream.Collectors.toMap(User::getId, User::getCompanyId, (a, b) -> a));
+
         for (Celebration c : todays) {
+            Long celebrantCompany = companyOfUser.get(c.userId());
+            if (celebrantCompany == null) {
+                // No company on the celebrant means there is no audience that
+                // can be established as theirs. Announcing it to everyone is
+                // the bug being fixed, so it is skipped instead.
+                continue;
+            }
+            List<User> audience = active.stream()
+                    .filter(u -> celebrantCompany.equals(u.getCompanyId()))
+                    .toList();
             boolean birthday = "BIRTHDAY".equals(c.type());
             String title = birthday ? "🎂 Birthday today" : "🎉 Work anniversary today";
             String body = birthday
                     ? c.name() + "'s birthday is today" + (c.team() != null ? " (" + c.team() + ")" : "") + " — wish them well!"
                     : c.name() + " completes " + c.years() + " year" + (c.years() != null && c.years() == 1 ? "" : "s")
                             + " with the company today" + (c.team() != null ? " (" + c.team() + ")" : "") + "!";
-            for (User u : active) {
+            for (User u : audience) {
                 // Skip notifying the celebrant about their own day.
                 if (u.getId().equals(c.userId())) continue;
                 notificationService.createAndPush(u.getId(), title, body, "CELEBRATION", "/");
             }
-            // One bulk SMS for the whole team, minus the celebrant.
+            // One bulk SMS for the celebrant's own company, minus the celebrant.
             smsService.sendBulk(
-                    active.stream()
+                    audience.stream()
                             .filter(u -> !u.getId().equals(c.userId()))
                             .map(User::getPhone)
                             .filter(p -> p != null && !p.isBlank())

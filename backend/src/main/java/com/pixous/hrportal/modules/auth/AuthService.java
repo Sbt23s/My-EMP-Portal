@@ -82,13 +82,25 @@ public class AuthService {
     @Transactional
     public LoginResponse login(LoginRequest request, String ip, String userAgent) {
         String username = request.username() == null ? "" : request.username().trim();
-        User user = userRepository.findByUsername(username).orElse(null);
+        /*
+         * Resolved across every tenant, deliberately.
+         *
+         * Which company someone belongs to is what signing in establishes; it
+         * cannot also be a precondition for finding them. findByUsername is a
+         * derived query and carries the tenant filter, so the moment that
+         * filter is active it narrows the lookup to the company already in
+         * context, and an account from any other tenant comes back empty --
+         * indistinguishable, at the login screen, from a username that does
+         * not exist. Usernames are unique across all tenants, so this resolves
+         * to exactly one account or none.
+         */
+        User user = userRepository.findByUsernameAcrossTenants(username).orElse(null);
 
         // Fallback: allow login by full employee name (case-insensitive) when the
         // input isn't a known username and exactly one employee has that name.
         // Existing username logins (admin, managers, …) are unaffected.
         if (user == null && !username.isBlank()) {
-            java.util.List<User> byName = userRepository.findByNameIgnoreCase(username);
+            java.util.List<User> byName = userRepository.findByNameAcrossTenants(username);
             if (byName.size() == 1) {
                 user = byName.get(0);
             }
@@ -97,20 +109,6 @@ public class AuthService {
         if (user == null) {
             recordLogin(null, username, false, ip, userAgent);
             throw new ApiException(ErrorCode.BAD_CREDENTIALS, "Invalid username or password");
-        }
-
-        if (user.getCompanyId() == null) {
-            // Auto-assign legacy accounts to Pixous Technologies so they can log in
-            java.util.Optional<com.pixous.hrportal.modules.org.Company> pixousCompany = companyRepository.findAll().stream()
-                    .filter(c -> "Pixous Technologies".equals(c.getCompanyName()))
-                    .findFirst();
-            if (pixousCompany.isPresent()) {
-                user.setCompanyId(pixousCompany.get().getId());
-                userRepository.save(user);
-            } else {
-                recordLogin(user.getId(), username, false, ip, userAgent);
-                throw new ApiException(ErrorCode.ACCESS_DENIED, "No companies available in the system.");
-            }
         }
 
         if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(LocalDateTime.now())) {
@@ -127,6 +125,40 @@ public class AuthService {
 
         if (!user.isEnabled()) {
             throw new ApiException(ErrorCode.ACCESS_DENIED, "Account is disabled. Contact HR.");
+        }
+
+        /*
+         * A login must not be refused for a bookkeeping gap.
+         *
+         * Some accounts carry no company_id: the legacy rows that predate
+         * multi-tenancy, and any account written while the creator had no
+         * tenant of their own. Their owner has just proved who they are, so
+         * the right thing is to repair the row and let them in rather than
+         * turn them away for something they cannot see or fix.
+         *
+         * Two things changed here. It now runs after the password check, not
+         * before -- it used to write to the database on behalf of anyone who
+         * merely typed a known username, which is a write no unauthenticated
+         * request should be able to cause. And it no longer looks for one
+         * company by name: "Pixous Technologies" is not present in every
+         * deployment, and on a platform whose purpose is adding tenants, a
+         * hard-coded name is a bug waiting for the next company. The account's
+         * own company is preferred, and a single-tenant install falls back to
+         * the only company there is.
+         */
+        if (user.getCompanyId() == null) {
+            java.util.List<com.pixous.hrportal.modules.org.Company> all = companyRepository.findAll();
+            com.pixous.hrportal.modules.org.Company home = all.stream()
+                    .filter(c -> "Pixous Technologies".equals(c.getCompanyName()))
+                    .findFirst()
+                    .orElseGet(() -> all.size() == 1 ? all.get(0) : null);
+            if (home != null) {
+                user.setCompanyId(home.getId());
+            } else {
+                recordLogin(user.getId(), username, false, ip, userAgent);
+                throw new ApiException(ErrorCode.ACCESS_DENIED,
+                        "Your account is not linked to a company. Ask an administrator to set one.");
+            }
         }
 
         // success

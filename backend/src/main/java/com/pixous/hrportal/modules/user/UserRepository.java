@@ -193,6 +193,28 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query(value = "SELECT COUNT(*) FROM users WHERE phone = :phone", nativeQuery = true)
     long countByPhoneAcrossTenants(@Param("phone") String phone);
 
+    /**
+     * The account for a username, whichever company it belongs to.
+     *
+     * <p>Login has to be able to find an account before it knows which tenant
+     * the person belongs to -- that is the answer, not the question. The
+     * derived findByUsername carries the tenant filter, so as soon as the
+     * filter is active it can only return a user from the company already in
+     * context, and the sign-in of anyone outside it reads as "no such
+     * username". Usernames are unique across every tenant (the index enforces
+     * it, and createEmployee checks it across tenants), so resolving one
+     * without the filter is exact, not a guess.
+     *
+     * <p>Native, for the same reason the count queries above are: it is the
+     * one way to be certain the filter is not applied.
+     */
+    @Query(value = "SELECT * FROM users WHERE username = :username LIMIT 1", nativeQuery = true)
+    Optional<User> findByUsernameAcrossTenants(@Param("username") String username);
+
+    /** The same, by full name, for the name-based login fallback. */
+    @Query(value = "SELECT * FROM users WHERE LOWER(name) = LOWER(:name)", nativeQuery = true)
+    List<User> findByNameAcrossTenants(@Param("name") String name);
+
     /** Enabled users who hold the given permission code through any of their roles. */
     @Query("""
             SELECT DISTINCT u FROM User u

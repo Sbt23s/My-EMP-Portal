@@ -97,7 +97,7 @@ class AuthServiceTest {
     @Test
     void loginSuccessIssuesTokensAndClearsFailures() {
         User user = enabledUser("admin", "hash");
-        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(user));
+        when(userRepository.findByUsernameAcrossTenants("admin")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("pass1234", "hash")).thenReturn(true);
         when(jwtService.generateAccessToken(any(), anyString(), any())).thenReturn("access-token");
         when(jwtService.getAccessTtlSeconds()).thenReturn(3600L);
@@ -113,8 +113,8 @@ class AuthServiceTest {
 
     @Test
     void loginWithUnknownUserThrowsBadCredentialsAndRecordsFailure() {
-        when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
-        when(userRepository.findByNameIgnoreCase("ghost")).thenReturn(List.of());
+        when(userRepository.findByUsernameAcrossTenants("ghost")).thenReturn(Optional.empty());
+        when(userRepository.findByNameAcrossTenants("ghost")).thenReturn(List.of());
 
         assertThatThrownBy(() -> authService.login(new LoginRequest("ghost", "x"), "1.2.3.4", "curl"))
                 .isInstanceOf(ApiException.class)
@@ -130,8 +130,8 @@ class AuthServiceTest {
     @Test
     void loginByFullNameWorksWhenSingleMatch() {
         User user = enabledUser("sethu", "hash");
-        when(userRepository.findByUsername("Sethu Kumar")).thenReturn(Optional.empty());
-        when(userRepository.findByNameIgnoreCase("Sethu Kumar")).thenReturn(List.of(user));
+        when(userRepository.findByUsernameAcrossTenants("Sethu Kumar")).thenReturn(Optional.empty());
+        when(userRepository.findByNameAcrossTenants("Sethu Kumar")).thenReturn(List.of(user));
         when(passwordEncoder.matches("pass", "hash")).thenReturn(true);
         when(jwtService.generateAccessToken(any(), anyString(), any())).thenReturn("t");
         when(jwtService.getAccessTtlSeconds()).thenReturn(3600L);
@@ -143,7 +143,7 @@ class AuthServiceTest {
     @Test
     void fiveWrongPasswordsLockTheAccount() {
         User user = enabledUser("admin", "hash");
-        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(user));
+        when(userRepository.findByUsernameAcrossTenants("admin")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(anyString(), anyString())).thenReturn(false);
 
         for (int i = 1; i <= 5; i++) {
@@ -168,7 +168,7 @@ class AuthServiceTest {
     void disabledAccountRejectedEvenWithCorrectPassword() {
         User user = enabledUser("left", "hash");
         user.setEnabled(false);
-        when(userRepository.findByUsername("left")).thenReturn(Optional.of(user));
+        when(userRepository.findByUsernameAcrossTenants("left")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("right", "hash")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.login(new LoginRequest("left", "right"), "1.2.3.4", "curl"))
@@ -184,7 +184,7 @@ class AuthServiceTest {
         Company pixous = new Company();
         pixous.setId(9L);
         pixous.setCompanyName("Pixous Technologies");
-        when(userRepository.findByUsername("old")).thenReturn(Optional.of(user));
+        when(userRepository.findByUsernameAcrossTenants("old")).thenReturn(Optional.of(user));
         when(companyRepository.findAll()).thenReturn(List.of(pixous));
         when(passwordEncoder.matches("pass", "hash")).thenReturn(true);
         when(jwtService.generateAccessToken(any(), anyString(), any())).thenReturn("t");
@@ -193,9 +193,53 @@ class AuthServiceTest {
         authService.login(new LoginRequest("old", "pass"), "1.2.3.4", "curl");
 
         assertThat(user.getCompanyId()).isEqualTo(9L);
-        // Saved twice: once to persist the company assignment, once for the
-        // success bookkeeping (lastLoginAt / failed-count reset).
-        verify(userRepository, org.mockito.Mockito.times(2)).save(user);
+        // Saved once. The company repair now happens after the password has
+        // been checked and rides along with the success bookkeeping, rather
+        // than being written on its own beforehand -- which had let an
+        // unauthenticated request cause a database write by typing a username
+        // that happened to exist.
+        verify(userRepository, org.mockito.Mockito.times(1)).save(user);
+    }
+
+    @Test
+    void loginFindsAnAccountBelongingToAnotherCompany() {
+        /*
+         * The Sethu Technologies case. Login has to resolve a username before
+         * it can know the tenant, so it must not use the tenant-filtered
+         * lookup -- with the filter active that returns nothing for anyone
+         * outside the company already in context, and the sign-in fails as
+         * though the username did not exist.
+         */
+        User user = enabledUser("admin1234", "hash");
+        user.setCompanyId(42L);
+        when(userRepository.findByUsernameAcrossTenants("admin1234")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("admin1234", "hash")).thenReturn(true);
+        when(jwtService.generateAccessToken(any(), anyString(), any())).thenReturn("t");
+        when(jwtService.getAccessTtlSeconds()).thenReturn(3600L);
+
+        LoginResponse res = authService.login(
+                new LoginRequest("admin1234", "admin1234"), "1.2.3.4", "curl");
+
+        assertThat(res.tokens().accessToken()).isEqualTo("t");
+        // Their own company, untouched -- not reassigned to anyone else's.
+        assertThat(user.getCompanyId()).isEqualTo(42L);
+    }
+
+    @Test
+    void loginIsRefusedBeforeAnyCompanyRepairWhenThePasswordIsWrong() {
+        // The repair is a write. It must never happen for a request that has
+        // not proved who it is.
+        User user = enabledUser("old", "hash");
+        user.setCompanyId(null);
+        when(userRepository.findByUsernameAcrossTenants("old")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong", "hash")).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.login(
+                new LoginRequest("old", "wrong"), "1.2.3.4", "curl"))
+                .isInstanceOf(ApiException.class);
+
+        assertThat(user.getCompanyId()).isNull();
+        verify(companyRepository, never()).findAll();
     }
 
     // ---------- refresh ----------

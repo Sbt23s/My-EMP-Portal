@@ -1038,62 +1038,6 @@ const BIRTHDAYS = [
   { name: "Olivia Jackson", date: "June 2" }
 ];
 
-function ExecutiveAnalytics({ industry }: { industry: string }) {
-  const analytics = useQuery({
-    queryKey: ["pythonExecutiveAnalytics", industry],
-    queryFn: async () => {
-      const res = await fetch(`${ANALYTICS_BASE}/api/analytics/executive?industry=${industry}`);
-      if (!res.ok) throw new Error("Executive analytics service unavailable");
-      return (await res.json()).data;
-    }
-  });
-
-  if (analytics.isLoading) return <Skeleton className="h-44 w-full mt-6 rounded-xl animate-pulse" />;
-  if (analytics.isError || !analytics.data) return null;
-
-  const data = analytics.data;
-
-  return (
-    <Card className="mt-6 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent overflow-hidden">
-      <CardHeader className="pb-2">
-        <div className="flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-primary" />
-          <CardTitle className="text-lg">AI-Powered Organisation Insights</CardTitle>
-        </div>
-        <CardDescription>Python microservice-powered organizational analysis</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="text-sm font-medium text-muted-foreground mb-4">
-          {data.insight}
-        </div>
-        {data.departmentStats && data.departmentStats.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {data.departmentStats.map((d: any) => (
-              <div key={d.department} className="bg-background border rounded-xl p-4 shadow-sm hover:shadow transition-shadow">
-                <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">{d.department}</div>
-                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/50">
-                  <div>
-                    <div className="text-[10px] text-muted-foreground font-semibold">Attendance</div>
-                    <div className="text-lg font-extrabold text-success">{d.attendanceRate}%</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-muted-foreground font-semibold">Late Rate</div>
-                    <div className="text-lg font-extrabold text-warning">{d.lateRate}%</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-xs text-muted-foreground py-2 italic">
-            No department level statistics available for this industry view yet.
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 /** A birthday or a work anniversary coming up, as the server reports it. */
 interface Celebration {
   userId: number; name: string; employeeCode?: string; team?: string;
@@ -2163,8 +2107,6 @@ function ExecutiveDashboardView({
 
         </div>
       </div>
-      <ExecutiveAnalytics industry={selectedIndustry} />
-
       {peopleList && (
         <InsightPeopleDialog
           title={peopleList.title}

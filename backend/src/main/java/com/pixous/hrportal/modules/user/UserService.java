@@ -245,7 +245,16 @@ public class UserService {
         boolean changed = false;
         if (username != null && !username.isBlank()) {
             String uname = username.trim();
-            userRepository.findByUsername(uname)
+            /*
+             * Checked across tenants, because that is how the index is built.
+             * A tenant-scoped check passes for a username already held in
+             * another company, and the insert then fails on the constraint --
+             * so the person renaming an account is shown a database error
+             * instead of "that username is taken", and login, which resolves a
+             * username globally, could not have told the two accounts apart
+             * anyway.
+             */
+            userRepository.findByUsernameAcrossTenants(uname)
                     .filter(other -> !other.getId().equals(userId))
                     .ifPresent(other -> {
                         throw ApiException.business("Username \"" + uname + "\" is already taken");

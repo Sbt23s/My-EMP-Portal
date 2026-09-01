@@ -1,7 +1,7 @@
 import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Play, Check, CheckCircle2, FileText} from "lucide-react";
+import { Play, Check, CheckCircle2, FileText, IndianRupee } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
 import { usePayrollProgress } from "@/hooks/usePayrollProgress";
@@ -12,8 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatMoney, monthName } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import type { ApiEnvelope, PayrollRunResponse } from "@/types";
+import type { ApiEnvelope, PageEnvelope, PayrollRunResponse, UserSummary } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
+import { SalaryDialog, type SalaryStructure } from "@/components/payroll/SalaryDialog";
 
 export default function PayrollRunsPage() {
   const queryClient = useQueryClient();
@@ -21,6 +22,39 @@ export default function PayrollRunsPage() {
   
   const [generateMonth, setGenerateMonth] = useState<number>(new Date().getMonth() + 1);
   const [generateYear, setGenerateYear] = useState<number>(new Date().getFullYear());
+  const [salaryFor, setSalaryFor] = useState<UserSummary | null>(null);
+  const [showSalaryPanel, setShowSalaryPanel] = useState(false);
+
+  /*
+    PAYROLL_RUN is what the server actually requires to start a run and to
+    confirm one. The page previously asked for PAYROLL_MANAGE, which is seeded
+    nowhere -- so the check was false for every user including the CTO, and
+    the buttons behind it had never once rendered.
+  */
+  const canRun = hasPermission("PAYROLL_RUN");
+
+  // Who payroll would run for, and which of them have a salary to run on.
+  const employees = useQuery({
+    queryKey: ["payroll-run-employees"],
+    enabled: canRun,
+    queryFn: async () =>
+      (await api.get<ApiEnvelope<PageEnvelope<UserSummary>>>(
+        "/users?status=ACTIVE&size=1000")).data.data.content ?? []
+  });
+
+  const salaries = useQuery({
+    queryKey: ["payroll-run-salaries"],
+    enabled: canRun,
+    queryFn: async () =>
+      (await api.get<ApiEnvelope<SalaryStructure[]>>("/payroll/salaries")).data.data ?? []
+  });
+
+  const salaryByUser = new Map<number, SalaryStructure>(
+    (salaries.data ?? []).map((x) => [x.userId, x])
+  );
+  const staff = employees.data ?? [];
+  const withSalary = staff.filter((e) => salaryByUser.has(e.id)).length;
+  const withoutSalary = staff.length - withSalary;
 
   const runs = useQuery({
     queryKey: ["payroll-runs"],
@@ -36,7 +70,15 @@ export default function PayrollRunsPage() {
 
   const generateMutation = useMutation({
     mutationFn: async () => {
-      return (await api.post<ApiEnvelope<PayrollRunResponse>>(`/payroll/runs?month=${generateMonth}&year=${generateYear}`)).data.data;
+      /*
+        month and year go in the body. They used to be appended as query
+        parameters, which the controller -- which binds a @RequestBody -- read
+        as an absent payload and rejected. Nobody had reported it because the
+        button that sends this was gated behind a permission that does not
+        exist, so it had never been clicked.
+      */
+      return (await api.post<ApiEnvelope<PayrollRunResponse>>(
+        "/payroll/runs", { month: generateMonth, year: generateYear })).data.data;
     },
     onSuccess: () => {
       // The counter has said its piece by now; what is left is the tally,
@@ -90,36 +132,143 @@ export default function PayrollRunsPage() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <PageHeader title="Payroll Runs" subtitle="Manage and approve monthly payroll." />
-        
-        {hasPermission("PAYROLL_MANAGE") && (
-          <div className="flex items-center gap-2">
-            <select 
-              className="px-3 py-2 border rounded-md text-sm bg-background"
-              value={generateMonth}
-              onChange={(e) => setGenerateMonth(parseInt(e.target.value))}
-            >
-              {Array.from({length: 12}).map((_, i) => (
-                <option key={i+1} value={i+1}>{monthName(i+1)}</option>
-              ))}
-            </select>
-            <input 
-              type="number" 
-              className="px-3 py-2 border rounded-md text-sm w-24 bg-background"
-              value={generateYear}
-              onChange={(e) => setGenerateYear(parseInt(e.target.value))}
-            />
-            <Button 
-              onClick={() => { resetProgress(); generateMutation.mutate(); }} 
-              disabled={generateMutation.isPending}
-            >
-              {generateMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
-              Generate Run
-            </Button>
-          </div>
-        )}
+      <div className="mb-6">
+        <PageHeader title="Payroll Runs" subtitle="Generate, confirm and approve a whole month of payroll in one go." />
       </div>
+
+      {canRun && (
+        <Card className="mb-6">
+          <CardContent className="p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <div className="text-sm font-semibold">Generate payroll for everyone</div>
+                <p className="mt-1 max-w-xl text-xs text-muted-foreground">
+                  One run covers every active employee who has a salary configured —
+                  there is no per-employee limit. Employees without a salary are
+                  skipped and named in the tally afterwards, so a missing salary
+                  never silently becomes a zero payslip.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  className="px-3 py-2 border rounded-md text-sm bg-background"
+                  value={generateMonth}
+                  onChange={(e) => setGenerateMonth(parseInt(e.target.value))}
+                >
+                  {Array.from({length: 12}).map((_, i) => (
+                    <option key={i+1} value={i+1}>{monthName(i+1)}</option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  className="px-3 py-2 border rounded-md text-sm w-24 bg-background"
+                  value={generateYear}
+                  onChange={(e) => setGenerateYear(parseInt(e.target.value))}
+                />
+                <Button
+                  onClick={() => { resetProgress(); generateMutation.mutate(); }}
+                  disabled={generateMutation.isPending || withSalary === 0}
+                  title={withSalary === 0
+                    ? "No employee has a salary configured yet"
+                    : `Generate payslips for ${withSalary} employees`}
+                >
+                  {generateMutation.isPending
+                    ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    : <Play className="h-4 w-4 mr-2" />}
+                  Generate All ({withSalary})
+                </Button>
+              </div>
+            </div>
+
+            {/*
+              Salary configuration, on the page where the gap is discovered.
+
+              A run calculates from each employee's salary structure, so the
+              moment worth setting one is the moment you are about to generate
+              and find people missing. Sending someone to another page to do it
+              is how twenty-eight employees stayed unconfigured.
+            */}
+            <div className="mt-4 flex flex-wrap items-center gap-3 border-t pt-4">
+              <div className="text-xs">
+                <span className="font-semibold text-emerald-600">{withSalary}</span>
+                <span className="text-muted-foreground"> ready</span>
+                {withoutSalary > 0 && (
+                  <>
+                    <span className="text-muted-foreground"> · </span>
+                    <span className="font-semibold text-amber-600">{withoutSalary}</span>
+                    <span className="text-muted-foreground"> without a salary</span>
+                  </>
+                )}
+              </div>
+              <Button
+                variant={withoutSalary > 0 ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowSalaryPanel((v) => !v)}
+              >
+                <IndianRupee className="h-3.5 w-3.5 mr-1" />
+                Salary configuration
+              </Button>
+            </div>
+
+            {showSalaryPanel && (
+              <div className="mt-3 max-h-80 overflow-y-auto rounded-md border">
+                {staff.length === 0 ? (
+                  <div className="p-4 text-sm text-muted-foreground">No employees found.</div>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-muted/60 text-xs">
+                      <tr>
+                        <th className="p-2 text-left font-medium">Employee</th>
+                        <th className="p-2 text-right font-medium">Monthly gross</th>
+                        <th className="p-2 text-right font-medium">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* Unconfigured first: they are the ones holding up the run. */}
+                      {[...staff]
+                        .sort((a, b) => Number(salaryByUser.has(a.id)) - Number(salaryByUser.has(b.id)))
+                        .map((e) => {
+                          const sal = salaryByUser.get(e.id);
+                          return (
+                            <tr key={e.id} className="border-t">
+                              <td className="p-2">
+                                <div className="font-medium">{e.name}</div>
+                                <div className="text-xs text-muted-foreground">{e.employeeCode}</div>
+                              </td>
+                              <td className="p-2 text-right tabular-nums">
+                                {sal
+                                  ? formatMoney(sal.grossSalary)
+                                  : <span className="text-amber-600">Not set</span>}
+                              </td>
+                              <td className="p-2 text-right">
+                                <Button
+                                  variant={sal ? "outline" : "default"}
+                                  size="sm"
+                                  onClick={() => setSalaryFor(e)}
+                                >
+                                  {sal ? "Change" : "Set salary"}
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {salaryFor && (
+        <SalaryDialog
+          employee={salaryFor}
+          current={salaryByUser.get(salaryFor.id)}
+          onClose={() => setSalaryFor(null)}
+        />
+      )}
 
       {/*
         The run as it happens, and the tally when it stops. Kept on screen
@@ -223,7 +372,7 @@ export default function PayrollRunsPage() {
                 </div>
 
                 <div className="mt-5 flex flex-col gap-2">
-                  {run.status === "PREVIEW" && hasPermission("PAYROLL_MANAGE") && (
+                  {run.status === "PREVIEW" && canRun && (
                     <Button 
                       variant="outline"
                       onClick={() => confirmMutation.mutate(run.id)}

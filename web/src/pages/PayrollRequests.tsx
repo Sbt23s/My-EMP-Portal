@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ApiEnvelope, PageEnvelope, UserSummary } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
+import { SalaryDialog } from "@/components/payroll/SalaryDialog";
 import { cn } from "@/lib/utils";
 
 interface Salary {
@@ -117,10 +118,20 @@ export default function PayrollPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<"all" | "IT" | "CIVIL">("all");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "GENERATED" | "PENDING">("ALL");
-  const [month, setMonth] = useState(dayjs().month() + 1);
-  const [year, setYear] = useState(dayjs().year());
+  /*
+    The period the figures describe.
+
+    Chosen by From/To date, not by a second pair of dropdowns: the toolbar
+    offered both, and two controls for one period is two ways to disagree
+    about which month you are looking at.
+  */
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+
+  // Follows From Date when one is picked, otherwise the month we are in.
+  const period = fromDate ? dayjs(fromDate) : dayjs();
+  const month = period.month() + 1;
+  const year = period.year();
   const [salaryFor, setSalaryFor] = useState<UserSummary | null>(null);
   const [genFor, setGenFor] = useState<UserSummary | null>(null);
   /** Which payslip is being emailed, so only that row shows a spinner. */
@@ -322,18 +333,6 @@ export default function PayrollPage() {
             <option value="ALL">All Statuses</option>
             <option value="GENERATED">Generated / Paid</option>
             <option value="PENDING">Pending / Unpaid</option>
-          </select>
-        </div>
-        <div className="flex flex-col">
-          <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Month</label>
-          <select className="h-9 w-[7.5rem] rounded-md border bg-background px-3 text-xs font-semibold" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
-            {MONTHS.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
-          </select>
-        </div>
-        <div className="flex flex-col">
-          <label className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Year</label>
-          <select className="h-9 w-[6.5rem] rounded-md border bg-background px-3 text-xs font-bold" value={year} onChange={(e) => setYear(Number(e.target.value))}>
-            {[dayjs().year(), dayjs().year() - 1, dayjs().year() - 2, dayjs().year() - 3, dayjs().year() - 4, dayjs().year() - 5, dayjs().year() - 6].map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
         <div className="flex flex-col">
@@ -675,90 +674,6 @@ function StatCard({
         {subtitle}
       </div>
     </div>
-  );
-}
-
-function SalaryDialog({ employee, current, monthBasic, periodLabel, onClose }: {
-  employee: UserSummary;
-  current?: Salary;
-  monthBasic?: number;
-  periodLabel: string;
-  onClose: () => void;
-}) {
-  const qc = useQueryClient();
-  const [basic, setBasic] = useState(
-    String(monthBasic != null ? monthBasic : current?.basicSalary ?? "")
-  );
-  const [hra, setHra] = useState(String(current?.hra ?? ""));
-  const [allowances, setAllowances] = useState(String(current?.allowances ?? ""));
-  const [pf, setPf] = useState(String(current?.pfPercentage ?? ""));
-  const [esi, setEsi] = useState(current?.esiApplicable ?? true);
-  const [pt, setPt] = useState(String(current?.ptAmount ?? ""));
-
-  const num = (v: string) => (v.trim() === "" ? 0 : Number(v));
-  const gross = num(basic) + num(hra) + num(allowances);
-
-  const save = useMutation({
-    mutationFn: async () =>
-      api.post("/payroll/salary", {
-        userId: employee.id,
-        basicSalary: num(basic),
-        hra: num(hra),
-        allowances: num(allowances),
-        pfPercentage: num(pf),
-        esiApplicable: esi,
-        ptAmount: num(pt)
-      }),
-    onSuccess: () => {
-      toast.success("Salary saved");
-      qc.invalidateQueries({ queryKey: ["payroll-salaries"] });
-      onClose();
-    },
-    onError: (e) => toast.error(apiMessage(e, "Could not save salary"))
-  });
-
-  return (
-    <Dialog open onClose={onClose} className="max-w-md">
-      <DialogHeader title={`Salary — ${employee.name}`} />
-      <form
-        className="mt-3 space-y-3"
-        onSubmit={(ev) => {
-          ev.preventDefault();
-          if (num(basic) <= 0) { toast.error("Enter a basic salary"); return; }
-          save.mutate();
-        }}
-      >
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Basic salary *">
-            <Input type="number" min="0" value={basic} onChange={(e) => setBasic(e.target.value)} placeholder="e.g. 25000" />
-            {monthBasic != null && (
-              <p className="mt-1 text-[11px] text-primary">
-                Filled from Salary details — {periodLabel}
-              </p>
-            )}
-          </Field>
-          <Field label="HRA"><Input type="number" min="0" value={hra} onChange={(e) => setHra(e.target.value)} placeholder="e.g. 8000" /></Field>
-          <Field label="Allowances"><Input type="number" min="0" value={allowances} onChange={(e) => setAllowances(e.target.value)} placeholder="e.g. 3000" /></Field>
-          <Field label="PF (₹)"><Input type="number" min="0" value={pf} onChange={(e) => setPf(e.target.value)} placeholder="e.g. 1800" /></Field>
-          <Field label="Professional Tax (₹)"><Input type="number" min="0" value={pt} onChange={(e) => setPt(e.target.value)} placeholder="e.g. 200" /></Field>
-          <label className="flex items-center gap-2 self-end pb-2 text-sm">
-            <input type="checkbox" checked={esi} onChange={(e) => setEsi(e.target.checked)} className="h-4 w-4 accent-[hsl(var(--primary))]" />
-            ESI applicable
-          </label>
-        </div>
-        <div className="rounded-md bg-muted/40 px-3 py-2 text-sm">
-          Monthly Gross: <span className="font-semibold">{inr(gross)}</span>
-          <span className="text-muted-foreground"> (Basic + HRA + Allowances)</span>
-        </div>
-        <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={save.isPending}>
-            {save.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Save Salary
-          </Button>
-        </div>
-      </form>
-    </Dialog>
   );
 }
 

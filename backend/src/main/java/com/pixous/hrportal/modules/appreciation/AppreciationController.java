@@ -57,6 +57,17 @@ public class AppreciationController {
         return ApiResponse.ok(service.get(SecurityUtils.currentUserId(), id));
     }
 
+    @GetMapping("/{id}/pdf")
+    @Operation(summary = "The letter as a PDF")
+    public org.springframework.http.ResponseEntity<byte[]> pdf(@PathVariable Long id) {
+        byte[] body = service.pdf(SecurityUtils.currentUserId(), id);
+        return org.springframework.http.ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .header("Content-Disposition",
+                        "attachment; filename=\"Appreciation-" + id + ".pdf\"")
+                .body(body);
+    }
+
     @PostMapping("/{id}/send")
     @PreAuthorize("hasAnyAuthority('USER_MANAGE','COMPLAINT_MANAGE','DASHBOARD_EXEC')")
     @Operation(summary = "Send a letter that was saved as a draft")

@@ -503,63 +503,84 @@ function LetterPreview({
   return (
     <div
       id="appreciation-letter"
-      className="max-h-[32rem] overflow-y-auto rounded-lg border-4 border-double border-indigo-200 bg-white p-8 text-slate-900 shadow-sm"
+      className="max-h-[32rem] overflow-y-auto bg-white p-10 text-slate-900 shadow-sm print:max-h-none print:overflow-visible print:shadow-none"
+      style={{ border: "1px solid #d8d5f2" }}
     >
-      <div className="border-b-2 border-indigo-600 pb-3 text-center">
-        <div className="font-display text-xl font-bold tracking-tight text-indigo-700">
-          PIXOUS TECHNOLOGIES
-        </div>
-        <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-          Employee Management System
-        </div>
-      </div>
-
-      <div className="mt-6 text-center">
-        <div className="inline-block border-b-2 border-amber-400 pb-1 font-display text-lg font-bold uppercase tracking-[0.15em] text-slate-800">
-          Appreciation Letter
-        </div>
-        <div className="mt-1 text-[10px] uppercase tracking-widest text-slate-400">
+      {/* The letterhead: mark on the left, the words it belongs to on the
+          right, and a rule under both. The reference letter is built this way
+          and it is what makes the page read as company stationery rather than
+          as a screen. */}
+      <div className="flex items-start justify-between gap-4">
+        <img
+          src="/pixous-favicon.png"
+          alt="Pixous Technologies"
+          className="h-12 w-auto shrink-0 object-contain"
+        />
+        <div className="pt-1 text-right text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-400">
           Official Communication
         </div>
       </div>
 
-      <div className="mt-6 text-right text-xs text-slate-600">
-        Date: {letterDate ? dayjs(letterDate).format("DD MMMM YYYY") : "—"}
+      <div className="mt-4 border-b-2 pb-2" style={{ borderColor: "#4f39c7" }}>
+        <div className="font-display text-lg font-bold tracking-tight" style={{ color: "#4f39c7" }}>
+          PIXOUS TECHNOLOGIES
+        </div>
       </div>
 
-      <div className="mt-4 text-sm">
-        <div className="font-semibold text-slate-500">To,</div>
-        <div className="mt-1 font-bold">{employeeName}</div>
-        <div className="text-slate-600">{designation}</div>
-        <div className="text-slate-600">Pixous Technologies</div>
+      <div className="mt-6 font-display text-base font-bold uppercase tracking-[0.12em]"
+           style={{ color: "#4f39c7" }}>
+        Appreciation Letter
       </div>
 
-      <div className="mt-5 text-sm font-semibold">
+      <div className="mt-5 text-xs text-slate-700">
+        <span className="font-semibold">Date:</span>{" "}
+        {letterDate ? dayjs(letterDate).format("DD/MM/YYYY") : "—"}
+      </div>
+
+      <div className="mt-5 text-sm">
+        <div className="font-semibold">To,</div>
+        <div className="font-bold">{employeeName}</div>
+        <div>{designation}</div>
+        <div>Pixous Technologies</div>
+      </div>
+
+      <div className="mt-6 text-sm font-bold">
         Subject: Appreciation for Your Valuable Contribution
       </div>
 
-      <div className="mt-4 space-y-3 text-sm leading-relaxed">
+      <div className="mt-5 space-y-4 text-sm leading-relaxed">
         <p>Dear {employeeName},</p>
-        {message.split("\n\n").map((para, i) => (
+
+        {/* Whatever was written in the form, paragraph by paragraph. */}
+        {message.split("\n\n").filter(Boolean).map((para, i) => (
           <p key={i} className="whitespace-pre-wrap">{para}</p>
         ))}
+
+        <p>
+          We truly appreciate the responsibility and professionalism you have
+          demonstrated in your work.
+        </p>
         <p>
           Your contribution to <span className="font-semibold">{achievement}</span> is
           highly appreciated, and we encourage you to continue maintaining the same
           level of dedication and excellence in your future endeavours.
         </p>
         <p>
-          We are proud to have you as part of the Pixous Technologies team and look
+          We are proud to have you as a part of the Pixous Technologies team and look
           forward to seeing you achieve many more milestones with us.
         </p>
-        <p className="font-medium">Congratulations, and keep up the excellent work.</p>
+        <p className="font-semibold">Congratulations and keep up the excellent work!</p>
       </div>
 
       <div className="mt-8 text-sm">
-        <div className="text-slate-600">Sincerely,</div>
-        <div className="mt-6 font-bold">{issuedByName}</div>
-        {issuedByRole && <div className="text-slate-600">{issuedByRole}</div>}
-        <div className="text-slate-600">Pixous Technologies</div>
+        <div>Sincerely,</div>
+        <div className="mt-8 font-bold">{issuedByName}</div>
+        {issuedByRole && <div>{issuedByRole}</div>}
+        <div>Pixous Technologies</div>
+      </div>
+
+      <div className="mt-8 border-t pt-3 text-center text-[9px] text-slate-400">
+        This message was sent by Pixous Technologies · pixoustech.com · Confidential
       </div>
     </div>
   );
@@ -579,17 +600,35 @@ function ViewDialog({ letter, isSubject, onClose, onDownloaded }: {
     A second PDF engine for one document would be a lot of machinery to keep
     working for something the browser already does properly.
   */
-  const print = async () => {
-    if (isSubject) {
-      try {
-        await api.post(`/appreciation/${letter.id}/downloaded`);
-        onDownloaded();
-      } catch {
-        // Recording the download is bookkeeping. Failing it must not stop
-        // somebody printing their own letter.
-      }
+  const [downloading, setDownloading] = useState(false);
+
+  /*
+    Downloads the letter the server renders, not a screenshot of the dialog.
+    Printing the page would carry the application's chrome and whatever the
+    browser decided about margins; the PDF is the same letter every time, and
+    it is the one that was emailed.
+
+    Fetched as a blob because the endpoint needs the Authorization header --
+    a plain link would arrive unauthenticated.
+  */
+  const download = async () => {
+    setDownloading(true);
+    try {
+      const res = await api.get(`/appreciation/${letter.id}/pdf`, { responseType: "blob" });
+      const url = URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Appreciation-${letter.referenceCode}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      if (isSubject) onDownloaded();
+    } catch (e) {
+      toast.error(apiMessage(e, "Could not download the letter"));
+    } finally {
+      setDownloading(false);
     }
-    window.print();
   };
 
   return (
@@ -601,8 +640,11 @@ function ViewDialog({ letter, isSubject, onClose, onDownloaded }: {
             {letter.referenceCode} · {letter.employeeName}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={print}>
-          <Download className="mr-1.5 h-4 w-4" /> Download / Print
+        <Button variant="outline" size="sm" onClick={download} disabled={downloading}>
+          {downloading
+            ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            : <Download className="mr-1.5 h-4 w-4" />}
+          Download PDF
         </Button>
       </div>
 

@@ -100,6 +100,7 @@ const HelpdeskPage = safeLazy(() => import("@/pages/Helpdesk"));
 const TicketEntryPage = safeLazy(() => import("@/pages/TicketEntry"));
 const ComplaintsPage = safeLazy(() => import("@/pages/Complaints"));
 const DisciplinePage = safeLazy(() => import("@/pages/Discipline"));
+const AppreciationPage = safeLazy(() => import("@/pages/Appreciation"));
 const ProfilePage = safeLazy(() => import("@/pages/Profile"));
 const NotificationsPage = safeLazy(() => import("@/pages/Notifications"));
 const TaExpensesPage = safeLazy(() => import("@/pages/TaExpenses"));
@@ -221,6 +222,7 @@ export const router = createBrowserRouter([
       { path: "helpdesk/new", element: page(<TicketEntryPage />) },
       { path: "complaints", element: page(<ComplaintsPage />) },
       { path: "discipline", element: page(<DisciplinePage />) },
+      { path: "appreciation", element: page(<AppreciationPage />) },
       { path: "notifications", element: page(<NotificationsPage />) },
       { path: "profile", element: page(<ProfilePage />) },
       { path: "ta-expenses", element: page(<TaExpensesPage />) },

@@ -108,16 +108,22 @@ export default function DisciplinePage() {
   const qc = useQueryClient();
   const { user, hasPermission } = useAuth();
 
-  const canManage = hasPermission("USER_MANAGE", "COMPLAINT_MANAGE");
-  const isCto = user?.employeeCode?.toUpperCase() === "PIX-E100"
-    || hasPermission("DASHBOARD_EXEC");
+  /*
+    The CTO reviews; HR and the administrators raise and manage. Both hold
+    USER_MANAGE -- it is the permission for managing employee records -- so
+    asking about the permission alone gave the CTO a Create button, an Edit and
+    a Cancel, none of which are theirs. The CTO is identified by account, and
+    managing is everyone else who holds the permission.
+  */
+  const isCto = user?.employeeCode?.toUpperCase() === "PIX-E100";
+  const canManage = !isCto && hasPermission("USER_MANAGE", "COMPLAINT_MANAGE");
 
   /*
     Which list is on screen. Mine is the only one every role has, so it is the
     fallback -- a tab nobody can load is worse than a tab nobody needs.
   */
   const [tab, setTab] = useState<"all" | "review" | "mine">(
-    canManage ? "all" : isCto ? "review" : "mine"
+    isCto ? "review" : canManage ? "all" : "mine"
   );
 
   const [q, setQ] = useState("");
@@ -213,7 +219,9 @@ export default function DisciplinePage() {
   const tabs = [
     ...(canManage ? [{ id: "all" as const, label: `All records (${(all.data ?? []).length})` }] : []),
     ...(isCto ? [{ id: "review" as const, label: `Pending review (${(review.data ?? []).length})` }] : []),
-    { id: "mine" as const, label: `My records (${(mine.data ?? []).length})` },
+    /* The CTO raises no records and has none about themselves, so a My
+       records tab could only ever read zero. */
+    ...(!isCto ? [{ id: "mine" as const, label: `My records (${(mine.data ?? []).length})` }] : []),
   ];
 
   if (loading && rawList.length === 0) return <PageLoader text="Loading discipline records..." />;
@@ -465,8 +473,18 @@ function CreateDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () =
       (await api.get<ApiEnvelope<{ content: any[] }>>("/users?size=1000")).data.data?.content ?? [],
   });
 
+  /*
+    People still working here. An offboarded account cannot be disciplined --
+    they have left, there is nobody to notify and nothing to answer -- and a
+    disabled one is the same in practice. Both were in the list, so the longest
+    part of the dropdown was names that could not be chosen usefully.
+  */
   const options = useMemo(
-    () => (employees.data ?? []).filter((u: any) => u?.id && u?.name),
+    () => (employees.data ?? []).filter((u: any) =>
+      u?.id && u?.name
+      && u.profileStatus !== "OFFBOARDED"
+      && u.active !== false
+      && u.enabled !== false),
     [employees.data]
   );
 
@@ -630,14 +648,14 @@ function EditDialog({ record, onClose, onSaved }: {
   const [subject, setSubject] = useState(record.subject);
   const [description, setDescription] = useState(record.description);
   const [actionTaken, setActionTaken] = useState(record.actionTaken || ACTIONS[0]);
-  const [status, setStatus] = useState(record.status);
+  // No status here: where a record stands is the CTO's to say.
 
   const save = useMutation({
     mutationFn: async () =>
       api.put(`/discipline/${record.id}`, {
         incidentDate, disciplineType, severity,
         subject: subject.trim(), description: description.trim(),
-        actionTaken, status,
+        actionTaken,
       }),
     onSuccess: () => { toast.success("Record updated"); onSaved(); },
     onError: (e) => toast.error(apiMessage(e, "Could not update the record")),
@@ -676,14 +694,9 @@ function EditDialog({ record, onClose, onSaved }: {
             {ACTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
           </Select>
         </div>
-        <div className="space-y-1.5 sm:col-span-2">
-          <Label>Status</Label>
-          <Select value={status} onChange={(e) => setStatus(e.target.value)}>
-            {STATUSES.filter((s) => s !== "CANCELLED").map((s) => (
-              <option key={s} value={s}>{pretty(s)}</option>
-            ))}
-          </Select>
-        </div>
+        {/* Status is deliberately absent. Where a record stands is the CTO's
+            to say -- HR moving one to Resolved would close a review that
+            never happened. */}
       </div>
       <div className="mt-4 space-y-1.5">
         <Label>Subject</Label>
@@ -871,7 +884,10 @@ function DetailDialog({ record, isCto, isSubject, onClose, onSaved }: {
       )}
 
       {/* The CTO writes the warning and says where the record now stands. */}
-      {isCto && record.status !== "CANCELLED" && (
+      {/* A closed or withdrawn record is finished. Leaving the remarks box and
+          Save review on one lets somebody reopen a decision by writing into it,
+          and the employee would be notified about a record already settled. */}
+      {isCto && !decided && (
         <div className="mt-4 space-y-3 border-t pt-4">
           <div className="space-y-1.5">
             <Label htmlFor="d-remarks">CTO remarks</Label>

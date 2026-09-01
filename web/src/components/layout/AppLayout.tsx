@@ -6,7 +6,7 @@ import {
   LifeBuoy, User, Bell, Menu, X, Moon, Sun, LogOut,
   FileBarChart, ClipboardList, Settings, Map, MessageSquareWarning, FileText,
   FolderOpen, ListTodo, FileArchive, CalendarDays, ChevronDown, Bot, Users2, Eraser, ScrollText,
-  PartyPopper, MessageSquare, Building2, FolderGit2, History, ShieldAlert, Lock
+  PartyPopper, MessageSquare, Building2, FolderGit2, History, ShieldAlert, Lock, Award
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useBranding } from "@/hooks/useBranding";
@@ -131,6 +131,9 @@ const NAV: NavEntry[] = [
   // record-and-review workflow, and a second switch for one page is a second
   // thing to remember to turn on.
   { to: "/discipline", label: "Discipline", icon: ShieldAlert, moduleCode: "HELPDESK" },
+  // Recognition sits beside Discipline: the same shape of record, read by the
+  // same people, and the counterweight to it.
+  { to: "/appreciation", label: "Appreciation", icon: Award, moduleCode: "HELPDESK" },
   { to: "/reports", label: "Reports", icon: FileBarChart, anyPermission: ["REPORT_VIEW"], excludeRole: ["SUPER_ADMIN", "COMPANY_ADMIN"], moduleCode: "REPORTS" },
   { to: "/chat", label: "Chat", icon: MessageSquareWarning, moduleCode: "CHAT" },
   /*

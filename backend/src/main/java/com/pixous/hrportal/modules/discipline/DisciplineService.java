@@ -46,6 +46,16 @@ public class DisciplineService {
 
     @Transactional
     public DisciplineDtos.View create(Long reporterId, DisciplineDtos.CreateRequest req) {
+        /*
+         * Raising is HR's. The CTO reviews what HR raised, and holds
+         * USER_MANAGE like HR does -- so the permission alone cannot separate
+         * them and the page's buttons cannot be the rule.
+         */
+        if (oversight.seesEveryRequest(reporterId)) {
+            throw ApiException.business(
+                    "Discipline records are raised by HR. Yours is the review.");
+        }
+
         User employee = userRepository.findById(req.employeeId())
                 .orElseThrow(() -> ApiException.notFound("Employee"));
 
@@ -134,6 +144,11 @@ public class DisciplineService {
      */
     @Transactional
     public DisciplineDtos.View update(Long actorId, Long id, DisciplineDtos.UpdateRequest req) {
+        // As with create: the CTO reviews rather than manages.
+        if (oversight.seesEveryRequest(actorId)) {
+            throw ApiException.business(
+                    "A discipline record is edited by HR. Yours is the review.");
+        }
         DisciplineRecord d = find(id);
         if ("CLOSED".equals(d.getStatus()) || "CANCELLED".equals(d.getStatus())) {
             throw ApiException.business(
@@ -166,6 +181,11 @@ public class DisciplineService {
      */
     @Transactional
     public void cancel(Long actorId, Long id) {
+        // As with create: the CTO reviews rather than manages.
+        if (oversight.seesEveryRequest(actorId)) {
+            throw ApiException.business(
+                    "A discipline record is withdrawn by HR. Yours is the review.");
+        }
         DisciplineRecord d = find(id);
         if ("CANCELLED".equals(d.getStatus())) {
             throw ApiException.business("This record is already cancelled.");
@@ -223,6 +243,11 @@ public class DisciplineService {
         DisciplineRecord d = find(id);
         if ("CANCELLED".equals(d.getStatus())) {
             throw ApiException.business("This record was withdrawn and cannot be reviewed.");
+        }
+        // Closing is the end of it. Writing into a closed record would reopen
+        // a decision and notify the employee about something already settled.
+        if ("CLOSED".equals(d.getStatus())) {
+            throw ApiException.business("This record is closed. Reopen it before reviewing again.");
         }
         String remarks = trimToNull(req.remarks());
         if (remarks != null) {

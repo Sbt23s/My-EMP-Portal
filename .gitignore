@@ -1,53 +1,149 @@
-# OS / editor
+# ==============================================================================
+# GitIgnore for HR Portal Project
+# Stack: Java/Spring Boot (Backend), React/Vite/Node (Web), Python (Analytics & Work)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Operating System & Editor / IDE Files
+# ------------------------------------------------------------------------------
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+desktop.ini
+
+# Editors & IDEs
 .idea/
 .vscode/
+*.swp
+*.swo
+*~
+*.bak
 *.iml
+.project
+.classpath
+.settings/
+.nbproject/
+.claude/
 
-# Node
-node_modules/
-dist/
-build/
-.expo/
-*.log
+# ------------------------------------------------------------------------------
+# Environment & Sensitive Configuration Files
+# ------------------------------------------------------------------------------
 .env
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
 .env.backup
 .env.*
+
+# Sensitive Credentials & Private Keys
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+docs/credentials/
+docs/downloads/Pixous_HR_Login_Credentials_v1.0.pdf
+docs/downloads/Pixous_HR_Login_Credentials_v1.0.html
+
+# Whitelist safe environment templates
 !.env.example
 !.env.production.example
 !**/.env.example
 !**/.env.production.example
-# web/.env.production holds no secrets: two empty/relative values that keep a
-# production build pointing at its own origin. Ignored, it protected only the
-# machine it was written on, and a fresh clone would rebuild with the developer
-# .env baked in -- which is how localhost:7060 reached production and broke
-# login for everyone.
+
+# web/.env.production holds non-secret configuration (origin binding).
+# Preserved to ensure fresh clones build pointing to their origin.
 !web/.env.production
 
-# Java / Maven
+# ------------------------------------------------------------------------------
+# Logs & System Crash Dumps
+# ------------------------------------------------------------------------------
+*.log
+hs_err_pid*.log
+replay_pid*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ------------------------------------------------------------------------------
+# Node.js & Web Application (web/)
+# ------------------------------------------------------------------------------
+node_modules/
+dist/
+dist-ssr/
+build/
+out/
+.next/
+.nuxt/
+.vuepress/dist/
+.output/
+.expo/
+.expo-shared/
+*.tsbuildinfo
+coverage/
+.nyc_output/
+.pnpm-store/
+
+# ------------------------------------------------------------------------------
+# Java & Maven (backend/)
+# ------------------------------------------------------------------------------
 target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
 !.mvn/wrapper/maven-wrapper.jar
 
-# Runtime storage (generated PDFs, QR codes, uploads)
+# Runtime storage (generated PDFs, avatars, QR codes, uploads)
 backend/storage/
 
-# Python (analytics-service)
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-
-# Generated face embeddings (enrolled at runtime, not source)
-analytics-service/faces/*.npy
-
-# Two empty files created by mistyped shell commands. Left on disk rather
-# than deleted, but they are not part of the project.
+# Terminal artifact files from mistyped shell commands
 backend/\[Help
 backend/localStorage.removeItem(k))
 
-# Login credentials export (sensitive - plain-text passwords, NEVER push)
-docs/credentials/
-docs/downloads/Pixous_HR_Login_Credentials_v1.0.pdf
-docs/downloads/Pixous_HR_Login_Credentials_v1.0.html
+# ------------------------------------------------------------------------------
+# Python & Analytics (analytics-service/ & work/)
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+.venv*/
+venv*/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# Generated face embeddings (enrolled at runtime)
+analytics-service/faces/*.npy
+
+# ------------------------------------------------------------------------------
+# Mobile Apps & Build Packages / Archives
+# ------------------------------------------------------------------------------
+*.apk
+*.aab
+*.ipa
+*.xcarchive
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# Temporary / Scratch files
+scratch/
+tmp/
+temp/

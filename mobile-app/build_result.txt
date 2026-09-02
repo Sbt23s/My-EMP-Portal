@@ -1,9 +1,0 @@
-START Tue Aug 25 07:39:39 IST 2026
-
-If you are a plugin author, please migrate your plugin to Built-in Kotlin using this guide: https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-plugin-authors
-Font asset "MaterialIcons-Regular.otf" was tree-shaken, reducing it from 1645184 to 24140 bytes (98.5% reduction). Tree-shaking can be disabled by providing the --no-tree-shake-icons flag when building your app.
-Running Gradle task 'assembleRelease'...                          109.6s
-√ Built build\app\outputs\flutter-apk\app-release.apk (92.9MB)
-EXIT 0
-END Tue Aug 25 07:41:38 IST 2026
--rw-r--r-- 1 balas 197609 93M Aug 25 07:41 build/app/outputs/flutter-apk/app-release.apk

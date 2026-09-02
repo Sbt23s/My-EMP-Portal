@@ -1,0 +1,3 @@
+@echo off
+echo Opening Web Application Master Analysis PDF...
+start "" "C:\Users\balas\Documents\product level\GitHub\hr-port\Web_Application_Master_Analysis.pdf"

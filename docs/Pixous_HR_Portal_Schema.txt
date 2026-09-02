@@ -1,0 +1,1230 @@
+PIXOUS HR PORTAL - MySQL SCHEMA
+82 tables, 900 columns, 67 foreign keys
+
+Table:announcements
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+title                          varchar(200)       
+body                           text               
+published_at                   datetime           
+created_by                     varchar(60)        
+company_id                     bigint             
+
+Table:appreciation_letters
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+reference_code                 varchar(30)        Unique
+employee_id                    bigint             FK -> users.id
+issued_by                      bigint             FK -> users.id
+letter_date                    date               
+achievement                    varchar(120)       
+message                        text               
+template                       varchar(40)        
+status                         varchar(20)        
+viewed_at                      datetime           
+downloaded_at                  datetime           
+created_at                     datetime           
+updated_at                     datetime           
+
+Table:asset_allocations
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+asset_id                       bigint             FK -> assets.id
+user_id                        bigint             FK -> users.id
+allocated_at                   datetime           
+acknowledged                   tinyint(1)         
+acknowledged_at                datetime           
+returned_at                    datetime           
+return_condition               varchar(20)        
+company_id                     bigint             
+
+Table:asset_maintenance
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+asset_id                       bigint             FK -> assets.id
+fault_desc                     varchar(500)       
+vendor                         varchar(120)       
+estimated_tat                  varchar(60)        
+cost                           decimal(12,2)      
+status                         varchar(20)        
+scheduled_for                  date               
+interval_days                  int                
+interval_hours                 int                
+logged_at                      datetime           
+company_id                     bigint             
+
+Table:assets
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+asset_code                     varchar(40)        Unique
+category                       varchar(30)        
+asset_type                     varchar(60)        
+brand                          varchar(80)        
+model                          varchar(80)        
+serial_number                  varchar(120)       
+registration_no                varchar(60)        
+purchase_date                  date               
+purchase_cost                  decimal(12,2)      
+warranty_expiry                date               
+amc_expiry                     date               
+status                         varchar(20)        
+site_id                        bigint             
+assigned_to                    bigint             
+qr_path                        varchar(255)       
+depreciation_rate              decimal(5,2)       
+created_at                     datetime           
+updated_at                     datetime           
+quantity                       int                
+company_id                     bigint             
+
+Table:attendance
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+work_date                      date               Unique
+punch_in_at                    datetime           
+punch_out_at                   datetime           
+mode                           varchar(20)        
+in_latitude                    decimal(10,7)      
+in_longitude                   decimal(10,7)      
+out_latitude                   decimal(10,7)      
+out_longitude                  decimal(10,7)      
+site_id                        bigint             
+shift_id                       bigint             
+within_geofence                tinyint(1)         
+status                         varchar(20)        
+is_late                        tinyint(1)         
+late_minutes                   int                
+worked_minutes                 int                
+overtime_minutes               int                
+geofence_exception             tinyint(1)         
+created_at                     datetime           
+updated_at                     datetime           
+face_verified                  tinyint(1)         
+face_photo_path                varchar(255)       
+face_score                     decimal(5,4)       
+out_face_verified              tinyint(1)         
+out_face_photo_path            varchar(255)       
+out_face_score                 decimal(5,4)       
+face_detail                    text               
+out_face_detail                text               
+in_accuracy_m                  int                
+out_accuracy_m                 int                
+in_device                      varchar(255)       
+out_device                     varchar(255)       
+company_id                     bigint             
+
+Table:audit_log
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+actor_id                       bigint             
+user_name                      varchar(150)       
+employee_code                  varchar(30)        
+roles                          varchar(255)       
+category                       varchar(40)        
+action                         varchar(120)       
+summary                        varchar(500)       
+entity_type                    varchar(80)        
+entity_id                      varchar(60)        
+entity_label                   varchar(200)       
+details                        text               
+ip_address                     varchar(45)        
+created_at                     datetime           
+method                         varchar(10)        
+path                           varchar(400)       
+status                         int                
+device                         varchar(255)       
+duration_ms                    int                
+succeeded                      tinyint(1)         
+company_id                     bigint             
+
+Table:bank_details
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+bank_name                      varchar(120)       
+branch_name                    varchar(120)       
+account_number                 varchar(40)        
+ifsc_code                      varchar(20)        
+account_holder_name            varchar(150)       
+is_primary                     tinyint(1)         
+created_at                     datetime           
+updated_at                     datetime           
+company_id                     bigint             
+
+Table:blood_groups
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+name                           varchar(10)        
+active                         tinyint(1)         
+
+Table:branches
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+company_id                     bigint             FK -> companies.id
+name                           varchar(150)       
+code                           varchar(40)        Unique
+address                        varchar(255)       
+created_at                     datetime           
+
+Table:chatbot_knowledge
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+source                         varchar(255)       
+title                          varchar(255)       
+content                        text               
+enabled                        tinyint(1)         
+created_at                     datetime           
+updated_at                     datetime           
+company_id                     bigint             
+
+Table:communities
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+name                           varchar(255)       
+description                    text               
+created_by                     bigint             FK -> users.id
+created_at                     timestamp          
+is_announcement                tinyint(1)         
+company_id                     bigint             
+
+Table:community_members
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+community_id                   bigint             PK
+user_id                        bigint             PK
+joined_at                      timestamp          
+
+Table:community_message_reactions
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+message_id                     bigint             FK -> community_messages.id
+user_id                        bigint             FK -> users.id
+emoji                          varchar(16)        Unique
+created_at                     datetime           
+
+Table:community_message_reads
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+message_id                     bigint             FK -> community_messages.id
+user_id                        bigint             FK -> users.id
+read_at                        datetime           
+acknowledged_at                datetime           
+
+Table:community_messages
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+community_id                   bigint             FK -> communities.id
+parent_id                      bigint             FK -> community_messages.id
+sender_id                      bigint             FK -> users.id
+content                        text               
+audio_path                     varchar(255)       
+attachments                    text               
+sent_at                        timestamp          
+pinned_at                      datetime           
+pinned_by                      bigint             
+scheduled_at                   datetime           
+requires_ack                   tinyint(1)         
+poll_options                   text               
+company_id                     bigint             
+
+Table:community_poll_votes
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+message_id                     bigint             FK -> community_messages.id
+user_id                        bigint             FK -> users.id
+option_index                   int                
+voted_at                       datetime           
+
+Table:companies
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+company_name                   varchar(150)       
+code                           varchar(40)        Unique
+industry                       varchar(20)        
+created_at                     datetime           
+company_id                     varchar(20)        Unique
+legal_name                     varchar(150)       
+email                          varchar(150)       
+phone                          varchar(20)        
+website                        varchar(150)       
+address                        varchar(255)       
+country                        varchar(100)       
+state                          varchar(100)       
+city                           varchar(100)       
+timezone                       varchar(50)        
+currency                       varchar(10)        
+date_format                    varchar(20)        
+language                       varchar(20)        
+organization_type              varchar(50)        
+employee_count                 int                
+status                         varchar(20)        
+logo_path                      varchar(255)       
+primary_color                  varchar(20)        
+secondary_color                varchar(20)        
+updated_at                     timestamp          
+created_by                     varchar(60)        
+updated_by                     varchar(60)        
+
+Table:company_events
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+title                          varchar(200)       
+description                    text               
+event_type                     varchar(30)        
+event_date                     date               
+end_date                       date               
+start_time                     time               
+end_time                       time               
+location                       varchar(200)       
+audience_team                  varchar(150)       
+created_by                     bigint             
+created_at                     datetime           
+company_id                     bigint             
+
+Table:company_modules
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+created_at                     timestamp          
+updated_at                     timestamp          
+created_by                     varchar(60)        
+updated_by                     varchar(60)        
+company_id                     bigint             FK -> companies.id
+module_code                    varchar(50)        Unique
+enabled                        tinyint(1)         
+feature_flags                  text               
+
+Table:complaints_needs
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+reference_code                 varchar(30)        Unique
+raised_by                      bigint             FK -> users.id
+requested_to                   bigint             
+kind                           varchar(20)        
+category                       varchar(60)        
+subject                        varchar(200)       
+description                    text               
+priority                       varchar(20)        
+status                         varchar(20)        
+hr_response                    text               
+handled_by                     bigint             
+resolved_at                    datetime           
+created_at                     datetime           
+updated_at                     datetime           
+company_id                     bigint             
+
+Table:departments
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+name                           varchar(120)       
+code                           varchar(40)        Unique
+active                         tinyint(1)         
+company_id                     bigint             
+
+Table:designations
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+name                           varchar(120)       
+code                           varchar(40)        Unique
+active                         tinyint(1)         
+industry                       varchar(20)        
+company_id                     bigint             
+
+Table:discipline_records
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+reference_code                 varchar(30)        Unique
+employee_id                    bigint             FK -> users.id
+reported_by                    bigint             FK -> users.id
+incident_date                  date               
+discipline_type                varchar(60)        
+severity                       varchar(20)        
+subject                        varchar(200)       
+description                    text               
+action_taken                   varchar(60)        
+attachments                    text               
+employee_response              text               
+responded_at                   datetime           
+cto_remarks                    text               
+reviewed_by                    bigint             
+reviewed_at                    datetime           
+status                         varchar(20)        
+created_at                     datetime           
+updated_at                     datetime           
+
+Table:educations
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+qualification                  varchar(120)       
+institution                    varchar(180)       
+year_of_passing                int                
+grade                          varchar(40)        
+company_id                     bigint             
+
+Table:employee_documents
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+doc_type                       varchar(40)        
+file_path                      varchar(255)       
+original_name                  varchar(200)       
+verified                       tinyint(1)         
+uploaded_at                    datetime           
+company_id                     bigint             
+
+Table:employee_imports
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+file_name                      varchar(255)       
+imported_by                    bigint             FK -> users.id
+imported_at                    datetime           
+total_rows                     int                
+created_count                  int                
+failed_count                   int                
+reverted_at                    datetime           
+reverted_by                    bigint             
+company_id                     bigint             
+
+Table:employment_statuses
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+name                           varchar(60)        
+active                         tinyint(1)         
+
+Table:expense_claims
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+category                       varchar(60)        
+amount                         decimal(12,2)      
+claim_date                     date               
+receipt_path                   varchar(255)       
+manager_status                 varchar(20)        
+finance_status                 varchar(20)        
+created_at                     datetime           
+company_id                     bigint             
+
+Table:experiences
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+company_name                   varchar(180)       
+designation                    varchar(120)       
+from_date                      date               
+to_date                        date               
+company_id                     bigint             
+
+Table:family_members
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+name                           varchar(150)       
+relationship                   varchar(40)        
+dob                            date               
+phone                          varchar(15)        
+is_nominee                     tinyint(1)         
+company_id                     bigint             
+
+Table:flyway_schema_history
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+installed_rank                 int                PK
+version                        varchar(50)        
+description                    varchar(200)       
+type                           varchar(20)        
+script                         varchar(1000)      
+checksum                       int                
+installed_by                   varchar(100)       
+installed_on                   timestamp          
+execution_time                 int                
+success                        tinyint(1)         
+
+Table:global_login_announcements
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+title                          varchar(255)       
+description                    text               
+media_type                     varchar(50)        
+media_url                      varchar(1000)      
+media_name                     varchar(255)       
+media_size                     bigint             
+status                         varchar(50)        
+target_roles                   varchar(500)       
+duration_seconds               int                
+created_by                     bigint             
+created_by_name                varchar(255)       
+created_at                     datetime           
+updated_at                     datetime           
+published_at                   datetime           
+deleted_at                     datetime           
+effect_url                     varchar(1000)      
+effect_name                    varchar(255)       
+effect_size                    bigint             
+effect_enabled                 tinyint(1)         
+
+Table:holidays
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+name                           varchar(120)       
+holiday_date                   date               
+state                          varchar(80)        
+site_id                        bigint             
+created_at                     datetime           
+company_id                     bigint             
+
+Table:investment_declarations
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+fin_year                       varchar(9)         
+section                        varchar(20)        
+declared_amount                decimal(12,2)      
+proof_path                     varchar(255)       
+status                         varchar(20)        
+created_at                     datetime           
+
+Table:leave_balances
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+leave_type_id                  bigint             FK -> leave_types.id
+year                           int                Unique
+allocated                      decimal(5,1)       
+used                           decimal(5,1)       
+company_id                     bigint             
+
+Table:leave_requests
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+leave_type_id                  bigint             FK -> leave_types.id
+from_date                      date               
+to_date                        date               
+working_days                   decimal(5,1)       
+reason                         varchar(500)       
+attachment_path                varchar(255)       
+status                         varchar(20)        
+decided_by                     bigint             
+decided_at                     datetime           
+decision_comment               varchar(500)       
+created_at                     datetime           
+updated_at                     datetime           
+requested_to                   bigint             
+company_id                     bigint             
+
+Table:leave_types
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+name                           varchar(80)        
+code                           varchar(20)        Unique
+max_days_per_year              int                
+carry_forward                  tinyint(1)         
+encashable                     tinyint(1)         
+gender_restriction             char(1)            
+allow_past_dates               tinyint(1)         
+accrual_type                   varchar(20)        
+min_notice_days                int                
+active                         tinyint(1)         
+monthly_limit                  int                
+paid                           tinyint(1)         
+company_id                     bigint             
+
+Table:login_history
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             
+aadhar                         varchar(12)        
+username                       varchar(60)        
+success                        tinyint(1)         
+ip_address                     varchar(45)        
+user_agent                     varchar(255)       
+created_at                     datetime           
+company_id                     bigint             
+
+Table:notifications
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+title                          varchar(200)       
+body                           varchar(500)       
+type                           varchar(40)        
+link                           varchar(255)       
+is_read                        tinyint(1)         
+created_at                     datetime           
+company_id                     bigint             
+
+Table:offboarding_records
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+relieving_date                 date               
+reason                         varchar(150)       
+notes                          text               
+fnf_status                     varchar(20)        
+created_at                     datetime           
+updated_at                     datetime           
+created_by                     varchar(60)        
+updated_by                     varchar(60)        
+
+Table:office_locations
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+name                           varchar(150)       
+address                        varchar(255)       
+latitude                       decimal(10,7)      
+longitude                      decimal(10,7)      
+geofence_radius_metres         int                
+active                         tinyint(1)         
+company_id                     bigint             
+
+Table:onboarding_checklists
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+completed_at                   datetime           
+status                         varchar(20)        
+started_at                     datetime           
+
+Table:onboarding_tasks
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+checklist_id                   bigint             FK -> onboarding_checklists.id
+task_name                      varchar(120)       
+description                    varchar(255)       
+is_completed                   tinyint(1)         
+completed_at                   datetime           
+
+Table:otp_codes
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+phone                          varchar(15)        
+code                           varchar(8)         
+purpose                        varchar(30)        
+expires_at                     datetime           
+consumed                       tinyint(1)         
+created_at                     datetime           
+
+Table:payroll_runs
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+pay_month                      int                Unique
+pay_year                       int                Unique
+status                         varchar(20)        
+run_by                         bigint             
+run_at                         datetime           
+finance_approved_by            bigint             
+finance_approved_at            datetime           
+created_at                     datetime           
+company_id                     bigint             
+
+Table:payslip_requests
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+pay_month                      int                
+pay_year                       int                
+note                           varchar(500)       
+status                         varchar(20)        
+payslip_id                     bigint             
+decided_by                     bigint             
+decided_at                     datetime           
+decision_note                  varchar(500)       
+created_at                     datetime           
+updated_at                     datetime           
+
+Table:payslips
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+payroll_run_id                 bigint             
+user_id                        bigint             FK -> users.id
+pay_month                      int                Unique
+pay_year                       int                Unique
+basic_salary                   decimal(12,2)      
+hra                            decimal(12,2)      
+allowances                     decimal(12,2)      
+overtime_pay                   decimal(12,2)      
+gross_salary                   decimal(12,2)      
+pf_deduction                   decimal(12,2)      
+esi_deduction                  decimal(12,2)      
+pt_deduction                   decimal(12,2)      
+tds_deduction                  decimal(12,2)      
+other_deductions               decimal(12,2)      
+total_deductions               decimal(12,2)      
+net_pay                        decimal(12,2)      
+lop_days                       decimal(5,1)       
+pdf_path                       varchar(255)       
+revision                       int                
+generated_at                   datetime           
+company_name                   varchar(160)       
+company_logo                   varchar(255)       
+company_gstin                  varchar(40)        
+company_address                varchar(400)       
+bank_name                      varchar(120)       
+bank_account                   varchar(60)        
+designation                    varchar(120)       
+department                     varchar(120)       
+pay_date                       date               
+working_days                   int                
+performance_pay                decimal(12,2)      
+expenses_pay                   decimal(12,2)      
+salary_advance                 decimal(12,2)      
+health_insurance               decimal(12,2)      
+source                         varchar(20)        
+company_id                     bigint             
+
+Table:performance_goals
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+title                          varchar(150)       
+description                    text               
+progress                       int                
+status                         varchar(20)        
+created_at                     datetime           
+updated_at                     datetime           
+
+Table:performance_reviews
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+manager_id                     bigint             FK -> users.id
+review_period                  varchar(20)        
+self_rating                    int                
+self_comment                   text               
+manager_rating                 int                
+manager_comment                text               
+status                         varchar(20)        
+created_at                     datetime           
+updated_at                     datetime           
+
+Table:permission_requests
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+request_date                   date               
+from_time                      varchar(5)         
+to_time                        varchar(5)         
+hours                          decimal(4,2)       
+reason                         varchar(500)       
+priority                       varchar(10)        
+status                         varchar(20)        
+decided_by                     bigint             
+decided_at                     timestamp          
+decision_comment               varchar(500)       
+created_at                     timestamp          
+requested_to                   bigint             
+
+Table:permissions
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+code                           varchar(60)        Unique
+name                           varchar(120)       
+
+Table:positions
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+name                           varchar(120)       
+active                         tinyint(1)         
+code                           varchar(40)        
+
+Table:projects
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+name                           varchar(150)       
+code                           varchar(40)        Unique
+description                    text               
+category                       varchar(20)        
+manager_id                     bigint             FK -> users.id
+status                         varchar(20)        
+start_date                     date               
+end_date                       date               
+active                         tinyint(1)         
+created_at                     datetime           
+updated_at                     datetime           
+
+Table:refresh_tokens
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+token                          varchar(512)       Unique
+expires_at                     datetime           
+revoked                        tinyint(1)         
+created_at                     datetime           
+
+Table:request_attachments
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+request_type                   varchar(20)        
+request_id                     bigint             
+file_path                      varchar(500)       
+file_name                      varchar(255)       
+content_type                   varchar(120)       
+file_size                      bigint             
+uploaded_by                    bigint             
+uploaded_at                    datetime           
+
+Table:request_comments
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+request_type                   varchar(20)        
+request_id                     bigint             
+author_id                      bigint             
+message                        text               
+attachment_path                varchar(500)       
+created_at                     datetime           
+
+Table:role_permissions
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+role_id                        bigint             PK
+permission_id                  bigint             PK
+
+Table:roles
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+code                           varchar(40)        
+name                           varchar(120)       
+industry                       varchar(20)        
+description                    varchar(255)       
+created_at                     datetime           
+company_id                     bigint             
+
+Table:safety_incidents
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+reference_code                 varchar(30)        
+reported_by                    bigint             
+site_id                        bigint             
+incident_type                  varchar(40)        
+severity                       varchar(20)        
+description                    text               
+zone                           varchar(120)       
+anonymous                      tinyint(1)         
+status                         varchar(20)        
+resolved_by                    bigint             
+resolved_at                    datetime           
+resolution_notes               text               
+occurred_at                    datetime           
+created_at                     datetime           
+company_id                     bigint             
+
+Table:salary_months
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+pay_year                       int                Unique
+pay_month                      int                Unique
+basic_salary                   decimal(12,2)      
+created_at                     datetime           
+updated_at                     datetime           
+
+Table:salary_structures
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+basic_salary                   decimal(12,2)      
+hra                            decimal(12,2)      
+allowances                     decimal(12,2)      
+pf_percentage                  decimal(12,2)      
+esi_applicable                 tinyint(1)         
+pt_amount                      decimal(8,2)       
+effective_from                 date               
+active                         tinyint(1)         
+created_at                     datetime           
+company_id                     bigint             
+
+Table:shifts
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+name                           varchar(60)        
+start_time                     time               
+end_time                       time               
+is_night                       tinyint(1)         
+active                         tinyint(1)         
+company_id                     bigint             
+
+Table:sites
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+name                           varchar(150)       
+code                           varchar(40)        Unique
+address                        varchar(255)       
+latitude                       decimal(10,7)      
+longitude                      decimal(10,7)      
+geofence_radius_metres         int                
+project_start                  date               
+project_end                    date               
+site_manager_id                bigint             
+active                         tinyint(1)         
+created_at                     datetime           
+company_id                     bigint             
+
+Table:software_licenses
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+product_name                   varchar(120)       
+vendor                         varchar(120)       
+license_key                    varchar(255)       
+license_type                   varchar(20)        
+seats_purchased                int                
+seats_consumed                 int                
+expiry_date                    date               
+created_at                     datetime           
+
+Table:system_files
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             varchar(255)       PK
+file_name                      varchar(255)       
+content_type                   varchar(100)       
+size_bytes                     bigint             
+data                           longblob           
+created_at                     timestamp          
+company_id                     varchar(36)        
+
+Table:system_settings
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+setting_key                    varchar(50)        PK
+setting_value                  varchar(255)       
+description                    varchar(255)       
+updated_at                     datetime           
+company_id                     bigint             
+
+Table:ta_expenses
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+date                           date               
+location                       varchar(150)       
+starting_km                    int                
+ending_km                      int                
+total_km                       int                
+hills_km                       int                
+plains_km                      int                
+total_amount                   decimal(10,2)      
+bus_fare                       decimal(10,2)      
+others                         decimal(10,2)      
+gross_total                    decimal(10,2)      
+remarks                        varchar(255)       
+status                         varchar(20)        
+created_at                     datetime           
+updated_at                     datetime           
+created_by                     varchar(60)        
+updated_by                     varchar(60)        
+petrol_slip_path               varchar(255)       
+photos                         text               
+category                       varchar(80)        
+decision_comment               varchar(500)       
+decided_by                     bigint             
+decided_at                     datetime           
+
+Table:task_messages
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+task_id                        bigint             FK -> tasks.id
+sender_id                      bigint             
+content                        text               
+attachments                    text               
+sent_at                        datetime           
+
+Table:tasks
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+title                          varchar(200)       
+description                    text               
+assigned_to                    bigint             FK -> users.id
+assigned_by                    bigint             FK -> users.id
+status                         varchar(20)        
+due_date                       date               
+created_at                     datetime           
+completed_at                   datetime           
+team_batch_id                  varchar(40)        
+team_name                      varchar(150)       
+progress                       int                
+priority                       varchar(10)        
+reminded_before                date               
+reminded_due                   date               
+reminded_overdue               date               
+company_id                     bigint             
+
+Table:team_leader_team
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             Unique
+team_title                     varchar(160)       Unique
+created_at                     datetime           
+created_by                     bigint             
+
+Table:team_members
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+team_id                        bigint             FK -> teams.id
+user_id                        bigint             FK -> users.id
+member_role                    varchar(60)        
+joined_at                      datetime           
+
+Table:teams
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+name                           varchar(120)       
+category                       varchar(60)        
+project_id                     bigint             FK -> projects.id
+team_lead_id                   bigint             FK -> users.id
+description                    varchar(255)       
+active                         tinyint(1)         
+created_at                     datetime           
+
+Table:technical_admins
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+created_at                     timestamp          
+updated_at                     timestamp          
+created_by                     varchar(60)        
+updated_by                     varchar(60)        
+username                       varchar(60)        Unique
+name                           varchar(150)       
+email                          varchar(150)       
+password_hash                  varchar(255)       
+enabled                        tinyint(1)         
+mfa_enabled                    tinyint(1)         
+failed_login_count             int                
+locked_until                   timestamp          
+last_login_at                  timestamp          
+
+Table:technical_audit_logs
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+created_at                     timestamp          
+updated_at                     timestamp          
+created_by                     varchar(60)        
+updated_by                     varchar(60)        
+company_id                     bigint             
+admin_id                       bigint             
+admin_username                 varchar(100)       
+action                         varchar(100)       
+entity_type                    varchar(100)       
+entity_id                      bigint             
+old_value                      text               
+new_value                      text               
+ip_address                     varchar(255)       
+
+Table:ticket_comments
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+ticket_id                      bigint             FK -> tickets.id
+author_id                      bigint             
+comment                        text               
+attachment_path                varchar(255)       
+created_at                     datetime           
+company_id                     bigint             
+
+Table:tickets
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+ticket_code                    varchar(30)        Unique
+raised_by                      bigint             FK -> users.id
+title                          varchar(200)       
+description                    text               
+attachments                    text               
+type                           varchar(20)        
+category                       varchar(40)        
+priority                       varchar(20)        
+status                         varchar(20)        
+assigned_to                    bigint             
+sla_due_at                     datetime           
+rating                         int                
+resolved_at                    datetime           
+created_at                     datetime           
+updated_at                     datetime           
+company_id                     bigint             
+
+Table:user_roles
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+user_id                        bigint             PK
+role_id                        bigint             PK
+
+Table:users
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+employee_code                  varchar(40)        Unique
+username                       varchar(60)        Unique
+name                           varchar(150)       
+dob                            date               
+gender                         char(1)            
+aadhar                         varchar(12)        Unique
+phone                          varchar(15)        Unique
+email                          varchar(150)       
+password_hash                  varchar(255)       
+password_vault                 varchar(255)       
+photo_path                     varchar(255)       
+cover_photo_path               varchar(512)       
+documents                      text               
+care_of                        varchar(120)       
+house                          varchar(120)       
+street                         varchar(150)       
+locality                       varchar(150)       
+vtc                            varchar(120)       
+district                       varchar(120)       
+state                          varchar(120)       
+country                        varchar(120)       
+pincode                        varchar(10)        
+post_office                    varchar(120)       
+blood_group_id                 bigint             
+department_id                  bigint             
+designation_id                 bigint             
+office_location_id             bigint             
+employment_status_id           bigint             
+position_id                    bigint             
+reporting_manager_id           bigint             
+site_id                        bigint             
+employment_type                varchar(30)        
+date_of_joining                date               
+probation_end_date             date               
+industry                       varchar(20)        
+profile_status                 varchar(20)        
+enabled                        tinyint(1)         
+failed_login_count             int                
+locked_until                   datetime           
+last_login_at                  datetime           
+created_by                     varchar(60)        
+updated_by                     varchar(60)        
+created_at                     datetime           
+updated_at                     datetime           
+pan                            varchar(20)        
+pf_number                      varchar(30)        
+alternate_phone                varchar(20)        
+emergency_contact              varchar(120)       
+emergency_contact_relation     varchar(60)        
+blood_group                    varchar(10)        
+personal_email                 varchar(150)       
+designation_title              varchar(150)       
+department_title               varchar(150)       
+position_title                 varchar(120)       
+tech_stack                     text               
+last_seen_at                   datetime           
+import_batch_id                bigint             FK -> employee_imports.id
+face_photo_path                varchar(255)       
+face_registered_at             datetime           
+face_registered_by             bigint             FK -> users.id
+company_id                     bigint             
+
+Table:wfh_requests
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+company_id                     bigint             
+user_id                        bigint             
+from_date                      date               
+to_date                        date               
+working_days                   decimal(5,2)       
+reason                         varchar(1000)      
+remarks                        varchar(1000)      
+status                         varchar(20)        
+requested_to                   bigint             
+decided_by                     bigint             
+decided_at                     datetime           
+decision_comment               varchar(1000)      
+created_at                     datetime           
+updated_at                     datetime           
+
+Table:work_reports
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+work_date                      date               
+project_name                   varchar(160)       
+work_hours                     decimal(4,1)       
+task_description               text               
+created_at                     datetime           
+updated_at                     datetime           
+attachments                    text               
+company_id                     bigint             
+
+Table:worker_skills
+Column                         Data type          Key / Reference
+------------------------------------------------------------------------------
+id                             bigint             PK
+user_id                        bigint             FK -> users.id
+trade                          varchar(80)        
+skill_level                    varchar(30)        
+certification                  varchar(120)       
+cert_expiry                    date               
+assessed_by                    bigint             
+assessed_at                    datetime           

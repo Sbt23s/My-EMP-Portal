@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixous HR Mobile App - Sidebar Menu & Live Preview</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@lucide/web"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background-color: #0F172A; color: #1E293B; min-height: 100vh; display: flex; padding: 20px; gap: 24px; overflow-x: auto; }
+    
+    .preview-container { display: flex; width: 100%; max-width: 1400px; margin: 0 auto; gap: 24px; }
+    .left-panel { flex: 0 0 420px; display: flex; flex-direction: column; align-items: center; }
+    .device-frame { width: 390px; height: 820px; background: #F4F6FB; border-radius: 48px; border: 12px solid #334155; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+    .notch { width: 140px; height: 26px; background: #334155; position: absolute; top: 0; left: 50%; transform: translateX(-50%); border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; z-index: 100; }
+    
+    .right-panel { flex: 1; background: #1E293B; border-radius: 24px; padding: 24px; color: #E2E8F0; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; height: 820px; border: 1px solid #334155; }
+    .panel-header { font-size: 20px; font-weight: 700; color: white; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 12px; }
+    
+    /* Top Bar with Sidebar Hamburger Button */
+    .top-bar { background: #F4F6FB; padding: 36px 16px 10px; display: flex; justify-content: space-between; align-items: center; z-index: 10; border-bottom: 1px solid #E2E8F0; }
+    .menu-btn { background: white; padding: 8px; border-radius: 12px; border: 1px solid #E2E8F0; cursor: pointer; color: #1E293B; display: flex; align-items: center; justify-content: center; }
+    .role-badge { background: linear-gradient(135deg, #5E35B1, #3949AB); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 10px rgba(94, 53, 177, 0.3); }
+    
+    .live-badge { background: #E6F4EA; color: #137333; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+    .live-dot { width: 6px; height: 6px; background: #10B981; border-radius: 50%; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+    /* Sliding Sidebar Drawer Component */
+    .sidebar-drawer { position: absolute; inset: 0; background: linear-gradient(180deg, #283593, #1A237E); color: white; z-index: 300; display: none; flex-direction: column; padding: 50px 24px 24px; }
+    .drawer-item { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 14px; font-size: 14px; font-weight: 600; cursor: pointer; color: rgba(255,255,255,0.9); }
+    .drawer-item:hover, .drawer-item.active { background: rgba(255,255,255,0.15); color: white; }
+
+    .screen-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+    .screen-page { padding: 16px 20px; display: none; flex-direction: column; gap: 16px; }
+    .screen-page.active { display: flex; }
+    
+    .card-purple { background: linear-gradient(135deg, #673AB7, #3F51B5); color: white; padding: 20px; border-radius: 24px; box-shadow: 0 10px 20px rgba(103, 58, 183, 0.2); }
+    .card-white { background: white; border-radius: 20px; padding: 16px; border: 1px solid #F1F5F9; color: #1E293B; }
+    .quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; }
+    .action-btn { background: white; padding: 12px 6px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; font-size: 11px; font-weight: 600; color: #1E293B; box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
+    .action-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
+    .stat-card { background: white; padding: 10px 4px; border-radius: 14px; color: #1E293B; }
+    
+    .role-tabs { display: flex; background: white; padding: 4px; border-radius: 14px; border: 1px solid #E2E8F0; margin-top: 14px; }
+    .role-tab { flex: 1; text-align: center; padding: 8px 0; font-size: 11px; font-weight: 700; color: #64748B; border-radius: 10px; cursor: pointer; }
+    .role-tab.active { background: #5E35B1; color: white; }
+
+    .bottom-nav { background: white; padding: 10px 16px 20px; display: flex; justify-content: space-around; border-top: 1px solid #E2E8F0; z-index: 10; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: #94A3B8; cursor: pointer; gap: 4px; }
+    .nav-item.active { color: #5E35B1; font-weight: 700; }
+    
+    .log-box { background: #0F172A; padding: 14px; border-radius: 12px; font-family: monospace; font-size: 12px; color: #38BDF8; line-height: 1.6; border: 1px solid #334155; }
+    .modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: flex-end; z-index: 200; }
+    .modal-card { background: white; width: 100%; border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+    .modal-opt { padding: 12px; border-radius: 12px; background: #F8FAFC; cursor: pointer; display: flex; justify-content: space-between; font-weight: 600; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+  <div class="preview-container">
+    
+    <!-- LEFT PANEL: MOBILE DEVICE -->
+    <div class="left-panel">
+      <div style="color: white; font-weight: 700; font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="smartphone"></i> Live Flutter Mobile App
+      </div>
+
+      <div class="device-frame">
+        <div class="notch"></div>
+        
+        <!-- Sliding Sidebar Drawer -->
+        <div class="sidebar-drawer" id="sidebar-drawer">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <img id="drawer-avatar" src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150" style="width: 48px; height: 48px; border-radius: 50%; border: 2px solid white;">
+              <div>
+                <div id="drawer-user" style="font-weight: 700; font-size: 16px;">Sethubala B</div>
+                <div id="drawer-role" style="font-size: 12px; opacity: 0.8;">Employee</div>
+              </div>
+            </div>
+            <div onclick="closeDrawer()" style="cursor: pointer; background: rgba(255,255,255,0.2); padding: 6px; border-radius: 50%;"><i data-lucide="x"></i></div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; overflow-y: auto;">
+            <div class="drawer-item active" onclick="switchNav(0); closeDrawer();"><i data-lucide="layout-dashboard"></i> Dashboard</div>
+            <div class="drawer-item" onclick="switchNav(0); closeDrawer();"><i data-lucide="calendar-check"></i> Attendance</div>
+            <div class="drawer-item" onclick="switchNav(1); closeDrawer();"><i data-lucide="plane"></i> Leave Management</div>
+            <div class="drawer-item" onclick="switchNav(3); closeDrawer();"><i data-lucide="file-text"></i> Payslip Details</div>
+            <div class="drawer-item" onclick="switchNav(2); closeDrawer();"><i data-lucide="check-square"></i> Tasks Board</div>
+            <div class="drawer-item" onclick="switchNav(4); closeDrawer();"><i data-lucide="file-spreadsheet"></i> Daily Work Reports</div>
+            <div class="drawer-item" onclick="switchNav(0); closeDrawer();"><i data-lucide="receipt"></i> Expenses & TA Claims</div>
+            <div class="drawer-item" onclick="switchNav(0); closeDrawer();"><i data-lucide="help-circle"></i> Helpdesk & Support</div>
+            <div class="drawer-item" onclick="switchNav(0); closeDrawer();"><i data-lucide="users"></i> Employee Directory</div>
+          </div>
+
+          <div class="drawer-item" onclick="logout(); closeDrawer();" style="color: #FF7675; margin-top: auto;"><i data-lucide="log-out"></i> Logout</div>
+        </div>
+
+        <!-- Top Bar with Sidebar Button -->
+        <div class="top-bar" id="app-top-bar" style="display: none;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="menu-btn" onclick="openDrawer()"><i data-lucide="menu"></i></div>
+            <div>
+              <div class="live-badge"><span class="live-dot"></span> LIVE • https://pixoushrportal.pixous.info/api</div>
+              <div id="page-title" style="font-size: 16px; font-weight: 700; color: #1E293B; margin-top: 2px;">Dashboard</div>
+            </div>
+          </div>
+          <div class="role-badge" onclick="openRoleModal()">
+            <i data-lucide="shield"></i> <span id="role-text">Employee</span>
+          </div>
+        </div>
+
+        <!-- Screen Container -->
+        <div class="screen-container">
+          
+          <!-- STEP 1: ROLE LOGIN SCREEN -->
+          <div class="screen-page active" id="page-login" style="height: 100%; justify-content: center; padding-top: 20px;">
+            <div style="text-align: center;">
+              <div style="background: linear-gradient(135deg, #673AB7, #3F51B5); width: 60px; height: 60px; border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: white;">
+                <i data-lucide="users" style="width: 30px; height: 30px;"></i>
+              </div>
+              <h2 style="font-size: 22px; font-weight: 700; color: #1E293B; margin-top: 10px;">Pixous HR Portal</h2>
+              <div style="font-size: 12px; color: #64748B; margin-top: 2px;">Step 1: Live Role Authentication</div>
+              <div class="live-badge" style="margin-top: 6px;"><span class="live-dot"></span> https://pixoushrportal.pixous.info/api</div>
+            </div>
+
+            <!-- Role Selector Tabs -->
+            <div class="role-tabs">
+              <div class="role-tab active" id="tab-emp" onclick="selectLoginRole('emp')">Employee</div>
+              <div class="role-tab" id="tab-tl" onclick="selectLoginRole('tl')">Team Leader</div>
+              <div class="role-tab" id="tab-cto" onclick="selectLoginRole('cto')">CTO / Admin</div>
+            </div>
+
+            <div class="card-white" style="margin-top: 14px; display: flex; flex-direction: column; gap: 12px; padding: 18px;">
+              <div>
+                <label style="font-size: 11px; font-weight: 700; color: #334155;">Username / Code</label>
+                <input type="text" id="login-user" value="priya" placeholder="e.g. priya, rajesh, admin" style="width: 100%; margin-top: 4px; padding: 10px; border-radius: 10px; border: 1px solid #E2E8F0; font-size: 13px; background: #F8FAFC;">
+              </div>
+              <div>
+                <label style="font-size: 11px; font-weight: 700; color: #334155;">Password</label>
+                <input type="password" id="login-pass" value="Hr@123" placeholder="Enter password" style="width: 100%; margin-top: 4px; padding: 10px; border-radius: 10px; border: 1px solid #E2E8F0; font-size: 13px; background: #F8FAFC;">
+              </div>
+
+              <button onclick="performLogin()" id="btn-login-text" style="width: 100%; margin-top: 6px; background: #5E35B1; color: white; border: none; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(94, 53, 177, 0.3);">
+                Sign In as Employee
+              </button>
+            </div>
+          </div>
+
+          <!-- SCREEN 1: DASHBOARD -->
+          <div class="screen-page" id="page-dashboard">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 12px; color: #64748B;" id="greet-sub">Good Morning 👋</div>
+                <div id="user-name" style="font-size: 20px; font-weight: 700; color: #1E293B;">Sethubala B</div>
+                <div id="user-title" style="font-size: 12px; color: #5E35B1; font-weight: 600;">AI Engineer</div>
+              </div>
+              <img id="user-avatar" src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150" style="width: 48px; height: 48px; border-radius: 50%;">
+            </div>
+
+            <div class="card-purple" id="main-card">
+              <div style="display: flex; justify-content: space-between; font-size: 12px; opacity: 0.9;">
+                <span id="card-sub-label">GET /api/dashboard/me</span>
+                <span id="punch-badge" style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px;">Checked In</span>
+              </div>
+              <h2 id="card-main-val">09:41 AM</h2>
+              <div style="font-size: 12px; opacity: 0.9;" id="card-desc">Today, 21 May 2026 • Live REST Connected</div>
+              <button id="punch-btn" onclick="togglePunch()" style="margin-top: 14px; background: white; color: #5E35B1; border: none; padding: 8px 16px; border-radius: 10px; font-weight: 700; cursor: pointer;">Check Out</button>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 700;">
+              <span>Quick Actions</span>
+              <span style="color: #5E35B1; font-size: 12px; cursor: pointer;">View All</span>
+            </div>
+            <div class="quick-grid">
+              <div class="action-btn" onclick="switchNav(1)"><div class="action-icon" style="background: #EDE7F6; color: #5E35B1;"><i data-lucide="plane"></i></div><span>Leave</span></div>
+              <div class="action-btn" onclick="switchNav(2)"><div class="action-icon" style="background: #E8F0FE; color: #3B82F6;"><i data-lucide="check-square"></i></div><span>Tasks</span></div>
+              <div class="action-btn" onclick="switchNav(3)"><div class="action-icon" style="background: #E6F4EA; color: #10B981;"><i data-lucide="file-text"></i></div><span>Payslip</span></div>
+              <div class="action-btn" onclick="switchNav(4)"><div class="action-icon" style="background: #FEF7E0; color: #F59E0B;"><i data-lucide="file-spreadsheet"></i></div><span>Work Log</span></div>
+            </div>
+
+            <div style="font-size: 14px; font-weight: 700;" id="overview-title">Personal Attendance Summary</div>
+            <div class="stats-grid">
+              <div class="stat-card"><div style="font-size: 10px; color: #64748B;">Present</div><div style="font-size:16px; font-weight:700; color:#10B981;">18</div></div>
+              <div class="stat-card"><div style="font-size: 10px; color: #64748B;">Absent</div><div style="font-size:16px; font-weight:700; color:#EF4444;">1</div></div>
+              <div class="stat-card"><div style="font-size: 10px; color: #64748B;">Half Day</div><div style="font-size:16px; font-weight:700; color:#F59E0B;">2</div></div>
+              <div class="stat-card"><div style="font-size: 10px; color: #64748B;">Leave</div><div style="font-size:16px; font-weight:700; color:#3B82F6;">1</div></div>
+            </div>
+          </div>
+
+          <!-- SCREEN 2: LEAVE -->
+          <div class="screen-page" id="page-leave">
+            <button style="background: #5E35B1; color: white; border: none; padding: 12px; border-radius: 14px; font-weight: 700; cursor: pointer;">+ Apply Leave (POST /api/leaves)</button>
+            <div class="card-white" style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-weight: 700; font-size: 14px;">Casual Leave</div>
+                <div style="font-size: 12px; color: #64748B;">Family function • 21 May - 22 May</div>
+              </div>
+              <span style="background:#FEF7E0; color:#B06000; padding:4px 8px; border-radius:10px; font-size:10px; font-weight:700;">Pending</span>
+            </div>
+          </div>
+
+          <!-- SCREEN 3: TASKS -->
+          <div class="screen-page" id="page-tasks">
+            <div class="card-white" style="display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; justify-content: space-between;">
+                <span style="font-weight: 700; font-size: 14px;">UI/UX Review</span>
+                <span style="background:#FCE8E6; color:#C5221F; padding:4px 8px; border-radius:10px; font-size:10px; font-weight:700;">High Priority</span>
+              </div>
+              <div style="font-size: 12px; color: #64748B;">Re-overhaul dashboard UI design</div>
+            </div>
+          </div>
+
+          <!-- SCREEN 4: PAYSLIP -->
+          <div class="screen-page" id="page-payslip">
+            <div class="card-purple">
+              <div style="font-size: 12px; opacity: 0.9;">Live Net Salary Pay</div>
+              <h2 style="font-size: 28px; font-weight: 700; margin: 6px 0;">$ 2,45,800.00</h2>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bottom Navigation Bar -->
+        <div class="bottom-nav" id="app-bottom-nav" style="display: none;">
+          <div class="nav-item active" onclick="switchNav(0)"><i data-lucide="home"></i><span>Home</span></div>
+          <div class="nav-item" onclick="switchNav(1)"><i data-lucide="plane"></i><span>Leave</span></div>
+          <div class="nav-item" onclick="switchNav(2)"><i data-lucide="check-square"></i><span>Tasks</span></div>
+          <div class="nav-item" onclick="switchNav(3)"><i data-lucide="file-text"></i><span>Payslip</span></div>
+          <div class="nav-item" onclick="openDrawer()"><i data-lucide="menu"></i><span>Menu</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: MASTER ANALYSIS & API CONSOLE -->
+    <div class="right-panel">
+      <div class="panel-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <i data-lucide="file-text" style="color: #A855F7;"></i>
+          <span>Web Master Analysis & Live REST API Console</span>
+        </div>
+        <span style="font-size: 11px; background: #334155; padding: 4px 10px; border-radius: 12px; color: #10B981;">0 Code Touched</span>
+      </div>
+
+      <div>
+        <h4 style="color: #F8FAFC; margin-bottom: 6px;">Live Production Server Target</h4>
+        <div class="log-box">
+          Base API: https://pixoushrportal.pixous.info/api<br>
+          WebSocket: wss://pixoushrportal.pixous.info/ws<br>
+          Sidebar Navigation Drawer: Fully Integrated
+        </div>
+      </div>
+
+      <div>
+        <h4 style="color: #F8FAFC; margin-bottom: 6px;">Active Workflow Pipeline Trace</h4>
+        <div class="log-box" id="workflow-log">
+          User → UI Action (Click Sidebar Drawer Menu ☰) → Opens Sidebar Navigation → Full Module Access
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    lucide.createIcons();
+    let currentLoginRole = 'emp';
+
+    function openDrawer() { document.getElementById('sidebar-drawer').style.display = 'flex'; updateLog('User → UI Action (Click Menu ☰) → Opens Sidebar Navigation Drawer'); }
+    function closeDrawer() { document.getElementById('sidebar-drawer').style.display = 'none'; }
+
+    function selectLoginRole(role) {
+      currentLoginRole = role;
+      document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('tab-' + role).classList.add('active');
+      if (role === 'emp') document.getElementById('login-user').value = 'priya';
+      else if (role === 'tl') document.getElementById('login-user').value = 'rajesh';
+      else if (role === 'cto') document.getElementById('login-user').value = 'admin';
+    }
+
+    function performLogin() {
+      document.getElementById('page-login').classList.remove('active');
+      document.getElementById('app-top-bar').style.display = 'flex';
+      document.getElementById('app-bottom-nav').style.display = 'flex';
+      setRole(currentLoginRole);
+      switchNav(0);
+      updateLog('User → UI Action (Sign In) → API (POST /api/auth/login) → Service (AuthService) → Token Issued (200 OK)');
+    }
+
+    function logout() {
+      document.getElementById('app-top-bar').style.display = 'none';
+      document.getElementById('app-bottom-nav').style.display = 'none';
+      const pages = ['page-dashboard', 'page-leave', 'page-tasks', 'page-payslip'];
+      pages.forEach(p => document.getElementById(p).classList.remove('active'));
+      document.getElementById('page-login').classList.add('active');
+      updateLog('User → UI Action (Logout) → Clear JWT Token → Return to Step 1 Role Login');
+    }
+
+    let isPunchedIn = true;
+    function togglePunch() {
+      isPunchedIn = !isPunchedIn;
+      document.getElementById('punch-badge').innerText = isPunchedIn ? 'Checked In' : 'Checked Out';
+      document.getElementById('punch-btn').innerText = isPunchedIn ? 'Check Out' : 'Check In';
+    }
+
+    function switchNav(idx) {
+      const pages = ['page-dashboard', 'page-leave', 'page-tasks', 'page-payslip'];
+      const titles = ['Dashboard', 'Leave Management', 'Tasks Board', 'Payslip Details'];
+      pages.forEach((p, i) => { document.getElementById(p).classList.toggle('active', i === idx); });
+      document.getElementById('page-title').innerText = titles[idx] || 'Dashboard';
+    }
+
+    function openRoleModal() { document.getElementById('role-modal').style.display = 'flex'; }
+    
+    function setRole(role) {
+      document.getElementById('role-modal').style.display = 'none';
+      if(role === 'emp') {
+        document.getElementById('user-name').innerText = 'Sethubala B';
+        document.getElementById('user-title').innerText = 'AI Engineer';
+        document.getElementById('role-text').innerText = 'Employee';
+        document.getElementById('drawer-user').innerText = 'Sethubala B';
+        document.getElementById('drawer-role').innerText = 'Employee';
+      } else if(role === 'tl') {
+        document.getElementById('user-name').innerText = 'Rajesh K (TL)';
+        document.getElementById('user-title').innerText = 'Engineering Team Lead';
+        document.getElementById('role-text').innerText = 'Team Leader';
+        document.getElementById('drawer-user').innerText = 'Rajesh K (TL)';
+        document.getElementById('drawer-role').innerText = 'Team Leader';
+      } else if(role === 'cto') {
+        document.getElementById('user-name').innerText = 'Admin / CTO';
+        document.getElementById('user-title').innerText = 'Chief Technology Officer';
+        document.getElementById('role-text').innerText = 'CTO / Admin';
+        document.getElementById('drawer-user').innerText = 'Admin / CTO';
+        document.getElementById('drawer-role').innerText = 'Chief Technology Officer';
+      }
+    }
+
+    function updateLog(msg) { document.getElementById('workflow-log').innerText = msg; }
+  </script>
+</body>
+</html>

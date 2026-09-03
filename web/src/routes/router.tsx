@@ -117,6 +117,7 @@ const CalendarPage = safeLazy(() => import("@/pages/Calendar"));
 const TasksPage = safeLazy(() => import("@/pages/Tasks"));
 const TeamsPage = safeLazy(() => import("@/pages/Teams"));
 const MyTeamPage = safeLazy(() => import("@/pages/MyTeam"));
+const AdminConfigurationPage = safeLazy(() => import("@/pages/AdminConfiguration"));
 
 // Technical Admin Pages
 import { TechAdminProvider } from "@/context/TechAdminAuthContext";
@@ -317,6 +318,20 @@ export const router = createBrowserRouter([
         element: page(
           <RoleGuard permission="USER_MANAGE,EMPLOYEE_MANAGE">
             <AuditLogPage />
+          </RoleGuard>
+        )
+      },
+      {
+        /*
+         * Reads are open to anyone holding USER_MANAGE so HR can review what is
+         * configured; the write endpoints ask for CONFIG_MANAGE separately, and
+         * the page renders read-only without it. Gating the route on the write
+         * permission would hide the review from the people who need it.
+         */
+        path: "admin/configuration",
+        element: page(
+          <RoleGuard permission="CONFIG_MANAGE,USER_MANAGE">
+            <AdminConfigurationPage />
           </RoleGuard>
         )
       },

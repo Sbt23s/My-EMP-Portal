@@ -162,6 +162,11 @@ const NAV: NavEntry[] = [
   // them has a route, so switching the module on put a link in the sidebar that
   // led to the not-found page. Their entries in the tech-admin module list have
   // gone too; bring a link back at the same time as its page, not before.
+  // Sits with the other administrator entries, above Fresh Start. Role-gated
+  // rather than permission-gated to match Audit Log beside it: this is the
+  // administrator's own area, and the page itself is read-only without
+  // CONFIG_MANAGE.
+  { to: "/admin/configuration", label: "Admin Configuration", icon: Settings, onlyRole: ["SUPER_ADMIN", "COMPANY_ADMIN"] },
   { to: "/audit", label: "Audit Log", icon: History, moduleCode: "AUDIT_LOG", onlyRole: ["SUPER_ADMIN", "COMPANY_ADMIN"] },
   { to: "/admin/reset", label: "Fresh Start", icon: Eraser, onlyRole: ["SUPER_ADMIN", "COMPANY_ADMIN"] }
 ];

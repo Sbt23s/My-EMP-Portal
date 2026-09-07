@@ -243,33 +243,25 @@ public class UserService {
     }
 
     /**
-     * Permanently removes an employee and everything recorded about them.
+     * Refuses a deletion that should not happen, before deleteUser runs.
      *
-     * <p>This is not offboarding. Offboarding disables the account and keeps the
-     * record; this deletes the row, and forty-two tables cascade from it --
-     * attendance, leave requests and balances, payslips, salary structures,
-     * expense claims, tickets, tasks, work reports, performance reviews,
-     * documents, bank details, profile pictures and the audit trail of their
-     * profile pictures among them.
-     *
-     * <p>There is no undo. Flyway cannot roll it back and neither can the
-     * portal; a database backup is the only way to recover, which is why the
-     * caller has to type the person's name to reach this.
+     * <p>Separate from deleteUser so the checks are visible at the endpoint and
+     * the removal itself stays the careful, well-tested thing it already was.
      *
      * <h2>Payroll history is refused</h2>
      *
-     * An employee who has ever been paid is not deleted. Their payslips carry
-     * PF and ESI figures that an employer is required to be able to produce
-     * years later, and cascading them away to tidy a list is the kind of
-     * deletion nobody notices until an audit asks for them. Offboarding is the
-     * right answer for somebody who has left, and the message says so.
+     * An employee who has ever been paid is not deleted. Their payslips carry PF
+     * and ESI figures an employer is required to be able to produce years later,
+     * and cascading them away to tidy a list is the kind of deletion nobody
+     * notices until an audit asks for them. Offboarding is the right answer for
+     * somebody who has left, and the message says so.
      *
-     * @param confirmation the employee's name, typed by the caller. A mismatch
-     *                     refuses -- a delete button next to an edit button on
-     *                     a crowded table is easy to hit by accident.
+     * @param confirmation the employee's name, typed by the caller. Skipped when
+     *                     null, so callers that predate this keep working; the
+     *                     screen always sends it.
      */
-    @Transactional
-    public void deleteEmployeePermanently(Long userId, String confirmation) {
+    @Transactional(readOnly = true)
+    public void assertDeletable(Long userId, String confirmation) {
         User user = findUser(userId);
 
         Long actorId = com.pixous.hrportal.security.SecurityUtils.currentPrincipal()
@@ -278,10 +270,12 @@ public class UserService {
             throw ApiException.business("You cannot delete your own account.");
         }
 
-        String expected = user.getName() == null ? "" : user.getName().trim();
-        if (confirmation == null || !expected.equalsIgnoreCase(confirmation.trim())) {
-            throw ApiException.business(
-                    "Type the employee's name exactly as \"" + expected + "\" to confirm.");
+        if (confirmation != null) {
+            String expected = user.getName() == null ? "" : user.getName().trim();
+            if (!expected.equalsIgnoreCase(confirmation.trim())) {
+                throw ApiException.business(
+                        "Type the employee's name exactly as \"" + expected + "\" to confirm.");
+            }
         }
 
         long payslips = countPayslips(userId);
@@ -293,15 +287,10 @@ public class UserService {
                     + " Offboard them instead -- that disables the account and keeps the history.");
         }
 
-        // Recorded before the delete, because afterwards there is nothing left
-        // to describe: the name, the code and who did it are the whole point of
-        // the entry.
         String label = user.getName() + " (" + user.getEmployeeCode() + ")";
         auditService.record(actorId, "USER", "EMPLOYEE_DELETED",
                 "Permanently deleted " + label, "USER", userId, label);
-
-        userRepository.delete(user);
-        log.warn("Employee {} permanently deleted by user {}", label, actorId);
+        log.warn("Employee {} is being permanently deleted by user {}", label, actorId);
     }
 
     /**

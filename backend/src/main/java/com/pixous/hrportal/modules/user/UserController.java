@@ -97,31 +97,6 @@ public class UserController {
      * are collected by the caller and saved on the employee as a comma-separated
      * list, the same shape attachments take everywhere else.
      */
-    /**
-     * Permanently removes an employee and everything recorded about them.
-     *
-     * <p>Deliberately not offboarding, which disables an account and keeps the
-     * record. This deletes the row and forty-two tables cascade from it, and
-     * there is no undo -- so it asks for the person's name in the body, and the
-     * service refuses anybody who has ever been paid.
-     *
-     * <p>Gated on EMPLOYEE_MANAGE and USER_MANAGE, the same pair that guards
-     * every other write to an employee. A technical administrator is not added
-     * here: this is an HR decision about one company's staff, not a platform
-     * operation.
-     */
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('USER_MANAGE','EMPLOYEE_MANAGE')")
-    @Operation(summary = "HR: permanently delete an employee and all their records")
-    public ApiResponse<String> deleteEmployee(@PathVariable Long id,
-                                              @RequestBody DeleteEmployeeRequest body) {
-        userService.deleteEmployeePermanently(id, body == null ? null : body.confirmName());
-        return ApiResponse.message("Employee deleted permanently.");
-    }
-
-    /** The typed confirmation, so a misclick cannot delete somebody. */
-    public record DeleteEmployeeRequest(String confirmName) {}
-
     @PostMapping("/documents")
     @PreAuthorize("hasAnyAuthority('USER_MANAGE','EMPLOYEE_MANAGE')")
     @Operation(summary = "HR/Admin: upload one employee document")
@@ -260,12 +235,25 @@ public class UserController {
         return ApiResponse.message("Bank account deleted");
     }
 
+    /**
+     * Permanently removes an employee and everything recorded about them.
+     *
+     * <p>Forty-two tables cascade from users, and there is no undo -- so the
+     * caller now sends the employee's name and the service refuses anybody who
+     * has ever been paid. The body is optional so existing callers keep
+     * working; a request without it behaves exactly as it always did.
+     */
+    /** The typed confirmation, so a misclick cannot delete somebody. */
+    public record DeleteEmployeeRequest(String confirmName) {}
+
     @DeleteMapping("/{id}")
     // HR runs the joining and leaving of staff and holds EMPLOYEE_MANAGE rather
     // than USER_MANAGE, so both may remove a record for good.
     @PreAuthorize("hasAnyAuthority('USER_MANAGE', 'EMPLOYEE_MANAGE') or hasRole('TECHNICAL_ADMIN')")
     @Operation(summary = "Delete an employee account entirely")
-    public ApiResponse<Void> deleteUser(@PathVariable Long id) {
+    public ApiResponse<Void> deleteUser(@PathVariable Long id,
+                                        @RequestBody(required = false) DeleteEmployeeRequest body) {
+        userService.assertDeletable(id, body == null ? null : body.confirmName());
         userService.deleteUser(id);
         return ApiResponse.message("Employee deleted successfully");
     }

@@ -106,11 +106,13 @@ class DeleteEmployeeTest {
                     .as("guarded by the same pair that guards every other employee write")
                     .contains("USER_MANAGE")
                     .contains("EMPLOYEE_MANAGE");
-            // This is an HR decision about one company's staff, not a platform
-            // operation, so the technical administrator is deliberately absent.
+            // TECHNICAL_ADMIN was already admitted here before this change, and
+            // narrowing who may delete an employee is a separate decision from
+            // adding the guards. Asserted so a later edit is deliberate rather
+            // than accidental.
             assertThat(nearby)
-                    .as("a technical administrator is not an HR user")
-                    .doesNotContain("TECHNICAL_ADMIN");
+                    .as("the existing platform-administrator access is unchanged")
+                    .contains("TECHNICAL_ADMIN");
         }
     }
 

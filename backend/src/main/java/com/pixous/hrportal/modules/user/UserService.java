@@ -32,6 +32,7 @@ import com.pixous.hrportal.modules.community.CommunityService;
 import org.springframework.context.annotation.Lazy;
 
 /** Profile read/update, photo upload, employee directory, and bank-detail CRUD. */
+@lombok.extern.slf4j.Slf4j
 @Service
 public class UserService {
 
@@ -44,6 +45,7 @@ public class UserService {
     private final CommunityService communityService;
     private final jakarta.persistence.EntityManager entityManager;
     private final RoleRepository roleRepository;
+    private final com.pixous.hrportal.modules.audit.AuditService auditService;
     private final com.pixous.hrportal.modules.org.DesignationRepository designationRepository;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     private final com.pixous.hrportal.modules.auth.PasswordVault passwordVault;
@@ -60,7 +62,8 @@ public class UserService {
                        com.pixous.hrportal.modules.org.DesignationRepository designationRepository,
                        org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
                        com.pixous.hrportal.modules.auth.PasswordVault passwordVault,
-                       com.pixous.hrportal.modules.org.CompanyRepository companyRepository) {
+                       com.pixous.hrportal.modules.org.CompanyRepository companyRepository,
+                       com.pixous.hrportal.modules.audit.AuditService auditService) {
         this.companyRepository = companyRepository;
         this.passwordEncoder = passwordEncoder;
         this.passwordVault = passwordVault;
@@ -74,6 +77,7 @@ public class UserService {
         this.entityManager = entityManager;
         this.roleRepository = roleRepository;
         this.designationRepository = designationRepository;
+        this.auditService = auditService;
     }
 
     @jakarta.annotation.PostConstruct
@@ -236,6 +240,83 @@ public class UserService {
         }
         userRepository.save(user);
         return toProfile(user);
+    }
+
+    /**
+     * Permanently removes an employee and everything recorded about them.
+     *
+     * <p>This is not offboarding. Offboarding disables the account and keeps the
+     * record; this deletes the row, and forty-two tables cascade from it --
+     * attendance, leave requests and balances, payslips, salary structures,
+     * expense claims, tickets, tasks, work reports, performance reviews,
+     * documents, bank details, profile pictures and the audit trail of their
+     * profile pictures among them.
+     *
+     * <p>There is no undo. Flyway cannot roll it back and neither can the
+     * portal; a database backup is the only way to recover, which is why the
+     * caller has to type the person's name to reach this.
+     *
+     * <h2>Payroll history is refused</h2>
+     *
+     * An employee who has ever been paid is not deleted. Their payslips carry
+     * PF and ESI figures that an employer is required to be able to produce
+     * years later, and cascading them away to tidy a list is the kind of
+     * deletion nobody notices until an audit asks for them. Offboarding is the
+     * right answer for somebody who has left, and the message says so.
+     *
+     * @param confirmation the employee's name, typed by the caller. A mismatch
+     *                     refuses -- a delete button next to an edit button on
+     *                     a crowded table is easy to hit by accident.
+     */
+    @Transactional
+    public void deleteEmployeePermanently(Long userId, String confirmation) {
+        User user = findUser(userId);
+
+        Long actorId = com.pixous.hrportal.security.SecurityUtils.currentPrincipal()
+                .map(com.pixous.hrportal.security.UserPrincipal::getId).orElse(null);
+        if (actorId != null && actorId.equals(userId)) {
+            throw ApiException.business("You cannot delete your own account.");
+        }
+
+        String expected = user.getName() == null ? "" : user.getName().trim();
+        if (confirmation == null || !expected.equalsIgnoreCase(confirmation.trim())) {
+            throw ApiException.business(
+                    "Type the employee's name exactly as \"" + expected + "\" to confirm.");
+        }
+
+        long payslips = countPayslips(userId);
+        if (payslips > 0) {
+            throw ApiException.business(
+                    user.getName() + " has " + payslips + " payslip"
+                    + (payslips == 1 ? "" : "s")
+                    + " on record, which carry PF and ESI figures the company must keep."
+                    + " Offboard them instead -- that disables the account and keeps the history.");
+        }
+
+        // Recorded before the delete, because afterwards there is nothing left
+        // to describe: the name, the code and who did it are the whole point of
+        // the entry.
+        String label = user.getName() + " (" + user.getEmployeeCode() + ")";
+        auditService.record(actorId, "USER", "EMPLOYEE_DELETED",
+                "Permanently deleted " + label, "USER", userId, label);
+
+        userRepository.delete(user);
+        log.warn("Employee {} permanently deleted by user {}", label, actorId);
+    }
+
+    /**
+     * How many payslips an employee has.
+     *
+     * <p>A native count rather than a repository method: this asks one question
+     * once, and adding a Spring Data interface for it would put the statutory
+     * check further from the rule it enforces.
+     */
+    private long countPayslips(Long userId) {
+        Object n = entityManager
+                .createNativeQuery("SELECT COUNT(*) FROM payslips WHERE user_id = :id")
+                .setParameter("id", userId)
+                .getSingleResult();
+        return ((Number) n).longValue();
     }
 
     /** Admin: change an employee's login username and/or reset their password. */

@@ -62,6 +62,38 @@ export default function EmployeesPage() {
   // and deleting an employee remain admin-only.
   const canManage = hasPermission("USER_MANAGE", "EMPLOYEE_MANAGE") || hasRole("SUPER_ADMIN") || hasRole("COMPANY_ADMIN");
 
+  /*
+   * Permanent deletion.
+   *
+   * Separate from offboarding, which disables an account and keeps the record.
+   * This removes the row and forty-two tables cascade from it, so the dialog
+   * asks the administrator to type the person's name -- a destructive button
+   * sitting next to Edit on a crowded table is easy to hit by accident, and
+   * there is no undo.
+   */
+  const deleteQc = useQueryClient();
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: number; name: string; code: string;
+  } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const deleteEmployee = useMutation({
+    mutationFn: async (vars: { id: number; confirmName: string }) =>
+      (await api.delete(`/users/${vars.id}`, { data: { confirmName: vars.confirmName } })).data,
+    onSuccess: () => {
+      deleteQc.invalidateQueries({ queryKey: ["employees"] });
+      setDeleteTarget(null);
+      setDeleteConfirm("");
+      setDeleteError(null);
+    },
+    onError: (e: any) => {
+      // The server explains why -- payslips on record, a name that does not
+      // match -- and that sentence is more use than "delete failed".
+      setDeleteError(e?.response?.data?.message ?? "Could not delete this employee.");
+    }
+  });
+
   /** The narrowing filters, kept together so clearing them is one action. */
   const [filters, setFilters] = useState({
     designationTitle: "", roleCode: "", departmentId: "", employmentType: "", profileStatus: "", companyId: "", joinedFrom: "", joinedTo: ""
@@ -423,11 +455,31 @@ export default function EmployeesPage() {
                 <Pencil className="h-3.5 w-3.5" /> Edit
               </Button>
             )}
+            {/*
+              Offered on offboarded employees too, unlike Edit. Somebody who has
+              left is exactly who an administrator wants to remove, and hiding
+              the button there would mean the only accounts you can delete are
+              the ones still working here.
+            */}
+            {canManage && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 text-xs gap-1 font-medium text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => setDeleteTarget({
+                  id: info.row.original.id,
+                  name: info.row.original.name,
+                  code: info.row.original.employeeCode
+                })}
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Delete
+              </Button>
+            )}
           </div>
         )
       })
     ],
-    [canManage, desigMap, user]
+    [canManage, desigMap, user, setDeleteTarget]
   );
 
   const rows = directory.data?.content ?? [];
@@ -690,6 +742,72 @@ export default function EmployeesPage() {
           id={editId}
           onClose={() => setEditId(null)}
         />
+      )}
+
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => { setDeleteTarget(null); setDeleteConfirm(""); setDeleteError(null); }}
+        >
+          <div
+            className="w-full max-w-md rounded-lg border bg-background p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-destructive">
+              <AlertCircle className="h-4 w-4" />
+              Delete {deleteTarget.name} permanently?
+            </h3>
+
+            <p className="mt-3 text-[13px] text-muted-foreground">
+              This removes the employee and everything recorded about them:
+              attendance, leave, claims, tickets, tasks, work reports, documents,
+              bank details and reviews.
+            </p>
+            <p className="mt-2 text-[13px] font-medium">
+              There is no undo. To keep the record and only stop access, offboard
+              them instead.
+            </p>
+
+            <label className="mt-4 block text-xs text-muted-foreground">
+              Type <span className="font-semibold text-foreground">{deleteTarget.name}</span> to confirm
+              <Input
+                className="mt-1"
+                value={deleteConfirm}
+                onChange={(e) => { setDeleteConfirm(e.target.value); setDeleteError(null); }}
+                placeholder={deleteTarget.name}
+                autoFocus
+              />
+            </label>
+
+            {deleteError && (
+              <p className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+                {deleteError}
+              </p>
+            )}
+
+            <div className="mt-5 flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => { setDeleteTarget(null); setDeleteConfirm(""); setDeleteError(null); }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={
+                  deleteEmployee.isPending ||
+                  deleteConfirm.trim().toLowerCase() !== deleteTarget.name.trim().toLowerCase()
+                }
+                onClick={() => deleteEmployee.mutate({
+                  id: deleteTarget.id,
+                  confirmName: deleteConfirm.trim()
+                })}
+              >
+                {deleteEmployee.isPending ? "Deleting..." : "Delete permanently"}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

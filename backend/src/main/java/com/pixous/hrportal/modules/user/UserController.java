@@ -97,6 +97,31 @@ public class UserController {
      * are collected by the caller and saved on the employee as a comma-separated
      * list, the same shape attachments take everywhere else.
      */
+    /**
+     * Permanently removes an employee and everything recorded about them.
+     *
+     * <p>Deliberately not offboarding, which disables an account and keeps the
+     * record. This deletes the row and forty-two tables cascade from it, and
+     * there is no undo -- so it asks for the person's name in the body, and the
+     * service refuses anybody who has ever been paid.
+     *
+     * <p>Gated on EMPLOYEE_MANAGE and USER_MANAGE, the same pair that guards
+     * every other write to an employee. A technical administrator is not added
+     * here: this is an HR decision about one company's staff, not a platform
+     * operation.
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('USER_MANAGE','EMPLOYEE_MANAGE')")
+    @Operation(summary = "HR: permanently delete an employee and all their records")
+    public ApiResponse<String> deleteEmployee(@PathVariable Long id,
+                                              @RequestBody DeleteEmployeeRequest body) {
+        userService.deleteEmployeePermanently(id, body == null ? null : body.confirmName());
+        return ApiResponse.message("Employee deleted permanently.");
+    }
+
+    /** The typed confirmation, so a misclick cannot delete somebody. */
+    public record DeleteEmployeeRequest(String confirmName) {}
+
     @PostMapping("/documents")
     @PreAuthorize("hasAnyAuthority('USER_MANAGE','EMPLOYEE_MANAGE')")
     @Operation(summary = "HR/Admin: upload one employee document")

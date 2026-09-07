@@ -248,6 +248,15 @@ public class UserService {
      * <p>Separate from deleteUser so the checks are visible at the endpoint and
      * the removal itself stays the careful, well-tested thing it already was.
      *
+     * <p>Not readOnly, despite only reading the employee: it writes the audit
+     * entry. On a read-only connection that insert fails, and although
+     * AuditService swallows the exception the failed statement has already
+     * marked the transaction rollback-only -- so the delete that follows aborts
+     * with UnexpectedRollbackException. AuditService.record is annotated
+     * REQUIRES_NEW, which would isolate it, but that never applies here: its
+     * short overload calls the long one on {@code this}, and a self-invocation
+     * does not pass through the proxy the annotation lives on.
+     *
      * <h2>Payroll history is refused</h2>
      *
      * An employee who has ever been paid is not deleted. Their payslips carry PF
@@ -260,7 +269,7 @@ public class UserService {
      *                     null, so callers that predate this keep working; the
      *                     screen always sends it.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public void assertDeletable(Long userId, String confirmation) {
         User user = findUser(userId);
 

@@ -256,6 +256,16 @@ export interface PayslipSummary {
   grossSalary: number;
   netPay: number;
   pdfPath?: string;
+  /*
+   * Whether the payslip reached the employee.
+   *
+   * Optional so a cached response from before the field existed still type
+   * checks; treat an absent value as NOT_SENT, which is what it means.
+   */
+  deliveryStatus?: "NOT_SENT" | "SENT" | "FAILED";
+  sentTo?: string;
+  sentAt?: string;
+  sendError?: string;
 }
 
 export interface Payslip extends PayslipSummary {
@@ -285,6 +295,12 @@ export interface Payslip extends PayslipSummary {
   department?: string;
   payDate?: string;
   workingDays?: number;
+  conveyanceAllowance?: number;
+  specialAllowance?: number;
+  bonus?: number;
+  otherEarnings?: number;
+  leaveDeduction?: number;
+  advanceDeduction?: number;
   performancePay?: number;
   expensesPay?: number;
   salaryAdvance?: number;

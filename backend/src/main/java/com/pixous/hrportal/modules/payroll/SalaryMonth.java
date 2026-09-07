@@ -43,4 +43,35 @@ public class SalaryMonth {
 
     @Column(name = "updated_at", insertable = false, updatable = false)
     private LocalDateTime updatedAt;
+
+    /**
+     * One month's adjustments, kept off the salary structure.
+     *
+     * <p>Before these existed the only way to give somebody a bonus was to edit
+     * their structure, which then changed every following month too. A row here
+     * applies to this month and no other.
+     */
+    @Column(precision = 12, scale = 2)
+    private BigDecimal bonus = BigDecimal.ZERO;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal overtime = BigDecimal.ZERO;
+
+    @Column(name = "other_earnings", precision = 12, scale = 2)
+    private BigDecimal otherEarnings = BigDecimal.ZERO;
+
+    /** Loss of pay for this month. */
+    @Column(name = "leave_deduction", precision = 12, scale = 2)
+    private BigDecimal leaveDeduction = BigDecimal.ZERO;
+
+    /** Repayment of a salary advance. */
+    @Column(name = "advance_deduction", precision = 12, scale = 2)
+    private BigDecimal advanceDeduction = BigDecimal.ZERO;
+
+    @Column(name = "other_deduction", precision = 12, scale = 2)
+    private BigDecimal otherDeduction = BigDecimal.ZERO;
+
+    /** Why the adjustment was made, for whoever reads the payslip later. */
+    @Column(length = 255)
+    private String note;
 }

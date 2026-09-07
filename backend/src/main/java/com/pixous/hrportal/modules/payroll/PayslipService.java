@@ -33,7 +33,24 @@ import com.pixous.hrportal.modules.user.BankDetailRepository;
  */
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class PayslipService {
+
+    /*
+     * This service, through its Spring proxy.
+     *
+     * Needed so recordSendFailure below actually runs in its own transaction.
+     * Calling it as a plain method would go straight to the implementation and
+     * skip the proxy, and REQUIRES_NEW would silently have no effect -- the
+     * failure would then roll back with the transaction it was meant to
+     * outlive.
+     *
+     * Injected as a field and @Lazy rather than through the constructor, which
+     * would be a circular dependency the container refuses to build.
+     */
+    @org.springframework.beans.factory.annotation.Autowired
+    @org.springframework.context.annotation.Lazy
+    private PayslipService self;
 
     private static final BigDecimal ESI_WAGE_CEILING = new BigDecimal("21000");
     private static final BigDecimal ESI_RATE = new BigDecimal("0.0075"); // 0.75% employee share
@@ -114,12 +131,42 @@ public class PayslipService {
         // The basic recorded against this month wins, so a figure entered under
         // Salary details is what the payslip is built on. Employees with no month
         // row fall back to their standing structure exactly as before.
-        BigDecimal basic = salaryMonthRepository
+        SalaryMonth month = salaryMonthRepository
                 .findByUserIdAndPayYearAndPayMonth(req.userId(), req.year(), req.month())
-                .map(SalaryMonth::getBasicSalary)
-                .orElse(salary.getBasicSalary());
+                .orElse(null);
+        BigDecimal basic = month != null ? month.getBasicSalary() : salary.getBasicSalary();
         BigDecimal hra = salary.getHra();
         BigDecimal allowances = salary.getAllowances();
+
+        /*
+         * The itemised components, so a payslip can show what makes up the pay
+         * instead of one combined "Allowances" figure nobody can check.
+         *
+         * `allowances` above is untouched and still added in full. These are
+         * separate columns that default to zero, so an employee whose structure
+         * predates them is paid exactly what they were paid before -- the gross
+         * below only grows if somebody has actually filled one in.
+         */
+        BigDecimal conveyance = zed(salary.getConveyanceAllowance());
+        BigDecimal special = zed(salary.getSpecialAllowance());
+        BigDecimal structureBonus = zed(salary.getBonus());
+        BigDecimal structureOt = zed(salary.getOvertime());
+
+        /*
+         * This month only, from the salary_months row.
+         *
+         * These exist because the only way to give somebody a one-off bonus was
+         * to edit their structure, which then paid it again every following
+         * month. A figure here applies to this month and no other.
+         */
+        BigDecimal monthBonus = month != null ? zed(month.getBonus()) : BigDecimal.ZERO;
+        BigDecimal monthOt = month != null ? zed(month.getOvertime()) : BigDecimal.ZERO;
+        BigDecimal otherEarnings = month != null ? zed(month.getOtherEarnings()) : BigDecimal.ZERO;
+        BigDecimal monthLeaveDed = month != null ? zed(month.getLeaveDeduction()) : BigDecimal.ZERO;
+        BigDecimal monthAdvanceDed = month != null ? zed(month.getAdvanceDeduction()) : BigDecimal.ZERO;
+        BigDecimal monthOtherDed = month != null ? zed(month.getOtherDeduction()) : BigDecimal.ZERO;
+
+        BigDecimal bonus = structureBonus.add(monthBonus);
 
         /*
          * A day's pay is a working day's pay, not a calendar day's.
@@ -132,13 +179,15 @@ public class PayslipService {
          */
         AttendanceMonth att = countMonth(req.userId(), req.month(), req.year());
         int workingDays = Math.max(1, att.workingDays());
-        BigDecimal perDayGross = basic.add(hra).add(allowances)
+        BigDecimal recurring = basic.add(hra).add(allowances)
+                .add(conveyance).add(special);
+        BigDecimal perDayGross = recurring
                 .divide(BigDecimal.valueOf(workingDays), 2, RoundingMode.HALF_UP);
 
         // Overtime pay = hourly rate * OT hours
         BigDecimal otHours = BigDecimal.valueOf(
                 req.overtimeHours() != null ? req.overtimeHours() : 0.0);
-        BigDecimal hourlyRate = basic.add(hra).add(allowances)
+        BigDecimal hourlyRate = recurring
                 .divide(OT_HOURLY_DIVISOR, 2, RoundingMode.HALF_UP);
         BigDecimal overtimePay = hourlyRate.multiply(otHours).setScale(2, RoundingMode.HALF_UP);
 
@@ -158,7 +207,9 @@ public class PayslipService {
         // Performance pay — an extra earning entered by the admin.
         BigDecimal performance = amt(req.performancePay());
 
-        BigDecimal gross = basic.add(hra).add(allowances).add(overtimePay).add(performance)
+        BigDecimal gross = recurring
+                .add(overtimePay).add(structureOt).add(monthOt)
+                .add(performance).add(bonus).add(otherEarnings)
                 .max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
 
         // ---- Deductions ----
@@ -170,15 +221,18 @@ public class PayslipService {
             esi = gross.multiply(ESI_RATE).setScale(2, RoundingMode.HALF_UP);
         }
         BigDecimal pt = salary.getPtAmount();
-        BigDecimal tds = amt(req.tds());
-        BigDecimal advance = amt(req.advanceDeduction());
+        BigDecimal tds = req.tds() != null ? amt(req.tds()) : zed(salary.getTdsAmount());
+        BigDecimal advance = amt(req.advanceDeduction()).add(monthAdvanceDed)
+                .setScale(2, RoundingMode.HALF_UP);
         // What the absent days cost, at a working day's rate.
         BigDecimal absentDeduction = perDayGross.multiply(lopDays)
                 .setScale(2, RoundingMode.HALF_UP);
-        BigDecimal lop = amt(req.lopDeduction()).add(absentDeduction)
+        BigDecimal lop = amt(req.lopDeduction()).add(absentDeduction).add(monthLeaveDed)
                 .setScale(2, RoundingMode.HALF_UP);
         // Manual loss-of-pay is grouped with any other deductions for storage.
-        BigDecimal otherDed = amt(req.otherDeductions()).add(lop).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal otherDed = amt(req.otherDeductions()).add(lop)
+                .add(monthOtherDed).add(zed(salary.getOtherDeduction()))
+                .setScale(2, RoundingMode.HALF_UP);
 
         BigDecimal totalDed = pf.add(esi).add(pt).add(tds).add(otherDed).add(advance)
                 .setScale(2, RoundingMode.HALF_UP);
@@ -187,6 +241,14 @@ public class PayslipService {
         p.setBasicSalary(basic);
         p.setHra(hra);
         p.setAllowances(allowances);
+        // Snapshotted, not looked up later: September must not change when
+        // October's structure does.
+        p.setConveyanceAllowance(conveyance);
+        p.setSpecialAllowance(special);
+        p.setBonus(bonus);
+        p.setOtherEarnings(otherEarnings);
+        p.setLeaveDeduction(monthLeaveDed);
+        p.setAdvanceDeduction(monthAdvanceDed);
         p.setOvertimePay(overtimePay);
         p.setPerformancePay(performance);
         p.setGrossSalary(gross);
@@ -299,6 +361,12 @@ public class PayslipService {
         s.setPfPercentage(req.pfPercentage() != null ? req.pfPercentage() : BigDecimal.ZERO);
         s.setEsiApplicable(req.esiApplicable() == null || req.esiApplicable());
         s.setPtAmount(req.ptAmount() != null ? req.ptAmount() : BigDecimal.ZERO);
+        s.setConveyanceAllowance(zed(req.conveyanceAllowance()));
+        s.setSpecialAllowance(zed(req.specialAllowance()));
+        s.setBonus(zed(req.bonus()));
+        s.setOvertime(zed(req.overtime()));
+        s.setTdsAmount(zed(req.tdsAmount()));
+        s.setOtherDeduction(zed(req.otherDeduction()));
         s.setActive(true);
         if (s.getEffectiveFrom() == null) s.setEffectiveFrom(LocalDate.now());
         return toSalaryResponse(salaryRepository.save(s), user);
@@ -326,8 +394,7 @@ public class PayslipService {
     @Transactional(readOnly = true)
     public List<SalaryMonthResponse> listSalaryMonths(int month, int year) {
         return salaryMonthRepository.findByPayYearAndPayMonth(year, month).stream()
-                .map(m -> new SalaryMonthResponse(m.getUserId(), m.getPayMonth(), m.getPayYear(),
-                        m.getBasicSalary()))
+                .map(PayslipService::toMonthResponse)
                 .toList();
     }
 
@@ -335,8 +402,7 @@ public class PayslipService {
     @Transactional(readOnly = true)
     public List<SalaryMonthResponse> salaryMonthsForUser(Long userId) {
         return salaryMonthRepository.findByUserIdOrderByPayYearDescPayMonthDesc(userId).stream()
-                .map(m -> new SalaryMonthResponse(m.getUserId(), m.getPayMonth(), m.getPayYear(),
-                        m.getBasicSalary()))
+                .map(PayslipService::toMonthResponse)
                 .toList();
     }
 
@@ -364,19 +430,57 @@ public class PayslipService {
         m.setPayYear(req.year());
         m.setPayMonth(req.month());
         m.setBasicSalary(req.basicSalary());
+        m.setBonus(zed(req.bonus()));
+        m.setOvertime(zed(req.overtime()));
+        m.setOtherEarnings(zed(req.otherEarnings()));
+        m.setLeaveDeduction(zed(req.leaveDeduction()));
+        m.setAdvanceDeduction(zed(req.advanceDeduction()));
+        m.setOtherDeduction(zed(req.otherDeduction()));
+        m.setNote(req.note());
         SalaryMonth saved = salaryMonthRepository.save(m);
-        return new SalaryMonthResponse(saved.getUserId(), saved.getPayMonth(), saved.getPayYear(),
-                saved.getBasicSalary());
+        return toMonthResponse(saved);
     }
 
     private SalaryStructureResponse toSalaryResponse(SalaryStructure s, User user) {
-        BigDecimal gross = s.getBasicSalary().add(s.getHra()).add(s.getAllowances());
+        // The figure the salary screen shows. Attendance and month adjustments are
+        // deliberately excluded -- this is the standing monthly pay, not a
+        // payslip -- but it has to include every recurring component, or the
+        // screen would show a gross with conveyance left out.
+        BigDecimal gross = s.getBasicSalary().add(s.getHra()).add(s.getAllowances())
+                .add(zed(s.getConveyanceAllowance())).add(zed(s.getSpecialAllowance()))
+                .add(zed(s.getBonus())).add(zed(s.getOvertime()));
         return new SalaryStructureResponse(
                 s.getUserId(),
                 user != null ? user.getName() : null,
                 user != null ? user.getEmployeeCode() : null,
                 s.getBasicSalary(), s.getHra(), s.getAllowances(),
-                s.getPfPercentage(), s.isEsiApplicable(), s.getPtAmount(), gross);
+                s.getPfPercentage(), s.isEsiApplicable(), s.getPtAmount(),
+                zed(s.getConveyanceAllowance()), zed(s.getSpecialAllowance()),
+                zed(s.getBonus()), zed(s.getOvertime()),
+                zed(s.getTdsAmount()), zed(s.getOtherDeduction()),
+                gross);
+    }
+
+    /**
+     * Zero for a missing figure.
+     *
+     * <p>The columns are NOT NULL with a zero default, so a row read back is
+     * never null -- but an entity built in memory and not yet saved can be, and
+     * so can a row a test inserted directly. Treating absent as zero keeps a
+     * null out of the arithmetic, where it would be an NPE halfway through a
+     * payroll run.
+     */
+    /** One place the month row becomes a response, so the three callers cannot drift. */
+    private static SalaryMonthResponse toMonthResponse(SalaryMonth m) {
+        return new SalaryMonthResponse(
+                m.getUserId(), m.getPayMonth(), m.getPayYear(), m.getBasicSalary(),
+                zed(m.getBonus()), zed(m.getOvertime()), zed(m.getOtherEarnings()),
+                zed(m.getLeaveDeduction()), zed(m.getAdvanceDeduction()),
+                zed(m.getOtherDeduction()), m.getNote());
+    }
+
+    private static BigDecimal zed(BigDecimal v) {
+        return v != null ? v : BigDecimal.ZERO;
     }
 
     private static BigDecimal amt(Double v) {
@@ -625,7 +729,7 @@ public class PayslipService {
      *
      * @return the address it was sent to, so the caller can say where it went
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public String emailToEmployee(Long requesterId, Long payslipId, boolean privileged) {
         Payslip p = payslipRepository.findById(payslipId)
                 .orElseThrow(() -> ApiException.notFound("Payslip"));
@@ -678,8 +782,70 @@ public class PayslipService {
                 + "The attachment is confidential and intended only for you.</p>";
 
         String fileName = "Payslip-" + period.replace(' ', '-') + ".pdf";
-        mailService.sendWithPdf(to, subject, body, fileName, reportService.payslipPdfBytes(p, u));
+
+        /*
+         * Record what happened, both ways.
+         *
+         * The send used to leave no trace, so "was September sent to this
+         * person?" had no answer and a bounced or rejected send was invisible
+         * -- which is the one outcome somebody needs to know about, because it
+         * is the one where an employee is waiting for a payslip that never
+         * arrived.
+         *
+         * A failure is recorded and then rethrown, so the operator still sees
+         * the error. The status write has to reach the database even though the
+         * transaction is about to roll back, which is why FAILED is saved by
+         * recordSendFailure in a transaction of its own.
+         */
+        try {
+            mailService.sendWithPdf(to, subject, body, fileName,
+                    reportService.payslipPdfBytes(p, u));
+        } catch (RuntimeException e) {
+            self.recordSendFailure(p.getId(), to, e);
+            throw e;
+        }
+
+        p.setDeliveryStatus("SENT");
+        p.setSentTo(to);
+        p.setSentBy(requesterId != null ? String.valueOf(requesterId) : null);
+        p.setSentAt(java.time.LocalDateTime.now());
+        p.setSendError(null);
+        payslipRepository.save(p);
         return to;
+    }
+
+    /**
+     * Marks a payslip's delivery as failed, in its own transaction.
+     *
+     * <p>REQUIRES_NEW because the caller rethrows: the surrounding transaction
+     * rolls back, and a FAILED status written inside it would roll back with it,
+     * leaving the failure unrecorded -- exactly the case this column exists for.
+     *
+     * <p>Called through the injected proxy rather than on {@code this}, because
+     * a self-invocation does not pass through the proxy and the propagation
+     * setting would silently do nothing.
+     */
+    @org.springframework.transaction.annotation.Transactional(
+            propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void recordSendFailure(Long payslipId, String to, Exception cause) {
+        try {
+            payslipRepository.findById(payslipId).ifPresent(slip -> {
+                slip.setDeliveryStatus("FAILED");
+                slip.setSentTo(to);
+                slip.setSentAt(java.time.LocalDateTime.now());
+                // Truncated to the column width. A stack trace does not fit and
+                // is not what the person reading the payroll screen needs.
+                String msg = cause.getMessage() != null
+                        ? cause.getMessage() : cause.getClass().getSimpleName();
+                slip.setSendError(msg.length() > 500 ? msg.substring(0, 500) : msg);
+                payslipRepository.save(slip);
+            });
+        } catch (RuntimeException recordingFailed) {
+            // Never let bookkeeping replace the real error. The send failure is
+            // what the operator has to see; this one goes to the log.
+            log.warn("Could not record the failed payslip delivery for {}", payslipId,
+                    recordingFailed);
+        }
     }
 
     private static String firstNonBlank(String... values) {

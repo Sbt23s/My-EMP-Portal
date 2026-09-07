@@ -132,4 +132,55 @@ public class Payslip {
 
     @Column(name = "source", nullable = false)
     private String source = "BATCH"; // BATCH | REQUEST
+
+    /* ---- itemised components, snapshotted with the rest ---- */
+
+    @Column(name = "conveyance_allowance", precision = 12, scale = 2)
+    private BigDecimal conveyanceAllowance = BigDecimal.ZERO;
+
+    @Column(name = "special_allowance", precision = 12, scale = 2)
+    private BigDecimal specialAllowance = BigDecimal.ZERO;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal bonus = BigDecimal.ZERO;
+
+    @Column(name = "other_earnings", precision = 12, scale = 2)
+    private BigDecimal otherEarnings = BigDecimal.ZERO;
+
+    @Column(name = "leave_deduction", precision = 12, scale = 2)
+    private BigDecimal leaveDeduction = BigDecimal.ZERO;
+
+    @Column(name = "advance_deduction", precision = 12, scale = 2)
+    private BigDecimal advanceDeduction = BigDecimal.ZERO;
+
+    /* ---- delivery ---- */
+
+    /**
+     * NOT_SENT | SENT | FAILED.
+     *
+     * <p>The service already emailed a payslip and recorded nothing, so "was
+     * September sent?" had no answer and a failed send was invisible -- which
+     * is the one case somebody needs to know about.
+     */
+    @Column(name = "delivery_status", nullable = false, length = 20)
+    private String deliveryStatus = "NOT_SENT";
+
+    /**
+     * The address it actually went to.
+     *
+     * <p>Recorded rather than read back from the employee, because their email
+     * can change and the question is where this payslip was sent.
+     */
+    @Column(name = "sent_to", length = 160)
+    private String sentTo;
+
+    @Column(name = "sent_by", length = 60)
+    private String sentBy;
+
+    @Column(name = "sent_at")
+    private LocalDateTime sentAt;
+
+    /** Why a send failed, so it can be fixed rather than guessed at. */
+    @Column(name = "send_error", length = 500)
+    private String sendError;
 }

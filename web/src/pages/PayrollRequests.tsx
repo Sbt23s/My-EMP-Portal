@@ -1,7 +1,7 @@
 import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Wallet, FileText, Download, IndianRupee, Eye, Users, Clock, Banknote, WalletCards, ReceiptText, CheckCircle2, Mail } from "lucide-react";
+import { Wallet, FileText, Download, IndianRupee, Eye, Users, Clock, Banknote, WalletCards, ReceiptText, CheckCircle2, Mail, AlertCircle } from "lucide-react";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
@@ -17,25 +17,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ApiEnvelope, PageEnvelope, UserSummary } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
-import { SalaryDialog } from "@/components/payroll/SalaryDialog";
+import { SalaryDialog, type SalaryStructure } from "@/components/payroll/SalaryDialog";
 import { cn } from "@/lib/utils";
 
-interface Salary {
-  userId: number;
-  basicSalary: number;
-  hra: number;
-  allowances: number;
-  pfPercentage: number;
-  esiApplicable: boolean;
-  ptAmount: number;
-  grossSalary: number;
-}
+/*
+ * The salary shape comes from SalaryDialog, which owns the form that writes it.
+ *
+ * This page used to declare its own copy, field for field. When V139 added the
+ * itemised components the copy did not gain them, so the dashboard estimated
+ * every structure that used one too low -- a duplicate type is two places for
+ * the same list to be wrong in.
+ */
+type Salary = SalaryStructure;
 interface PayslipSum {
   id: number;
   payMonth: number;
   payYear: number;
   netPay?: number;
   grossSalary?: number;
+  /* Delivery, from PayslipSummary on the server. Absent means never sent. */
+  deliveryStatus?: "NOT_SENT" | "SENT" | "FAILED";
+  sentTo?: string;
+  sentAt?: string;
+  sendError?: string;
 }
 interface SalaryMonth {
   userId: number;
@@ -46,6 +50,92 @@ interface SalaryMonth {
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const inr = (n?: number) => (n == null ? "—" : "₹" + Number(n).toLocaleString("en-IN"));
+
+/**
+ * Whether the payslip reached the employee.
+ *
+ * <p>Separate from "was it generated". Every row here said "Paid" the moment a
+ * payslip existed, which conflated three different situations: generated and
+ * emailed, generated and never sent, and a send that failed. The last is the
+ * one somebody has to act on, and it was the one that looked identical to
+ * success.
+ *
+ * <p>A failure shows its reason on hover rather than in the cell -- the table
+ * has one line per employee and a mail server error does not fit in it.
+ */
+/**
+ * What an employee would be paid, from their salary structure alone.
+ *
+ * <p>Used for a row that has no payslip yet -- the tile totals and the table
+ * both need it, and they each had their own copy of the arithmetic. The copies
+ * disagreed with the server and with each other: both divided PF by 100, and
+ * neither counted the components added in V139, so a row showed a ₹540,200
+ * deduction against a ₹51,000 gross and a net of zero.
+ *
+ * <p>`pfPercentage` is an amount in rupees despite its name -- PayslipService
+ * uses it as the deduction as it stands. Nothing here divides it.
+ *
+ * <p>This is an estimate and says so: the payslip is recalculated from
+ * attendance and that month's adjustments, which this cannot see. When a
+ * payslip exists its stored figures are used instead of this.
+ */
+function estimateFromStructure(s: Salary, monthBasic?: number) {
+  const basic = monthBasic || s.basicSalary || 0;
+  const recurring = basic + (s.hra || 0) + (s.allowances || 0)
+    + (s.conveyanceAllowance || 0) + (s.specialAllowance || 0);
+  const gross = recurring + (s.bonus || 0) + (s.overtime || 0);
+  // The ESI ceiling, applied the way the server applies it.
+  const esi = s.esiApplicable && gross <= 21000 ? gross * 0.0075 : 0;
+  const deductions = Math.round((s.pfPercentage || 0) + esi + (s.ptAmount || 0)
+    + (s.tdsAmount || 0) + (s.otherDeduction || 0));
+  return {
+    gross,
+    deductions,
+    // Floored at zero: a structure whose deductions exceed its gross is a
+    // data-entry problem, and a negative would quietly offset another row.
+    net: Math.max(0, gross - deductions)
+  };
+}
+
+function DeliveryBadge({ status, sentTo, sentAt, error }: {
+  status?: "NOT_SENT" | "SENT" | "FAILED";
+  sentTo?: string;
+  sentAt?: string;
+  error?: string;
+}) {
+  // An older row has no value stored; never sent is the truth about it.
+  const state = status ?? "NOT_SENT";
+  const base =
+    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase";
+
+  if (state === "SENT") {
+    return (
+      <span
+        className={cn(base, "bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300")}
+        title={[sentTo && `Sent to ${sentTo}`, sentAt && dayjs(sentAt).format("DD MMM YYYY, h:mm A")]
+          .filter(Boolean).join(" — ")}
+      >
+        <Mail className="h-3 w-3" /> Emailed
+      </span>
+    );
+  }
+  if (state === "FAILED") {
+    return (
+      <span
+        className={cn(base,
+          "bg-destructive/10 text-destructive ring-1 ring-destructive/30")}
+        title={error ? `Failed: ${error}` : "The send failed"}
+      >
+        <AlertCircle className="h-3 w-3" /> Send failed
+      </span>
+    );
+  }
+  return (
+    <span className={cn(base, "bg-muted text-muted-foreground")} title="Not emailed yet">
+      Not sent
+    </span>
+  );
+}
 
 function PayrollStatus({ state }: { state: "GENERATED" | "PENDING" | "FAILED" | "NOT_GENERATED" }) {
   const look: Record<string, [string, string, string]> = {
@@ -135,6 +225,9 @@ export default function PayrollPage() {
   const [salaryFor, setSalaryFor] = useState<UserSummary | null>(null);
   const [genFor, setGenFor] = useState<UserSummary | null>(null);
   /** Which payslip is being emailed, so only that row shows a spinner. */
+  // This page's own query client. A second `qc` exists further down, inside a
+  // child component, and is a different instance in a different scope.
+  const pageQc = useQueryClient();
   const [emailing, setEmailing] = useState<number | null>(null);
 
   /**
@@ -155,6 +248,16 @@ export default function PayrollPage() {
       toast.error(apiMessage(err, "Could not send the payslip"), { id });
     } finally {
       setEmailing(null);
+      /*
+       * Re-read the payslips either way.
+       *
+       * The send records its outcome on the payslip, so both a success and a
+       * failure change what the delivery badge should say. Refetching only on
+       * success would leave a failed send showing "Not sent" -- the one case
+       * where the badge has something to tell somebody.
+       */
+      pageQc.invalidateQueries({ queryKey: ["payroll-month-payslips"] });
+      pageQc.invalidateQueries({ queryKey: ["payslips-for"] });
     }
   };
   const [payslipsFor, setPayslipsFor] = useState<UserSummary | null>(null);
@@ -228,18 +331,26 @@ export default function PayrollPage() {
         totalGross += (payslip.grossSalary || 0);
         totalNet += (payslip.netPay || 0);
       } else if (s) {
-        const basic = monthBasicMap.get(e.id) || s.basicSalary || 0;
-        const hra = s.hra || 0;
-        const allowances = s.allowances || 0;
-        const g = s.grossSalary || (basic + hra + allowances);
-        const pf = (basic * (s.pfPercentage || 0)) / 100;
-        const esi = s.esiApplicable ? (g * 0.0075) : 0;
-        const pt = s.ptAmount || 0;
-        const d = Math.round(pf + esi + pt);
-        const n = Math.max(0, g - d);
-        totalGross += g;
-        totalNet += n;
+        const est = estimateFromStructure(s, monthBasicMap.get(e.id));
+        totalGross += est.gross;
+        totalNet += est.net;
       }
+    });
+
+    /*
+     * Delivery, counted across the same rows the rest of the tiles use.
+     *
+     * A failed send is the only figure on this page that needs somebody to do
+     * something, and until now it was not on the page at all -- it sat in one
+     * badge on one row, on whichever month happened to be selected.
+     */
+    let emailed = 0;
+    let failed = 0;
+    rows.forEach((e) => {
+      const slip = monthPayslips.data?.[String(e.id)];
+      if (!slip) return;
+      if (slip.deliveryStatus === "SENT") emailed++;
+      else if (slip.deliveryStatus === "FAILED") failed++;
     });
 
     return {
@@ -248,6 +359,8 @@ export default function PayrollPage() {
       missing: rows.length - configured,
       generated,
       pending: rows.length - generated,
+      emailed,
+      failed,
       totalNet,
       totalGross,
       totalDeductions: totalGross - totalNet
@@ -430,6 +543,35 @@ export default function PayrollPage() {
       </div>
 
       {/*
+        Delivery, and only when it is worth saying.
+
+        Shown once at least one payslip has been generated for the month --
+        before that "0 emailed" is noise. A failed send gets the destructive
+        treatment because it is the one line here somebody has to act on.
+      */}
+      {payrollCounts.generated > 0 && (
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border bg-card px-4 py-3 text-xs shadow-sm">
+          <span className="font-bold uppercase tracking-wider text-muted-foreground">
+            Payslip delivery — {MONTHS[month - 1]} {year}
+          </span>
+          <span className="inline-flex items-center gap-1.5 font-semibold text-sky-600">
+            <Mail className="h-3.5 w-3.5" />
+            {payrollCounts.emailed} emailed
+          </span>
+          <span className="inline-flex items-center gap-1.5 font-semibold text-muted-foreground">
+            {payrollCounts.generated - payrollCounts.emailed - payrollCounts.failed} not sent
+          </span>
+          {payrollCounts.failed > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-destructive/10 px-2 py-1 font-semibold text-destructive ring-1 ring-destructive/30">
+              <AlertCircle className="h-3.5 w-3.5" />
+              {payrollCounts.failed} send{payrollCounts.failed === 1 ? "" : "s"} failed —
+              hover a row&apos;s badge for the reason
+            </span>
+          )}
+        </div>
+      )}
+
+      {/*
         The reason a row reads zero, said out loud.
 
         Payroll is calculated from a salary structure, and an employee without
@@ -491,15 +633,12 @@ export default function PayrollPage() {
                     net = payslip.netPay || 0;
                     deds = gross - net;
                   } else if (s) {
-                    const basic = monthBasicMap.get(e.id) || s.basicSalary || 0;
-                    const hra = s.hra || 0;
-                    const allowances = s.allowances || 0;
-                    gross = s.grossSalary || (basic + hra + allowances);
-                    const pf = (basic * (s.pfPercentage || 0)) / 100;
-                    const esi = s.esiApplicable ? (gross * 0.0075) : 0;
-                    const pt = s.ptAmount || 0;
-                    deds = Math.round(pf + esi + pt);
-                    net = Math.max(0, gross - deds);
+                    // Same estimator the tiles use, so a row and the total it
+                    // contributes to cannot disagree.
+                    const est = estimateFromStructure(s, monthBasicMap.get(e.id));
+                    gross = est.gross;
+                    deds = est.deductions;
+                    net = est.net;
                   }
                   
                   const payDate = dayjs(`${year}-${month}-01`).endOf('month').format("DD MMM YYYY");
@@ -526,9 +665,23 @@ export default function PayrollPage() {
                       </td>
                       <td className="px-4 py-3">
                         {isPaid ? (
-                          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                            Paid
-                          </span>
+                          <div className="flex flex-col items-start gap-1">
+                            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                              Paid
+                            </span>
+                            {/*
+                              Generated and delivered are different facts, so
+                              they get separate badges. "Paid" alone read as
+                              "the employee has it", which was not true of a
+                              payslip nobody had sent.
+                            */}
+                            <DeliveryBadge
+                              status={payslip.deliveryStatus}
+                              sentTo={payslip.sentTo}
+                              sentAt={payslip.sentAt}
+                              error={payslip.sendError}
+                            />
+                          </div>
                         ) : (
                           <span className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-[11px] font-bold text-orange-700 dark:bg-orange-950/40 dark:text-orange-300">
                             Pending
@@ -574,6 +727,21 @@ export default function PayrollPage() {
                                 {emailing === payslip.id
                                   ? <Loader2 className="h-4 w-4 animate-spin" />
                                   : <Mail className="h-4 w-4" />}
+                              </button>
+                              {/*
+                                Every month this employee has been paid.
+                                PayslipsDialog was already written and nothing
+                                opened it -- setPayslipsFor was never called --
+                                so an employee's history was unreachable from
+                                the page that lists them.
+                              */}
+                              <button
+                                type="button"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border text-muted-foreground hover:bg-muted/50 transition-colors"
+                                onClick={() => setPayslipsFor(e)}
+                                title={`All payslips for ${e.name}`}
+                              >
+                                <FileText className="h-4 w-4" />
                               </button>
                             </>
                           ) : (
@@ -906,11 +1074,41 @@ function GenerateDialog({ employee, grossMonthly, standingBasic, salary, default
 }
 
 function PayslipsDialog({ employee, canDownload, onClose }: { employee: UserSummary; canDownload: boolean; onClose: () => void }) {
+  const dialogQc = useQueryClient();
+  const [sending, setSending] = useState<number | null>(null);
   const list = useQuery({
     queryKey: ["payslips-for", employee.id],
     queryFn: async () =>
       (await api.get<ApiEnvelope<PayslipSum[]>>(`/payroll/payslip/list/${employee.id}`)).data.data
   });
+
+  /**
+   * Send one of this employee's payslips, from their history.
+   *
+   * <p>Here as well as on the month table because a resend is decided from the
+   * history: somebody asks where last September's payslip went, and this is the
+   * screen showing that it was never sent. Walking back to the right month on
+   * the main table to press send there was the only way to do it.
+   *
+   * <p>The address is not asked for -- the server reads it from the employee's
+   * profile, so a payslip cannot be sent to the wrong person by mistyping.
+   */
+  const send = async (payslipId: number, label: string) => {
+    setSending(payslipId);
+    const id = toast.loading(`Emailing ${label} payslip…`);
+    try {
+      const res = await api.post<{ message?: string }>(`/payroll/payslip/${payslipId}/email`);
+      toast.success(res.data?.message || `${label} payslip emailed`, { id });
+    } catch (err) {
+      toast.error(apiMessage(err, "Could not send the payslip"), { id });
+    } finally {
+      setSending(null);
+      // Either outcome is recorded on the payslip, so the badge changes both
+      // ways and both need the refetch.
+      dialogQc.invalidateQueries({ queryKey: ["payslips-for", employee.id] });
+      dialogQc.invalidateQueries({ queryKey: ["payroll-month-payslips"] });
+    }
+  };
 
   return (
     <Dialog open onClose={onClose} className="max-w-3xl">
@@ -950,18 +1148,53 @@ function PayslipsDialog({ employee, canDownload, onClose }: { employee: UserSumm
                       {inr(p.netPay)}
                     </td>
                     <td className="p-3">
-                      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 uppercase">
-                        Paid
-                      </span>
+                      {/*
+                        Was "Paid", unconditionally, on every row -- which said
+                        nothing, because a row only exists once the payslip has
+                        been generated. What the reader actually wants to know
+                        here is whether it was sent.
+                      */}
+                      <div className="flex flex-col items-start gap-1">
+                        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 uppercase">
+                          Paid
+                        </span>
+                        <DeliveryBadge
+                          status={p.deliveryStatus}
+                          sentTo={p.sentTo}
+                          sentAt={p.sentAt}
+                          error={p.sendError}
+                        />
+                      </div>
                     </td>
                     <td className="p-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <Button variant="outline" size="sm" className="h-8 px-2.5 text-xs" onClick={() => viewPayslipPdf(p.id)}>
                           <Eye className="mr-1 h-3.5 w-3.5" /> View
                         </Button>
-                        <Button variant="outline" size="sm" className="h-8 px-2.5 text-xs text-primary border-primary/30" onClick={() => downloadPayslipPdf(p.id, employee.name)}>
-                          <Download className="mr-1 h-3.5 w-3.5" /> Download
-                        </Button>
+                        {/*
+                          canDownload was accepted as a prop and then never
+                          read, so the two buttons that act on somebody else's
+                          payslip were shown to anyone who could open the
+                          dialog. The server checks the same thing, so this was
+                          a UI that offered an action it would be refused.
+                        */}
+                        {canDownload && (
+                          <>
+                            <Button variant="outline" size="sm" className="h-8 px-2.5 text-xs text-primary border-primary/30" onClick={() => downloadPayslipPdf(p.id, employee.name)}>
+                              <Download className="mr-1 h-3.5 w-3.5" /> Download
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={sending === p.id}
+                              className="h-8 px-2.5 text-xs text-sky-600 border-sky-600/30 disabled:opacity-40"
+                              onClick={() => send(p.id, `${MONTHS[p.payMonth - 1]} ${p.payYear}`)}
+                            >
+                              <Mail className="mr-1 h-3.5 w-3.5" />
+                              {p.deliveryStatus === "SENT" ? "Resend" : "Send"}
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

@@ -21,7 +21,20 @@ public record PayslipResponse(
         BigDecimal performancePay, BigDecimal expensesPay,
         BigDecimal salaryAdvance, BigDecimal healthInsurance, String source,
         /** How many times this payslip has been generated. 1 unless it was regenerated. */
-        Integer revision
+        Integer revision,
+
+        // ---- itemised components (V109) ----
+        BigDecimal conveyanceAllowance, BigDecimal specialAllowance, BigDecimal bonus,
+        BigDecimal otherEarnings, BigDecimal leaveDeduction, BigDecimal advanceDeduction,
+
+        /**
+         * Delivery: NOT_SENT | SENT | FAILED, and where it went.
+         *
+         * <p>Returned so the payroll screen can show whether a payslip actually
+         * reached the employee. Before this the send left no trace, and a failed
+         * one looked the same as one never attempted.
+         */
+        String deliveryStatus, String sentTo, LocalDateTime sentAt, String sendError
 ) {
     public static PayslipResponse from(Payslip p, String name, String code) {
         return new PayslipResponse(p.getId(), p.getUserId(), name, code,
@@ -36,6 +49,9 @@ public record PayslipResponse(
                 p.getPayDate(), p.getWorkingDays(),
                 p.getPerformancePay(), p.getExpensesPay(),
                 p.getSalaryAdvance(), p.getHealthInsurance(), p.getSource(),
-                p.getRevision());
+                p.getRevision(),
+                p.getConveyanceAllowance(), p.getSpecialAllowance(), p.getBonus(),
+                p.getOtherEarnings(), p.getLeaveDeduction(), p.getAdvanceDeduction(),
+                p.getDeliveryStatus(), p.getSentTo(), p.getSentAt(), p.getSendError());
     }
 }

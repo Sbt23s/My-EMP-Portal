@@ -13,5 +13,11 @@ public record SalaryStructureResponse(
         BigDecimal pfPercentage,
         boolean esiApplicable,
         BigDecimal ptAmount,
+        BigDecimal conveyanceAllowance,
+        BigDecimal specialAllowance,
+        BigDecimal bonus,
+        BigDecimal overtime,
+        BigDecimal tdsAmount,
+        BigDecimal otherDeduction,
         BigDecimal grossSalary
 ) {}

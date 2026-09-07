@@ -93,7 +93,34 @@ public class AuditFilter extends OncePerRequestFilter {
 
             Map.entry("/api/admin/reset", new String[]{AuditService.SYSTEM, "Cleared records (Fresh Start)"}),
             Map.entry("/api/org", new String[]{AuditService.SYSTEM, "Changed organisation master data"}),
-            Map.entry("/api/tasks", new String[]{AuditService.SYSTEM, "Task change"})
+            Map.entry("/api/tasks", new String[]{AuditService.SYSTEM, "Task change"}),
+
+            /*
+             * Configuration: the settings that change what everybody else can do.
+             *
+             * These all fell through to the generic fallback and were recorded as
+             * SYSTEM / "Change" — so switching a module off for a whole company,
+             * editing a role's permissions and renaming a task were the same row
+             * to anybody reading the log. When a screen stops working for an
+             * entire company these are the rows to search, and they had no name
+             * to search for.
+             *
+             * Longest prefix first, as above: the modules rule must beat the
+             * companies rule, or turning a module off reads as "changed a company".
+             */
+            Map.entry("/api/technical-admin/companies/", new String[]{AuditService.CONFIG, "Changed a company's configuration"}),
+            Map.entry("/api/technical-admin/companies", new String[]{AuditService.CONFIG, "Changed the company list"}),
+            Map.entry("/api/technical-admin/roles", new String[]{AuditService.CONFIG, "Changed a role's permissions"}),
+            Map.entry("/api/technical-admin/auth", new String[]{AuditService.SECURITY, "Technical administrator sign-in action"}),
+            Map.entry("/api/tech-admin/global-announcements", new String[]{AuditService.CONFIG, "Changed a global announcement"}),
+            Map.entry("/api/global-announcements", new String[]{AuditService.CONFIG, "Changed a global announcement"}),
+            Map.entry("/api/settings", new String[]{AuditService.CONFIG, "Changed portal settings"}),
+            Map.entry("/api/my-modules", new String[]{AuditService.CONFIG, "Changed module access"}),
+            Map.entry("/api/team-leaders", new String[]{AuditService.CONFIG, "Changed team leader assignments"}),
+            Map.entry("/api/chatbot", new String[]{AuditService.CONFIG, "Changed chatbot settings"}),
+            Map.entry("/api/cache", new String[]{AuditService.CONFIG, "Cleared a cache"}),
+            Map.entry("/api/onboarding", new String[]{AuditService.EMPLOYEE, "Onboarding change"}),
+            Map.entry("/api/performance", new String[]{AuditService.EMPLOYEE, "Performance review change"})
     );
 
     @Override

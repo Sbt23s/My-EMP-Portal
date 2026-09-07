@@ -171,7 +171,26 @@ public class LeaveService {
                 + attendanceRepository
                 .countByUserIdAndWorkDateBetweenAndStatus(userId, first, last, "WFH");
         BigDecimal leaveDays = paidDays.add(unpaidDays);
-        int absent = (int) Math.max(0, workingDays - present - leaveDays.intValue());
+
+        /*
+         * Absence needs a register to be measured against.
+         *
+         * With no attendance rows at all, `present` is zero and every working
+         * day in the month reads as an absence -- so this preview told HR that
+         * somebody had missed the entire month, and the payslip built on it
+         * deducted their whole salary. A month nobody recorded is not a month
+         * of absence; it is a month with nothing to go on.
+         *
+         * Counted over the whole month with any status, which is the same
+         * question countMonth asks in PayslipService, so the preview and the
+         * payslip cannot disagree about whether the register exists.
+         */
+        long anyRows = attendanceRepository
+                .countByUserIdAndWorkDateBetween(userId, first, last);
+        boolean tracked = com.pixous.hrportal.common.WorkCalendar.attendanceWasKept(anyRows);
+        int absent = tracked
+                ? (int) Math.max(0, workingDays - present - leaveDays.intValue())
+                : 0;
 
         // A day neither worked nor covered by approved leave is a day not paid for.
         // Counting only unpaid leave meant somebody absent for a whole month with no

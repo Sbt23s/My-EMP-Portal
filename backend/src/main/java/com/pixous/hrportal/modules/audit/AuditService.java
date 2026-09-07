@@ -37,6 +37,17 @@ public class AuditService {
     public static final String FACE = "FACE";
     public static final String CHAT = "CHAT";
     public static final String SECURITY = "SECURITY";
+    /**
+     * Changing how the portal itself behaves.
+     *
+     * <p>Separate from SYSTEM, which is where routine housekeeping lands.
+     * Turning a module off for a company, editing a role's permissions or
+     * rewiring an approval chain changes what everybody else can do, and those
+     * are the rows somebody needs to find when a screen stops working for a
+     * whole company. Under SYSTEM they were indistinguishable from a task edit.
+     */
+    public static final String CONFIG = "CONFIG";
+
     public static final String SYSTEM = "SYSTEM";
 
     /**

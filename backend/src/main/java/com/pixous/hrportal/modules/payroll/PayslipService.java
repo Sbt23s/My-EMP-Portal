@@ -354,6 +354,18 @@ public class PayslipService {
                 .orElseThrow(() -> ApiException.notFound("User"));
         SalaryStructure s = salaryRepository.findByUserIdAndActiveTrue(req.userId())
                 .orElseGet(SalaryStructure::new);
+
+        /*
+         * What it was, read before the setters overwrite it.
+         *
+         * This method edits the active row in place rather than superseding it,
+         * so the previous figures are gone the moment it saves and the only
+         * record of a raise -- or of somebody quietly halving a salary -- is
+         * whatever is captured here first.
+         */
+        boolean isNew = s.getId() == null;
+        String before = isNew ? null : describe(s);
+
         s.setUserId(req.userId());
         s.setBasicSalary(req.basicSalary());
         s.setHra(req.hra() != null ? req.hra() : BigDecimal.ZERO);
@@ -369,7 +381,50 @@ public class PayslipService {
         s.setOtherDeduction(zed(req.otherDeduction()));
         s.setActive(true);
         if (s.getEffectiveFrom() == null) s.setEffectiveFrom(LocalDate.now());
-        return toSalaryResponse(salaryRepository.save(s), user);
+        SalaryStructure saved = salaryRepository.save(s);
+
+        /*
+         * Salary is money, and this is the screen that sets it.
+         *
+         * Generating a payslip was already audited and setting the salary the
+         * payslip is computed from was not, so "why did this person's pay
+         * change in March" had no answer anywhere in the system. Recorded after
+         * the save, so a failed write does not leave a log line claiming a
+         * change that did not happen.
+         */
+        auditService.recordChange(
+                com.pixous.hrportal.security.SecurityUtils.currentUserId(),
+                "PAYROLL",
+                isNew ? "SALARY_STRUCTURE_CREATED" : "SALARY_STRUCTURE_UPDATED",
+                (isNew ? "Set" : "Changed") + " the salary structure for " + user.getName()
+                        + " (gross " + grossOf(saved) + ")",
+                "SALARY_STRUCTURE", saved.getId(), user.getName(),
+                before, describe(saved));
+
+        return toSalaryResponse(saved, user);
+    }
+
+    /** The figures of a structure, one line, for an audit before/after. */
+    private static String describe(SalaryStructure s) {
+        return "basic=" + zed(s.getBasicSalary())
+                + " hra=" + zed(s.getHra())
+                + " allowances=" + zed(s.getAllowances())
+                + " conveyance=" + zed(s.getConveyanceAllowance())
+                + " special=" + zed(s.getSpecialAllowance())
+                + " bonus=" + zed(s.getBonus())
+                + " overtime=" + zed(s.getOvertime())
+                + " pf=" + zed(s.getPfPercentage())
+                + " esi=" + s.isEsiApplicable()
+                + " pt=" + zed(s.getPtAmount())
+                + " tds=" + zed(s.getTdsAmount())
+                + " otherDeduction=" + zed(s.getOtherDeduction());
+    }
+
+    /** The recurring monthly gross, for the audit summary line. */
+    private static BigDecimal grossOf(SalaryStructure s) {
+        return zed(s.getBasicSalary()).add(zed(s.getHra())).add(zed(s.getAllowances()))
+                .add(zed(s.getConveyanceAllowance())).add(zed(s.getSpecialAllowance()))
+                .add(zed(s.getBonus())).add(zed(s.getOvertime()));
     }
 
     @Transactional(readOnly = true)
@@ -802,6 +857,17 @@ public class PayslipService {
                     reportService.payslipPdfBytes(p, u));
         } catch (RuntimeException e) {
             self.recordSendFailure(p.getId(), to, e);
+            /*
+             * Logged as a failure, not omitted.
+             *
+             * An audit trail that records only what worked answers "was it
+             * sent?" with silence in exactly the case somebody is asking.
+             */
+            auditService.record(requesterId, "PAYROLL", "PAYSLIP_EMAIL_FAILED",
+                    "Could not email the " + period + " payslip for " + u.getName()
+                            + " to " + to,
+                    "PAYSLIP", p.getId(), period + " — " + u.getName(),
+                    e.getMessage(), false, null, null, null, null, null, null);
             throw e;
         }
 
@@ -811,6 +877,19 @@ public class PayslipService {
         p.setSentAt(java.time.LocalDateTime.now());
         p.setSendError(null);
         payslipRepository.save(p);
+
+        /*
+         * A payslip leaving the company is worth a line in the log.
+         *
+         * The delivery columns on the payslip say what happened to *this*
+         * payslip; the audit log says who caused it, which is the question
+         * asked when somebody's salary document turns up where it should not
+         * have. The address is recorded because that is the fact in dispute.
+         */
+        auditService.record(requesterId, "PAYROLL", "PAYSLIP_EMAILED",
+                "Emailed the " + period + " payslip for " + u.getName() + " to " + to,
+                "PAYSLIP", p.getId(), period + " — " + u.getName());
+
         return to;
     }
 
@@ -889,7 +968,10 @@ public class PayslipService {
      *
      * <p>Here a day is paid if it was worked, worked from home, or covered by
      * leave that carries pay. Only a working day with none of those is
-     * deducted. Future days in the current month are skipped, so a run on the
+     * deducted -- and only when the register was being kept at all. A month
+     * with no attendance rows for this employee deducts nothing; see
+     * {@link com.pixous.hrportal.common.WorkCalendar#attendanceWasKept(long)}
+     * for why absent and unrecorded must not be the same thing. Future days in the current month are skipped, so a run on the
      * 10th does not treat the rest of the month as absence; working days are
      * counted over the whole month regardless, so a day's pay does not change
      * depending on when payroll is run.
@@ -922,12 +1004,34 @@ public class PayslipService {
                             a.getStatus() == null ? "" : a.getStatus().toUpperCase()));
         }
 
+        /*
+         * Was the register kept for this employee this month?
+         *
+         * Read over the whole month, not just up to today: a run on the 3rd
+         * would otherwise see two days, find nothing in them, and conclude the
+         * register was not kept when it plainly was.
+         */
+        boolean tracked = com.pixous.hrportal.common.WorkCalendar.attendanceWasKept(
+                attendanceRepository.countByUserIdAndWorkDateBetween(userId, start, monthEnd));
+
         int present = 0, paid = 0, unpaid = 0, wfh = 0;
         for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
             if (com.pixous.hrportal.common.WorkCalendar.isWeekend(d)) continue;
             if (holidays.contains(d)) continue;
             String status = byDay.get(d);
-            if (status == null) { unpaid++; continue; }
+            if (status == null) {
+                /*
+                 * No row for this day.
+                 *
+                 * An absence only if the register was being kept. Where it was
+                 * not, every working day landed here and the month's entire
+                 * salary was deducted as absence -- a payslip with a negative
+                 * net, produced without an error, on figures that otherwise
+                 * looked right.
+                 */
+                if (tracked) unpaid++;
+                continue;
+            }
             switch (status) {
                 case "WFH" -> { present++; wfh++; }
                 case "PRESENT", "LATE", "HALF_DAY" -> present++;

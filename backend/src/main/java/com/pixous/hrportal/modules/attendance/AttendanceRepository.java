@@ -17,4 +17,13 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     long countByUserIdAndWorkDateBetweenAndStatus(
             Long userId, LocalDate from, LocalDate to, String status);
+
+    /**
+     * Rows of any status for one employee in a date range.
+     *
+     * <p>Answers "was attendance recorded at all", which payroll needs before
+     * it can read a missing day as an absence. Counted rather than fetched
+     * because only the existence matters.
+     */
+    long countByUserIdAndWorkDateBetween(Long userId, LocalDate from, LocalDate to);
 }

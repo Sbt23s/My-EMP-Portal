@@ -75,16 +75,24 @@ export default function EmployeesPage() {
   const [deleteTarget, setDeleteTarget] = useState<{
     id: number; name: string; code: string;
   } | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const deleteEmployee = useMutation({
-    mutationFn: async (vars: { id: number; confirmName: string }) =>
-      (await api.delete(`/users/${vars.id}`, { data: { confirmName: vars.confirmName } })).data,
+    /*
+     * No typed confirmation. The server still accepts one -- assertDeletable
+     * skips the check when it is absent -- so the guards that matter are
+     * untouched: nobody can delete their own account, and an employee with
+     * payslips is refused because PF and ESI figures have to be kept.
+     *
+     * What is gone is the second step. One confirm on a dialog that says what
+     * will be removed is a deliberate act; asking for a name as well was
+     * friction the person deleting had already decided against.
+     */
+    mutationFn: async (vars: { id: number }) =>
+      (await api.delete(`/users/${vars.id}`)).data,
     onSuccess: () => {
       deleteQc.invalidateQueries({ queryKey: ["employees"] });
       setDeleteTarget(null);
-      setDeleteConfirm("");
       setDeleteError(null);
     },
     onError: (e: any) => {
@@ -747,7 +755,7 @@ export default function EmployeesPage() {
       {deleteTarget && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => { setDeleteTarget(null); setDeleteConfirm(""); setDeleteError(null); }}
+          onClick={() => { setDeleteTarget(null); setDeleteError(null); }}
         >
           <div
             className="w-full max-w-md rounded-lg border bg-background p-5 shadow-xl"
@@ -755,29 +763,17 @@ export default function EmployeesPage() {
           >
             <h3 className="flex items-center gap-2 text-sm font-semibold text-destructive">
               <AlertCircle className="h-4 w-4" />
-              Delete {deleteTarget.name} permanently?
+              Delete {deleteTarget.name}?
             </h3>
 
             <p className="mt-3 text-[13px] text-muted-foreground">
               This removes the employee and everything recorded about them:
-              attendance, leave, claims, tickets, tasks, work reports, documents,
-              bank details and reviews.
+              attendance, leave, claims, tickets, tasks, work reports, documents
+              and bank details. There is no undo.
             </p>
-            <p className="mt-2 text-[13px] font-medium">
-              There is no undo. To keep the record and only stop access, offboard
-              them instead.
+            <p className="mt-2 text-[13px] text-muted-foreground">
+              To keep the record and only stop access, offboard them instead.
             </p>
-
-            <label className="mt-4 block text-xs text-muted-foreground">
-              Type <span className="font-semibold text-foreground">{deleteTarget.name}</span> to confirm
-              <Input
-                className="mt-1"
-                value={deleteConfirm}
-                onChange={(e) => { setDeleteConfirm(e.target.value); setDeleteError(null); }}
-                placeholder={deleteTarget.name}
-                autoFocus
-              />
-            </label>
 
             {deleteError && (
               <p className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
@@ -788,22 +784,16 @@ export default function EmployeesPage() {
             <div className="mt-5 flex justify-end gap-2">
               <Button
                 variant="ghost"
-                onClick={() => { setDeleteTarget(null); setDeleteConfirm(""); setDeleteError(null); }}
+                onClick={() => { setDeleteTarget(null); setDeleteError(null); }}
               >
                 Cancel
               </Button>
               <Button
                 variant="destructive"
-                disabled={
-                  deleteEmployee.isPending ||
-                  deleteConfirm.trim().toLowerCase() !== deleteTarget.name.trim().toLowerCase()
-                }
-                onClick={() => deleteEmployee.mutate({
-                  id: deleteTarget.id,
-                  confirmName: deleteConfirm.trim()
-                })}
+                disabled={deleteEmployee.isPending}
+                onClick={() => deleteEmployee.mutate({ id: deleteTarget.id })}
               >
-                {deleteEmployee.isPending ? "Deleting..." : "Delete permanently"}
+                {deleteEmployee.isPending ? "Deleting..." : "Delete"}
               </Button>
             </div>
           </div>

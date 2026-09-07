@@ -63,13 +63,14 @@ class DeleteEmployeeTest {
         }
 
         @Test
-        @DisplayName("The employee's name must be typed to confirm")
-        void nameConfirmationRequired() throws IOException {
-            // A destructive button next to Edit on a crowded table is easy to
-            // hit by accident, and there is no undo.
-            assertThat(read(SERVICE))
-                    .as("a mismatched confirmation must refuse")
-                    .contains("to confirm");
+        @DisplayName("A confirmation is still honoured when one is sent")
+        void confirmationStillSupported() throws IOException {
+            String service = read(SERVICE);
+
+            // The screen no longer asks for a name, but the check remains for
+            // any caller that does send one, and it is skipped when absent.
+            assertThat(service).contains("if (confirmation != null)");
+            assertThat(service).contains("to confirm");
         }
 
         @Test
@@ -134,11 +135,27 @@ class DeleteEmployeeTest {
         }
 
         @Test
-        @DisplayName("The confirm button stays disabled until the name matches")
-        void confirmRequiresTheName() throws IOException {
-            assertThat(read(SCREEN))
-                    .as("typing anything else must not enable the button")
-                    .contains("deleteConfirm.trim().toLowerCase() !== deleteTarget.name.trim().toLowerCase()");
+        @DisplayName("Deleting takes one confirm, with no name to type")
+        void deleteTakesOneConfirm() throws IOException {
+            String screen = read(SCREEN);
+
+            int dialog = screen.indexOf("Delete {deleteTarget.name}?");
+            assertThat(dialog).as("the list's delete dialog must exist").isGreaterThan(-1);
+            String block = screen.substring(dialog, Math.min(dialog + 2000, screen.length()));
+
+            // The typed name was removed deliberately. What must remain is a
+            // dialog that states the consequence before it asks, so the single
+            // click is still an informed one.
+            //
+            // Scoped to this dialog: the employee detail view has an older
+            // delete of its own that asks for the employee code, and it is
+            // untouched.
+            assertThat(block)
+                    .as("this confirm must not be gated on a typed name")
+                    .doesNotContain("deleteConfirm");
+            assertThat(block)
+                    .as("the consequence is still stated before it asks")
+                    .contains("There is no undo");
         }
 
         @Test

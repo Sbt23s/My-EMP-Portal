@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ApiEnvelope, LeaveType, HolidayResponse } from "@/types";
@@ -31,6 +32,18 @@ export default function LeavePoliciesPage() {
   const thisYear = new Date().getFullYear();
   const [allocYearStr, setAllocYearStr] = useState<string>(String(thisYear));
   const [typeQuery, setTypeQuery] = useState("");
+
+  /*
+   * Three questions this page used to ask with window.confirm().
+   *
+   * That draws the browser's own box: pinned to the top of the window, the
+   * hostname printed above the question, unstyleable, and it blocks the page
+   * behind it. The portal already has a centred ConfirmDialog that five other
+   * screens use, so these hold what it needs -- null or false means closed.
+   */
+  const [confirmAllocate, setConfirmAllocate] = useState(false);
+  const [confirmType, setConfirmType] = useState<LeaveType | null>(null);
+  const [confirmHoliday, setConfirmHoliday] = useState<HolidayResponse | null>(null);
 
   const numYear = Number(allocYearStr);
   const isInvalidYear = allocYearStr.length > 0 && numYear !== thisYear;
@@ -166,9 +179,7 @@ export default function LeavePoliciesPage() {
                         toast.error(`Only the current year (${thisYear}) can be allocated. Past and future years are not allowed.`);
                         return;
                       }
-                      if (confirm(`Allocate default leave balances to all employees for ${thisYear}?`)) {
-                        allocateMutation.mutate(thisYear);
-                      }
+                      setConfirmAllocate(true);
                     }}
                   >
                     {allocateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Users className="h-4 w-4 mr-2" />}
@@ -247,9 +258,7 @@ export default function LeavePoliciesPage() {
                                 size="sm"
                                 title="Delete leave type"
                                 onClick={() => {
-                                  if (confirm(`Delete ${t.name}? Existing balances stay, but nobody can be given it again.`)) {
-                                    deleteTypeMutation.mutate(t.id);
-                                  }
+                                  setConfirmType(t);
                                 }}
                               >
                                 <Trash2 className="w-4 h-4 text-destructive" />
@@ -312,9 +321,7 @@ export default function LeavePoliciesPage() {
                               size="sm"
                               title="Delete holiday"
                               onClick={() => {
-                                if (confirm(`Delete holiday ${h.name}?`)) {
-                                  deleteHolidayMutation.mutate(h.id);
-                                }
+                                setConfirmHoliday(h);
                               }}
                             >
                               <Trash2 className="w-4 h-4 text-destructive" />
@@ -349,6 +356,53 @@ export default function LeavePoliciesPage() {
       {createHolidayOpen && (
         <CreateHolidayDialog onClose={() => setCreateHolidayOpen(false)} />
       )}
+
+      <ConfirmDialog
+        open={confirmAllocate}
+        title={`Allocate leave for ${thisYear}?`}
+        description="Every employee is given their annual balance from each leave type's maximum. Existing balances are kept, so this is safe to run again."
+        detail={
+          (leaveTypes.data ?? [])
+            .filter((t: LeaveType) => !!t.maxDaysPerYear && t.maxDaysPerYear > 0)
+            .map((t: LeaveType) => [t.name, `${t.maxDaysPerYear} days`] as [string, string])
+        }
+        confirmLabel="Allocate to all"
+        cancelLabel="Cancel"
+        busy={allocateMutation.isPending}
+        onConfirm={() => {
+          allocateMutation.mutate(thisYear);
+          setConfirmAllocate(false);
+        }}
+        onCancel={() => setConfirmAllocate(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmType !== null}
+        title={confirmType ? `Delete ${confirmType.name}?` : ""}
+        description="Balances already given to employees stay as they are, but nobody can be granted this leave type again."
+        detail={confirmType ? [["Code", confirmType.code]] : undefined}
+        confirmLabel="Delete leave type"
+        busy={deleteTypeMutation.isPending}
+        onConfirm={() => {
+          if (confirmType) deleteTypeMutation.mutate(confirmType.id);
+          setConfirmType(null);
+        }}
+        onCancel={() => setConfirmType(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmHoliday !== null}
+        title={confirmHoliday ? `Delete ${confirmHoliday.name}?` : ""}
+        description="The holiday is removed from the company calendar."
+        detail={confirmHoliday ? [["Date", confirmHoliday.holidayDate]] : undefined}
+        confirmLabel="Delete holiday"
+        busy={deleteHolidayMutation.isPending}
+        onConfirm={() => {
+          if (confirmHoliday) deleteHolidayMutation.mutate(confirmHoliday.id);
+          setConfirmHoliday(null);
+        }}
+        onCancel={() => setConfirmHoliday(null)}
+      />
     </div>
   );
 }

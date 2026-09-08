@@ -6,7 +6,7 @@ import {
   LifeBuoy, User, Bell, Menu, X, Moon, Sun, LogOut,
   FileBarChart, ClipboardList, Settings, Map, MessageSquareWarning, FileText,
   FolderOpen, ListTodo, FileArchive, CalendarDays, ChevronDown, Bot, Users2, Eraser, ScrollText,
-  PartyPopper, MessageSquare, Building2, FolderGit2, History, ShieldAlert, Lock, Award, Cake
+  PartyPopper, MessageSquare, Building2, FolderGit2, History, ShieldAlert, Lock, Award
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useBranding } from "@/hooks/useBranding";
@@ -141,13 +141,6 @@ const NAV: NavEntry[] = [
   // Recognition sits beside Discipline: the same shape of record, read by the
   // same people, and the counterweight to it.
   { to: "/appreciation", label: "Appreciation", icon: Award, moduleCode: "HELPDESK" },
-  /*
-    Birthdays and anniversaries as a register rather than a dashboard card.
-    Beside Appreciation because it is the same kind of thing -- the pleasant
-    half of the people record -- and because the dashboard card it complements
-    is a sixty-day window that cannot answer "when is hers".
-  */
-  { to: "/celebrations", label: "Celebrations", icon: Cake, moduleCode: "HELPDESK" },
   { to: "/reports", label: "Reports", icon: FileBarChart, anyPermission: ["REPORT_VIEW"], excludeRole: ["SUPER_ADMIN", "COMPANY_ADMIN"], moduleCode: "REPORTS" },
   { to: "/chat", label: "Chat", icon: MessageSquareWarning, moduleCode: "CHAT" },
   /*

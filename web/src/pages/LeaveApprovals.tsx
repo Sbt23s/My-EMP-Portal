@@ -1,7 +1,8 @@
 import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, X, CheckCheck, Inbox, ListTodo, Clock, Eye } from "lucide-react";
+import { Check, X, CheckCheck, Inbox, ListTodo, Clock } from "lucide-react";
+import { ViewButton } from "@/components/ui/view-button";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
@@ -349,15 +350,22 @@ export default function LeaveApprovalsPage() {
                         reading it is not the same right as deciding it.
                       */}
                       <td>
-                        <Button
-                          variant={r.status === "PENDING" && r.canAct ? "default" : "outline"}
-                          size="sm"
-                          className="h-8 gap-1.5 px-3"
+                        {/*
+                          The shared ViewButton rather than a hand-rolled one.
+                          Every other list in the portal opens a row with the
+                          same amber control -- permissions, WFH, complaints,
+                          discipline, expenses -- and this screen was the one
+                          place it looked different, so the approvals table read
+                          as a different product from the queue beside it.
+
+                          The label still changes: a row this person can decide
+                          says Review, because opening it is the first step of
+                          doing something rather than of reading.
+                        */}
+                        <ViewButton
+                          label={r.status === "PENDING" && r.canAct ? "Review" : "View"}
                           onClick={() => setViewModalData(r)}
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                          {r.status === "PENDING" && r.canAct ? "Review" : "View"}
-                        </Button>
+                        />
                       </td>
                       <td>
                         <div className="flex items-center gap-2">

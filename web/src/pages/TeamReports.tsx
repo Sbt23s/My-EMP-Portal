@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   CalendarCheck, ClipboardList, Clock, Download, ListTodo,
-  Map as MapIcon, Plane, UserX, Users
+  Home, Map as MapIcon, Plane, UserX, Users
 } from "lucide-react";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
@@ -45,7 +45,18 @@ const REPORTS = [
   { key: "tasks", label: "Tasks", icon: ListTodo, fill: TILE_FILLS.pink,
     hint: "Assignments, progress and due dates" },
   { key: "claims", label: "Claims", icon: MapIcon, fill: TILE_FILLS.violet,
-    hint: "Expense claims and their outcome" }
+    hint: "Expense claims and their outcome" },
+  /*
+    Work from home was the one absence type with no report.
+
+    Leave and permission both had one, so a month could be accounted for in
+    every way except this -- and a Team Leader asked how many days their team
+    worked remotely had to open the WFH page, filter it by eye and count. The
+    page has an export of its own, but it exports the tab you are looking at
+    rather than a chosen window, which is a different thing from a report.
+  */
+  { key: "wfh", label: "Work from home", icon: Home, fill: TILE_FILLS.slate,
+    hint: "Remote-working days, requested and decided" }
 ] as const;
 
 type ReportKey = typeof REPORTS[number]["key"];
@@ -113,6 +124,12 @@ export default function TeamReportsPage({ orgWide = false }: { orgWide?: boolean
   const WORK_URL = orgWide ? "/work-reports/all" : "/work-reports/team";
   const CLAIMS_URL = orgWide ? "/ta-expenses/all" : "/ta-expenses/team";
   const PERMS_URL = orgWide ? "/leave/permissions/all" : "/leave/permissions/for-me";
+  /*
+    /wfh/all is guarded by USER_MANAGE, which a Team Leader does not hold, so
+    the team report reads the approver's own queue -- the same rows the WFH
+    page shows them, already scoped to the people whose requests reach them.
+  */
+  const WFH_URL = orgWide ? "/wfh/all" : "/wfh/for-me";
 
   const inWindow = (d?: string) =>
     !!d && d.slice(0, 10) >= range.from && d.slice(0, 10) <= range.to;
@@ -183,6 +200,33 @@ export default function TeamReportsPage({ orgWide = false }: { orgWide?: boolean
             fmt(r.requestDate), r.employeeName ?? "", r.employeeCode ?? "", r.team ?? "",
             r.fromTime ?? "", r.toTime ?? "", Number(r.hours ?? 0),
             r.reason ?? "", status(r), r.requestedToName ?? "",
+            r.decidedByName ?? "", fmt(r.decidedAt), r.decisionComment ?? ""
+          ])
+      };
+    }
+
+    if (key === "wfh") {
+      /*
+        Overlap rather than containment, as leave does: somebody who worked
+        from home across a month boundary was remote during this window even
+        though neither of their dates falls inside it. Filtering on fromDate
+        alone would drop exactly the spells that matter most in a monthly
+        report.
+      */
+      const rows = (await api.get<ApiEnvelope<any[]>>(WFH_URL)).data.data ?? [];
+      return {
+        name: "Work from home",
+        headers: ["Applied On", "Employee", "Employee ID", "Team", "From", "To",
+                  "Days", "Reason", "Status", "Requested To", "Decided By",
+                  "Decided On", "Remark"],
+        cols: [14, 22, 13, 18, 14, 14, 7, 34, 12, 20, 20, 14, 30],
+        rows: rows
+          .filter((r) => overlapsWindow(r.fromDate, r.toDate))
+          .sort((a, b) => String(a.fromDate).localeCompare(String(b.fromDate)))
+          .map((r) => [
+            fmt(r.createdAt), r.employeeName ?? "", r.employeeCode ?? "", r.team ?? "",
+            fmt(r.fromDate), fmt(r.toDate), Number(r.workingDays ?? 0),
+            r.reason ?? "", r.status ?? "", r.requestedToName ?? "",
             r.decidedByName ?? "", fmt(r.decidedAt), r.decisionComment ?? ""
           ])
       };

@@ -645,6 +645,7 @@ export default function WorkFromHomePage() {
       {viewRow && (
         <DetailsDialog
           row={viewRow}
+          mine={viewRow.userId === user?.id}
           onClose={() => setViewRow(null)}
           onDecide={(approve) => {
             setDecisionNote("");
@@ -881,10 +882,20 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
 
 function DetailsDialog({
   row,
+  mine,
   onClose,
   onDecide,
 }: {
   row: WfhRow;
+  /**
+   * Whether the signed-in person is the one who made this request.
+   *
+   * Passed in rather than read from useAuth here, because the dialog takes
+   * everything else it renders from `row` and one component reaching for a
+   * hook to answer a question its caller already knows is how two sources of
+   * truth start.
+   */
+  mine: boolean;
   onClose: () => void;
   onDecide: (approve: boolean) => void;
 }) {
@@ -987,7 +998,25 @@ function DetailsDialog({
           for it to work here.
         */}
         <div className="border-t pt-4">
-          <RequestThread type="WFH" requestId={row.id} canAttach={row.status === "PENDING"} canComment={row.status === "PENDING"} />
+          {/*
+            Attaching is the applicant's; reading is everybody's.
+
+            The Attach button appeared to whoever had the dialog open, so an
+            approver reviewing a request was offered a control for putting a
+            file onto somebody else's application -- changing what they are
+            about to decide on, with nothing on the record to say so.
+
+            Commenting stays open to both: a question from the approver and an
+            answer from the applicant is the conversation this thread is for,
+            and it is signed. Files already attached remain listed and
+            downloadable for everyone; canAttach governs uploading alone.
+          */}
+          <RequestThread
+            type="WFH"
+            requestId={row.id}
+            canAttach={row.status === "PENDING" && mine}
+            canComment={row.status === "PENDING"}
+          />
         </div>
 
         <div className="flex flex-wrap justify-end gap-2 border-t pt-3">

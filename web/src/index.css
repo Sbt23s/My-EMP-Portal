@@ -70,7 +70,20 @@
     --accent-foreground: 240 6% 7%;
 
     --muted: 240 5% 20%;
-    --muted-foreground: 215 25% 88%;
+    /*
+      Secondary text, and the second half of why dark mode read as flat.
+
+      This was 88% lightness against a 100% foreground -- a twelve-point gap,
+      which on a dark ground is not a gap at all. Every hint, caption, unit and
+      supporting column arrived at effectively the same brightness as the
+      figure it was supporting, so a card with a label, a number and a note
+      under it presented three lines of equal importance.
+
+      72% is quiet enough to recede and still clears WCAG AA on the card
+      surface, which is what secondary text has to do: be skippable without
+      being unreadable when somebody does look.
+    */
+    --muted-foreground: 220 14% 72%;
 
     --success: 158 76% 46%;
     --success-foreground: 0 0% 100%;
@@ -106,45 +119,100 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Executive Dark Mode Typography & Ultra High Contrast Text */
+  /*
+    Dark mode.
+
+    WHAT WAS HERE, AND WHY IT MADE EVERYTHING LOOK THE SAME
+
+    Every element on the page -- body, p, span, div, label, button, th, td, a
+    and all three form controls -- was forced to `font-weight: 600 !important`.
+    The aim was legibility on a dark ground, and light text on dark does look
+    thinner than the same weight the other way round, so the instinct was
+    right. The execution removed the thing it was trying to help with.
+
+    Weight is how a screen says what matters. Setting one weight on everything
+    and marking it !important means a heading, its label, the number underneath
+    and the paragraph beside it all arrive with equal emphasis -- and no
+    `font-bold` in any component can say otherwise, because !important beats
+    every utility class. The page becomes uniformly heavy, which reads as
+    uniformly flat: nothing is bold, because everything is.
+
+    WHAT REPLACES IT
+
+    A floor, not a ceiling. Body copy lifts from 400 to 500, which recovers the
+    thinning that dark grounds cause, and every utility above that is left
+    alone -- so font-medium, font-semibold and font-bold keep their three
+    distinct steps and headings stay heavier than the text they sit above.
+
+    Headings and the small uppercase labels get one step more than they carry
+    in light mode, because those are the elements the thinning costs most and
+    they are the ones a person scans by. Form controls are named separately:
+    they sit on their own surface, and 500 is what makes a typed value read as
+    entered rather than as a placeholder.
+  */
   .dark {
     font-weight: 500;
   }
 
-  .dark body, 
-  .dark p, 
-  .dark span, 
-  .dark div, 
-  .dark label, 
-  .dark button, 
-  .dark th, 
-  .dark td, 
-  .dark a, 
+  .dark body,
+  .dark p,
+  .dark td,
+  .dark li {
+    font-weight: 500;
+  }
+
+  /* The scanned elements, one step up from their light-mode weight. */
+  .dark h1,
+  .dark h2,
+  .dark h3,
+  .dark h4,
+  .dark th,
+  .dark label,
+  .dark .font-display {
+    font-weight: 700;
+  }
+
   .dark input,
   .dark select,
   .dark textarea {
-    font-weight: 600 !important;
+    font-weight: 500;
   }
 
-  .dark .text-muted-foreground {
-    color: #cbd5e1 !important;
-    font-weight: 600 !important;
-  }
+  /*
+    text-muted-foreground has no override here any more. It used to be pinned
+    to #cbd5e1 with !important, which meant the --muted-foreground token was
+    decorative -- changing it did nothing, because this rule won. The token now
+    carries the value (see the .dark block above) and this class resolves to it
+    like every other colour in the system.
 
+    The literal slate/gray utilities below still need one: those are raw
+    Tailwind palette classes chosen for a light ground, and on a dark one the
+    400-600 range lands too close to the background to read.
+  */
   .dark .text-slate-400,
   .dark .text-slate-500,
   .dark .text-slate-600,
   .dark .text-gray-400,
   .dark .text-gray-500,
   .dark .text-gray-600 {
-    color: #94a3b8 !important;
-    font-weight: 600 !important;
+    color: #94a3b8;
   }
 
+  /*
+    Borders. Still lifted -- a 1px line at the token's own value disappears
+    against the card on most screens, and a table with no visible row
+    separation is harder to read than one with slightly heavy ones. Softened
+    from 0.22 to 0.16: the old value drew the grid harder than the content,
+    which is the other failure mode.
+
+    !important stays here alone, because these override Tailwind's own border
+    utilities and there is no weight hierarchy to flatten -- a border is either
+    visible or it is not.
+  */
   .dark .border-border,
   .dark .border-border\/50,
   .dark .border {
-    border-color: rgba(255, 255, 255, 0.22) !important;
+    border-color: rgba(255, 255, 255, 0.16) !important;
   }
 
   /* Recharts & Chart Dark Mode High Contrast Overrides */

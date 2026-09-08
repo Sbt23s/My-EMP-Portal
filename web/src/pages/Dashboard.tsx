@@ -1159,6 +1159,156 @@ function InsightPeopleDialog({ title, people, dateLabel, onClose }: {
   );
 }
 
+/**
+ * Birthdays and work anniversaries, as the card HR has always had.
+ *
+ * <p>Lifted out of the executive dashboard rather than rewritten, so the two
+ * are the same card and not two that resemble each other -- an employee asking
+ * whose birthday is coming up should see what HR sees, in the same shape. It
+ * was only ever on the HR dashboard by accident of where it was written; there
+ * is nothing private about a colleague's birthday, and it is the one thing on
+ * the page that is about other people rather than about you.
+ *
+ * <p>State lives here rather than in the caller because the All / Birthdays /
+ * Anniversaries toggle is the card's own business, and two dashboards each
+ * holding their own copy of it was one filter too many to keep in step.
+ */
+function CelebrationsCard({
+  celebrations,
+  loading,
+  className
+}: {
+  celebrations?: Celebration[];
+  loading?: boolean;
+  className?: string;
+}) {
+  const [filter, setFilter] = useState<"ALL" | "BIRTHDAY" | "ANNIVERSARY">("ALL");
+  return (
+    <Card className={cn("shadow-sm border-border/50", className)}>
+      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+        <CardTitle className="text-sm font-bold text-foreground">Birthdays &amp; Anniversaries</CardTitle>
+        <div className="flex gap-1 rounded-md border p-1 bg-muted/20">
+          <button 
+            onClick={() => setFilter("ALL")}
+            className={cn("px-2 py-1 text-[10px] font-semibold rounded transition-colors", filter === "ALL" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted")}
+          >
+            All
+          </button>
+          <button 
+            onClick={() => setFilter("BIRTHDAY")}
+            className={cn("px-2 py-1 text-[10px] font-semibold rounded transition-colors", filter === "BIRTHDAY" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted")}
+          >
+            Birthdays
+          </button>
+          <button 
+            onClick={() => setFilter("ANNIVERSARY")}
+            className={cn("px-2 py-1 text-[10px] font-semibold rounded transition-colors", filter === "ANNIVERSARY" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted")}
+          >
+            Anniversaries
+          </button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {(() => {
+          // One source for both: birthdays come from the date of birth, work
+          // anniversaries from the date of joining, and the server counts
+          // the years so a first anniversary is not shown before it is one.
+          const allUps = celebrations ?? [];
+          if (loading) {
+            return <Skeleton className="h-24" />;
+          }
+          const ups = allUps.filter(c => {
+            if (filter === "BIRTHDAY") return c.type === "BIRTHDAY";
+            if (filter === "ANNIVERSARY") return c.type === "ANNIVERSARY";
+            return true;
+          });
+      
+          if (ups.length === 0) {
+            return (
+              <div className="flex h-24 flex-col items-center justify-center text-center text-xs text-muted-foreground">
+                <Cake className="mb-1.5 h-6 w-6" /> Nothing to celebrate in the next 60 days.
+              </div>
+            );
+          }
+          const birthdays = ups.filter((c) => c.type === "BIRTHDAY").length;
+          const anniversaries = ups.length - birthdays;
+          return (
+            <>
+              {/* Which colour means what, said once. */}
+              <div className="mb-2 flex flex-wrap items-center gap-3 text-[10px] font-semibold">
+                <span className="flex items-center gap-1.5 text-red-600 dark:text-red-400">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white">
+                    <Cake className="h-2.5 w-2.5" />
+                  </span>
+                  {birthdays} birthday{birthdays === 1 ? "" : "s"}
+                </span>
+                <span className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40">
+                    <PartyPopper className="h-2.5 w-2.5" />
+                  </span>
+                  {anniversaries} anniversar{anniversaries === 1 ? "y" : "ies"}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-4 gap-2 text-center">
+                {ups.map((c) => {
+                  const isBirthday = c.type === "BIRTHDAY";
+                  const today = c.daysUntil === 0;
+                  return (
+                    <div
+                      key={`${c.type}-${c.userId}`}
+                      title={`${c.name}${c.team ? ` · ${c.team}` : ""} — ${
+                        isBirthday ? "birthday" : `${c.years} year${c.years === 1 ? "" : "s"}`
+                      } on ${dayjs(c.date).format("DD MMM")}`}
+                      className={cn(
+                        "flex flex-col items-center rounded-lg border p-2 transition-colors",
+                        isBirthday
+                          ? "border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/30"
+                          : "border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/30",
+                        // Today gets a ring, so the one that needs a message
+                        // now is not read off the date.
+                        today && (isBirthday ? "ring-2 ring-red-400" : "ring-2 ring-amber-400")
+                      )}
+                    >
+                      <div className="relative">
+                        <Avatar name={c.name} src={c.photoPath} className="h-9 w-9 shadow-sm" />
+                        <span className={cn(
+                          "absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full ring-2 ring-white dark:ring-card",
+                          isBirthday
+                            ? "bg-red-500 text-white"
+                            : "bg-amber-500 text-white"
+                        )}>
+                          {isBirthday
+                            ? <Cake className="h-2.5 w-2.5 text-white" />
+                            : <PartyPopper className="h-2.5 w-2.5" />}
+                        </span>
+                      </div>
+                      <span className="mt-1.5 block w-full truncate text-[10px] font-bold text-foreground">
+                        {c.name.split(" ")[0]}
+                      </span>
+                      <span className="text-[9px] font-semibold text-muted-foreground">
+                        {dayjs(c.date).format("MMM D")}
+                      </span>
+                      <span className={cn(
+                        "mt-1 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide",
+                        isBirthday
+                          ? "bg-violet-500/15 text-violet-700 dark:text-violet-300"
+                          : "bg-amber-500/20 text-amber-800 dark:text-amber-300"
+                      )}>
+                        {today ? "Today" : isBirthday ? "Birthday" : `${c.years} yr`}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          );
+        })()}
+      </CardContent>
+    </Card>
+  );
+}
+
 function ExecutiveDashboardView({
   exec,
   recentUsers,
@@ -1981,129 +2131,10 @@ function ExecutiveDashboardView({
 
         {/* Right widgets column */}
         <div className="flex flex-col gap-6">
-          {/* Birthdays and work anniversaries */}
-          <Card className="shadow-sm border-border/50">
-            <CardHeader className="pb-2 flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-bold text-foreground">Birthdays &amp; Anniversaries</CardTitle>
-              <div className="flex gap-1 rounded-md border p-1 bg-muted/20">
-                <button 
-                  onClick={() => setCelebrationFilter("ALL")}
-                  className={cn("px-2 py-1 text-[10px] font-semibold rounded transition-colors", celebrationFilter === "ALL" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted")}
-                >
-                  All
-                </button>
-                <button 
-                  onClick={() => setCelebrationFilter("BIRTHDAY")}
-                  className={cn("px-2 py-1 text-[10px] font-semibold rounded transition-colors", celebrationFilter === "BIRTHDAY" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted")}
-                >
-                  Birthdays
-                </button>
-                <button 
-                  onClick={() => setCelebrationFilter("ANNIVERSARY")}
-                  className={cn("px-2 py-1 text-[10px] font-semibold rounded transition-colors", celebrationFilter === "ANNIVERSARY" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted")}
-                >
-                  Anniversaries
-                </button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {(() => {
-                // One source for both: birthdays come from the date of birth, work
-                // anniversaries from the date of joining, and the server counts
-                // the years so a first anniversary is not shown before it is one.
-                const allUps = celebrationsQuery.data ?? [];
-                if (celebrationsQuery.isLoading) {
-                  return <Skeleton className="h-24" />;
-                }
-                const ups = allUps.filter(c => {
-                  if (celebrationFilter === "BIRTHDAY") return c.type === "BIRTHDAY";
-                  if (celebrationFilter === "ANNIVERSARY") return c.type === "ANNIVERSARY";
-                  return true;
-                });
-                
-                if (ups.length === 0) {
-                  return (
-                    <div className="flex h-24 flex-col items-center justify-center text-center text-xs text-muted-foreground">
-                      <Cake className="mb-1.5 h-6 w-6" /> Nothing to celebrate in the next 60 days.
-                    </div>
-                  );
-                }
-                const birthdays = ups.filter((c) => c.type === "BIRTHDAY").length;
-                const anniversaries = ups.length - birthdays;
-                return (
-                  <>
-                    {/* Which colour means what, said once. */}
-                    <div className="mb-2 flex flex-wrap items-center gap-3 text-[10px] font-semibold">
-                      <span className="flex items-center gap-1.5 text-red-600 dark:text-red-400">
-                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white">
-                          <Cake className="h-2.5 w-2.5" />
-                        </span>
-                        {birthdays} birthday{birthdays === 1 ? "" : "s"}
-                      </span>
-                      <span className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
-                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40">
-                          <PartyPopper className="h-2.5 w-2.5" />
-                        </span>
-                        {anniversaries} anniversar{anniversaries === 1 ? "y" : "ies"}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-2 text-center">
-                      {ups.map((c) => {
-                        const isBirthday = c.type === "BIRTHDAY";
-                        const today = c.daysUntil === 0;
-                        return (
-                          <div
-                            key={`${c.type}-${c.userId}`}
-                            title={`${c.name}${c.team ? ` · ${c.team}` : ""} — ${
-                              isBirthday ? "birthday" : `${c.years} year${c.years === 1 ? "" : "s"}`
-                            } on ${dayjs(c.date).format("DD MMM")}`}
-                            className={cn(
-                              "flex flex-col items-center rounded-lg border p-2 transition-colors",
-                              isBirthday
-                                ? "border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/30"
-                                : "border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/30",
-                              // Today gets a ring, so the one that needs a message
-                              // now is not read off the date.
-                              today && (isBirthday ? "ring-2 ring-red-400" : "ring-2 ring-amber-400")
-                            )}
-                          >
-                            <div className="relative">
-                              <Avatar name={c.name} src={c.photoPath} className="h-9 w-9 shadow-sm" />
-                              <span className={cn(
-                                "absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full ring-2 ring-white dark:ring-card",
-                                isBirthday
-                                  ? "bg-red-500 text-white"
-                                  : "bg-amber-500 text-white"
-                              )}>
-                                {isBirthday
-                                  ? <Cake className="h-2.5 w-2.5 text-white" />
-                                  : <PartyPopper className="h-2.5 w-2.5" />}
-                              </span>
-                            </div>
-                            <span className="mt-1.5 block w-full truncate text-[10px] font-bold text-foreground">
-                              {c.name.split(" ")[0]}
-                            </span>
-                            <span className="text-[9px] font-semibold text-muted-foreground">
-                              {dayjs(c.date).format("MMM D")}
-                            </span>
-                            <span className={cn(
-                              "mt-1 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide",
-                              isBirthday
-                                ? "bg-violet-500/15 text-violet-700 dark:text-violet-300"
-                                : "bg-amber-500/20 text-amber-800 dark:text-amber-300"
-                            )}>
-                              {today ? "Today" : isBirthday ? "Birthday" : `${c.years} yr`}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </>
-                );
-              })()}
-            </CardContent>
-          </Card>
+          <CelebrationsCard
+            celebrations={celebrationsQuery.data}
+            loading={celebrationsQuery.isLoading}
+          />
 
         </div>
       </div>
@@ -2901,6 +2932,31 @@ function EmployeeToday({ userName, d, punch, org }: {
     queryFn: async () => (await api.get<ApiEnvelope<HolidayLite[]>>(`/org/holidays?year=${year}`)).data.data ?? []
   });
 
+  /*
+    Whose birthday is coming up.
+
+    /dashboard/celebrations is open to every signed-in employee -- it always
+    was; only the card that read it lived on the HR dashboard, so everybody
+    else had the data and no way to see it. No industry filter here: that
+    toggle belongs to the executive view, and an employee wants their
+    colleagues rather than a slice of the company.
+
+    The key is shared with the executive dashboard's own query, so one fetch
+    serves both when a person can see both, and a CELEBRATION notification
+    invalidates them together.
+  */
+  const celebrationsQ = useQuery({
+    queryKey: ["dashboard", "celebrations", "ALL"],
+    retry: false,
+    queryFn: async () => {
+      try {
+        const res = await api.get<ApiEnvelope<Celebration[]>>("/dashboard/celebrations");
+        if (res.data?.data) return res.data.data;
+      } catch {}
+      return [];
+    }
+  });
+
   const tasks = tasksQ.data ?? [];
   const pending = tasks.filter((t) => t.status !== "COMPLETED");
   const dueToday = pending.filter((t) => (t.dueDate || "").slice(0, 10) === today);
@@ -3087,6 +3143,24 @@ function EmployeeToday({ userName, d, punch, org }: {
           )}
         </CardContent>
       </Card>
+
+      {/*
+        The third column, which was empty.
+
+        Tasks and Upcoming Events filled two of the three, and the row ran on
+        to the full-width summary below with a gap beside it — so the page had
+        a hole in it at every width above a tablet. This is the card HR has
+        always had, and there is nothing about it that was theirs: whose
+        birthday is coming up is the one thing on an employee's dashboard that
+        is about their colleagues rather than about them.
+
+        Same component as the executive view renders, so the two cannot drift.
+      */}
+      <CelebrationsCard
+        celebrations={celebrationsQ.data}
+        loading={celebrationsQ.isLoading}
+        className="flex flex-col"
+      />
 
       {/*
         The second "Today's Status" panel was here.

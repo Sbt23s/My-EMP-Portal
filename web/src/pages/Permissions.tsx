@@ -981,10 +981,26 @@ export default function PermissionsPage() {
                 left stay readable; what is gone is the box for new ones, and
                 with nothing to explain there is no notice either.
               */}
+              {/*
+                Attaching is the applicant's, reading is everybody's.
+
+                The Attach button appeared to whoever had the dialog open, so a
+                Team Leader reviewing a request was offered a control for
+                putting a file onto somebody else's application. Evidence on a
+                request should come from the person making it -- an approver
+                who adds a document to a request they are about to decide has
+                changed what they are deciding on, with nothing on the record
+                to say so.
+
+                Only the button goes. Files already attached stay listed and
+                downloadable for everyone: an approver has to be able to read
+                what was submitted, and RequestThread's canAttach governs
+                uploading alone.
+              */}
               <RequestThread
                 type="PERMISSION"
                 requestId={viewRow.id}
-                canAttach={viewRow.status === "PENDING"}
+                canAttach={viewRow.status === "PENDING" && viewRow.userId === user?.id}
                 canComment={false}
                 closedNotice={false}
               />

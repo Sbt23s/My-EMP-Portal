@@ -48,6 +48,14 @@ export function useAttendanceLive(enabled: boolean = true) {
           qc.invalidateQueries({ queryKey: ["dashboard"] });
           qc.invalidateQueries({ queryKey: ["attendance"] });
           qc.invalidateQueries({ queryKey: ["team-attendance-range"] });
+          // Listed separately because it has to be. React Query matches keys by
+          // prefix on the array, and "attendance-insights" is a different first
+          // element from "attendance" -- so the line above does not reach it,
+          // however much it looks as though it should. The insights panel is
+          // derived from the very punches this announcement is about (late
+          // arrivals, missing punch-outs), so leaving it stale meant the numbers
+          // beside it moved while it did not.
+          qc.invalidateQueries({ queryKey: ["attendance-insights"] });
         });
       }
     });

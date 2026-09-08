@@ -22,6 +22,7 @@ import toast from "react-hot-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { ApiEnvelope, UserSummary, LeaveRequest } from "@/types";
+import { useAttendanceLive } from "@/hooks/useAttendanceLive";
 
 const MAX_ATTACHMENT_MB = 2048;
 const MAX_BATCH_MB = 5120;
@@ -155,6 +156,17 @@ export default function MyTeamPage() {
     retry: false,
     queryFn: async () => (await api.get<ApiEnvelope<Celebration[]>>("/dashboard/celebrations")).data.data
   });
+
+  /*
+   * Who on this team is in today, live.
+   *
+   * The announcement arrives the moment somebody punches -- at a terminal or in
+   * the app -- and invalidates the "attendance" keys, this one among them. The
+   * minute-long poll below is kept as the floor: a socket that cannot connect
+   * through a proxy leaves the page correct but a minute behind, rather than
+   * showing this morning's arrivals all afternoon.
+   */
+  useAttendanceLive();
 
   // Punch-in status for this team today — Present means they actually punched in.
   const presence = useQuery({

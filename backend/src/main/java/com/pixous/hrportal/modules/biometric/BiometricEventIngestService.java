@@ -29,17 +29,23 @@ import java.util.Optional;
 @Service
 public class BiometricEventIngestService {
 
-    /**
-     * Where the terminal's clock lives, for a punch that arrives without one.
+    /*
+     * The portal's own clock decides what time a punch happened.
      *
-     * <p>Hikvision sends {@code occurTime} with an offset — the guide's example
-     * is {@code 2026-01-30T15:40:07+08:00} from a Singapore device — and the
-     * portal stores local times. So every timestamp is converted into this
-     * zone rather than having its offset dropped: read as a wall clock, a
-     * Singapore punch at 15:40 would land at 15:40 here, two and a half hours
-     * late, and an on-time arrival would be recorded as an afternoon one.
+     * Hikvision sends occurTime with an offset -- the guide's example is
+     * 2026-01-30T15:40:07+08:00 from a Singapore device -- and this portal
+     * stores local times. So every timestamp is converted rather than having
+     * its offset dropped: read as a wall clock, a Singapore punch at 15:40
+     * would land at 15:40 here, two and a half hours late, and an on-time
+     * arrival would be recorded as an afternoon one.
+     *
+     * Read from the default zone at each call, NOT captured in a static field.
+     * HrPortalApplication.main sets that default from APP_TIMEZONE, falling
+     * back to Asia/Kolkata, and naming Asia/Kolkata again here would quietly
+     * ignore APP_TIMEZONE -- reintroducing exactly the bug that setting is
+     * there to prevent, whose note records that a wrong zone rolled the date
+     * over in the evening and filed a late punch under the previous day.
      */
-    private static final ZoneId PORTAL_ZONE = ZoneId.of("Asia/Kolkata");
 
     private final ObjectMapper mapper;
     private final BiometricEventRepository eventRepository;
@@ -249,7 +255,7 @@ public class BiometricEventIngestService {
         }
         try {
             return OffsetDateTime.parse(raw.trim())
-                    .atZoneSameInstant(PORTAL_ZONE)
+                    .atZoneSameInstant(ZoneId.systemDefault())
                     .toLocalDateTime();
         } catch (DateTimeParseException ignored) {
             // No offset on it.

@@ -173,11 +173,52 @@ class BiometricIngestTest {
     @DisplayName("The terminal's clock is not this office's clock")
     class Timezone {
 
-        /** The conversion the service performs. */
+        /**
+         * The conversion the service performs.
+         *
+         * <p>Pinned to Asia/Kolkata here so the expected times below are fixed
+         * numbers a reader can check by hand. The service itself uses the
+         * default zone, which HrPortalApplication sets from APP_TIMEZONE and
+         * which is Asia/Kolkata unless a deployment says otherwise -- so this
+         * is the arithmetic that actually runs in production, with the zone
+         * named rather than inherited from whatever machine runs the test.
+         */
         private static LocalDateTime toPortalTime(String raw) {
             return OffsetDateTime.parse(raw)
                     .atZoneSameInstant(ZoneId.of("Asia/Kolkata"))
                     .toLocalDateTime();
+        }
+
+        @Test
+        @DisplayName("The service takes its zone from the portal's setting, not its own copy")
+        void usesThePortalZone() {
+            /*
+             * The bug this guards. HrPortalApplication.main sets the default
+             * zone from APP_TIMEZONE because the container's TZ was not
+             * trustworthy, and its note records what a wrong zone did: after
+             * half past six in the evening the date rolled over and a late
+             * punch was filed under the previous day.
+             *
+             * Naming a zone inside the ingest service would silently opt out of
+             * that setting and bring the same failure back for any deployment
+             * that sets APP_TIMEZONE. So the source is checked for a hardcoded
+             * zone -- crude, but it is the actual regression, and no amount of
+             * arithmetic on a correctly-configured JVM would reveal it.
+             */
+            java.nio.file.Path src = java.nio.file.Path.of(
+                    "src/main/java/com/pixous/hrportal/modules/biometric",
+                    "BiometricEventIngestService.java");
+            String code;
+            try {
+                code = java.nio.file.Files.readString(src);
+            } catch (java.io.IOException e) {
+                throw new AssertionError("Cannot read " + src, e);
+            }
+            assertThat(code)
+                    .as("the ingest service must not name a zone; "
+                            + "APP_TIMEZONE decides, via ZoneId.systemDefault()")
+                    .doesNotContain("ZoneId.of(")
+                    .contains("ZoneId.systemDefault()");
         }
 
         @Test

@@ -75,6 +75,29 @@ public class HikPersonMap {
     @Column(name = "synced_at")
     private LocalDateTime syncedAt;
 
+    /**
+     * Somebody matched this terminal identity to this employee by hand.
+     *
+     * <p>Necessary because Hikvision will not let an employee number be
+     * changed once a person exists — {@code /persons/update} answers
+     * OPEN000010, and §5.8.6 says "The employee No. cannot be edited". A
+     * terminal set up with "001" and a portal using "PIX-E001" describe the
+     * same person and nothing automatic can safely join them: "001" also
+     * matches "ADM0001".
+     *
+     * <p>The sync skips these rows entirely. Without that, the next hourly run
+     * would find no employee for "001" and count a deliberately mapped person
+     * as unmatched — undoing the decision, every hour, in silence.
+     */
+    @Column(name = "manual", nullable = false)
+    private boolean manual = false;
+
+    @Column(name = "mapped_by", length = 60)
+    private String mappedBy;
+
+    @Column(name = "mapped_at")
+    private LocalDateTime mappedAt;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 

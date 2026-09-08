@@ -89,6 +89,28 @@ public class HikPersonSyncService {
         int unmatched = 0;
 
         for (HikPerson person : people) {
+            /*
+             * A mapping somebody set by hand is never revisited.
+             *
+             * Hikvision refuses to change an employee number once a person
+             * exists -- POST /persons/update answers OPEN000010 "validated
+             * failed argument [personCode]", and §5.8.6 says so outright: "The
+             * employee No. cannot be edited." So on a real account the terminal
+             * keeps whatever code it was set up with ("001") while the portal
+             * uses its own ("PIX-E001"), and the two can only be joined here.
+             *
+             * That join is a decision a person made, and this sync must not
+             * undo it: without this check the next hourly run would look at
+             * "001", find no employee, and count a deliberately mapped person
+             * as unmatched -- or worse, a later code collision would move them.
+             */
+            Optional<HikPersonMap> alreadyMapped =
+                    mapRepository.findByHikPersonId(person.personId());
+            if (alreadyMapped.isPresent() && alreadyMapped.get().isManual()) {
+                matched++;
+                continue;
+            }
+
             String code = normalise(person.personCode());
             User user = code == null ? null : byCode.get(code);
 
@@ -107,7 +129,7 @@ public class HikPersonSyncService {
             }
 
             matched++;
-            Optional<HikPersonMap> existing = mapRepository.findByHikPersonId(person.personId());
+            Optional<HikPersonMap> existing = alreadyMapped;
 
             if (existing.isPresent()) {
                 HikPersonMap row = existing.get();

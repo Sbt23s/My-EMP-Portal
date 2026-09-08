@@ -45,6 +45,7 @@ public class BiometricAdminController {
     private final HikPersonSyncService syncService;
     private final HikPersonMapRepository mapRepository;
     private final BiometricEventRepository eventRepository;
+    private final PersonMappingService mappingService;
 
     /**
      * Whether the link is configured and working, without revealing how.
@@ -142,6 +143,48 @@ public class BiometricAdminController {
         webhookApi.subscribe(false);
         webhookApi.unregister();
         return ApiResponse.message("Hikvision will no longer push punches here.");
+    }
+
+    /**
+     * Who is on the terminal, and who they are here.
+     *
+     * <p>The screen this feeds exists because the automatic join cannot work on
+     * a terminal that predates the portal: Hikvision refuses to change an
+     * employee number once a person exists, so "001" on the device and
+     * "PIX-E001" here have to be matched by a person who can see both.
+     */
+    @GetMapping("/people")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
+    @Operation(summary = "Every person on the terminal, with the employee they are matched to")
+    public ApiResponse<java.util.List<com.pixous.hrportal.modules.biometric.dto.PersonMappingRow>>
+            people() {
+        return ApiResponse.ok(mappingService.list());
+    }
+
+    /**
+     * Matches one terminal identity to one employee, or unmatches it.
+     *
+     * <p>Recorded as a manual decision, which is what stops the hourly sync
+     * undoing it.
+     *
+     * @param userId the employee, or omitted to unmatch
+     */
+    @PostMapping("/people/{hikPersonId}/match")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
+    @Operation(summary = "Match a terminal person to an employee")
+    public ApiResponse<String> match(
+            @org.springframework.web.bind.annotation.PathVariable String hikPersonId,
+            @RequestParam(required = false) Long userId) {
+        /*
+         * Recorded by id rather than by name. A name changes and a row written
+         * a year ago should still point at the person who wrote it -- and the
+         * audit filter already records who called this endpoint, so the name is
+         * recoverable from there.
+         */
+        String actor = String.valueOf(
+                com.pixous.hrportal.security.SecurityUtils.currentUserId());
+        mappingService.map(hikPersonId, userId, actor);
+        return ApiResponse.message(userId == null ? "Unmatched." : "Matched.");
     }
 
     private void requireConfigured() {

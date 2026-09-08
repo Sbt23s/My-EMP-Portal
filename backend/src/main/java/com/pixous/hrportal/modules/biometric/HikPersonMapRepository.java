@@ -33,4 +33,7 @@ public interface HikPersonMapRepository extends JpaRepository<HikPersonMap, Long
      * that person.
      */
     List<HikPersonMap> findByCompanyIdAndPersonCodeIsNull(Long companyId);
+
+    /** Every mapping, newest first, for the screen that shows them all. */
+    List<HikPersonMap> findAllByOrderByIdDesc();
 }

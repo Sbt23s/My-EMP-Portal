@@ -31,5 +31,28 @@ public record AttendanceSummary(
          * it is working days elapsed, not days in the month, so somebody
          * perfect on the 8th reads 100% rather than 27%.
          */
-        int attendancePercent
+        int attendancePercent,
+
+        /**
+         * Days in the month that carried an approved permission.
+         *
+         * <p>Counted separately from the hours because they answer different
+         * questions: four fifteen-minute permissions and one four-hour one are
+         * not the same month, and neither figure implies the other.
+         *
+         * <p>Approved only. A pending request is a question nobody has
+         * answered, and counting it would show time off that has not been
+         * granted — the same rule the punch-out window already applies.
+         */
+        int permissionDays,
+
+        /**
+         * Hours of approved permission across the month, to one decimal.
+         *
+         * <p>Held as a double rather than minutes because that is the unit the
+         * request itself is made in — somebody asks for an hour and a half, not
+         * for ninety minutes — and rounding it into minutes here would make the
+         * total disagree with the sum of the requests behind it.
+         */
+        double permissionHours
 ) {}

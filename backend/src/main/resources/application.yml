@@ -184,19 +184,16 @@ app:
     default-geofence-radius-metres: 200
     # Office hours are 09:00-18:00, and time worked past 18:00 is overtime.
     #
-    # THIS GRACE VALUE IS NOT THE ONE IN FORCE. application.properties sets
-    # app.attendance.late-grace-minutes=15, and Spring Boot lets .properties win
-    # over .yml, so the running grace is 15 minutes: a punch at or before 09:15
-    # is on time and lateness is counted from 09:15.
+    # Grace is zero: 09:00 is on time, 09:01 is one minute late.
     #
-    # Verified by reading the value back from a running server, after this
-    # comment's claim of zero disagreed with the late_minutes a real punch
-    # produced -- 09:17 came out 2 minutes late, not 17.
+    # Both files now agree. They did not before -- application.properties said
+    # 15 and .properties wins over .yml in Spring Boot, so the running grace was
+    # fifteen minutes while this file claimed none. A punch at 09:21 was
+    # recorded as 6 minutes late and one at 09:09 as not late at all, on every
+    # employee, on both routes, every day.
     #
-    # Left as it is rather than reconciled here: changing either file changes
-    # what counts as late for every employee on both routes, app and terminal,
-    # and that is a decision about company policy rather than a tidy-up. Change
-    # the value in application.properties if the policy is meant to differ.
+    # Changing this changes what counts as late company-wide, so change it in
+    # BOTH files or the disagreement comes back.
     late-grace-minutes: 0
     standard-work-hours: 8
     office-start: ${OFFICE_START:09:00}

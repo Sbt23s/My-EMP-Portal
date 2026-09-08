@@ -46,6 +46,9 @@ type AttendanceSummaryType = {
   totalWorkedMinutes: number;
   /** Present days over working days elapsed, not days in the month. */
   attendancePercent: number;
+  /** Days carrying an approved permission, and the hours across them. */
+  permissionDays: number;
+  permissionHours: number;
 };
 
 
@@ -385,6 +388,29 @@ export default function AttendancePage() {
                       label: "Overtime",
                       value: minutesToHours(summary.data.totalOvertimeMinutes),
                       note: "worked past 6 PM",
+                      tone: "text-foreground"
+                    },
+                    {
+                      /*
+                        Approved permission, which the page did not show at all.
+                        An employee could see they had left early and had no
+                        figure anywhere saying how much of that was sanctioned
+                        -- so the only visible number about a permitted absence
+                        was the one that looked like a problem.
+
+                        Hours lead and days follow, because the hours are what
+                        a month is judged on; the day count is there because
+                        four short permissions and one long one are different
+                        months and neither figure implies the other.
+                      */
+                      label: "Permission",
+                      value: summary.data.permissionHours
+                        ? `${summary.data.permissionHours}h`
+                        : "—",
+                      note: summary.data.permissionDays
+                        ? `approved across ${summary.data.permissionDays} day${
+                            summary.data.permissionDays === 1 ? "" : "s"}`
+                        : "none approved",
                       tone: "text-foreground"
                     },
                     {

@@ -313,8 +313,40 @@ public class AttendanceService {
                 ? (int) Math.round(present * 100.0 / workingDays)
                 : 0;
 
+        /*
+         * Approved permission in the month.
+         *
+         * <p>Read here rather than left to the browser so that this page, the
+         * team view and the export all quote one figure. The team view already
+         * computed its own from a different endpoint, and two sums of the same
+         * hours that disagree is worse than not showing them.
+         *
+         * <p>APPROVED only, and days counted distinctly from hours: somebody
+         * who stepped out twice on one afternoon had one permission day and two
+         * requests, and adding the days up would say two.
+         */
+        List<com.pixous.hrportal.modules.leave.PermissionRequest> permissions =
+                permissionRequestRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                        .filter(p -> "APPROVED".equalsIgnoreCase(p.getStatus()))
+                        .filter(p -> p.getRequestDate() != null
+                                && !p.getRequestDate().isBefore(from)
+                                && !p.getRequestDate().isAfter(to))
+                        .toList();
+        int permissionDays = (int) permissions.stream()
+                .map(com.pixous.hrportal.modules.leave.PermissionRequest::getRequestDate)
+                .distinct().count();
+        double permissionHours = permissions.stream()
+                .map(com.pixous.hrportal.modules.leave.PermissionRequest::getHours)
+                .filter(java.util.Objects::nonNull)
+                .mapToDouble(java.math.BigDecimal::doubleValue)
+                .sum();
+        // One decimal: the requests are made in halves and quarters of an hour,
+        // and a total of 3.5000000000000004 is arithmetic showing through.
+        permissionHours = Math.round(permissionHours * 10.0) / 10.0;
+
         return new AttendanceSummary(month, year, present, wfh, late, absent,
-                overtime, lateMinutesTotal, workingDays, workedMinutes, percent);
+                overtime, lateMinutesTotal, workingDays, workedMinutes, percent,
+                permissionDays, permissionHours);
     }
 
     @Transactional(readOnly = true)

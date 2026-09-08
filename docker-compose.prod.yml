@@ -90,6 +90,23 @@ services:
       FAST2SMS_API_KEY: ${FAST2SMS_API_KEY:-}
       FAST2SMS_ROUTE: ${FAST2SMS_ROUTE:-q}
       FAST2SMS_SENDER_ID: ${FAST2SMS_SENDER_ID:-}
+      # Hikvision biometric attendance. The app key and secret come from the
+      # host .env (synced from a GitHub secret), never from git -- they are the
+      # whole of the integration's authority over the Hik-Connect account.
+      #
+      # OFF unless HIKVISION_ENABLED is set, and off in effect without the key
+      # anyway: the client refuses to call with either missing, so a
+      # half-configured server sits idle instead of failing on a schedule.
+      #
+      # HIKVISION_WEBHOOK_SECRET signs the pushes. Hikvision falls back to the
+      # secret key when it is absent and so does the receiver, so leaving it
+      # empty still works -- setting it means the account secret can be rotated
+      # without re-registering the webhook.
+      HIKVISION_ENABLED: ${HIKVISION_ENABLED:-false}
+      HIKVISION_BASE_URL: ${HIKVISION_BASE_URL:-https://isgp.hikcentralconnect.com}
+      HIKVISION_APP_KEY: ${HIKVISION_APP_KEY:-}
+      HIKVISION_SECRET_KEY: ${HIKVISION_SECRET_KEY:-}
+      HIKVISION_WEBHOOK_SECRET: ${HIKVISION_WEBHOOK_SECRET:-}
       # WebRTC calls: STUN always, TURN when the shared secret is present (see
       # setup-turn.sh on the server — it writes /etc/turn-secret). The backend
       # mints short-lived TURN credentials from it, so no password ships in the

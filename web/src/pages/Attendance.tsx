@@ -11,6 +11,7 @@ import * as XLSX from "xlsx";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
+import { methodLabel, punchPlaceLabel, joinDistinct } from "@/lib/punch";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { PageLoader } from "@/components/ui/page-loader";
@@ -342,7 +343,11 @@ export default function AttendancePage() {
   const exportMonth = () => {
     const headers = ["S.No", "Employee ID", "Employee Name", "Date", "Day",
                      "Punch In", "Punch Out", "Mode", "Status", "Late By",
-                     "Hours Worked", "Overtime", "GPS"];
+                     "Hours Worked", "Overtime",
+                     // Where and how. Separate columns so a sheet can be sorted
+                     // and filtered by them, which is the reason to export one.
+                     "In Location", "Out Location", "Verified By", "Terminal",
+                     "GPS"];
     const data = historyRows.map((r, i) => [
       i + 1,
       user?.employeeCode ?? "",
@@ -356,18 +361,34 @@ export default function AttendancePage() {
       r.lateMinutes ? minutesToHours(r.lateMinutes) : "—",
       r.workedMinutes ? minutesToHours(r.workedMinutes) : "—",
       r.overtimeMinutes ? minutesToHours(r.overtimeMinutes) : "—",
+      // The terminal's door first, the GPS-matched office second. Exporting
+      // only the GPS name left every biometric punch with an empty cell, which
+      // reads as "not recorded" for a place that is recorded exactly.
+      punchPlaceLabel(r.inAreaName, r.inLocationName) || "—",
+      r.punchOutAt ? (punchPlaceLabel(r.outAreaName, r.outLocationName) || "—") : "—",
+      joinDistinct([methodLabel(r.inAuthMethod), methodLabel(r.outAuthMethod)])
+        || (r.faceVerified ? "Face (app)" : "—"),
+      joinDistinct([r.inDevice, r.outDevice]) || "—",
       [gpsText(r.inLatitude, r.inLongitude) !== "—" ? `In: ${gpsText(r.inLatitude, r.inLongitude)}` : "",
        gpsText(r.outLatitude, r.outLongitude) !== "—" ? `Out: ${gpsText(r.outLatitude, r.outLongitude)}` : ""]
         .filter(Boolean).join("  |  ") || "no GPS"
     ]);
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-    // One width per header, in order. GPS holds two coordinate pairs.
-    // One width per header, in order: S.No, Employee ID, Employee Name, Date,
-    // Day, Punch In, Punch Out, Mode, Status, Late By, Hours Worked, Overtime,
-    // GPS. The GPS column holds two coordinate pairs, so it needs the room.
+    /*
+     * One width per header, and the list must stay as long as `headers` -- a
+     * short list leaves the trailing columns at the default width with no
+     * warning.
+     *
+     * S.No, Employee ID, Employee Name, Date, Day, Punch In, Punch Out, Mode,
+     * Status, Late By, Hours Worked, Overtime, In Location, Out Location,
+     * Verified By, Terminal, GPS. GPS holds two coordinate pairs and Terminal
+     * holds a full device name.
+     */
     ws["!cols"] = [{ wch: 6 }, { wch: 13 }, { wch: 24 }, { wch: 14 }, { wch: 11 },
                    { wch: 11 }, { wch: 11 }, { wch: 9 }, { wch: 11 }, { wch: 10 },
-                   { wch: 13 }, { wch: 10 }, { wch: 46 }];
+                   { wch: 13 }, { wch: 10 },
+                   { wch: 22 }, { wch: 22 }, { wch: 20 }, { wch: 28 },
+                   { wch: 46 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Attendance");
     // The file is named after the span it covers, so a folder of exports stays
@@ -778,7 +799,7 @@ function DayDetail({ record, code, onClose }: {
     if (record.inAuthMethod || record.outAuthMethod) {
       rows.push({
         icon: ShieldCheck, label: "Verified by",
-        value: [authMethodText(record.inAuthMethod), authMethodText(record.outAuthMethod)]
+        value: [methodLabel(record.inAuthMethod), methodLabel(record.outAuthMethod)]
           .filter(Boolean).filter((v, i, all) => all.indexOf(v) === i).join(" / "),
         tone: "good"
       });
@@ -869,10 +890,4 @@ function punchPlaceText(areaName?: string | null, lat?: number, lng?: number) {
   return gpsText(lat, lng);
 }
 
-/** The authentication method in words rather than as a wire constant. */
-function authMethodText(method?: string | null) {
-  if (method === "FACE") return "Face";
-  if (method === "FINGERPRINT") return "Fingerprint";
-  if (method === "FACE_FINGERPRINT") return "Face + fingerprint";
-  return "";
-}
+

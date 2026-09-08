@@ -5,6 +5,7 @@ import {
   ScanFace, Fingerprint, DoorOpen
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { methodLabel, punchPlaceLabel, joinDistinct } from "@/lib/punch";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -252,10 +253,7 @@ function PunchPlace({ areaName, authMethod, device, locationName, lat, lng }: {
     const Icon = authMethod === "FINGERPRINT" ? Fingerprint
       : authMethod === "FACE" || authMethod === "FACE_FINGERPRINT" ? ScanFace
       : DoorOpen;
-    const method = authMethod === "FACE" ? "Face"
-      : authMethod === "FINGERPRINT" ? "Fingerprint"
-      : authMethod === "FACE_FINGERPRINT" ? "Face + fingerprint"
-      : "Terminal";
+    const method = methodLabel(authMethod) || "Terminal";
     return (
       <div className="min-w-0">
         <div
@@ -726,7 +724,12 @@ export default function TeamAttendancePage() {
       const sHeaders = [
         "#", "Employee ID", "Employee Name", "Team", "Attendance %",
         "Present Days", "Leave Days", "Absent Days", "Work Hours",
-        "Late Check-ins", "Early Check-outs", "Missing Punch", "Work From Home"
+        "Late Check-ins", "Early Check-outs", "Missing Punch", "Work From Home",
+        // The same two the summary view shows on screen: where they usually
+        // punch from and how their most recent punch was proved. A summary row
+        // covers many days, so the latest is the only single answer that means
+        // anything -- the daily sheet is where every punch is listed.
+        "Usual Location", "Latest Verified By"
       ];
       const sData = summary.map((s, i) => [
         i + 1,
@@ -737,7 +740,10 @@ export default function TeamAttendancePage() {
         s.present, s.leaveDays, s.absentDays,
         minutesLabel(s.minutes),
         s.lateDays, s.earlyOut, s.missing,
-        s.wfh ? `${s.wfh}d` : "—"
+        s.wfh ? `${s.wfh}d` : "—",
+        s.usualPlace || "—",
+        methodLabel(s.latest?.inAuthMethod)
+          || (s.verifiedDays > 0 ? "Face (app)" : "—")
       ]);
       const sWs = XLSX.utils.aoa_to_sheet([
         [`Attendance summary — ${dayjs(fromDate).format("DD MMM YYYY")} to ${dayjs(toDate).format("DD MMM YYYY")}`],
@@ -746,9 +752,11 @@ export default function TeamAttendancePage() {
         sHeaders,
         ...sData
       ]);
+      // As long as sHeaders, including the two location columns added above.
       sWs["!cols"] = [{ wch: 5 }, { wch: 13 }, { wch: 24 }, { wch: 20 }, { wch: 13 },
                       { wch: 13 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
-                      { wch: 15 }, { wch: 16 }, { wch: 14 }, { wch: 16 }];
+                      { wch: 15 }, { wch: 16 }, { wch: 14 }, { wch: 16 },
+                      { wch: 24 }, { wch: 20 }];
       sWs["!merges"] = [
         { s: { r: 0, c: 0 }, e: { r: 0, c: sHeaders.length - 1 } },
         { s: { r: 1, c: 0 }, e: { r: 1, c: sHeaders.length - 1 } }
@@ -764,7 +772,13 @@ export default function TeamAttendancePage() {
     // and which the screen has no room to hold.
     const headers = [
       "Date", "Employee ID", "Employee Name", "Team", "Status",
-      "Punch In", "Punch Out", "Work Hours", "Late By", "Overtime", "Remarks", "GPS"
+      "Punch In", "Punch Out", "Work Hours", "Late By", "Overtime", "Remarks",
+      // Where and how, split into the four questions people actually ask of an
+      // exported sheet -- which door in, which door out, how it was proved, on
+      // which machine. One combined column would be unfilterable, and filtering
+      // is the reason to export rather than read the screen.
+      "In Location", "Out Location", "Verified By", "Terminal",
+      "GPS"
     ];
     const coords = (lat?: number, lng?: number) =>
       lat && lng ? `${lat}, ${lng}` : "";
@@ -781,14 +795,38 @@ export default function TeamAttendancePage() {
           dayjs(row._date).format("DD MMM YYYY"),
           getUserCode(row.userId), getUserName(row.userId), teamOf(row.userId),
           label, "—", "—", "—", "—", "—",
-          lv ? lv.leaveTypeName : "—", "—"
+          lv ? lv.leaveTypeName : "—",
+          "—", "—", "—", "—",
+          "—"
         ];
       }
       const inGPS = coords(att.inLatitude, att.inLongitude);
       const outGPS = coords(att.outLatitude, att.outLongitude);
       // One GPS column, both punches in it, so the sheet matches the screen.
+      // "no GPS" rather than blank, and it is now an ordinary state rather than
+      // a gap: a wall-mounted terminal has no coordinates to give, and the
+      // location columns beside this one carry the real answer.
       const gps = [inGPS && `In: ${inGPS}`, outGPS && `Out: ${outGPS}`]
         .filter(Boolean).join("  |  ") || "no GPS";
+
+      /*
+       * The door, whichever way the punch knows it: the terminal's area name
+       * when a terminal recorded it, the GPS-matched office otherwise. Exporting
+       * only the GPS name left every biometric punch with an empty location
+       * cell, which reads as "not recorded" for a punch whose place is known
+       * exactly.
+       */
+      const inPlace = punchPlaceLabel(att.inAreaName, att.inLocationName) || "—";
+      const outPlace = att.punchOutAt
+        ? (punchPlaceLabel(att.outAreaName, att.outLocationName) || "—")
+        : "—";
+      // "Face (app)" distinguishes the portal's own selfie check from a
+      // terminal's -- both are a face, and only one of them was a machine at a
+      // door.
+      const verified = joinDistinct([methodLabel(att.inAuthMethod), methodLabel(att.outAuthMethod)])
+        || (att.faceVerified ? "Face (app)" : "—");
+      const terminal = joinDistinct([att.inDevice, att.outDevice]) || "—";
+
       return [
         dayjs(row._date).format("DD MMM YYYY"),
         getUserCode(row.userId),
@@ -801,16 +839,29 @@ export default function TeamAttendancePage() {
         minutesLabel(att.lateMinutes),
         minutesLabel(att.overtimeMinutes),
         remarksFor(att).join(", ") || "—",
+        inPlace,
+        outPlace,
+        verified,
+        terminal,
         gps
       ];
     });
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-    // One width per header, in order: Date, Employee ID, Employee Name, Team,
-    // Status, Punch In, Punch Out, Late By, Overtime, GPS. The GPS column holds
-    // two coordinate pairs, so it needs the room.
+    /*
+     * One width per header, and the list must stay the same length as `headers`
+     * above -- a short list silently leaves the last columns at the default
+     * width, which is how the GPS column used to arrive unreadably narrow.
+     *
+     * Date, Employee ID, Employee Name, Team, Status, Punch In, Punch Out,
+     * Work Hours, Late By, Overtime, Remarks, In Location, Out Location,
+     * Verified By, Terminal, GPS. The last holds two coordinate pairs and the
+     * terminal column holds a full device name, so both need the room.
+     */
     ws["!cols"] = [{ wch: 14 }, { wch: 13 }, { wch: 24 }, { wch: 20 },
                    { wch: 16 }, { wch: 11 }, { wch: 11 }, { wch: 11 },
-                   { wch: 10 }, { wch: 10 }, { wch: 26 }, { wch: 46 }];
+                   { wch: 10 }, { wch: 10 }, { wch: 26 },
+                   { wch: 22 }, { wch: 22 }, { wch: 20 }, { wch: 28 },
+                   { wch: 46 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Attendance");
     XLSX.writeFile(wb, `Team_Attendance_${fromDate}_to_${toDate}.xlsx`);

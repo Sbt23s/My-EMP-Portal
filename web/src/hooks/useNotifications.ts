@@ -268,6 +268,20 @@ export function useNotifications(userId?: number) {
         const AFFECTED: Record<string, string[]> = {
           WFH: ["wfh", "attendance", "dashboard"],
           LEAVE: ["leave", "permissions", "dashboard"],
+          /*
+            PERMISSION was missing, and the omission was invisible.
+
+            The backend sends type "PERMISSION" for a permission request and its
+            decision. LEAVE above already lists "permissions" among the queries
+            it refreshes, which made the map look complete -- but a PERMISSION
+            frame matched no key at all, so the toast appeared and the list
+            behind it did not move.
+
+            It matters most now that a request addressed to HR reaches the whole
+            desk: one of them approves, the others are notified, and their
+            screens went on showing it as pending until somebody reloaded.
+          */
+          PERMISSION: ["permissions", "attendance", "dashboard"],
           COMPLAINT: ["complaints"],
           TICKET: ["tickets"],
           HELPDESK: ["tickets"],

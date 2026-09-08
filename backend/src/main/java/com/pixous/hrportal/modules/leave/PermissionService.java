@@ -145,13 +145,49 @@ public class PermissionService {
             String applicantName = userRepository.findById(userId).map(User::getName).orElse("Someone");
             String detail = applicantName + " requested " + hours + "h permission on " + req.requestDate()
                     + " (" + req.fromTime() + "–" + req.toTime() + ")";
-            notificationService.createAndPush(req.requestedTo(),
-                    "New permission request", detail, "PERMISSION", "/leave/permissions");
+
+            /*
+             * Everybody who can act on it, not only the account it was
+             * addressed to.
+             *
+             * HR is a desk. A request went to whichever HR name the approver
+             * list happened to offer, and only that account was told about it
+             * -- so if they were on leave the request sat unanswered and nobody
+             * else knew it existed. The whole desk now hears about it, and the
+             * first one free can act.
+             *
+             * The addressed approver is always included: for an employee's
+             * request that is their team leader, who is not HR and must still
+             * be told.
+             */
+            java.util.Map<Long, User> recipients = new java.util.LinkedHashMap<>();
+            userRepository.findById(req.requestedTo()).ifPresent(u -> recipients.put(u.getId(), u));
+            if (isHrRequest(req.requestedTo())) {
+                for (User hr : userRepository.findByRoleCodes(HR_ROLE_CODES)) {
+                    recipients.put(hr.getId(), hr);
+                }
+            }
+            // Never the applicant's own inbox, even when they are in HR.
+            recipients.remove(userId);
+
+            for (User r : recipients.values()) {
+                notificationService.createAndPush(r.getId(),
+                        "New permission request", detail, "PERMISSION", "/leave/permissions");
+            }
 
             // A copy to the CTO, who follows every request in the portal
             // without being in the approval chain for most of them.
             oversight.notifyCto(userId, "New permission request", detail,
                     "PERMISSION", "/leave/permissions");
+
+            /*
+             * One text message, to the person it was addressed to.
+             *
+             * Deliberately not to the whole desk: an in-app notification costs
+             * nothing and a text costs money and interrupts an evening. The
+             * addressed approver is the one being asked; the rest can see it
+             * when they next look.
+             */
             userRepository.findById(req.requestedTo())
                     .filter(u -> u.getPhone() != null && !u.getPhone().isBlank())
                     .ifPresent(u -> smsService.send(u.getPhone(),
@@ -165,16 +201,60 @@ public class PermissionService {
         return repo.findByUserIdOrderByCreatedAtDesc(userId).stream().map(this::toResponse).toList();
     }
 
-    /** Requests addressed to the given approver (only they see/act on them). */
+    /**
+     * Whether this person sees HR's whole queue rather than only their own.
+     *
+     * <p>HR is a desk, not a person. A request addressed to whoever happened to
+     * be offered in the approver list was visible to that one account and
+     * nobody else, so a permission sat unanswered while the rest of HR had no
+     * idea it existed — and an approval one of them made was invisible to the
+     * others.
+     *
+     * <p>Leave already worked this way: {@code pendingForManager} shows the
+     * whole queue to anyone holding IT_MGR or IT_HR. Permission did not, which
+     * is the difference this closes.
+     */
+    private boolean seesTheWholeQueue(User u) {
+        return u != null
+                && (hasRole(u, "IT_HR") || hasRole(u, "CV_HR") || hasRole(u, "IT_MGR")
+                    || hasRole(u, "SUPER_ADMIN")
+                    || com.pixous.hrportal.security.SecurityUtils.hasAuthority("USER_MANAGE"));
+    }
+
+    /**
+     * Requests waiting on this approver.
+     *
+     * <p>For a team leader that is the ones addressed to them. For anyone in HR
+     * it is every pending request, because any of them can act on it and a
+     * queue only one person can see is a queue that stalls when that person is
+     * away.
+     */
     @Transactional(readOnly = true)
     public List<PermissionResponse> pendingFor(Long approverId) {
+        User me = userRepository.findById(approverId).orElse(null);
+        if (seesTheWholeQueue(me)) {
+            return repo.findAllByOrderByCreatedAtDesc().stream()
+                    .filter(r -> "PENDING".equalsIgnoreCase(r.getStatus()))
+                    .map(this::toResponse).toList();
+        }
         return repo.findByStatusAndRequestedTo("PENDING", approverId)
                 .stream().map(this::toResponse).toList();
     }
 
-    /** Every request addressed to the approver (all statuses) — full details. */
+    /**
+     * Every request this approver may look at, whatever its status.
+     *
+     * <p>Same rule as above, and the reason it matters after a decision as
+     * much as before: an approval made by one HR account was previously
+     * invisible to the rest, so nobody else could see what had been agreed.
+     */
     @Transactional(readOnly = true)
     public List<PermissionResponse> forApprover(Long approverId) {
+        User me = userRepository.findById(approverId).orElse(null);
+        if (seesTheWholeQueue(me)) {
+            return repo.findAllByOrderByCreatedAtDesc().stream()
+                    .map(this::toResponse).toList();
+        }
         List<PermissionRequest> list = repo.findByRequestedToOrderByCreatedAtDesc(approverId);
         if (list == null || list.isEmpty()) {
             list = repo.findAllByOrderByCreatedAtDesc().stream()
@@ -186,6 +266,26 @@ public class PermissionService {
 
     /** Employee code of the company head, who approves HR's own requests. */
     private static final String HR_APPROVER_CODE = "PIX-E100";
+
+    /**
+     * The roles that make somebody part of the HR desk.
+     *
+     * <p>IT_MGR is deliberately absent. It counts as HR for deciding who may
+     * approve, and including it here would copy every permission request to
+     * two managers who are not on the desk.
+     */
+    private static final java.util.List<String> HR_ROLE_CODES =
+            java.util.List.of("IT_HR", "CV_HR");
+
+    /** Whether a request addressed to this person is a request to HR. */
+    private boolean isHrRequest(Long approverId) {
+        if (approverId == null) {
+            return false;
+        }
+        return userRepository.findById(approverId)
+                .map(u -> hasRole(u, "IT_HR") || hasRole(u, "CV_HR"))
+                .orElse(false);
+    }
 
     /**
      * Approvers the requester may send a permission to. Exactly one level, so
@@ -331,7 +431,29 @@ public class PermissionService {
           deciding, and the two were conflated.
         */
         boolean isDirectApprover = p.getRequestedTo() != null && p.getRequestedTo().equals(deciderId);
-        if (!isDirectApprover) {
+
+        /*
+          One exception, and only one: a request addressed to HR may be decided
+          by anyone on the HR desk.
+
+          HR is a desk rather than a person. The approver list offers whichever
+          HR account it happens to offer, and holding the request to that one
+          account meant a permission waited for somebody who was on leave while
+          three colleagues who could have answered it were told they were not
+          allowed to.
+
+          This does not reopen the administrator override the note above
+          removed. An administrator is not on the HR desk, a Team Leader's
+          request still reaches HR rather than another TL, and an employee's
+          request still reaches their own Team Leader -- the rung is unchanged,
+          only its width.
+         */
+        boolean isHrDeskRequest = isHrRequest(p.getRequestedTo());
+        User decider = userRepository.findById(deciderId).orElse(null);
+        boolean deciderIsHrDesk = decider != null
+                && (hasRole(decider, "IT_HR") || hasRole(decider, "CV_HR"));
+
+        if (!isDirectApprover && !(isHrDeskRequest && deciderIsHrDesk)) {
             throw ApiException.business(
                     "Only the approver this request was sent to can approve or reject it.");
         }
@@ -367,6 +489,32 @@ public class PermissionService {
                         + " by " + userRepository.findById(deciderId)
                                 .map(User::getName).orElse("their approver") + ".",
                 "PERMISSION", "/leave/permissions");
+        /*
+         * The rest of the desk, when the desk decided it.
+         *
+         * Any one of them could have answered this request and all of them were
+         * shown it as pending. Telling only the applicant leaves the others
+         * looking at a queue that is now wrong -- and, because the browser
+         * refreshes these lists off the notification, looking at it until they
+         * reload the page.
+         *
+         * Told about the decision rather than asked to act: no text message,
+         * and nothing sent to whoever made it.
+         */
+        if (isHrRequest(p.getRequestedTo())) {
+            String deciderName = userRepository.findById(deciderId)
+                    .map(User::getName).orElse("A colleague");
+            String deskDetail = applicant + "'s permission for " + p.getRequestDate()
+                    + " was " + verb + " by " + deciderName + ".";
+            for (User hr : userRepository.findByRoleCodes(HR_ROLE_CODES)) {
+                if (hr.getId().equals(deciderId) || hr.getId().equals(p.getUserId())) {
+                    continue;
+                }
+                notificationService.createAndPush(hr.getId(),
+                        "Permission " + verb, deskDetail, "PERMISSION", "/leave/permissions");
+            }
+        }
+
         userRepository.findById(p.getUserId())
                 .filter(u -> u.getPhone() != null && !u.getPhone().isBlank())
                 .ifPresent(u -> smsService.send(u.getPhone(), "Pixous HR: " + detail));

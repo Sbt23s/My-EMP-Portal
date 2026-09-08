@@ -223,4 +223,23 @@ public interface UserRepository extends JpaRepository<User, Long> {
             WHERE p.code = :permission AND u.enabled = true
             """)
     List<User> findByPermission(@Param("permission") String permission);
+
+    /**
+     * Enabled users holding any of the given role codes.
+     *
+     * <p>Written for the HR desk. A request addressed to one HR account was
+     * notified to that account alone, so a permission sat unanswered while the
+     * rest of HR had no idea it existed — and whoever was away that day was the
+     * only person who could see it.
+     *
+     * <p>Takes codes rather than a permission because "who is HR" is a role
+     * question: IT_HR and CV_HR are the HR desks, and USER_MANAGE is held by
+     * administrators who are not.
+     */
+    @Query("""
+            SELECT DISTINCT u FROM User u
+            JOIN u.roles r
+            WHERE r.code IN :codes AND u.enabled = true
+            """)
+    List<User> findByRoleCodes(@Param("codes") java.util.Collection<String> codes);
 }

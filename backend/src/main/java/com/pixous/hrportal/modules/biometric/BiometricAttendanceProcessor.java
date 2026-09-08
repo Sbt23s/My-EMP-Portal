@@ -163,11 +163,24 @@ public class BiometricAttendanceProcessor {
                         attendance.getShiftId(), event.getOccurTime());
                 attendance.setLateMinutes(lateBy);
                 attendance.setLate(lateBy > 0);
+                /*
+                 * Written together with the time, never separately. These three
+                 * describe one punch -- when, how, and where -- and a row
+                 * carrying 09:02 beside the previous punch's door would be
+                 * worse than one carrying no door at all, because it reads as
+                 * fact.
+                 */
+                attendance.setInAuthMethod(event.getAuthMethod());
+                attendance.setInAreaName(event.getAreaName());
+                attendance.setInDevice(deviceLabel(event));
                 changed = true;
             }
         } else {
             if (direction.shouldReplace(attendance.getPunchOutAt(), event.getOccurTime())) {
                 attendance.setPunchOutAt(event.getOccurTime());
+                attendance.setOutAuthMethod(event.getAuthMethod());
+                attendance.setOutAreaName(event.getAreaName());
+                attendance.setOutDevice(deviceLabel(event));
                 changed = true;
             }
         }
@@ -265,6 +278,30 @@ public class BiometricAttendanceProcessor {
             log.debug("Could not announce a biometric punch for user {}: {}",
                     event.getUserId(), e.getMessage());
         }
+    }
+
+    /**
+     * What to record as the device.
+     *
+     * <p>The terminal's name when it has one, its serial number otherwise. The
+     * serial is not pretty, but a punch whose device column is empty cannot be
+     * traced to a machine at all -- and when two terminals disagree, which one
+     * recorded a punch is the whole question.
+     *
+     * <p>Truncated to the column's 255, because a device name is free text on
+     * the Hikvision side and an over-long one would fail the insert -- turning
+     * "this terminal has a verbose name" into "this punch was lost".
+     */
+    private static String deviceLabel(BiometricEvent event) {
+        String name = event.getDeviceName();
+        if (name == null || name.isBlank()) {
+            name = event.getDeviceSerial();
+        }
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        String trimmed = name.trim();
+        return trimmed.length() > 255 ? trimmed.substring(0, 255) : trimmed;
     }
 
     private static String truncate(String s) {

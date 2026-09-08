@@ -49,5 +49,33 @@ public record AttendanceResponse(
         BigDecimal faceScore,
         boolean outFaceVerified,
         String outFacePhotoPath,
-        String inDevice
+        String inDevice,
+        /** The browser or terminal the punch-out was made from. */
+        String outDevice,
+
+        /**
+         * How the punch was made: FACE, FINGERPRINT, FACE_FINGERPRINT, or null
+         * for a punch that did not come from a biometric terminal.
+         *
+         * <p>The distinction people actually ask about. A punch from the app is
+         * somebody saying they arrived; a punch at the terminal is the terminal
+         * recognising their face, and a timesheet that shows them identically
+         * cannot answer "did they really come in".
+         */
+        String inAuthMethod,
+        String outAuthMethod,
+
+        /**
+         * Where the terminal stands, as Hikvision names it -- "Main Gate",
+         * "Second Floor Entry".
+         *
+         * <p>Separate from {@code inLocationName}, which is derived from GPS by
+         * matching coordinates against the offices on record. A wall-mounted
+         * terminal sends no coordinates, so that field is empty for these
+         * punches however real the location is; the area is the location, and
+         * it is a better one -- a named door rather than a point that happens
+         * to fall inside a radius.
+         */
+        String inAreaName,
+        String outAreaName
 ) {}

@@ -485,7 +485,10 @@ public class AttendanceService {
                 a.getOutLatitude(), a.getOutLongitude(),
                 in.name, out.name, in.distance, a.getInAccuracyM(),
                 a.isFaceVerified(), a.getFacePhotoPath(), a.getFaceScore(),
-                a.isOutFaceVerified(), a.getOutFacePhotoPath(), a.getInDevice());
+                a.isOutFaceVerified(), a.getOutFacePhotoPath(), a.getInDevice(),
+                a.getOutDevice(),
+                a.getInAuthMethod(), a.getOutAuthMethod(),
+                a.getInAreaName(), a.getOutAreaName());
     }
 
     /** A named place, and how far away the nearest one was when none contained it. */

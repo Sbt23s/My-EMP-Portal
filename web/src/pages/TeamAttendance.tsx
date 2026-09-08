@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Users, FileSpreadsheet, MapPin, Loader2, Eye, Building2, AlertTriangle
+  Users, FileSpreadsheet, MapPin, Loader2, Eye, Building2, AlertTriangle,
+  ScanFace, Fingerprint, DoorOpen
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
@@ -150,31 +151,49 @@ function PunchDetailDialog({
           <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Where
           </div>
-          {[["Punched in", a.inLocationName, a.inLatitude, a.inLongitude],
-            ["Punched out", a.outLocationName, a.outLatitude, a.outLongitude]].map(([label, name, lat, lng]) => {
-            const locName = (name as string) || "Pixous Technologies, Coimbatore";
-            const displayLat = lat ? Number(lat) : 11.02375;
-            const displayLng = lng ? Number(lng) : 76.96833;
-            const isOutNotPunched = label === "Punched out" && !a.punchOutAt;
+          {([
+            {
+              label: "Punched in", areaName: a.inAreaName, authMethod: a.inAuthMethod,
+              device: a.inDevice, name: a.inLocationName,
+              lat: a.inLatitude, lng: a.inLongitude, missing: false
+            },
+            {
+              label: "Punched out", areaName: a.outAreaName, authMethod: a.outAuthMethod,
+              device: a.outDevice, name: a.outLocationName,
+              lat: a.outLatitude, lng: a.outLongitude, missing: !a.punchOutAt
+            }
+          ]).map((p) => {
+            /*
+             * A map link only where there is a real point to open.
+             *
+             * This used to fall back to the head office's coordinates whenever a
+             * punch had none, so "Open on a map" led somewhere the person had
+             * demonstrably not been -- and a biometric punch never has
+             * coordinates, so every one of them would have linked to the same
+             * wrong spot.
+             */
+            const hasPoint = p.lat != null && p.lng != null;
             return (
-              <div key={String(label)} className="rounded-lg border p-2.5">
+              <div key={p.label} className="rounded-lg border p-2.5">
                 <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {String(label)}
+                  {p.label}
                 </div>
-                {!isOutNotPunched ? (
+                {!p.missing ? (
                   <>
-                    <LocationName name={locName} />
-                    <div className="mt-0.5">
-                      <PunchLocation lat={displayLat} lng={displayLng} />
-                    </div>
-                    <a
-                      className="mt-1 inline-block text-[11px] font-medium text-primary hover:underline"
-                      href={`https://www.google.com/maps?q=${displayLat},${displayLng}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open on a map
-                    </a>
+                    <PunchPlace
+                      areaName={p.areaName} authMethod={p.authMethod} device={p.device}
+                      locationName={p.name} lat={p.lat} lng={p.lng}
+                    />
+                    {hasPoint ? (
+                      <a
+                        className="mt-1 inline-block text-[11px] font-medium text-primary hover:underline"
+                        href={`https://www.google.com/maps?q=${Number(p.lat)},${Number(p.lng)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open on a map
+                      </a>
+                    ) : null}
                   </>
                 ) : (
                   <div className="text-xs text-muted-foreground">Not punched out yet</div>
@@ -201,6 +220,74 @@ function Detail({ label, children }: { label: string; children: React.ReactNode 
       <div className="break-words text-xs">{children}</div>
     </div>
   );
+}
+
+/**
+ * Where one punch was made, and how it was proved.
+ *
+ * There are two kinds of punch and they know their location in different ways,
+ * so showing them the same way makes one of them a lie.
+ *
+ * A punch from the app carries GPS, which is matched to an office by name and
+ * reverse-geocoded to a street. A punch at a wall-mounted terminal carries no
+ * coordinates at all — what it carries is the door it happened at ("Main Gate")
+ * and the fact that a face or a finger was recognised there.
+ *
+ * This previously defaulted a missing location to the head-office name and a
+ * fixed pair of coordinates. That is worse than showing nothing: every punch
+ * without GPS claimed to be at one specific address, and a reader had no way to
+ * tell an asserted location from a recorded one.
+ */
+function PunchPlace({ areaName, authMethod, device, locationName, lat, lng }: {
+  areaName?: string | null;
+  authMethod?: string | null;
+  device?: string | null;
+  locationName?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+}) {
+  // The terminal's own account of itself wins: it is a recorded fact, where the
+  // GPS name is a match against a radius.
+  if (areaName || authMethod) {
+    const Icon = authMethod === "FINGERPRINT" ? Fingerprint
+      : authMethod === "FACE" || authMethod === "FACE_FINGERPRINT" ? ScanFace
+      : DoorOpen;
+    const method = authMethod === "FACE" ? "Face"
+      : authMethod === "FINGERPRINT" ? "Fingerprint"
+      : authMethod === "FACE_FINGERPRINT" ? "Face + fingerprint"
+      : "Terminal";
+    return (
+      <div className="min-w-0">
+        <div
+          className="flex items-start gap-1 text-[11px] font-semibold leading-tight text-emerald-700 dark:text-emerald-400"
+          title={[areaName, device].filter(Boolean).join(" — ")}
+        >
+          <Icon className="mt-px h-3 w-3 shrink-0" />
+          <span className="break-words">{areaName || "Biometric terminal"}</span>
+        </div>
+        {/* The device is named underneath rather than in the line above: when
+            two terminals disagree, which one recorded a punch is the question,
+            but it is not what a reader scanning the column is looking for. */}
+        <div className="text-[10px] leading-tight text-muted-foreground">
+          {method}{device ? ` · ${device}` : ""}
+        </div>
+      </div>
+    );
+  }
+
+  // A GPS punch, as before.
+  if (locationName || (lat != null && lng != null)) {
+    return (
+      <div className="min-w-0">
+        {locationName ? <LocationName name={locationName} /> : null}
+        {lat != null && lng != null ? <PunchLocation lat={lat} lng={lng} /> : null}
+      </div>
+    );
+  }
+
+  // Neither. Said plainly, because "we do not know" is a real answer and the
+  // alternative is inventing one.
+  return <span className="text-[11px] text-muted-foreground">Location not recorded</span>;
 }
 
 function PunchLocation({ lat, lng }: { lat: number; lng: number }) {
@@ -590,7 +677,17 @@ export default function TeamAttendancePage() {
         // the exception counted rather than hidden.
         const places = new Map<string, number>();
         mine.forEach((r) => {
-          if (r.inLocationName) places.set(r.inLocationName, (places.get(r.inLocationName) ?? 0) + 1);
+          /*
+           * The terminal's door first, then the GPS-derived office.
+           *
+           * Counting only inLocationName made every biometric punch invisible
+           * here: a wall-mounted terminal sends no coordinates, so that field
+           * is empty however real the place is, the map stayed empty, and the
+           * column fell through to a hardcoded head-office name that was not
+           * read from the data at all.
+           */
+          const place = r.inAreaName || r.inLocationName;
+          if (place) places.set(place, (places.get(place) ?? 0) + 1);
         });
         const ranked = [...places.entries()].sort((a, b) => b[1] - a[1]);
         const elsewhereDays = mine.filter(
@@ -928,13 +1025,33 @@ export default function TeamAttendancePage() {
                                 <span>{" · "}{s.placeCount} places</span>
                               )}
                             </div>
-                            <PunchLocation lat={s.latest?.inLatitude || 11.02375} lng={s.latest?.inLongitude || 76.96833} />
+                            {/* The street, only when there is a real point to
+                                resolve. Substituting the head office's
+                                coordinates for a punch that has none printed an
+                                address the person was never at -- and a
+                                terminal punch never has coordinates. */}
+                            {s.latest?.inLatitude != null && s.latest?.inLongitude != null ? (
+                              <PunchLocation lat={s.latest.inLatitude} lng={s.latest.inLongitude} />
+                            ) : s.latest?.inAuthMethod ? (
+                              <div className="text-[10px] leading-tight text-muted-foreground">
+                                {s.latest.inAuthMethod === "FACE" ? "Face"
+                                  : s.latest.inAuthMethod === "FINGERPRINT" ? "Fingerprint"
+                                  : "Face + fingerprint"}
+                                {s.latest.inDevice ? ` · ${s.latest.inDevice}` : ""}
+                              </div>
+                            ) : null}
                           </div>
                         ) : (
-                          <div className="min-w-0">
-                            <LocationName name="Pixous Technologies, Coimbatore" />
-                            <PunchLocation lat={11.02375} lng={76.96833} />
-                          </div>
+                          /*
+                           * Nobody punched in this range, so there is no place
+                           * to report. This used to print the head office's
+                           * name and coordinates -- neither read from the data
+                           * -- which told the reader somebody had been
+                           * somewhere they had not been.
+                           */
+                          <span className="text-[11px] text-muted-foreground">
+                            No punches in this range
+                          </span>
                         )}
                       </td>
 
@@ -1183,18 +1300,26 @@ export default function TeamAttendancePage() {
                         <div className="flex flex-col gap-1.5">
                           <div className="flex items-start gap-1.5">
                             <span className="mt-0.5 w-7 shrink-0 text-[9px] font-bold uppercase text-emerald-600">In</span>
-                            <div className="min-w-0">
-                              <LocationName name={att.inLocationName || "Pixous Technologies, Coimbatore"} />
-                              <PunchLocation lat={att.inLatitude || 11.02375} lng={att.inLongitude || 76.96833} />
-                            </div>
+                            <PunchPlace
+                              areaName={att.inAreaName}
+                              authMethod={att.inAuthMethod}
+                              device={att.inDevice}
+                              locationName={att.inLocationName}
+                              lat={att.inLatitude}
+                              lng={att.inLongitude}
+                            />
                           </div>
                           <div className="flex items-start gap-1.5">
                             <span className="mt-0.5 w-7 shrink-0 text-[9px] font-bold uppercase text-rose-600">Out</span>
                             {att.punchOutAt ? (
-                              <div className="min-w-0">
-                                <LocationName name={att.outLocationName || "Pixous Technologies, Coimbatore"} />
-                                <PunchLocation lat={att.outLatitude || 11.02375} lng={att.outLongitude || 76.96833} />
-                              </div>
+                              <PunchPlace
+                                areaName={att.outAreaName}
+                                authMethod={att.outAuthMethod}
+                                device={att.outDevice}
+                                locationName={att.outLocationName}
+                                lat={att.outLatitude}
+                                lng={att.outLongitude}
+                              />
                             ) : (
                               <span className="text-xs text-muted-foreground">not out yet</span>
                             )}

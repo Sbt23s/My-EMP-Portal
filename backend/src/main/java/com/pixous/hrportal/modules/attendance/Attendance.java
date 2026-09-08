@@ -122,6 +122,35 @@ public class Attendance {
     @Column(name = "out_device", length = 255)
     private String outDevice;
 
+    /**
+     * How a biometric terminal authenticated the punch: FACE, FINGERPRINT or
+     * FACE_FINGERPRINT.
+     *
+     * <p>Null for a punch made in the app, and deliberately so. A default would
+     * claim a face check nobody performed, and the difference between "somebody
+     * said they arrived" and "a machine recognised their face" is the whole
+     * point of having the hardware.
+     */
+    @Column(name = "in_auth_method", length = 24)
+    private String inAuthMethod;
+
+    @Column(name = "out_auth_method", length = 24)
+    private String outAuthMethod;
+
+    /**
+     * The terminal area, as Hikvision names it — "Main Gate", "Second Floor
+     * Entry".
+     *
+     * <p>The location for a punch that has no coordinates. A wall-mounted
+     * terminal sends none, so the GPS-derived location on the timesheet is
+     * empty for these punches however real the place is.
+     */
+    @Column(name = "in_area_name", length = 128)
+    private String inAreaName;
+
+    @Column(name = "out_area_name", length = 128)
+    private String outAreaName;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 

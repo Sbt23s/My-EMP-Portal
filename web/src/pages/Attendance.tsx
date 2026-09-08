@@ -756,15 +756,45 @@ function DayDetail({ record, code, onClose }: {
 
   if (!isWfh) {
     rows.push(
-      { icon: MapPin, label: "Punch-in location", value: gpsText(record.inLatitude, record.inLongitude) },
-      { icon: MapPin, label: "Punch-out location", value: gpsText(record.outLatitude, record.outLongitude) },
       {
-        icon: Building2, label: "At office site",
-        value: record.withinGeofence === undefined
-          ? "—" : record.withinGeofence ? "Yes" : "No — outside the geofence",
-        tone: record.withinGeofence === undefined ? undefined : record.withinGeofence ? "good" : "warn"
+        icon: MapPin, label: "Punch-in location",
+        value: punchPlaceText(record.inAreaName, record.inLatitude, record.inLongitude),
+        tone: record.inAreaName ? "good" : undefined
+      },
+      {
+        icon: MapPin, label: "Punch-out location",
+        value: punchPlaceText(record.outAreaName, record.outLatitude, record.outLongitude),
+        tone: record.outAreaName ? "good" : undefined
       }
     );
+
+    /*
+     * How the punch was proved, but only when a terminal proved it.
+     *
+     * Absent for an app punch, and left out entirely rather than shown as a
+     * dash: a row reading "Verified by —" invites the reader to wonder what
+     * failed, when in fact nothing was ever claimed.
+     */
+    if (record.inAuthMethod || record.outAuthMethod) {
+      rows.push({
+        icon: ShieldCheck, label: "Verified by",
+        value: [authMethodText(record.inAuthMethod), authMethodText(record.outAuthMethod)]
+          .filter(Boolean).filter((v, i, all) => all.indexOf(v) === i).join(" / "),
+        tone: "good"
+      });
+      const devices = [record.inDevice, record.outDevice]
+        .filter(Boolean).filter((v, i, all) => all.indexOf(v) === i);
+      if (devices.length > 0) {
+        rows.push({ icon: Building2, label: "Terminal", value: devices.join(" / "), tone: "plain" });
+      }
+    }
+
+    rows.push({
+      icon: Building2, label: "At office site",
+      value: record.withinGeofence === undefined
+        ? "—" : record.withinGeofence ? "Yes" : "No — outside the geofence",
+      tone: record.withinGeofence === undefined ? undefined : record.withinGeofence ? "good" : "warn"
+    });
   } else {
     rows.push({ icon: Home, label: "Worked from", value: "Home — approved work from home", tone: "plain" });
   }
@@ -825,4 +855,24 @@ function DayDetail({ record, code, onClose }: {
 
 function gpsText(lat?: number, lng?: number) {
   return lat != null && lng != null ? `${lat.toFixed(5)}, ${lng.toFixed(5)}` : "—";
+}
+
+/**
+ * Where a punch was made, whichever way it knows.
+ *
+ * A wall-mounted terminal sends no coordinates -- it sends the door it stands
+ * at. Reading only the GPS left every biometric punch showing a dash, which
+ * says "we do not know" about a punch whose location is recorded exactly.
+ */
+function punchPlaceText(areaName?: string | null, lat?: number, lng?: number) {
+  if (areaName) return areaName;
+  return gpsText(lat, lng);
+}
+
+/** The authentication method in words rather than as a wire constant. */
+function authMethodText(method?: string | null) {
+  if (method === "FACE") return "Face";
+  if (method === "FINGERPRINT") return "Fingerprint";
+  if (method === "FACE_FINGERPRINT") return "Face + fingerprint";
+  return "";
 }

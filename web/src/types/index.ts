@@ -196,6 +196,30 @@ export interface AttendanceRecord {
   outFaceVerified?: boolean;
   outFacePhotoPath?: string | null;
   inDevice?: string | null;
+  outDevice?: string | null;
+
+  /**
+   * How a biometric terminal authenticated the punch — FACE, FINGERPRINT or
+   * FACE_FINGERPRINT. Absent for a punch made in the app.
+   *
+   * The distinction people actually ask about: a punch from the app is somebody
+   * saying they arrived, a punch at the terminal is the terminal recognising
+   * their face.
+   */
+  inAuthMethod?: string | null;
+  outAuthMethod?: string | null;
+
+  /**
+   * The terminal area, as Hikvision names it — "Main Gate", "Second Floor
+   * Entry".
+   *
+   * Separate from inLocationName, which is derived from GPS. A wall-mounted
+   * terminal sends no coordinates, so that field is empty for these punches
+   * however real the place is — this is the location for them, and a better
+   * one: a named door rather than a point inside a radius.
+   */
+  inAreaName?: string | null;
+  outAreaName?: string | null;
 }
 
 export interface LeaveType {

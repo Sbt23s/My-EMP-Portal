@@ -210,6 +210,36 @@ app:
     route: ${FAST2SMS_ROUTE:q}
     sender-id: ${FAST2SMS_SENDER_ID:}
 
+  hikvision:
+    # Biometric attendance from a Hik-Connect for Teams account.
+    #
+    # OFF by default, and it stays off until the credentials are supplied: with
+    # no app key there is nothing to authenticate with, and a half-configured
+    # integration that starts polling and fails is worse than one that is
+    # plainly disabled.
+    #
+    # NONE OF THESE VALUES IS COMMITTED. The app key and secret are the whole of
+    # the integration's authority -- they can read every person and every punch
+    # on the account -- and Hikvision's guidance is to have support replace them
+    # once leaked. Supply them as environment variables (GitHub secret -> server
+    # .env), exactly as the SMS keys above are supplied. They never reach the
+    # browser; React talks only to this portal.
+    enabled: ${HIKVISION_ENABLED:false}
+    # Regional, and the wrong one simply fails to authenticate.
+    # Singapore/India is https://isgp.hikcentralconnect.com (guide, Chapter 2).
+    base-url: ${HIKVISION_BASE_URL:https://isgp.hikcentralconnect.com}
+    app-key: ${HIKVISION_APP_KEY:}
+    secret-key: ${HIKVISION_SECRET_KEY:}
+    # The signSecret registered with /webhook/v1/config/save, which signs every
+    # pushed message. The guide lets it default to the secret key; a separate
+    # value is kept so the signing secret can be rotated without re-issuing the
+    # credentials that authenticate outbound calls.
+    webhook-secret: ${HIKVISION_WEBHOOK_SECRET:}
+    # How far a push's X-Hook-Timestamp may sit from now. The guide suggests no
+    # more than a minute. Configurable because a server whose clock has drifted
+    # would otherwise reject every message with no obvious cause.
+    webhook-tolerance-seconds: ${HIKVISION_WEBHOOK_TOLERANCE_SECONDS:60}
+
 # ---- Actuator (health check for Render / uptime monitors) ----
 # Expose only /actuator/health. Redis and mail are optional at runtime, so their
 # health indicators are disabled — otherwise the endpoint would report DOWN (503)

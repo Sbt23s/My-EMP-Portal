@@ -71,7 +71,9 @@ class AuthServiceTest {
                 new AppProperties.Attendance(200, 0, 8, "09:00", "18:00"),
                 new AppProperties.Security(5, 15),
                 new AppProperties.Twilio(false, "", "", "", "+91"),
-                new AppProperties.Fast2sms(false, "", "q", "")
+                new AppProperties.Fast2sms(false, "", "q", ""),
+                // Hikvision off: these tests are about the portal, not the terminal.
+                new AppProperties.Hikvision(false, "", "", "", "", 60)
         );
     }
 

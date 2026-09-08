@@ -31,7 +31,9 @@ class JwtServiceTest {
                 new AppProperties.Attendance(200, 0, 8, "09:00", "18:00"),
                 new AppProperties.Security(5, 15),
                 new AppProperties.Twilio(false, "", "", "", "+91"),
-                new AppProperties.Fast2sms(false, "", "q", "")
+                new AppProperties.Fast2sms(false, "", "q", ""),
+                // Hikvision off: these tests are about the portal, not the terminal.
+                new AppProperties.Hikvision(false, "", "", "", "", 60)
         );
     }
 
@@ -95,7 +97,8 @@ class JwtServiceTest {
                         otherProps.jwt().refreshTokenTtlSeconds(),
                         otherProps.jwt().issuer()),
                 otherProps.cors(), otherProps.storage(), otherProps.attendance(),
-                otherProps.security(), otherProps.twilio(), otherProps.fast2sms());
+                otherProps.security(), otherProps.twilio(), otherProps.fast2sms(),
+                otherProps.hikvision());
         JwtService wrongKeyService = new JwtService(other);
         String token = jwtService.generateAccessToken(7L, "alice", List.of("IT_EMP"));
 

@@ -394,7 +394,14 @@ public class AttendanceService {
      * shift was supplied â€” which the punch endpoints never do â€” so nobody was
      * ever marked late. It now falls back to the configured office start.
      */
-    private int lateMinutes(Long shiftId, LocalDateTime punchInAt) {
+    /*
+     * Public, not private, so the biometric terminal reaches the same rule.
+     * A punch from a Hikvision device is the same punch as one from the app,
+     * and a second copy of this arithmetic would drift the first time a shift
+     * or the grace period changed -- one route would honour it and the other
+     * would not, on the same employee, on the same day.
+     */
+    public int lateMinutes(Long shiftId, LocalDateTime punchInAt) {
         if (punchInAt == null) return 0;
         LocalDateTime allowedUntil = punchInAt.toLocalDate()
                 .atTime(startTimeFor(shiftId))
@@ -455,7 +462,8 @@ public class AttendanceService {
     }
 
     /** Minutes worked past the office end time â€” nothing before it counts. */
-    private int overtimeMinutes(LocalDateTime punchInAt, LocalDateTime punchOutAt) {
+    /** Public for the same reason as {@link #lateMinutes}: one rule, both routes. */
+    public int overtimeMinutes(LocalDateTime punchInAt, LocalDateTime punchOutAt) {
         if (punchInAt == null || punchOutAt == null) return 0;
         LocalDateTime officeEnd = punchOutAt.toLocalDate()
                 .atTime(parseTime(props.attendance().officeEnd(), java.time.LocalTime.of(18, 0)));

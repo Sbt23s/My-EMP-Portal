@@ -55,6 +55,7 @@ public class BiometricWebhookController {
 
     private final AppProperties props;
     private final BiometricEventIngestService ingestService;
+    private final BiometricProcessingTrigger processingTrigger;
 
     /**
      * The URL-validation handshake.
@@ -153,6 +154,18 @@ public class BiometricWebhookController {
             BiometricEventIngestService.IngestResult result =
                     ingestService.ingest(rawBody, batchId);
             log.info("Webhook batch {}: {}", batchId, result.summary());
+
+            if (result.stored() > 0) {
+                /*
+                 * Off this thread, and after the punches are safely stored.
+                 * This is what makes the office screen move when somebody
+                 * presents a face -- but it must not happen inline: applying a
+                 * batch of punches inside the request risks the five-second
+                 * timeout, and a timeout means Hikvision redelivers punches we
+                 * have already got.
+                 */
+                processingTrigger.processSoon();
+            }
             // 2XX, so Hikvision stops retrying (§4.17).
             return ResponseEntity.ok(result.summary());
         } catch (Exception e) {

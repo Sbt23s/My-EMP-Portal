@@ -110,17 +110,36 @@ public class HelpdeskService {
                     map.putIfAbsent(u.getId(), m);
                 });
 
-        // 3. For Employees & TLs (not HR), also include single HR option
+        /*
+         * 3. For employees and Team Leaders: every member of the HR desk, by
+         *    name.
+         *
+         * <p>This used to be findFirst -- one entry reading "HR (CODE)". It
+         * made the desk look like a single mailbox, so every request in the
+         * company went to whichever account the query happened to return first,
+         * and the rest of HR had nothing addressed to them at all. Since the
+         * addressee is who decides a request, that one person also did all the
+         * deciding.
+         *
+         * <p>Names rather than the word "HR", because somebody choosing where
+         * to send a problem is choosing a person: they know who they spoke to
+         * last week, and "HR" tells them nothing about who will read it.
+         *
+         * <p>Sorted by name so the list does not reorder itself between page
+         * loads -- a picker whose second entry is a different person each time
+         * is one people mis-click.
+         */
         if (!iAmHr) {
-            userRepository.findByPermission("COMPLAINT_MANAGE").stream()
+            userRepository.findByRoleCodes(HR_DESK).stream()
                     .filter(User::isEnabled)
                     .filter(u -> !u.getId().equals(requesterId))
-                    .filter(HelpdeskService::isHrRole)
-                    .findFirst()
-                    .ifPresent(u -> {
+                    .sorted(java.util.Comparator.comparing(
+                            u -> u.getName() == null ? "" : u.getName(),
+                            String.CASE_INSENSITIVE_ORDER))
+                    .forEach(u -> {
                         java.util.Map<String, Object> m = new java.util.HashMap<>();
                         m.put("id", u.getId());
-                        m.put("name", "HR (" + u.getEmployeeCode() + ")");
+                        m.put("name", u.getName() + " (HR)");
                         m.put("code", u.getEmployeeCode());
                         m.put("designation", "HR");
                         map.putIfAbsent(u.getId(), m);
@@ -182,13 +201,36 @@ public class HelpdeskService {
         }
         targets.remove(userId);
 
+        /*
+         * Everybody on the desk is told, and the wording says which of them has
+         * to do something about it.
+         *
+         * <p>The colleagues need to know because they share the queue -- a
+         * request nobody mentions is one that waits until somebody happens to
+         * refresh. But only the addressee can answer it, and a notification
+         * that reads the same to all of them makes four people each assume one
+         * of the others is handling it.
+         *
+         * <p>The text messages go only to the addressee. Waking somebody's
+         * phone about work that is not theirs to do is how people learn to
+         * ignore it.
+         */
+        Long addressedId = addressed == null ? null : addressed.getId();
         targets.values().forEach(staff -> {
+            boolean forThem = staff.getId().equals(addressedId);
             notificationService.createAndPush(staff.getId(),
                     "New support request " + saved.getTicketCode(),
-                    safeName(userId) + " raised a support request",
+                    forThem
+                            ? safeName(userId) + " sent you a support request"
+                            : safeName(userId) + " raised a support request"
+                                    + (addressedId == null
+                                            ? " — nobody is named on it yet"
+                                            : " for " + safeName(addressedId)),
                     "HELPDESK", "/helpdesk");
-            sms(staff.getId(), safeName(userId) + " raised support request "
-                    + saved.getTicketCode() + ": " + saved.getTitle());
+            if (forThem || addressedId == null) {
+                sms(staff.getId(), safeName(userId) + " raised support request "
+                        + saved.getTicketCode() + ": " + saved.getTitle());
+            }
         });
         return toResponse(saved);
     }

@@ -99,33 +99,36 @@ export default function TicketEntryPage() {
   });
 
   /*
-    "CTO", not "CTO (PIX-E100) (PIX-E100)".
+    The label is what the server sent.
 
-    The server builds the name with the employee code already inside it, and
-    this list is one person per role, so the code identifies nothing the role
-    does not. Falls back to the name as sent if it is not in that shape.
+    It used to prefer `designation`, on the reasoning that this list held one
+    person per role so "CTO" said everything the name did. That stopped being
+    true when the HR desk started appearing by name: three colleagues all
+    carrying designation "HR" collapsed into three identical options, and
+    picking one of them was a guess.
+
+    Names now, as sent -- "Priya Raman (HR)", "CTO (PIX-E100)". Somebody
+    choosing where to send a problem is choosing a person.
   */
   const roleLabel = (u: { name?: string; designation?: string; code?: string }) =>
-    (u.designation || "").trim()
-      || (u.name || "").replace(/\s*\([^)]*\)\s*$/, "").trim()
-      || u.name
-      || "";
+    (u.name || "").trim() || (u.designation || "").trim() || "";
 
-  const filteredAgents = useMemo(() => {
-    let list = hrUsers.data ?? [];
-    if (isTL || !hasRole("SUPER_ADMIN", "COMPANY_ADMIN", "IT_MGR", "IT_HR", "CV_HR")) {
-      list = list.filter((u) => {
-        const code = (u.code || "").toUpperCase();
-        const desig = (u.designation || "").toUpperCase();
-        const name = (u.name || "").toUpperCase();
-        const isAdmin = code === "ADM0001" || code.startsWith("ADM") || name.includes("ADMIN") || desig.includes("ADMIN");
-        const isHR = code === "HR0001" || code.includes("HR") || desig.includes("HR") || desig.includes("MANAGER") || desig.includes("HEAD");
-        const isCTO = code === "PIX-E100" || desig.includes("CTO");
-        return isAdmin || isHR || isCTO;
-      });
-    }
-    return list;
-  }, [hrUsers.data, isTL, hasRole]);
+  /*
+    No client-side filtering.
+
+    There was a filter here that re-derived who counts as HR from the shape of
+    an employee code and the words in a designation -- code.includes("HR"),
+    desig.includes("MANAGER"), and so on. It was guesswork about data the
+    server had already decided on, and it guessed wrong in both directions:
+    PIX-E058 is on the HR desk with neither "HR" in his code nor in his title,
+    and any employee whose designation happened to contain "Head" would have
+    been offered as a recipient.
+
+    /tickets/agents already returns exactly who this requester may address --
+    it takes the requester's id for precisely that reason -- so the list is
+    used as it arrives.
+  */
+  const filteredAgents = hrUsers.data ?? [];
 
   async function uploadOne(file: File): Promise<string> {
     const data = new FormData();

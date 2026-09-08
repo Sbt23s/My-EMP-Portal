@@ -104,12 +104,32 @@ public class ComplaintService {
         oversight.notifyCto(userId, "New " + label + ": " + saved.getReferenceCode(),
                 submitter + " submitted a " + label, "COMPLAINT", "/complaints");
 
+        /*
+         * Everybody on the desk hears, and the wording says whose it is.
+         *
+         * <p>The colleagues need to know because they share the queue -- a
+         * complaint nobody mentions waits until somebody happens to refresh.
+         * Only the addressee can answer it, though, and a notification that
+         * reads the same to all of them makes each assume another is handling
+         * it.
+         *
+         * <p>Text messages go only to the person who has to respond. A phone
+         * waking about somebody else's work is a phone people stop reading.
+         */
+        Long addressedId = saved.getRequestedTo();
         targets.forEach(staff -> {
-            if (!staff.getId().equals(userId)) {
-                notificationService.createAndPush(staff.getId(),
-                        "New " + label + ": " + saved.getReferenceCode(),
-                        submitter + " submitted a " + label,
-                        "COMPLAINT", "/complaints");
+            if (staff.getId().equals(userId)) return;
+            boolean forThem = staff.getId().equals(addressedId);
+            notificationService.createAndPush(staff.getId(),
+                    "New " + label + ": " + saved.getReferenceCode(),
+                    forThem
+                            ? submitter + " sent you a " + label
+                            : submitter + " submitted a " + label
+                                    + (addressedId == null
+                                            ? " — nobody is named on it yet"
+                                            : " to " + safeName(addressedId)),
+                    "COMPLAINT", "/complaints");
+            if (forThem || addressedId == null) {
                 sms(staff.getId(), submitter + " submitted a " + label + " ("
                         + saved.getReferenceCode() + "). Please review in the portal.");
             }
@@ -185,17 +205,34 @@ public class ComplaintService {
                     map.putIfAbsent(u.getId(), m);
                 });
 
-        // 3. For Employees & TLs (not HR), also include single HR option
+        /*
+         * 3. For employees and Team Leaders: every member of the HR desk, by
+         *    name.
+         *
+         * <p>This used to be findFirst -- one entry reading "HR (CODE)", which
+         * made the desk look like a single mailbox. Every complaint in the
+         * company went to whichever account the query returned first, so the
+         * rest of HR had nothing addressed to them, and since the addressee is
+         * who answers a complaint, that one person answered all of them.
+         *
+         * <p>Names rather than the word "HR". Choosing where to take a
+         * complaint is choosing a person to tell -- more so here than anywhere
+         * else in the portal -- and "HR" tells the person raising it nothing
+         * about who will read what they write.
+         *
+         * <p>Sorted by name so the list is stable between page loads.
+         */
         if (!iAmHr) {
-            userRepository.findByPermission("COMPLAINT_MANAGE").stream()
+            userRepository.findByRoleCodes(HR_DESK).stream()
                     .filter(User::isEnabled)
                     .filter(u -> !u.getId().equals(requesterId))
-                    .filter(ComplaintService::isHrRole)
-                    .findFirst()
-                    .ifPresent(u -> {
+                    .sorted(java.util.Comparator.comparing(
+                            u -> u.getName() == null ? "" : u.getName(),
+                            String.CASE_INSENSITIVE_ORDER))
+                    .forEach(u -> {
                         java.util.Map<String, Object> m = new java.util.HashMap<>();
                         m.put("id", u.getId());
-                        m.put("name", "HR (" + u.getEmployeeCode() + ")");
+                        m.put("name", u.getName() + " (HR)");
                         m.put("code", u.getEmployeeCode());
                         m.put("role", "HR");
                         map.putIfAbsent(u.getId(), m);

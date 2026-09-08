@@ -288,11 +288,40 @@ public class HelpdeskService {
     }
 
     @Transactional(readOnly = true)
+    /**
+     * The accounts whose queue this person shares.
+     *
+     * <p>Just themselves, unless they are on the HR desk -- in which case the
+     * whole desk, because the picker offers HR as one entry and which account
+     * it happened to name is an accident of list order rather than a decision.
+     */
+    private java.util.List<Long> queueMates(Long viewerId) {
+        java.util.List<Long> ids = new java.util.ArrayList<>();
+        ids.add(viewerId);
+        User me = userRepository.findById(viewerId).orElse(null);
+        if (isHrRole(me)) {
+            userRepository.findByRoleCodes(HR_DESK).forEach(u -> {
+                if (!ids.contains(u.getId())) ids.add(u.getId());
+            });
+        }
+        return ids;
+    }
+
     public PageResponse<TicketResponse> agentQueue(Long agentId, String status, int page, int size) {
         var pageable = PageRequest.of(page, size);
-        Page<Ticket> result = (status != null && !status.isBlank())
-                ? ticketRepository.findByStatusOrderByCreatedAtDesc(status.toUpperCase(), pageable)
-                : ticketRepository.findByAssignedToOrderByCreatedAtDesc(agentId, pageable);
+        String statusFilter = (status == null || status.isBlank()) ? null : status.toUpperCase();
+        /*
+         * Addressed to this agent, or to anybody on their desk.
+         *
+         * <p>Note what the status filter used to do: with a status set it
+         * called findByStatus and returned every ticket in that state to any
+         * agent, ignoring who each was addressed to -- so filtering an empty
+         * queue by "Open" made other people's tickets appear. The scope is now
+         * the same whether or not a status is chosen, which is what a filter
+         * should be.
+         */
+        Page<Ticket> result = ticketRepository.findAssignedToDesk(
+                statusFilter, queueMates(agentId), pageable);
         return PageResponse.from(result.map(this::toResponseNoComments));
     }
 
@@ -315,7 +344,8 @@ public class HelpdeskService {
                     ? ticketRepository.findByStatusOrderByCreatedAtDesc(statusFilter, pageable)
                     : ticketRepository.findAllByOrderByCreatedAtDesc(pageable);
         } else {
-            result = ticketRepository.findForViewer(statusFilter, viewerId, pageable);
+            result = ticketRepository.findForDesk(
+                    statusFilter, viewerId, queueMates(viewerId), pageable);
         }
         return PageResponse.from(result.map(this::toResponseNoComments));
     }

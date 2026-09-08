@@ -234,10 +234,32 @@ public class ComplaintService {
         // for managing employee records, and checking it here handed them the
         // complaints addressed past them to the CTO.
         boolean seesEverything = oversight.seesEveryRequest(viewerId);
-        Page<ComplaintNeed> result = seesEverything
-                ? repository.filterAll(statusFilter, kindFilter, PageRequest.of(page, size))
-                : repository.filterForViewer(statusFilter, kindFilter, viewerId,
-                        PageRequest.of(page, size));
+        Page<ComplaintNeed> result;
+        if (seesEverything) {
+            result = repository.filterAll(statusFilter, kindFilter, PageRequest.of(page, size));
+        } else {
+            /*
+             * On the HR desk, the queue is the desk's rather than one account's.
+             * Anything addressed to any HR account is theirs to read, because
+             * the picker only ever offers one of them and which one it happened
+             * to name is an accident of the list order, not a decision anybody
+             * made.
+             *
+             * The CTO distinction filterForViewer protects survives this: a
+             * complaint addressed past HR to the CTO is still invisible to HR,
+             * because the CTO is not on the desk.
+             */
+            java.util.List<Long> deskIds = new java.util.ArrayList<>();
+            deskIds.add(viewerId);
+            User me = userRepository.findById(viewerId).orElse(null);
+            if (isHrRole(me)) {
+                userRepository.findByRoleCodes(HR_DESK).forEach(u -> {
+                    if (!deskIds.contains(u.getId())) deskIds.add(u.getId());
+                });
+            }
+            result = repository.filterForDesk(statusFilter, kindFilter, viewerId, deskIds,
+                    PageRequest.of(page, size));
+        }
         return PageResponse.from(result.map(this::toResponse));
     }
 
@@ -278,6 +300,30 @@ public class ComplaintService {
     @Transactional
     public ComplaintResponse respond(Long staffId, Long id, ComplaintDecisionRequest req) {
         ComplaintNeed c = find(id);
+
+        /*
+         * Reading it is the desk's; answering it is the addressee's.
+         *
+         * <p>The queue was widened so that every HR colleague can see what is
+         * waiting -- one person holding the only copy of a complaint is how one
+         * sits unread for a week. Deciding was deliberately not widened with
+         * it. A complaint names the person it was sent to, and an answer signed
+         * by somebody the submitter did not write to reads as their confidence
+         * being passed around.
+         *
+         * <p>So: the addressee answers. Whoever it was addressed to nobody in
+         * particular is the desk's to answer, and oversight -- the CTO and the
+         * platform administrator -- answers anything, because that is what
+         * seesEveryRequest already means everywhere else.
+         */
+        boolean mine = staffId != null && staffId.equals(c.getRequestedTo());
+        boolean unaddressed = c.getRequestedTo() == null;
+        if (!mine && !unaddressed && !oversight.seesEveryRequest(staffId)) {
+            throw ApiException.business(
+                    "This was addressed to " + safeName(c.getRequestedTo())
+                            + ". Only they can respond to it.");
+        }
+
         String status = req.status() == null ? "" : req.status().toUpperCase();
         if (!VALID_STATUS.contains(status)) {
             throw ApiException.business("Invalid status: " + req.status());

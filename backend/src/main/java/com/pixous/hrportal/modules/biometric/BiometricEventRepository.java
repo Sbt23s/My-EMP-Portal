@@ -73,4 +73,19 @@ public interface BiometricEventRepository extends JpaRepository<BiometricEvent, 
 
     long countByUserIdAndOccurTimeBetween(Long userId,
                                           LocalDateTime from, LocalDateTime to);
+
+    /**
+     * How many punches have arrived recently, across every company.
+     *
+     * <p>Answers the only question that matters once the link is configured:
+     * is anything actually coming in. A correctly registered webhook with no
+     * event subscription verifies, saves and then delivers nothing for ever,
+     * and every other health check reports that as working.
+     *
+     * <p>Deliberately not scoped to a company. It is read by the administration
+     * endpoint behind USER_MANAGE, and it returns a count rather than any
+     * punch -- "seventeen" tells an administrator the terminal is alive without
+     * telling them whose attendance it was.
+     */
+    long countByOccurTimeAfter(LocalDateTime since);
 }

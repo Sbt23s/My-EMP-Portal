@@ -149,6 +149,30 @@ class AuditFilterRulesTest {
         }
 
         @Test
+        @DisplayName("Registering and unregistering the webhook are named separately")
+        void webhookRulesAreNamed() {
+            /*
+             * These two decide whether a punch reaches the portal at all --
+             * unregistering silently stops the entire attendance feed -- so the
+             * audit row has to say which one happened. Both sit above the
+             * general /api/biometric rule; below it, they would both read as
+             * "Biometric attendance change".
+             */
+            assertThat(label("/api/biometric/admin/webhook/register"))
+                    .isEqualTo("Pointed the biometric terminal at this portal");
+            assertThat(label("/api/biometric/admin/webhook/unregister"))
+                    .isEqualTo("Stopped biometric punches reaching the portal");
+            assertThat(category("/api/biometric/admin/webhook/register"))
+                    .isEqualTo(AuditService.ATTENDANCE);
+
+            // "unregister" must not be swallowed by the "register" prefix --
+            // /webhook/register is a prefix of nothing here, but the reverse
+            // ordering would make both read as the register label.
+            assertThat(label("/api/biometric/admin/webhook/unregister"))
+                    .isNotEqualTo(label("/api/biometric/admin/webhook/register"));
+        }
+
+        @Test
         @DisplayName("The technical administrator's own sign-in stays under SECURITY")
         void techAdminAuthIsSecurity() {
             // Under CONFIG it would be filed with the settings screens, when it

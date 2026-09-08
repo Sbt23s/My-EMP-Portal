@@ -84,10 +84,19 @@ public class AuditFilter extends OncePerRequestFilter {
             Map.entry("/api/attendance/punch-out", new String[]{AuditService.ATTENDANCE, "Punched out"}),
             Map.entry("/api/attendance", new String[]{AuditService.ATTENDANCE, "Attendance change"}),
 
-            // Remapping a terminal identity decides whose attendance a punch
-            // becomes, so it is an attendance action rather than a settings
-            // one. Without these two rules both fall through to SYSTEM/"Change"
-            // and read like any other edit.
+            /*
+             * Biometric administration, most specific first.
+             *
+             * Remapping a terminal identity decides whose attendance a punch
+             * becomes; registering or unregistering the webhook decides whether
+             * a punch is recorded at all. Without these rules every one of them
+             * falls through to SYSTEM/"Change" and reads like any other edit --
+             * including the one that silently stops the whole attendance feed.
+             */
+            Map.entry("/api/biometric/admin/webhook/unregister",
+                    new String[]{AuditService.ATTENDANCE, "Stopped biometric punches reaching the portal"}),
+            Map.entry("/api/biometric/admin/webhook/register",
+                    new String[]{AuditService.ATTENDANCE, "Pointed the biometric terminal at this portal"}),
             Map.entry("/api/biometric/admin/sync-enrolment",
                     new String[]{AuditService.ATTENDANCE, "Refreshed biometric enrolment"}),
             Map.entry("/api/biometric/admin/sync",

@@ -3,7 +3,9 @@ package com.pixous.hrportal.modules.biometric;
 import com.pixous.hrportal.common.ApiException;
 import com.pixous.hrportal.common.ApiResponse;
 import com.pixous.hrportal.common.ErrorCode;
+import com.pixous.hrportal.config.AppProperties;
 import com.pixous.hrportal.modules.biometric.hik.HikClient;
+import com.pixous.hrportal.modules.biometric.hik.HikWebhookApi;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -11,8 +13,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -35,9 +39,12 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class BiometricAdminController {
 
+    private final AppProperties props;
     private final HikClient client;
+    private final HikWebhookApi webhookApi;
     private final HikPersonSyncService syncService;
     private final HikPersonMapRepository mapRepository;
+    private final BiometricEventRepository eventRepository;
 
     /**
      * Whether the link is configured and working, without revealing how.
@@ -49,12 +56,100 @@ public class BiometricAdminController {
      */
     @GetMapping("/status")
     @PreAuthorize("hasAuthority('USER_MANAGE')")
-    @Operation(summary = "Is the Hikvision link configured, and how many people are mapped")
+    @Operation(summary = "Is the Hikvision link configured, and is anything arriving")
     public ApiResponse<Map<String, Object>> status() {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("configured", client.isEnabled());
         out.put("mappedPeople", mapRepository.count());
+
+        /*
+         * Whether punches are actually arriving, which is a different question
+         * from whether the link is configured and the only one that matters
+         * once it is. A correctly configured account with no subscription
+         * verifies, saves, and delivers nothing -- and "configured: true" would
+         * report that as healthy.
+         *
+         * Counted over a day rather than in total: an integration that worked
+         * last month and stopped yesterday has a large total and is broken.
+         */
+        LocalDateTime since = LocalDateTime.now().minusDays(1);
+        long recent = eventRepository.countByOccurTimeAfter(since);
+        out.put("punchesLast24h", recent);
+        out.put("receiving", recent > 0);
         return ApiResponse.ok(out);
+    }
+
+    /**
+     * Points Hikvision at this server and subscribes to the punch events.
+     *
+     * <p>Two steps because both are needed and only one of them is obvious.
+     * Registering the callback tells Hik-Connect where to post; subscribing
+     * tells it what to post. A registered webhook with no subscription is a URL
+     * that has been verified and will never be used, which looks exactly like a
+     * working integration until somebody notices no punches have arrived.
+     *
+     * <p>Manual, never automatic. The guide warns that configuring a webhook
+     * can stop an existing polling integration from receiving anything, and
+     * that switching back needs Hikvision's technical support -- so this is not
+     * something to run on a deploy or a schedule.
+     *
+     * @param callbackUrl the public HTTPS address of this server's webhook,
+     *                    ending in {@code /api/biometric/webhook}
+     */
+    @PostMapping("/webhook/register")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
+    @Operation(summary = "Register this server's callback URL and subscribe to punches")
+    public ApiResponse<Map<String, Object>> registerWebhook(
+            @RequestParam String callbackUrl) {
+        requireConfigured();
+
+        AppProperties.Hikvision h = props.hikvision();
+        String signSecret = (h.webhookSecret() != null && !h.webhookSecret().isBlank())
+                ? h.webhookSecret()
+                : h.secretKey();
+
+        webhookApi.register(callbackUrl, signSecret);
+        webhookApi.subscribe(true);
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("callbackUrl", callbackUrl);
+        out.put("subscribed", true);
+        return ApiResponse.ok(out,
+                "Hikvision will now push punches here. Present a face at a terminal to confirm.");
+    }
+
+    /** What Hikvision currently believes the callback configuration to be. */
+    @GetMapping("/webhook")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
+    @Operation(summary = "Read the callback configuration back from Hikvision")
+    public ApiResponse<Object> readWebhook() {
+        requireConfigured();
+        return ApiResponse.ok(webhookApi.query());
+    }
+
+    /**
+     * Stops the pushes.
+     *
+     * <p>Cancels the subscription first and then removes the configuration, in
+     * that order: the reverse would leave Hikvision briefly posting to an
+     * address it no longer has a signing secret for.
+     */
+    @PostMapping("/webhook/unregister")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
+    @Operation(summary = "Stop Hikvision pushing punches to this server")
+    public ApiResponse<String> unregisterWebhook() {
+        requireConfigured();
+        webhookApi.subscribe(false);
+        webhookApi.unregister();
+        return ApiResponse.message("Hikvision will no longer push punches here.");
+    }
+
+    private void requireConfigured() {
+        if (!client.isEnabled()) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR,
+                    "Hikvision is not configured. Set HIKVISION_ENABLED and supply "
+                            + "the app key and secret key on the server.");
+        }
     }
 
     /**

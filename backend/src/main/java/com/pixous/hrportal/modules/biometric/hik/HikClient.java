@@ -179,18 +179,37 @@ public class HikClient {
      */
     public JsonNode call(String path, ObjectNode body) {
         requireEnabled();
+
+        /*
+         * The token first, and the host second -- in that order, and it matters.
+         *
+         * token() logs in when there is no session, and it is the login response
+         * that names areaDomain. Reading the host before the token meant the
+         * first call of every process used the configured base URL while the
+         * token had just been minted for the region Hikvision nominated. On a
+         * live Indian account the config said isgp (Singapore), Hikvision said
+         * iind, and every first call came back OPEN000006 TOKEN_NOT_FOUND -- a
+         * token that is perfectly valid, presented to the wrong host.
+         *
+         * Observed exactly that way in production: "session established ... calls
+         * go to https://iind.hikcentralconnect.com" immediately followed by
+         * "isgp.hikcentralconnect.com/... failed: OPEN000006".
+         */
+        String token = token();
         String url = areaDomain() + path;
         try {
-            return post(url, body, token());
+            return post(url, body, token);
         } catch (HikApiException e) {
             if (!e.isTokenProblem()) {
                 throw e;
             }
             // The token went stale between the margin check and the call, or
-            // was invalidated at Hikvision's end. One fresh login, one retry.
+            // was invalidated at Hikvision's end. One fresh login, one retry --
+            // and the URL is rebuilt from the new session, because a login can
+            // move the account to a different regional host.
             log.info("Hikvision rejected the token ({}); logging in again", e.getErrorCode());
             login();
-            return post(url, body, token());
+            return post(areaDomain() + path, body, token());
         }
     }
 

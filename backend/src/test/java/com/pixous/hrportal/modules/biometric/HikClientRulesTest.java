@@ -23,6 +23,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class HikClientRulesTest {
 
+    /** A literal newline, kept out of the string below for readability. */
+    private static final char NEWLINE = (char) 10;
+
     @Nested
     @DisplayName("Staying under the published request ceiling")
     class RateLimit {
@@ -205,6 +208,74 @@ class HikClientRulesTest {
                     new HikPersonSyncService.SyncResult(true, 42, 40, 3, 1, 2);
             assertThat(done.summary())
                     .isEqualTo("42 on the terminal, 40 matched (3 new, 1 changed), 2 unmatched");
+        }
+    }
+
+    @Nested
+    @DisplayName("Calls go to the host Hikvision nominated, not the configured one")
+    class AreaDomain {
+
+        @Test
+        @DisplayName("The login response decides where later calls go")
+        void areaDomainWins() {
+            /*
+             * Seen on the live account, an hour after the credentials were
+             * installed. The log said both halves of it in consecutive lines:
+             *
+             *   session established ... calls go to https://iind.hikcentralconnect.com
+             *   https://isgp.hikcentralconnect.com/... failed: OPEN000006 TOKEN_NOT_FOUND
+             *
+             * The configuration named Singapore, Hikvision put the account in
+             * India, and a token minted for one region is not a token the other
+             * accepts. The failure reads as an expired token, which it is not.
+             */
+            HikTokenStore session = new HikTokenStore(
+                    "hcc.abc",
+                    Instant.parse("2026-09-15T07:48:10Z"),
+                    "https://iind.hikcentralconnect.com");
+            assertThat(session.areaDomain()).isEqualTo("https://iind.hikcentralconnect.com");
+        }
+
+        @Test
+        @DisplayName("The token has to be resolved before the host is read")
+        void tokenBeforeHost() {
+            /*
+             * The actual bug, and it was one line of ordering:
+             *
+             *   String url = areaDomain() + path;   // no session yet -> config
+             *   return post(url, body, token());    // token() logs in, too late
+             *
+             * areaDomain() only knows the right host once a session exists, and
+             * token() is what creates one. Every first call of a fresh process
+             * therefore went to the configured host with a token minted for
+             * another. Pinned by reading the source, because on an account whose
+             * region matches its configuration the two orderings behave
+             * identically -- which is exactly why it survived every local test.
+             */
+            java.nio.file.Path src = java.nio.file.Path.of(
+                    "src/main/java/com/pixous/hrportal/modules/biometric/hik",
+                    "HikClient.java");
+            String code;
+            try {
+                code = java.nio.file.Files.readString(src);
+            } catch (java.io.IOException e) {
+                throw new AssertionError("Cannot read " + src, e);
+            }
+            int callAt = code.indexOf("public JsonNode call(");
+            assertThat(callAt).as("call(String, ObjectNode) is gone").isGreaterThan(0);
+            // The method body: from its signature to the closing brace at
+            // method indentation. Enough to see the order of the two calls.
+            String body = code.substring(callAt, code.indexOf(NEWLINE + "    }", callAt));
+
+            int tokenAt = body.indexOf("token()");
+            int hostAt = body.indexOf("areaDomain()");
+            assertThat(tokenAt).as("call() no longer resolves a token").isGreaterThan(0);
+            assertThat(hostAt).as("call() no longer resolves a host").isGreaterThan(0);
+            assertThat(tokenAt)
+                    .as("token() must be resolved before areaDomain(), or the first "
+                            + "call of a process uses the configured host with a token "
+                            + "minted for the region Hikvision nominated")
+                    .isLessThan(hostAt);
         }
     }
 

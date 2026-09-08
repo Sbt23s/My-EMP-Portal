@@ -42,6 +42,10 @@ public class HikPersonApi {
      */
     private static final int MAX_PAGES = 500;
 
+    /** Returned when a response carries no usable person array. */
+    private static final JsonNode EMPTY =
+            com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.arrayNode();
+
     private final HikClient client;
     private final ObjectMapper mapper;
 
@@ -66,19 +70,19 @@ public class HikPersonApi {
             body.put("pageIndex", page);
             body.put("pageSize", PAGE_SIZE);
 
-            JsonNode data = client.call(LIST_PATH, body);
-            if (data == null || !data.isArray() || data.isEmpty()) {
+            JsonNode rows = personRows(client.call(LIST_PATH, body));
+            if (rows.isEmpty()) {
                 break;
             }
 
-            for (JsonNode row : data) {
+            for (JsonNode row : rows) {
                 HikPerson person = readPerson(row.path("personInfo"));
                 if (person != null) {
                     people.add(person);
                 }
             }
 
-            if (data.size() < PAGE_SIZE) {
+            if (rows.size() < PAGE_SIZE) {
                 // A short page is the last page.
                 break;
             }
@@ -136,6 +140,37 @@ public class HikPersonApi {
                     personId, e.getMessage());
             return new Enrolment(null, null);
         }
+    }
+
+    /**
+     * The array of people inside a {@code /persons/list} response.
+     *
+     * <p>The guide types {@code data} as {@code Object[]} and the live platform
+     * returns an object with the array under {@code personList}. Both are
+     * handled, and the reason to handle both rather than pick the observed one
+     * is that a mismatch here is invisible: the caller sees an empty list and
+     * reports "0 people on the terminal", which reads as a terminal nobody has
+     * been added to.
+     *
+     * <p>That is exactly how this presented -- a live account holding real
+     * people, with fingerprints enrolled, syncing as empty.
+     */
+    private static JsonNode personRows(JsonNode data) {
+        if (data == null || data.isMissingNode() || data.isNull()) {
+            return EMPTY;
+        }
+        if (data.isArray()) {
+            return data;
+        }
+        JsonNode list = data.path("personList");
+        if (list.isArray()) {
+            return list;
+        }
+        // Neither shape. Returning an empty array keeps the caller's loop
+        // simple; the warning is what stops it being silent.
+        log.warn("Hikvision returned a person list in an unrecognised shape: {}",
+                data.fieldNames().hasNext() ? data.fieldNames().next() : "no fields");
+        return EMPTY;
     }
 
     private HikPerson readPerson(JsonNode info) {

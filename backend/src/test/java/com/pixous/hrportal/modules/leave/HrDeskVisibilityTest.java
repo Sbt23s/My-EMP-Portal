@@ -25,8 +25,16 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class HrDeskVisibilityTest {
 
-    /** The desk. IT_MGR is not on it — see the note in PermissionService. */
-    private static final Set<String> HR_DESK = Set.of("IT_HR", "CV_HR");
+    /**
+     * The desk.
+     *
+     * <p>IT_MGR is on it. It was left off at first, on the reasoning that it is
+     * a manager role — and the live data says otherwise: the two accounts
+     * holding IT_MGR are the HR account and the head of HR, and the account
+     * everybody calls "HR" holds IT_MGR and not IT_HR. Excluding it meant the
+     * desk-wide rules reached nobody who works the desk.
+     */
+    private static final Set<String> HR_DESK = Set.of("IT_HR", "CV_HR", "IT_MGR");
 
     /**
      * Whether this person may decide a request, as
@@ -69,6 +77,19 @@ class HrDeskVisibilityTest {
         @DisplayName("The civil-side HR desk counts as well")
         void civilHr() {
             assertThat(mayDecide(10, true, 12, Set.of("CV_HR"))).isTrue();
+        }
+
+        @Test
+        @DisplayName("The account everybody calls HR holds IT_MGR, and is on the desk")
+        void theHrAccountItself() {
+            /*
+             * The correction this test exists for. The desk was first defined
+             * as IT_HR and CV_HR on the reasoning that IT_MGR is a manager
+             * role. On this company's data that excluded the HR account itself
+             * -- username "hr", which holds IT_MGR alone -- so every rule about
+             * "the whole desk" reached nobody who works it.
+             */
+            assertThat(mayDecide(10, true, 13, Set.of("IT_MGR"))).isTrue();
         }
     }
 

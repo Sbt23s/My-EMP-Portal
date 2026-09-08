@@ -6,6 +6,8 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { methodLabel, punchPlaceLabel, joinDistinct } from "@/lib/punch";
+import { ExportColumnsDialog, type ExportChoice, type ExportColumn }
+  from "@/components/ui/export-columns-dialog";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -365,6 +367,63 @@ function minutesLabel(mins?: number) {
 function formatTime(at?: string | null) {
   return at ? dayjs(at).format("h:mm A") : "—";
 }
+
+/**
+ * What the picker offers for the day-by-day sheet.
+ *
+ * <p>The keys match the column definitions inside the export. They are listed
+ * separately because the definitions read from a row and need the page's
+ * closures; keeping the keys identical is the contract, and a key here with no
+ * definition simply exports nothing rather than shifting the columns.
+ *
+ * <p>Everything is ticked by default, so an export nobody customises produces
+ * exactly the file it always did.
+ */
+const DAILY_EXPORT_COLUMNS: ExportColumn[] = [
+  // Required: a sheet of times with no date and nobody's name against them is
+  // not something anybody can read afterwards.
+  { key: "date", label: "Date", required: true },
+  { key: "code", label: "Employee ID", required: true },
+  { key: "name", label: "Employee Name", required: true },
+  { key: "team", label: "Team" },
+  { key: "status", label: "Status" },
+  { key: "in", label: "Punch In" },
+  { key: "out", label: "Punch Out" },
+  { key: "worked", label: "Work Hours" },
+  { key: "late", label: "Late By" },
+  { key: "overtime", label: "Overtime" },
+  { key: "remarks", label: "Remarks" },
+  { key: "inPlace", label: "In Location" },
+  { key: "outPlace", label: "Out Location" },
+  { key: "verified", label: "Verified By" },
+  { key: "terminal", label: "Terminal" },
+  { key: "permission", label: "Permission" },
+  // Off by default: a wall-mounted terminal has no coordinates, so for most
+  // punches this column now reads "no GPS" all the way down.
+  { key: "gps", label: "GPS coordinates", default: false }
+];
+
+/** The same, for the per-employee summary sheet. */
+const SUMMARY_EXPORT_COLUMNS: ExportColumn[] = [
+  { key: "n", label: "#", required: true },
+  { key: "code", label: "Employee ID", required: true },
+  { key: "name", label: "Employee Name", required: true },
+  { key: "team", label: "Team" },
+  { key: "percent", label: "Attendance %" },
+  { key: "present", label: "Present Days" },
+  { key: "leave", label: "Leave Days" },
+  { key: "absent", label: "Absent Days" },
+  { key: "hours", label: "Work Hours" },
+  { key: "overtime", label: "Overtime" },
+  { key: "lateIn", label: "Late Check-ins" },
+  { key: "earlyOut", label: "Early Check-outs" },
+  { key: "missing", label: "Missing Punch" },
+  { key: "wfh", label: "Work From Home" },
+  { key: "permDays", label: "Permission Days" },
+  { key: "permHours", label: "Permission Hours" },
+  { key: "usual", label: "Usual Location" },
+  { key: "latestVerified", label: "Latest Verified By" }
+];
 
 export default function TeamAttendancePage() {
   const { user, hasRole, hasPermission } = useAuth();
@@ -798,7 +857,83 @@ export default function TeamAttendancePage() {
       .join(", ");
   };
 
-  const exportToExcel = () => {
+  /**
+   * One row per employee, with a pair of columns for each date.
+   *
+   * <p>The shape a printed muster roll has, and the one people ask for when
+   * they want a fortnight at a glance:
+   *
+   * <pre>
+   *   Employee ID  Name    01 Sep IN  01 Sep OUT  02 Sep IN  02 Sep OUT
+   *   PIX-E039     Amutha  8:56 AM    6:10 PM     9:02 AM    6:15 PM
+   * </pre>
+   *
+   * <p>The per-day column ticks do not apply here — each date brings its own
+   * IN and OUT by definition — so only the columns that describe the employee
+   * are carried across. The dialog says so rather than letting somebody tick
+   * boxes that would be ignored.
+   */
+  const [exporting, setExporting] = useState(false);
+
+  const exportHorizontal = (wanted: { key: string; label: string; read: (r: any) => any }[]) => {
+    // The employee columns, in the order they were offered. Anything per-day is
+    // replaced by the date pairs below.
+    const PER_DAY = new Set(["date", "in", "out", "worked", "late", "overtime",
+                             "status", "remarks", "inPlace", "outPlace",
+                             "verified", "terminal", "permission", "gps"]);
+    const person = wanted.filter((c) => !PER_DAY.has(c.key));
+    // Always something to identify the row: nine columns of times with no name
+    // against them is not a spreadsheet anybody can read.
+    const identity = person.length > 0
+      ? person
+      : [{ key: "code", label: "Employee ID", read: (r: any) => getUserCode(r.userId) },
+         { key: "name", label: "Employee Name", read: (r: any) => getUserName(r.userId) }];
+
+    // One entry per employee, keyed by date, built from the rows already on
+    // screen -- so the file matches the filters exactly as the table does.
+    const byUser = new Map<number, Map<string, RangeRecord | undefined>>();
+    for (const r of rows) {
+      if (!byUser.has(r.userId)) byUser.set(r.userId, new Map());
+      byUser.get(r.userId)!.set(r._date, r.record);
+    }
+
+    const header: string[] = [...identity.map((c) => c.label)];
+    for (const d of rangeDates) {
+      const label = dayjs(d).format("DD MMM");
+      header.push(`${label} IN`, `${label} OUT`);
+    }
+
+    const body = [...byUser.entries()]
+      .sort((a, b) => getUserName(a[0]).localeCompare(getUserName(b[0])))
+      .map(([userId, days]) => {
+        // identity columns read from any row for this person; they do not vary
+        // by day, and every employee in `rows` has at least one.
+        const sample = rows.find((r) => r.userId === userId)!;
+        const line: (string | number)[] = identity.map((c) => c.read(sample));
+        for (const d of rangeDates) {
+          const rec = days.get(d);
+          line.push(rec ? formatTime(rec.punchInAt) : "—");
+          line.push(rec ? formatTime(rec.punchOutAt) : "—");
+        }
+        return line;
+      });
+
+    const ws = XLSX.utils.aoa_to_sheet([header, ...body]);
+    ws["!cols"] = [
+      ...identity.map((c) => ({ wch: c.key === "name" ? 24 : 14 })),
+      ...rangeDates.flatMap(() => [{ wch: 11 }, { wch: 11 }])
+    ];
+    // Frozen at the identity columns so the names stay visible while scrolling
+    // a month of dates sideways -- which is the whole reason to choose this
+    // layout.
+    ws["!freeze"] = { xSplit: identity.length, ySplit: 1 };
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Attendance");
+    XLSX.writeFile(wb, `Team_Attendance_${fromDate}_to_${toDate}_by_date.xlsx`);
+    toast.success(`Exported ${body.length} employee${body.length === 1 ? "" : "s"}`);
+  };
+
+  const exportToExcel = (choice?: ExportChoice) => {
     if (view === "SUMMARY" ? summary.length === 0 : rows.length === 0) {
       toast.error("Nothing in this range to export.");
       return;
@@ -806,56 +941,63 @@ export default function TeamAttendancePage() {
 
     // The file follows the view: one line per employee, or the daily log.
     if (view === "SUMMARY") {
-      const sHeaders = [
-        "#", "Employee ID", "Employee Name", "Team", "Attendance %",
-        "Present Days", "Leave Days", "Absent Days", "Work Hours",
-        "Overtime",
-        "Late Check-ins", "Early Check-outs", "Missing Punch", "Work From Home",
+      /*
+       * Column definitions rather than two parallel arrays, for the same reason
+       * as the daily sheet: exporting a chosen subset means filtering headings
+       * and values together, and two lists kept in step by hand shift every
+       * value one column left the first time somebody adds a heading.
+       */
+      type S = (typeof summary)[number];
+      const SUMMARY_COLS: {
+        key: string; label: string; width: number; read: (s: S, i: number) => string | number;
+      }[] = [
+        { key: "n", label: "#", width: 5, read: (_s, i) => i + 1 },
+        { key: "code", label: "Employee ID", width: 13, read: (s) => s.user.employeeCode ?? "" },
+        { key: "name", label: "Employee Name", width: 24, read: (s) => s.user.name },
+        { key: "team", label: "Team", width: 20,
+          read: (s) => (s.user.designationTitle || "").trim() || "No team" },
+        { key: "percent", label: "Attendance %", width: 13, read: (s) => `${s.percent}%` },
+        { key: "present", label: "Present Days", width: 13, read: (s) => s.present },
+        { key: "leave", label: "Leave Days", width: 12, read: (s) => s.leaveDays },
+        { key: "absent", label: "Absent Days", width: 12, read: (s) => s.absentDays },
+        { key: "hours", label: "Work Hours", width: 12, read: (s) => minutesLabel(s.minutes) },
+        { key: "overtime", label: "Overtime", width: 11,
+          read: (s) => s.overtimeMinutes ? minutesLabel(s.overtimeMinutes) : "—" },
+        { key: "lateIn", label: "Late Check-ins", width: 15, read: (s) => s.lateDays },
+        { key: "earlyOut", label: "Early Check-outs", width: 16, read: (s) => s.earlyOut },
+        { key: "missing", label: "Missing Punch", width: 14, read: (s) => s.missing },
+        { key: "wfh", label: "Work From Home", width: 16,
+          read: (s) => s.wfh ? `${s.wfh}d` : "—" },
         // Permission is counted two ways because they answer different
-        // questions: four permissions of fifteen minutes and one of four hours
-        // are not the same month, and neither figure implies the other.
-        "Permission Days", "Permission Hours",
-        // The same two the summary view shows on screen: where they usually
-        // punch from and how their most recent punch was proved. A summary row
-        // covers many days, so the latest is the only single answer that means
-        // anything -- the daily sheet is where every punch is listed.
-        "Usual Location", "Latest Verified By"
+        // questions: four fifteen-minute permissions and one four-hour one are
+        // not the same month, and neither figure implies the other.
+        { key: "permDays", label: "Permission Days", width: 15,
+          read: (s) => s.permissionDays || "—" },
+        { key: "permHours", label: "Permission Hours", width: 16,
+          read: (s) => s.permissionHours ? `${s.permissionHours}h` : "—" },
+        // A summary row covers many days, so the latest is the only single
+        // answer that means anything; the daily sheet lists every punch.
+        { key: "usual", label: "Usual Location", width: 24, read: (s) => s.usualPlace || "—" },
+        { key: "latestVerified", label: "Latest Verified By", width: 20,
+          read: (s) => methodLabel(s.latest?.inAuthMethod)
+            || (s.verifiedDays > 0 ? "Face (app)" : "—") }
       ];
-      const sData = summary.map((s, i) => [
-        i + 1,
-        s.user.employeeCode ?? "",
-        s.user.name,
-        (s.user.designationTitle || "").trim() || "No team",
-        `${s.percent}%`,
-        s.present, s.leaveDays, s.absentDays,
-        minutesLabel(s.minutes),
-        s.overtimeMinutes ? minutesLabel(s.overtimeMinutes) : "—",
-        s.lateDays, s.earlyOut, s.missing,
-        s.wfh ? `${s.wfh}d` : "—",
-        s.permissionDays || "—",
-        s.permissionHours ? `${s.permissionHours}h` : "—",
-        s.usualPlace || "—",
-        methodLabel(s.latest?.inAuthMethod)
-          || (s.verifiedDays > 0 ? "Face (app)" : "—")
-      ]);
+
+      const sWanted = choice
+        ? SUMMARY_COLS.filter((c) => choice.columns.includes(c.key))
+        : SUMMARY_COLS;
+
       const sWs = XLSX.utils.aoa_to_sheet([
         [`Attendance summary — ${dayjs(fromDate).format("DD MMM YYYY")} to ${dayjs(toDate).format("DD MMM YYYY")}`],
         [`${summary.length} employee(s) · ${workingDaysInRange} working days (Sundays excluded)`],
         [],
-        sHeaders,
-        ...sData
+        sWanted.map((c) => c.label),
+        ...summary.map((s, i) => sWanted.map((c) => c.read(s, i)))
       ]);
-      // As long as sHeaders. Nineteen columns: the thirteen original, plus
-      // Overtime, the two permission figures, and the two location ones.
-      sWs["!cols"] = [{ wch: 5 }, { wch: 13 }, { wch: 24 }, { wch: 20 }, { wch: 13 },
-                      { wch: 13 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
-                      { wch: 11 },
-                      { wch: 15 }, { wch: 16 }, { wch: 14 }, { wch: 16 },
-                      { wch: 15 }, { wch: 16 },
-                      { wch: 24 }, { wch: 20 }];
+      sWs["!cols"] = sWanted.map((c) => ({ wch: c.width }));
       sWs["!merges"] = [
-        { s: { r: 0, c: 0 }, e: { r: 0, c: sHeaders.length - 1 } },
-        { s: { r: 1, c: 0 }, e: { r: 1, c: sHeaders.length - 1 } }
+        { s: { r: 0, c: 0 }, e: { r: 0, c: sWanted.length - 1 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: sWanted.length - 1 } }
       ];
       const sWb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(sWb, sWs, "Attendance Summary");
@@ -863,109 +1005,97 @@ export default function TeamAttendancePage() {
       toast.success(`Exported ${summary.length} employee${summary.length === 1 ? "" : "s"}`);
       return;
     }
-    // The sheet carries the columns the table shows, in the same order, plus how
-    // late the punch was and any overtime -- figures a month's file is read for
-    // and which the screen has no room to hold.
-    const headers = [
-      "Date", "Employee ID", "Employee Name", "Team", "Status",
-      "Punch In", "Punch Out", "Work Hours", "Late By", "Overtime", "Remarks",
-      // Where and how, split into the four questions people actually ask of an
-      // exported sheet -- which door in, which door out, how it was proved, on
-      // which machine. One combined column would be unfilterable, and filtering
-      // is the reason to export rather than read the screen.
-      "In Location", "Out Location", "Verified By", "Terminal",
-      // The times a permission covered, not just that one existed. "Permission"
-      // as a yes/no cannot answer whether a 4:15 departure was the sanctioned
-      // one, which is the question a short day actually raises.
-      "Permission",
-      "GPS"
-    ];
+    /*
+     * One definition per column: its key, its heading, and how to read it off a
+     * row. Previously the headings and the values were two parallel arrays, and
+     * exporting a chosen subset would have meant filtering both in step -- the
+     * kind of pairing that silently shifts every value one column left the
+     * first time somebody adds a heading and forgets the value.
+     */
     const coords = (lat?: number, lng?: number) =>
       lat && lng ? `${lat}, ${lng}` : "";
-    const data = rows.map((row) => {
-      const att = row.record;
-      if (!att) {
-        // A day off shows why: approved leave, a request still waiting, or a
-        // genuine absence.
-        const lv = leaveByKey.get(`${row._date}-${row.userId}`);
-        const label = lv
-          ? `LEAVE · ${(lv.status || "").toUpperCase()}`
-          : "ABSENT";
-        return [
-          dayjs(row._date).format("DD MMM YYYY"),
-          getUserCode(row.userId), getUserName(row.userId), teamOf(row.userId),
-          label, "—", "—", "—", "—", "—",
-          lv ? lv.leaveTypeName : "—",
-          "—", "—", "—", "—",
-          permissionLabel(row._date, row.userId),
-          "—"
-        ];
-      }
-      const inGPS = coords(att.inLatitude, att.inLongitude);
-      const outGPS = coords(att.outLatitude, att.outLongitude);
-      // One GPS column, both punches in it, so the sheet matches the screen.
-      // "no GPS" rather than blank, and it is now an ordinary state rather than
-      // a gap: a wall-mounted terminal has no coordinates to give, and the
-      // location columns beside this one carry the real answer.
-      const gps = [inGPS && `In: ${inGPS}`, outGPS && `Out: ${outGPS}`]
-        .filter(Boolean).join("  |  ") || "no GPS";
 
-      /*
-       * The door, whichever way the punch knows it: the terminal's area name
-       * when a terminal recorded it, the GPS-matched office otherwise. Exporting
-       * only the GPS name left every biometric punch with an empty location
-       * cell, which reads as "not recorded" for a punch whose place is known
-       * exactly.
-       */
-      const inPlace = punchPlaceLabel(att.inAreaName, att.inLocationName) || "—";
-      const outPlace = att.punchOutAt
-        ? (punchPlaceLabel(att.outAreaName, att.outLocationName) || "—")
-        : "—";
-      // "Face (app)" distinguishes the portal's own selfie check from a
-      // terminal's -- both are a face, and only one of them was a machine at a
-      // door.
-      const verified = joinDistinct([methodLabel(att.inAuthMethod), methodLabel(att.outAuthMethod)])
-        || (att.faceVerified ? "Face (app)" : "—");
-      const terminal = joinDistinct([att.inDevice, att.outDevice]) || "—";
+    type Row = (typeof rows)[number];
+    const DAILY_COLUMNS: {
+      key: string; label: string; width: number;
+      read: (row: Row) => string | number;
+    }[] = [
+      { key: "date", label: "Date", width: 14,
+        read: (r) => dayjs(r._date).format("DD MMM YYYY") },
+      { key: "code", label: "Employee ID", width: 13, read: (r) => getUserCode(r.userId) },
+      { key: "name", label: "Employee Name", width: 24, read: (r) => getUserName(r.userId) },
+      { key: "team", label: "Team", width: 20, read: (r) => teamOf(r.userId) },
+      { key: "status", label: "Status", width: 16, read: (r) => {
+          const a = r.record;
+          if (!a) {
+            // A day off says why: approved leave, a request still waiting, or a
+            // genuine absence.
+            const lv = leaveByKey.get(`${r._date}-${r.userId}`);
+            return lv ? `LEAVE · ${(lv.status || "").toUpperCase()}` : "ABSENT";
+          }
+          return a.late ? "LATE" : a.status;
+        } },
+      { key: "in", label: "Punch In", width: 11,
+        read: (r) => r.record ? formatTime(r.record.punchInAt) : "—" },
+      { key: "out", label: "Punch Out", width: 11,
+        read: (r) => r.record ? formatTime(r.record.punchOutAt) : "—" },
+      { key: "worked", label: "Work Hours", width: 11,
+        read: (r) => r.record ? minutesLabel(r.record.workedMinutes) : "—" },
+      { key: "late", label: "Late By", width: 10,
+        read: (r) => r.record ? minutesLabel(r.record.lateMinutes) : "—" },
+      { key: "overtime", label: "Overtime", width: 10,
+        read: (r) => r.record ? minutesLabel(r.record.overtimeMinutes) : "—" },
+      { key: "remarks", label: "Remarks", width: 26, read: (r) => {
+          if (r.record) return remarksFor(r.record).join(", ") || "—";
+          const lv = leaveByKey.get(`${r._date}-${r.userId}`);
+          return lv ? lv.leaveTypeName : "—";
+        } },
+      { key: "inPlace", label: "In Location", width: 22,
+        read: (r) => r.record
+          ? (punchPlaceLabel(r.record.inAreaName, r.record.inLocationName) || "—") : "—" },
+      { key: "outPlace", label: "Out Location", width: 22,
+        read: (r) => r.record && r.record.punchOutAt
+          ? (punchPlaceLabel(r.record.outAreaName, r.record.outLocationName) || "—") : "—" },
+      { key: "verified", label: "Verified By", width: 20, read: (r) => {
+          const a = r.record;
+          if (!a) return "—";
+          // "Face (app)" distinguishes the portal's own selfie check from a
+          // terminal's: both are a face, only one was a machine at a door.
+          return joinDistinct([methodLabel(a.inAuthMethod), methodLabel(a.outAuthMethod)])
+            || (a.faceVerified ? "Face (app)" : "—");
+        } },
+      { key: "terminal", label: "Terminal", width: 28,
+        read: (r) => r.record
+          ? (joinDistinct([r.record.inDevice, r.record.outDevice]) || "—") : "—" },
+      { key: "permission", label: "Permission", width: 30,
+        read: (r) => permissionLabel(r._date, r.userId) },
+      { key: "gps", label: "GPS", width: 46, read: (r) => {
+          const a = r.record;
+          if (!a) return "—";
+          const i = coords(a.inLatitude, a.inLongitude);
+          const o = coords(a.outLatitude, a.outLongitude);
+          // "no GPS" rather than blank: a wall-mounted terminal has no
+          // coordinates to give, and the location columns carry the real answer.
+          return [i && `In: ${i}`, o && `Out: ${o}`].filter(Boolean).join("  |  ") || "no GPS";
+        } }
+    ];
 
-      return [
-        dayjs(row._date).format("DD MMM YYYY"),
-        getUserCode(row.userId),
-        getUserName(row.userId),
-        teamOf(row.userId),
-        att.late ? "LATE" : att.status,
-        formatTime(att.punchInAt),
-        formatTime(att.punchOutAt),
-        minutesLabel(att.workedMinutes),
-        minutesLabel(att.lateMinutes),
-        minutesLabel(att.overtimeMinutes),
-        remarksFor(att).join(", ") || "—",
-        inPlace,
-        outPlace,
-        verified,
-        terminal,
-        permissionLabel(row._date, row.userId),
-        gps
-      ];
-    });
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-    /*
-     * One width per header, and the list must stay the same length as `headers`
-     * above -- a short list silently leaves the last columns at the default
-     * width, which is how the GPS column used to arrive unreadably narrow.
-     *
-     * Date, Employee ID, Employee Name, Team, Status, Punch In, Punch Out,
-     * Work Hours, Late By, Overtime, Remarks, In Location, Out Location,
-     * Verified By, Terminal, Permission, GPS. GPS holds two coordinate pairs,
-     * the terminal column a full device name, and Permission can hold two
-     * time ranges, so all three need the room.
-     */
-    ws["!cols"] = [{ wch: 14 }, { wch: 13 }, { wch: 24 }, { wch: 20 },
-                   { wch: 16 }, { wch: 11 }, { wch: 11 }, { wch: 11 },
-                   { wch: 10 }, { wch: 10 }, { wch: 26 },
-                   { wch: 22 }, { wch: 22 }, { wch: 20 }, { wch: 28 },
-                   { wch: 30 },
-                   { wch: 46 }];
+    const wanted = choice
+      ? DAILY_COLUMNS.filter((c) => choice.columns.includes(c.key))
+      : DAILY_COLUMNS;
+
+    if (choice?.layout === "HORIZONTAL") {
+      exportHorizontal(wanted);
+      return;
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet([
+      wanted.map((c) => c.label),
+      ...rows.map((row) => wanted.map((c) => c.read(row)))
+    ]);
+    // Widths follow the chosen columns, so they cannot drift out of step with
+    // the headings the way a separate hand-kept list did.
+    ws["!cols"] = wanted.map((c) => ({ wch: c.width }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Attendance");
     XLSX.writeFile(wb, `Team_Attendance_${fromDate}_to_${toDate}.xlsx`);
@@ -1077,10 +1207,27 @@ export default function TeamAttendancePage() {
         </div>
 
         <ExportExcelButton
-          onClick={exportToExcel}
-          title="Export this date range to Excel"
+          onClick={() => setExporting(true)}
+          title="Choose the columns and layout, then export"
         />
       </div>
+
+      {exporting && (
+        <ExportColumnsDialog
+          columns={view === "SUMMARY" ? SUMMARY_EXPORT_COLUMNS : DAILY_EXPORT_COLUMNS}
+          /*
+           * Only the day-by-day sheet has dates to pivot. The per-employee
+           * summary is already one row each, so offering the choice there
+           * would let somebody pick an option that quietly does nothing.
+           */
+          allowLayout={view !== "SUMMARY"}
+          onCancel={() => setExporting(false)}
+          onExport={(choice) => {
+            setExporting(false);
+            exportToExcel(choice);
+          }}
+        />
+      )}
 
       {!validRange ? (
         <EmptyState icon={Users} title="Pick a valid date range" description="Choose a From date on or before the To date." />

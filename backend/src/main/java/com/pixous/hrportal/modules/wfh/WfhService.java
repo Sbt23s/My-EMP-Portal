@@ -527,8 +527,15 @@ public class WfhService {
         return addressedToHrDesk(r) && onHrDesk(viewerId);
     }
 
-    /** The roles that make somebody part of the HR desk. */
-    private static final String[] HR_DESK = {"IT_HR", "CV_HR"};
+    /**
+     * The roles that make somebody part of the HR desk.
+     *
+     * <p>IT_MGR included: on the live data the two accounts holding it are the
+     * HR account and the head of HR, and the account everyone calls "HR" holds
+     * IT_MGR rather than IT_HR. isHr() below has always counted all three, and
+     * a desk that excluded IT_MGR would have reached nobody who works it.
+     */
+    private static final String[] HR_DESK = {"IT_HR", "CV_HR", "IT_MGR"};
 
     /**
      * Whether a request was sent to HR.

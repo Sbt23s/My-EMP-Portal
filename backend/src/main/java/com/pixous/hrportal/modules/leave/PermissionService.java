@@ -215,10 +215,9 @@ public class PermissionService {
      * is the difference this closes.
      */
     private boolean seesTheWholeQueue(User u) {
-        return u != null
-                && (hasRole(u, "IT_HR") || hasRole(u, "CV_HR") || hasRole(u, "IT_MGR")
-                    || hasRole(u, "SUPER_ADMIN")
-                    || com.pixous.hrportal.security.SecurityUtils.hasAuthority("USER_MANAGE"));
+        return onHrDesk(u)
+                || hasRole(u, "SUPER_ADMIN")
+                || com.pixous.hrportal.security.SecurityUtils.hasAuthority("USER_MANAGE");
     }
 
     /**
@@ -270,12 +269,20 @@ public class PermissionService {
     /**
      * The roles that make somebody part of the HR desk.
      *
-     * <p>IT_MGR is deliberately absent. It counts as HR for deciding who may
-     * approve, and including it here would copy every permission request to
-     * two managers who are not on the desk.
+     * <p>IT_MGR is on the list, and was left off at first on the reasoning that
+     * it is a manager role rather than an HR one. Checking the live data showed
+     * that reasoning was wrong about this company: the two accounts holding
+     * IT_MGR are the HR account itself and the head of HR, and the account
+     * everyone calls "HR" holds IT_MGR and not IT_HR. Excluding it meant the
+     * desk-wide rules reached nobody who actually works the desk.
+     *
+     * <p>Every service that asks "is this person HR" already tests all three
+     * together — LeaveService, WfhService, ComplaintService, HelpdeskService —
+     * so this brings permissions into line with the rest of the portal rather
+     * than inventing a rule for it.
      */
     private static final java.util.List<String> HR_ROLE_CODES =
-            java.util.List.of("IT_HR", "CV_HR");
+            java.util.List.of("IT_HR", "CV_HR", "IT_MGR");
 
     /** Whether a request addressed to this person is a request to HR. */
     private boolean isHrRequest(Long approverId) {
@@ -283,8 +290,13 @@ public class PermissionService {
             return false;
         }
         return userRepository.findById(approverId)
-                .map(u -> hasRole(u, "IT_HR") || hasRole(u, "CV_HR"))
+                .map(this::onHrDesk)
                 .orElse(false);
+    }
+
+    /** Whether this person works the HR desk. */
+    private boolean onHrDesk(User u) {
+        return u != null && HR_ROLE_CODES.stream().anyMatch(c -> hasRole(u, c));
     }
 
     /**
@@ -450,8 +462,7 @@ public class PermissionService {
          */
         boolean isHrDeskRequest = isHrRequest(p.getRequestedTo());
         User decider = userRepository.findById(deciderId).orElse(null);
-        boolean deciderIsHrDesk = decider != null
-                && (hasRole(decider, "IT_HR") || hasRole(decider, "CV_HR"));
+        boolean deciderIsHrDesk = onHrDesk(decider);
 
         if (!isDirectApprover && !(isHrDeskRequest && deciderIsHrDesk)) {
             throw ApiException.business(

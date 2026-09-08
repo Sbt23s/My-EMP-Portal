@@ -46,6 +46,7 @@ public class BiometricAdminController {
     private final HikPersonMapRepository mapRepository;
     private final BiometricEventRepository eventRepository;
     private final PersonMappingService mappingService;
+    private final BiometricBackfillService backfillService;
 
     /**
      * Whether the link is configured and working, without revealing how.
@@ -185,6 +186,31 @@ public class BiometricAdminController {
                 com.pixous.hrportal.security.SecurityUtils.currentUserId());
         mappingService.map(hikPersonId, userId, actor);
         return ApiResponse.message(userId == null ? "Unmatched." : "Matched.");
+    }
+
+    /**
+     * Imports punches that happened before the webhook was registered.
+     *
+     * <p>The webhook pushes what happens next and nothing else, so a terminal
+     * already in service holds every punch people remember making and the
+     * register would otherwise start empty on switch-on day.
+     *
+     * <p>Manual and dated on purpose. A backfill rewrites history, and history
+     * should only change when somebody asks it to.
+     */
+    @PostMapping("/backfill")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
+    @Operation(summary = "Import past punches from Hikvision for a date range")
+    public ApiResponse<BiometricBackfillService.Result> backfill(
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(
+                    iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
+            java.time.LocalDate from,
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(
+                    iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
+            java.time.LocalDate to) {
+        requireConfigured();
+        BiometricBackfillService.Result r = backfillService.run(from, to);
+        return ApiResponse.ok(r, r.summary());
     }
 
     private void requireConfigured() {

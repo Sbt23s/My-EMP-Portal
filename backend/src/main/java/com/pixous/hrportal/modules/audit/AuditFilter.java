@@ -93,6 +93,12 @@ public class AuditFilter extends OncePerRequestFilter {
              * falls through to SYSTEM/"Change" and reads like any other edit --
              * including the one that silently stops the whole attendance feed.
              */
+            // Importing history rewrites days that are already on payslips, so
+            // it needs its own row rather than the general biometric label.
+            Map.entry("/api/biometric/admin/backfill",
+                    new String[]{AuditService.ATTENDANCE, "Imported past biometric punches"}),
+            Map.entry("/api/biometric/admin/people",
+                    new String[]{AuditService.ATTENDANCE, "Matched a terminal person to an employee"}),
             Map.entry("/api/biometric/admin/webhook/unregister",
                     new String[]{AuditService.ATTENDANCE, "Stopped biometric punches reaching the portal"}),
             Map.entry("/api/biometric/admin/webhook/register",

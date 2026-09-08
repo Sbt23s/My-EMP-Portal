@@ -77,6 +77,21 @@ public class SecurityConfig {
                                 // endpoint employees use lives at
                                 // /api/global-announcements and is unaffected.
                                 "/api/files/**",
+                                // The Hikvision terminal's callback. Public
+                                // because it must be: Hik-Connect is a machine
+                                // on the internet with no account here, and
+                                // §4.17 requires a plain HTTPS URL answering
+                                // GET and POST.
+                                //
+                                // It is NOT unprotected. Every push carries an
+                                // HMAC-SHA256 signature over its timestamp and
+                                // batch id, and BiometricWebhookController
+                                // refuses anything unsigned, wrongly signed, or
+                                // older than the configured window before a
+                                // single row is written. Only this exact path
+                                // is opened -- /api/biometric/admin/** stays
+                                // behind USER_MANAGE like the rest of the API.
+                                "/api/biometric/webhook",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",

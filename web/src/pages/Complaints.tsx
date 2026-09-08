@@ -816,6 +816,22 @@ function SubmitDialog({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const [subject, setSubject] = useState("");
   const [category, setCategory] = useState("WORKPLACE");
+  /*
+    What "Other" actually was.
+
+    Picking Other used to file the complaint under the literal word OTHER, so
+    the list showed a row of them with nothing to tell them apart and no way to
+    see a pattern -- three people reporting the same unlisted thing looked like
+    three unrelated complaints. The description said what it was, but a
+    category exists so that you do not have to open every row to find out.
+
+    Sent in place of the category rather than beside it, because there is no
+    column for it and inventing one would migrate a table to hold what the
+    existing 60-character column already fits. Everything downstream -- the
+    list, the filters, the export -- reads the category as a label and displays
+    whatever it holds.
+  */
+  const [otherCategory, setOtherCategory] = useState("");
   const [priority, setPriority] = useState("MEDIUM");
   const [targetRoleId, setTargetRoleId] = useState("");
   const [description, setDescription] = useState("");
@@ -843,7 +859,9 @@ function SubmitDialog({ onClose }: { onClose: () => void }) {
     mutationFn: async () => {
       const body = {
         subject,
-        category,
+        // "Other" carries what the person typed, trimmed, and falls back to
+        // the plain word only if they somehow got past the required field.
+        category: category === "OTHER" ? (otherCategory.trim() || "OTHER") : category,
         priority,
         requestedTo: selectedTargetRoleId ? Number(selectedTargetRoleId) : undefined,
         description,
@@ -882,6 +900,23 @@ function SubmitDialog({ onClose }: { onClose: () => void }) {
               <option value="OTHER">Other Issue</option>
             </Select>
           </div>
+          {category === "OTHER" && (
+            <div className="col-span-2 space-y-1">
+              <Label htmlFor="othercat">What kind of issue?</Label>
+              <Input
+                id="othercat"
+                required
+                maxLength={60}
+                value={otherCategory}
+                onChange={(e) => setOtherCategory(e.target.value)}
+                placeholder="Name it in a few words — e.g. Transport, Canteen"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                A short label, so this shows in the list as itself rather than
+                as one of several rows reading &ldquo;Other&rdquo;.
+              </p>
+            </div>
+          )}
           <div className="space-y-1">
             <Label htmlFor="prio">Priority</Label>
             <Select id="prio" value={priority} onChange={(e) => setPriority(e.target.value)}>

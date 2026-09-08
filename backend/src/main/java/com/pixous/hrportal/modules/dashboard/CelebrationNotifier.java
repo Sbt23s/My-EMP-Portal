@@ -63,12 +63,37 @@ public class CelebrationNotifier {
             List<User> audience = active.stream()
                     .filter(u -> celebrantCompany.equals(u.getCompanyId()))
                     .toList();
+            /*
+             * The date, not the word "today".
+             *
+             * A notification is written once and read for weeks. These said
+             * "Birthday today" and "is today", so a fortnight later the bell
+             * still announced a birthday that had already passed -- and it did
+             * so in the present tense, which made it read as current rather
+             * than as history. The text is the only record of when the event
+             * was; the notification row carries a created-at, but nothing in
+             * the message tied the two together.
+             *
+             * Naming the day fixes it without any read-time logic: "Birthday
+             * on 12 Sep" is true on the day and true a month later.
+             */
+            String when = c.date() == null
+                    ? null
+                    : c.date().format(java.time.format.DateTimeFormatter.ofPattern("d MMM"));
+            String onDay = when == null ? "" : " on " + when;
+            String team = c.team() != null ? " (" + c.team() + ")" : "";
+
             boolean birthday = "BIRTHDAY".equals(c.type());
-            String title = birthday ? "🎂 Birthday today" : "🎉 Work anniversary today";
+            String title = birthday
+                    ? "🎂 Birthday" + onDay
+                    : "🎉 Work anniversary" + onDay;
             String body = birthday
-                    ? c.name() + "'s birthday is today" + (c.team() != null ? " (" + c.team() + ")" : "") + " — wish them well!"
-                    : c.name() + " completes " + c.years() + " year" + (c.years() != null && c.years() == 1 ? "" : "s")
-                            + " with the company today" + (c.team() != null ? " (" + c.team() + ")" : "") + "!";
+                    ? c.name() + "'s birthday is" + (when == null ? " today" : " on " + when)
+                            + team + " — wish them well!"
+                    : c.name() + " completes " + c.years() + " year"
+                            + (c.years() != null && c.years() == 1 ? "" : "s")
+                            + " with the company" + (when == null ? " today" : " on " + when)
+                            + team + "!";
             for (User u : audience) {
                 // Skip notifying the celebrant about their own day.
                 if (u.getId().equals(c.userId())) continue;

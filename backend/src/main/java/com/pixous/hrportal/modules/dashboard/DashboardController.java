@@ -7,6 +7,7 @@ import com.pixous.hrportal.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,6 +34,29 @@ public class DashboardController {
     public ApiResponse<java.util.List<com.pixous.hrportal.modules.dashboard.dto.Celebration>> celebrations(
             @RequestParam(required = false) String industry) {
         return ApiResponse.ok(service.celebrations(industry));
+    }
+
+    /**
+     * Every birthday and work anniversary in one calendar year.
+     *
+     * <p>A separate endpoint from the card above, because that one is a
+     * "coming up soon" widget -- sixty days, twelve rows -- and this is a
+     * register somebody reads a year at a time, dates already past included.
+     * Visible to every employee, as the card is: whose birthday it is has
+     * never been private here, and a team that cannot see the year cannot plan
+     * around it.
+     */
+    @GetMapping("/celebrations/year/{year}")
+    public ApiResponse<java.util.List<com.pixous.hrportal.modules.dashboard.dto.Celebration>> celebrationsInYear(
+            @PathVariable int year,
+            @RequestParam(required = false) String industry) {
+        // A path variable is whatever the caller typed. Bounded so a typo asks
+        // for a year rather than sending withYear a value it will throw on.
+        if (year < 1970 || year > 2200) {
+            throw com.pixous.hrportal.common.ApiException.business(
+                    "Choose a year between 1970 and 2200.");
+        }
+        return ApiResponse.ok(service.celebrationsInYear(year, industry));
     }
 
     /**

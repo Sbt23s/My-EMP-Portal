@@ -85,6 +85,23 @@ export default function AppreciationPage() {
 
   const [tab, setTab] = useState<"all" | "mine">(canIssue ? "all" : "mine");
   const [q, setQ] = useState("");
+  /*
+    When the letters were written.
+
+    A search box finds a letter you can already name. It cannot answer "what
+    did we send out in August", which is the question somebody has when they
+    are checking a quarter or writing a summary -- and with a year of letters
+    in one list, scrolling to find out is not an answer either.
+
+    Two controls rather than one, because they are asked differently. A month
+    is the common case and is one click. A range spans months, and is the only
+    way to ask for a quarter or a fortnight. Picking either clears the other,
+    so the list never has two filters fighting over it and the person reading
+    it can always tell which one is in force.
+  */
+  const [month, setMonth] = useState("");     // "YYYY-MM"
+  const [from, setFrom] = useState("");       // "YYYY-MM-DD"
+  const [to, setTo] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [viewing, setViewing] = useState<LetterView | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<LetterView | null>(null);
@@ -125,15 +142,37 @@ export default function AppreciationPage() {
   const loading = tab === "all" ? all.isLoading : mine.isLoading;
 
   const list = useMemo(() => {
+    let rows = rawList;
+
+    /*
+      Dated first, then searched. A letter with no date on it survives every
+      date filter rather than vanishing: a draft that has not been dated yet is
+      still somebody's work, and quietly hiding it would look like it had been
+      deleted.
+    */
+    if (month) {
+      rows = rows.filter((l) => !l.letterDate || l.letterDate.slice(0, 7) === month);
+    } else if (from || to) {
+      // Compared as ISO strings, which sort correctly by date and avoid
+      // building a dayjs object per row per keystroke. Either end may be left
+      // open: "everything since March" is a real question.
+      rows = rows.filter((l) => {
+        if (!l.letterDate) return true;
+        if (from && l.letterDate < from) return false;
+        if (to && l.letterDate > to) return false;
+        return true;
+      });
+    }
+
     const needle = q.trim().toLowerCase();
-    if (!needle) return rawList;
-    return rawList.filter((l) => [
+    if (!needle) return rows;
+    return rows.filter((l) => [
       l.referenceCode, l.employeeName, l.employeeCode, l.designation,
       l.achievement, l.issuedByName,
     ].filter(Boolean).join(" ").toLowerCase().includes(needle));
-  }, [rawList, q]);
+  }, [rawList, q, month, from, to]);
 
-  const paged = usePagedRows(list, 15, [tab, q, rawList]);
+  const paged = usePagedRows(list, 15, [tab, q, month, from, to, rawList]);
 
   const tabs = [
     ...(canIssue ? [{ id: "all" as const, label: `Issued letters (${(all.data ?? []).length})` }] : []),
@@ -189,8 +228,51 @@ export default function AppreciationPage() {
             />
           </div>
         </div>
-        {q.trim() && (
-          <Button variant="outline" onClick={() => setQ("")}>Reset</Button>
+        <div className="space-y-1">
+          <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Month
+          </label>
+          <Input
+            type="month"
+            className="w-40"
+            value={month}
+            /* Choosing a month drops the range, and vice versa below. Two date
+               filters in force at once produce an empty list nobody can
+               explain from what is on screen. */
+            onChange={(e) => { setMonth(e.target.value); setFrom(""); setTo(""); }}
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            From
+          </label>
+          <Input
+            type="date"
+            className="w-40"
+            value={from}
+            max={to || undefined}
+            onChange={(e) => { setFrom(e.target.value); setMonth(""); }}
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            To
+          </label>
+          <Input
+            type="date"
+            className="w-40"
+            value={to}
+            min={from || undefined}
+            onChange={(e) => { setTo(e.target.value); setMonth(""); }}
+          />
+        </div>
+        {(q.trim() || month || from || to) && (
+          <Button
+            variant="outline"
+            onClick={() => { setQ(""); setMonth(""); setFrom(""); setTo(""); }}
+          >
+            Reset
+          </Button>
         )}
         <span className="ml-auto text-xs text-muted-foreground">
           {list.length} of {rawList.length} letter{rawList.length === 1 ? "" : "s"}

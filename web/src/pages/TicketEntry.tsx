@@ -79,6 +79,20 @@ export default function TicketEntryPage() {
     type: "",
     priority: "",
     assignedTo: "",
+    /*
+      What "Other" actually was.
+
+      Choosing Other used to file the ticket under the literal word, so the
+      queue filled with rows saying "Other" and nothing distinguished them --
+      three people reporting the same unlisted problem looked like three
+      unrelated tickets. The description said what it was, but a category
+      exists so nobody has to open every row to find out.
+
+      Sent in place of the category rather than beside it: there is no column
+      for it, and the existing 40-character one already fits a short label.
+      Everything downstream reads the category as text and shows what it holds.
+    */
+    otherCategory: "",
     module: "",
     description: "",
     attachments: ""
@@ -179,7 +193,9 @@ export default function TicketEntryPage() {
       api.post("/tickets", {
         title: form.title.trim(),
         type: form.type,
-        category: form.category || undefined,
+        category: (form.category === "Other"
+          ? form.otherCategory.trim() || "Other"
+          : form.category) || undefined,
         priority: form.priority,
         assignedTo: selectedAssignedTo ? Number(selectedAssignedTo) : undefined,
         // The affected module matters to whoever picks this up, so it travels
@@ -201,6 +217,10 @@ export default function TicketEntryPage() {
   const submit = () => {
     if (!form.title.trim()) { toast.error("A short summary is required"); return; }
     if (!form.category) { toast.error("Please choose a category"); return; }
+    if (form.category === "Other" && !form.otherCategory.trim()) {
+      toast.error("Say in a few words what kind of issue this is");
+      return;
+    }
     if (!form.type) { toast.error("Please choose a type"); return; }
     if (!form.priority) { toast.error("Please set a priority"); return; }
     if (!selectedAssignedTo) { toast.error("Please pick who to send this ticket to"); return; }
@@ -264,6 +284,17 @@ export default function TicketEntryPage() {
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </Select>
             </Field>
+            {form.category === "Other" && (
+              <Field label="What kind of issue?" required icon={Grid2x2}
+                hint="A short label, so this shows in the queue as itself.">
+                <Input
+                  maxLength={40}
+                  value={form.otherCategory}
+                  onChange={(e) => set("otherCategory", e.target.value)}
+                  placeholder="e.g. Printer, Seating, ID card"
+                />
+              </Field>
+            )}
             <Field label="Type" required icon={FileText}>
               <Select value={form.type} onChange={(e) => set("type", e.target.value)}>
                 <option value="">Select type</option>

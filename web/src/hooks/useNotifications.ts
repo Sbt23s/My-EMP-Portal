@@ -289,6 +289,19 @@ export function useNotifications(userId?: number) {
           ASSET: ["assets"],
           EXPENSE: ["claims"],
           PAYROLL: ["payroll", "payslips"],
+          /*
+            Three the backend has always sent and this map never listed, so the
+            toast appeared and the page behind it did not move. An appreciation
+            letter is the worst of them: the person it was written for was told
+            about it and then had to reload to find it.
+
+            CELEBRATION refreshes the dashboard rather than a list of its own --
+            the birthdays card is part of it, and the year view reads the same
+            query key.
+          */
+          APPRECIATION: ["appreciation", "dashboard"],
+          DISCIPLINE: ["discipline"],
+          CELEBRATION: ["dashboard"],
         };
 
         const onFrame = (body: string) => {

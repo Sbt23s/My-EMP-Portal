@@ -442,6 +442,72 @@ public class DashboardService {
         return out.stream().limit(12).toList();
     }
 
+    /**
+     * Every celebration in one calendar year, in date order.
+     *
+     * <p>Separate from {@link #celebrations(String)} rather than a parameter on
+     * it, because the two answer different questions and the dashboard card's
+     * shape is wrong for this one. That method looks forward sixty days and
+     * stops at twelve rows -- it is a "what is coming up" widget, and both
+     * limits are right for it. Asking it for a year would either break the
+     * widget or return a truncated year.
+     *
+     * <p>This returns the whole year: everybody's birthday and everybody's
+     * anniversary, January to December, past dates included. Somebody looking
+     * at a year wants the year, and a list that silently drops the first eight
+     * months because they have already happened is a list that cannot be
+     * checked against anything.
+     *
+     * <p>{@code daysUntil} is still measured from today, so it goes negative
+     * for a date already past. That is what lets a screen distinguish "today"
+     * from "was in March" without re-deriving it from the date.
+     *
+     * @param year     the calendar year to list
+     * @param industry optional industry filter, as on the dashboard card
+     */
+    @Transactional(readOnly = true)
+    public List<com.pixous.hrportal.modules.dashboard.dto.Celebration> celebrationsInYear(
+            int year, String industry) {
+        String want = industry == null || industry.isBlank() || "ALL".equalsIgnoreCase(industry)
+                ? null : industry.trim();
+        LocalDate today = LocalDate.now();
+        List<com.pixous.hrportal.modules.dashboard.dto.Celebration> out = new java.util.ArrayList<>();
+        for (User u : userRepository.findByEnabledTrue()) {
+            if ("OFFBOARDED".equalsIgnoreCase(u.getProfileStatus())) continue;
+            if (want != null && !want.equalsIgnoreCase(u.getIndustry())) continue;
+            addInYear(out, u, u.getDob(), "BIRTHDAY", year, today, false);
+            addInYear(out, u, u.getDateOfJoining(), "ANNIVERSARY", year, today, true);
+        }
+        out.sort(java.util.Comparator.comparing(
+                com.pixous.hrportal.modules.dashboard.dto.Celebration::date));
+        return out;
+    }
+
+    /** One person's occurrence of a date within a named year, if there is one. */
+    private void addInYear(List<com.pixous.hrportal.modules.dashboard.dto.Celebration> out, User u,
+                           LocalDate base, String type, int year, LocalDate today,
+                           boolean anniversary) {
+        if (base == null) return;
+        // Somebody who joined in 2027 has no 2026 anniversary, and a birthday
+        // before the year they were born is not a date.
+        if (base.getYear() > year) return;
+
+        LocalDate on;
+        try {
+            on = base.withYear(year);
+        } catch (Exception e) { // 29 Feb in a year that has no 29 Feb
+            on = LocalDate.of(year, base.getMonthValue(), 1).plusMonths(1);
+        }
+
+        Integer years = anniversary ? year - base.getYear() : null;
+        if (anniversary && (years == null || years < 1)) return; // not yet a year
+
+        int daysUntil = (int) java.time.temporal.ChronoUnit.DAYS.between(today, on);
+        out.add(new com.pixous.hrportal.modules.dashboard.dto.Celebration(
+                u.getId(), u.getName(), u.getEmployeeCode(),
+                u.getDesignationTitle(), u.getPhotoPath(), type, on, daysUntil, years));
+    }
+
     /** Only the celebrations that fall exactly today — used by the daily notification job. */
     @Transactional(readOnly = true)
     public List<com.pixous.hrportal.modules.dashboard.dto.Celebration> todaysCelebrations() {

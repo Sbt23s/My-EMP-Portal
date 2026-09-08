@@ -521,10 +521,19 @@ public class WfhService {
         if (!r.isPending() || viewerId == null || viewerId.equals(r.getUserId())) {
             return false;
         }
-        if (viewerId.equals(r.getRequestedTo())) {
-            return true;
-        }
-        return addressedToHrDesk(r) && onHrDesk(viewerId);
+        /*
+         * The addressee decides, and nobody else.
+         *
+         * <p>There was a widening here -- anyone on the HR desk could decide a
+         * request addressed to HR -- added so that a request would not wait for
+         * a colleague who was away. The visibility half of that is right and
+         * remains: the whole desk sees the queue, so nothing is hidden. But an
+         * approval signed by somebody the applicant did not write to reads as
+         * their request having been handed round, and where cover is genuinely
+         * needed reassigning the request leaves a record of who took it on
+         * where a silent decision leaves none.
+         */
+        return viewerId.equals(r.getRequestedTo());
     }
 
     /**

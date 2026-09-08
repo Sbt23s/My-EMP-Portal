@@ -445,26 +445,22 @@ public class PermissionService {
         boolean isDirectApprover = p.getRequestedTo() != null && p.getRequestedTo().equals(deciderId);
 
         /*
-          One exception, and only one: a request addressed to HR may be decided
-          by anyone on the HR desk.
+          The desk reads the queue; the approver answers it.
 
-          HR is a desk rather than a person. The approver list offers whichever
-          HR account it happens to offer, and holding the request to that one
-          account meant a permission waited for somebody who was on leave while
-          three colleagues who could have answered it were told they were not
-          allowed to.
+          There was an exception here letting anyone on the HR desk decide a
+          request addressed to HR, on the reasoning that the approver list
+          offers whichever HR account it happens to offer and a request should
+          not wait for somebody who is away. The visibility half of that was
+          right and stays: every HR colleague sees the whole queue, so nothing
+          is hidden and nobody has to ask what is waiting.
 
-          This does not reopen the administrator override the note above
-          removed. An administrator is not on the HR desk, a Team Leader's
-          request still reaches HR rather than another TL, and an employee's
-          request still reaches their own Team Leader -- the rung is unchanged,
-          only its width.
+          Deciding is the addressee's. An employee chooses who to send their
+          hours to, and an approval signed by somebody they did not write to
+          reads as their request having been passed around. Where cover is
+          genuinely needed the request can be reassigned, which leaves a record
+          of who took it on -- a silent decision by a colleague leaves none.
          */
-        boolean isHrDeskRequest = isHrRequest(p.getRequestedTo());
-        User decider = userRepository.findById(deciderId).orElse(null);
-        boolean deciderIsHrDesk = onHrDesk(decider);
-
-        if (!isDirectApprover && !(isHrDeskRequest && deciderIsHrDesk)) {
+        if (!isDirectApprover) {
             throw ApiException.business(
                     "Only the approver this request was sent to can approve or reject it.");
         }

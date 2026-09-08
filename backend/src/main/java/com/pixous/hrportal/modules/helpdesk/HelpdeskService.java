@@ -311,17 +311,22 @@ public class HelpdeskService {
         var pageable = PageRequest.of(page, size);
         String statusFilter = (status == null || status.isBlank()) ? null : status.toUpperCase();
         /*
-         * Addressed to this agent, or to anybody on their desk.
+         * "Assigned to me" means assigned to me.
          *
-         * <p>Note what the status filter used to do: with a status set it
-         * called findByStatus and returned every ticket in that state to any
-         * agent, ignoring who each was addressed to -- so filtering an empty
-         * queue by "Open" made other people's tickets appear. The scope is now
-         * the same whether or not a status is chosen, which is what a filter
-         * should be.
+         * <p>Narrower than "All tickets" on purpose, and the two answer
+         * different questions. The desk shares what it can see -- that is what
+         * findForDesk is for, and it is what the All tab shows -- but a queue
+         * headed "assigned to me" that lists a colleague's work is a queue
+         * nobody can plan a day from. Somebody opening this tab is asking what
+         * they personally have to answer.
+         *
+         * <p>The status filter is applied inside that scope. It used to call
+         * findByStatus, which ignored who each ticket was addressed to, so
+         * filtering an empty queue by "Open" made other people's tickets
+         * appear -- a filter that widens what it is filtering.
          */
         Page<Ticket> result = ticketRepository.findAssignedToDesk(
-                statusFilter, queueMates(agentId), pageable);
+                statusFilter, java.util.List.of(agentId), pageable);
         return PageResponse.from(result.map(this::toResponseNoComments));
     }
 

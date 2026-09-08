@@ -47,36 +47,48 @@ class HrDeskVisibilityTest {
      */
     private static boolean mayDecide(long addressedTo, boolean addressedIsHr,
                                      long decider, Set<String> deciderRoles) {
-        boolean direct = addressedTo == decider;
-        boolean deciderOnDesk = deciderRoles.stream().anyMatch(HR_DESK::contains);
-        return direct || (addressedIsHr && deciderOnDesk);
+        return addressedTo == decider;
+    }
+
+    /**
+     * Whether this person may read the request, as the queue listings judge it.
+     *
+     * <p>Separate from {@link #mayDecide} because the two answers differ, and
+     * the difference is the whole design: the desk reads, the addressee
+     * answers.
+     */
+    private static boolean maySee(long addressedTo, boolean addressedIsHr,
+                                  long viewer, Set<String> viewerRoles) {
+        boolean direct = addressedTo == viewer;
+        boolean onDesk = viewerRoles.stream().anyMatch(HR_DESK::contains);
+        return direct || (addressedIsHr && onDesk);
     }
 
     @Nested
-    @DisplayName("Anyone on the HR desk can act on a request sent to HR")
+    @DisplayName("Anyone on the HR desk can read a request sent to HR")
     class TheDesk {
 
         @Test
-        @DisplayName("The HR colleague it was addressed to can decide it")
+        @DisplayName("The HR colleague it was addressed to sees it")
         void addressedHr() {
-            assertThat(mayDecide(10, true, 10, Set.of("IT_HR"))).isTrue();
+            assertThat(maySee(10, true, 10, Set.of("IT_HR"))).isTrue();
         }
 
         @Test
-        @DisplayName("A different HR colleague can decide it too")
+        @DisplayName("A different HR colleague sees it too")
         void anotherHr() {
             /*
-             * The whole point. Before this, HR account 11 was told "Only the
-             * approver this request was sent to can approve or reject it" about
-             * a request their own desk had been sent.
+             * The whole point. Before this, HR account 11 opened a queue that
+             * showed nothing while a request their own desk had been sent sat
+             * waiting on a colleague who was away.
              */
-            assertThat(mayDecide(10, true, 11, Set.of("IT_HR"))).isTrue();
+            assertThat(maySee(10, true, 11, Set.of("IT_HR"))).isTrue();
         }
 
         @Test
         @DisplayName("The civil-side HR desk counts as well")
         void civilHr() {
-            assertThat(mayDecide(10, true, 12, Set.of("CV_HR"))).isTrue();
+            assertThat(maySee(10, true, 12, Set.of("CV_HR"))).isTrue();
         }
 
         @Test
@@ -89,7 +101,40 @@ class HrDeskVisibilityTest {
              * -- username "hr", which holds IT_MGR alone -- so every rule about
              * "the whole desk" reached nobody who works it.
              */
-            assertThat(mayDecide(10, true, 13, Set.of("IT_MGR"))).isTrue();
+            assertThat(maySee(10, true, 13, Set.of("IT_MGR"))).isTrue();
+        }
+    }
+
+    @Nested
+    @DisplayName("Reading it is not answering it")
+    class SeeingIsNotDeciding {
+
+        /*
+         * The desk-wide decision was tried and withdrawn. Letting any HR
+         * colleague approve a request addressed to another meant an employee
+         * who chose who to send their hours to got an answer signed by
+         * somebody they had not written to, with nothing on the record to say
+         * why it had changed hands. Where cover is genuinely needed the
+         * request is reassigned, which leaves that record.
+         */
+
+        @Test
+        @DisplayName("A colleague on the desk sees the request but cannot decide it")
+        void seesButCannotDecide() {
+            assertThat(maySee(10, true, 11, Set.of("IT_HR"))).isTrue();
+            assertThat(mayDecide(10, true, 11, Set.of("IT_HR"))).isFalse();
+        }
+
+        @Test
+        @DisplayName("The addressee decides it")
+        void theAddressee() {
+            assertThat(mayDecide(10, true, 10, Set.of("IT_HR"))).isTrue();
+        }
+
+        @Test
+        @DisplayName("Holding IT_MGR does not confer it either")
+        void norTheHrAccount() {
+            assertThat(mayDecide(10, true, 13, Set.of("IT_MGR"))).isFalse();
         }
     }
 

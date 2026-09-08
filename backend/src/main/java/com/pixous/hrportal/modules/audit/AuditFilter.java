@@ -84,6 +84,17 @@ public class AuditFilter extends OncePerRequestFilter {
             Map.entry("/api/attendance/punch-out", new String[]{AuditService.ATTENDANCE, "Punched out"}),
             Map.entry("/api/attendance", new String[]{AuditService.ATTENDANCE, "Attendance change"}),
 
+            // Remapping a terminal identity decides whose attendance a punch
+            // becomes, so it is an attendance action rather than a settings
+            // one. Without these two rules both fall through to SYSTEM/"Change"
+            // and read like any other edit.
+            Map.entry("/api/biometric/admin/sync-enrolment",
+                    new String[]{AuditService.ATTENDANCE, "Refreshed biometric enrolment"}),
+            Map.entry("/api/biometric/admin/sync",
+                    new String[]{AuditService.ATTENDANCE, "Synced the biometric person mapping"}),
+            Map.entry("/api/biometric",
+                    new String[]{AuditService.ATTENDANCE, "Biometric attendance change"}),
+
             Map.entry("/api/leave/permissions", new String[]{AuditService.LEAVE, "Permission request"}),
             Map.entry("/api/leave/types", new String[]{AuditService.LEAVE, "Changed a leave policy"}),
             Map.entry("/api/leave", new String[]{AuditService.LEAVE, "Leave action"}),

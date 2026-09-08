@@ -126,6 +126,29 @@ class AuditFilterRulesTest {
         }
 
         @Test
+        @DisplayName("The biometric mapping is an attendance action, and the specific rule wins")
+        void biometricOrder() {
+            /*
+             * Remapping a terminal identity decides whose attendance a punch
+             * becomes, so it belongs with attendance rather than with the
+             * settings screens. Both specific rules sit above the general
+             * /api/biometric one, which is the whole of the behaviour: put
+             * either one below and it never matches.
+             */
+            assertThat(category("/api/biometric/admin/sync"))
+                    .isEqualTo(AuditService.ATTENDANCE);
+            assertThat(label("/api/biometric/admin/sync"))
+                    .isEqualTo("Synced the biometric person mapping");
+            assertThat(label("/api/biometric/admin/sync-enrolment"))
+                    .isEqualTo("Refreshed biometric enrolment");
+            assertThat(label("/api/biometric/admin/status"))
+                    .isEqualTo("Biometric attendance change");
+
+            // And it has not stolen the label from attendance's own rules.
+            assertThat(label("/api/attendance/punch-in")).isEqualTo("Punched in");
+        }
+
+        @Test
         @DisplayName("The technical administrator's own sign-in stays under SECURITY")
         void techAdminAuthIsSecurity() {
             // Under CONFIG it would be filed with the settings screens, when it

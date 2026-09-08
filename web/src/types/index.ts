@@ -615,3 +615,33 @@ export interface SafetyIncident {
   resolvedAt?: string;
   createdAt: string;
 }
+
+/**
+ * One permission request — a sanctioned short absence, an hour or two rather
+ * than a day.
+ *
+ * Lived in Permissions.tsx until the attendance report needed it too. Kept as
+ * one definition rather than two, because the second copy is the one that
+ * quietly loses a field when the server adds one.
+ */
+export interface PermissionRow {
+  id: number;
+  userId: number;
+  employeeName: string;
+  employeeCode: string;
+  requestDate: string;
+  fromTime: string;
+  toTime: string;
+  hours: number;
+  reason?: string;
+  /** HIGH | MEDIUM | LOW. */
+  priority?: string;
+  status: string;
+  decisionComment?: string;
+  createdAt?: string;
+  requestedTo?: number;
+  requestedToName?: string;
+  decidedByName?: string;
+  decidedAt?: string;
+  team?: string;
+}

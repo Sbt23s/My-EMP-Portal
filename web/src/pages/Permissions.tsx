@@ -22,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import type { ApiEnvelope } from "@/types";
+import type { ApiEnvelope, PermissionRow } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
@@ -48,27 +48,7 @@ function minutesOf(hhmm: string): number | null {
   return Number.isNaN(h) ? null : h * 60 + (m || 0);
 }
 
-interface PermissionRow {
-  id: number;
-  userId: number;
-  employeeName: string;
-  employeeCode: string;
-  requestDate: string;
-  fromTime: string;
-  toTime: string;
-  hours: number;
-  reason?: string;
-  /** HIGH | MEDIUM | LOW. */
-  priority?: string;
-  status: string;
-  decisionComment?: string;
-  createdAt?: string;
-  requestedTo?: number;
-  requestedToName?: string;
-  decidedByName?: string;
-  decidedAt?: string;
-  team?: string;
-}
+
 
 /**
  * A request still sitting undecided after the day it was for is overdue — the

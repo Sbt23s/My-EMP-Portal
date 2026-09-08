@@ -19,7 +19,7 @@ import { PhotoLightbox } from "@/components/PhotoLightbox";
 import { OfficeLocationsCard } from "@/components/OfficeLocationsCard";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
-import type { ApiEnvelope, AttendanceRecord, UserSummary, LeaveRequest } from "@/types";
+import type { ApiEnvelope, AttendanceRecord, UserSummary, LeaveRequest, PermissionRow } from "@/types";
 import toast from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -494,6 +494,46 @@ export default function TeamAttendancePage() {
   });
 
   /**
+   * Approved permission in the range — the sanctioned short absences.
+   *
+   * <p>Somebody who leaves at three with permission has a short day that is not
+   * an early departure and not a missing punch, and the register alone cannot
+   * tell the difference: it sees a punch-out at three and nothing else. Without
+   * this the same person shows up under "Early check-outs" every time they use
+   * a permission they were granted.
+   *
+   * <p>Fetched whole and filtered here rather than by date, because the
+   * endpoint takes no range. That is fine at this size and is noted so nobody
+   * assumes the filtering is happening at the server: a company with years of
+   * permissions would want a ranged endpoint instead.
+   *
+   * <p>Only APPROVED counts. A pending request is a question nobody has
+   * answered, and a rejected one is a day the person was expected to be there.
+   */
+  const permissionsInRange = useQuery({
+    queryKey: ["permissions-all"],
+    enabled: validRange,
+    retry: false,
+    queryFn: async () =>
+      (await api.get<ApiEnvelope<PermissionRow[]>>("/leave/permissions/all")).data.data
+  });
+
+  /** Approved permissions for one employee on one day, keyed for direct lookup. */
+  const permissionByKey = useMemo(() => {
+    const map = new Map<string, PermissionRow[]>();
+    (permissionsInRange.data ?? []).forEach((p) => {
+      if ((p.status || "").toUpperCase() !== "APPROVED") return;
+      if (!p.requestDate) return;
+      if (p.requestDate < fromDate || p.requestDate > toDate) return;
+      const key = `${p.requestDate}-${p.userId}`;
+      const list = map.get(key) ?? [];
+      list.push(p);
+      map.set(key, list);
+    });
+    return map;
+  }, [permissionsInRange.data, fromDate, toDate]);
+
+  /**
    * Leave by employee and day, so a date can be looked up directly. A rejected
    * request is kept: it explains a day that really was an absence.
    */
@@ -646,11 +686,35 @@ export default function TeamAttendancePage() {
         const present = mine.filter((r) => r.punchInAt).length;
         const wfh = mine.filter((r) => "WFH" === (r.status || "").toUpperCase()).length;
         const lateDays = mine.filter((r) => (r.lateMinutes ?? 0) > 0 || r.late).length;
+
+        /*
+         * Left early, except when they were allowed to.
+         *
+         * Somebody with an approved permission from three o'clock who leaves at
+         * three has not left early -- they left exactly when they were given
+         * leave to. Counting them here put a person who followed the process on
+         * the same list as one who slipped out, every single time they used a
+         * permission, which is the surest way to make a column ignored.
+         */
         const earlyOut = mine.filter((r) =>
-          r.punchOutAt && dayjs(r.punchOutAt).hour() < 18).length;
+          r.punchOutAt
+          && dayjs(r.punchOutAt).hour() < 18
+          && !(permissionByKey.get(`${r._date}-${m.id}`)?.length)).length;
+
         const missing = mine.filter((r) =>
           (r.punchInAt && !r.punchOutAt) || (!r.punchInAt && r.punchOutAt)).length;
         const minutes = mine.reduce((s, r) => s + (r.workedMinutes ?? 0), 0);
+        const overtimeMinutes = mine.reduce((s, r) => s + (r.overtimeMinutes ?? 0), 0);
+
+        /*
+         * Approved permission in the range: how many days carried one, and how
+         * many hours in total. Both, because "three permissions" and "three
+         * hours" are different questions and one does not imply the other.
+         */
+        const myPermissions = rangeDates.flatMap(
+          (d) => permissionByKey.get(`${d}-${m.id}`) ?? []);
+        const permissionDays = new Set(myPermissions.map((p) => p.requestDate)).size;
+        const permissionHours = myPermissions.reduce((sum, p) => sum + (Number(p.hours) || 0), 0);
 
         // Days with no punch, split by whether leave explains them.
         let leaveDays = 0;
@@ -695,6 +759,7 @@ export default function TeamAttendancePage() {
         return {
           user: m,
           present, wfh, lateDays, earlyOut, missing, minutes, leaveDays, absentDays,
+          overtimeMinutes, permissionDays, permissionHours,
           percent: workingDays > 0 ? Math.round((present / workingDays) * 100) : 0,
           latest,
           usualPlace: ranked[0]?.[0] ?? null,
@@ -705,13 +770,33 @@ export default function TeamAttendancePage() {
         };
       })
       .sort((a, b) => a.user.name.localeCompare(b.user.name));
-  }, [teamAttendance.data, rangeDates, scopedMembers, teamFilter, search, leaveByKey]);
+  // permissionByKey is a dependency, not an incidental read: an approved
+  // permission changes the early-out count, so a summary computed before the
+  // permissions arrive must be recomputed when they do.
+  }, [teamAttendance.data, rangeDates, scopedMembers, teamFilter, search, leaveByKey,
+      permissionByKey]);
 
   const workingDaysInRange = rangeDates.filter((d) => dayjs(d).day() !== 0).length;
 
   const { pageRows, page, setPage, totalPages, pageSize, setPageSize, total } =
     usePagedRows(rows, 20, [search, statusFilter, teamFilter, fromDate, toDate]);
   const summaryPaged = usePagedRows(summary, 15, [search, teamFilter, fromDate, toDate]);
+
+  /**
+   * The permission a day carried, with its times.
+   *
+   * <p>"09:00–11:00" rather than "yes", because a short day raises exactly one
+   * question -- was leaving at 4:15 the sanctioned departure? -- and a yes/no
+   * cannot answer it. Two permissions on one day are both listed; somebody who
+   * stepped out twice did so twice, and summing them would hide the pattern.
+   */
+  const permissionLabel = (date: string, userId: number) => {
+    const list = permissionByKey.get(`${date}-${userId}`);
+    if (!list || list.length === 0) return "—";
+    return list
+      .map((p) => `${p.fromTime}–${p.toTime}`)
+      .join(", ");
+  };
 
   const exportToExcel = () => {
     if (view === "SUMMARY" ? summary.length === 0 : rows.length === 0) {
@@ -724,7 +809,12 @@ export default function TeamAttendancePage() {
       const sHeaders = [
         "#", "Employee ID", "Employee Name", "Team", "Attendance %",
         "Present Days", "Leave Days", "Absent Days", "Work Hours",
+        "Overtime",
         "Late Check-ins", "Early Check-outs", "Missing Punch", "Work From Home",
+        // Permission is counted two ways because they answer different
+        // questions: four permissions of fifteen minutes and one of four hours
+        // are not the same month, and neither figure implies the other.
+        "Permission Days", "Permission Hours",
         // The same two the summary view shows on screen: where they usually
         // punch from and how their most recent punch was proved. A summary row
         // covers many days, so the latest is the only single answer that means
@@ -739,8 +829,11 @@ export default function TeamAttendancePage() {
         `${s.percent}%`,
         s.present, s.leaveDays, s.absentDays,
         minutesLabel(s.minutes),
+        s.overtimeMinutes ? minutesLabel(s.overtimeMinutes) : "—",
         s.lateDays, s.earlyOut, s.missing,
         s.wfh ? `${s.wfh}d` : "—",
+        s.permissionDays || "—",
+        s.permissionHours ? `${s.permissionHours}h` : "—",
         s.usualPlace || "—",
         methodLabel(s.latest?.inAuthMethod)
           || (s.verifiedDays > 0 ? "Face (app)" : "—")
@@ -752,10 +845,13 @@ export default function TeamAttendancePage() {
         sHeaders,
         ...sData
       ]);
-      // As long as sHeaders, including the two location columns added above.
+      // As long as sHeaders. Nineteen columns: the thirteen original, plus
+      // Overtime, the two permission figures, and the two location ones.
       sWs["!cols"] = [{ wch: 5 }, { wch: 13 }, { wch: 24 }, { wch: 20 }, { wch: 13 },
                       { wch: 13 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+                      { wch: 11 },
                       { wch: 15 }, { wch: 16 }, { wch: 14 }, { wch: 16 },
+                      { wch: 15 }, { wch: 16 },
                       { wch: 24 }, { wch: 20 }];
       sWs["!merges"] = [
         { s: { r: 0, c: 0 }, e: { r: 0, c: sHeaders.length - 1 } },
@@ -778,6 +874,10 @@ export default function TeamAttendancePage() {
       // which machine. One combined column would be unfilterable, and filtering
       // is the reason to export rather than read the screen.
       "In Location", "Out Location", "Verified By", "Terminal",
+      // The times a permission covered, not just that one existed. "Permission"
+      // as a yes/no cannot answer whether a 4:15 departure was the sanctioned
+      // one, which is the question a short day actually raises.
+      "Permission",
       "GPS"
     ];
     const coords = (lat?: number, lng?: number) =>
@@ -797,6 +897,7 @@ export default function TeamAttendancePage() {
           label, "—", "—", "—", "—", "—",
           lv ? lv.leaveTypeName : "—",
           "—", "—", "—", "—",
+          permissionLabel(row._date, row.userId),
           "—"
         ];
       }
@@ -843,6 +944,7 @@ export default function TeamAttendancePage() {
         outPlace,
         verified,
         terminal,
+        permissionLabel(row._date, row.userId),
         gps
       ];
     });
@@ -854,13 +956,15 @@ export default function TeamAttendancePage() {
      *
      * Date, Employee ID, Employee Name, Team, Status, Punch In, Punch Out,
      * Work Hours, Late By, Overtime, Remarks, In Location, Out Location,
-     * Verified By, Terminal, GPS. The last holds two coordinate pairs and the
-     * terminal column holds a full device name, so both need the room.
+     * Verified By, Terminal, Permission, GPS. GPS holds two coordinate pairs,
+     * the terminal column a full device name, and Permission can hold two
+     * time ranges, so all three need the room.
      */
     ws["!cols"] = [{ wch: 14 }, { wch: 13 }, { wch: 24 }, { wch: 20 },
                    { wch: 16 }, { wch: 11 }, { wch: 11 }, { wch: 11 },
                    { wch: 10 }, { wch: 10 }, { wch: 26 },
                    { wch: 22 }, { wch: 22 }, { wch: 20 }, { wch: 28 },
+                   { wch: 30 },
                    { wch: 46 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Attendance");
@@ -1006,7 +1110,9 @@ export default function TeamAttendancePage() {
                     <th className="text-right">Leave</th>
                     <th className="text-right">Absent</th>
                     <th className="text-right">Work hours</th>
+                    <th className="text-right">Overtime</th>
                     <th className="text-right">Late / Early</th>
+                    <th className="text-right">Permission</th>
                     <th className="text-right">Missing punch</th>
                     <th>Remarks</th>
                     <th className="text-right">Details</th>
@@ -1085,9 +1191,7 @@ export default function TeamAttendancePage() {
                               <PunchLocation lat={s.latest.inLatitude} lng={s.latest.inLongitude} />
                             ) : s.latest?.inAuthMethod ? (
                               <div className="text-[10px] leading-tight text-muted-foreground">
-                                {s.latest.inAuthMethod === "FACE" ? "Face"
-                                  : s.latest.inAuthMethod === "FINGERPRINT" ? "Fingerprint"
-                                  : "Face + fingerprint"}
+                                {methodLabel(s.latest.inAuthMethod)}
                                 {s.latest.inDevice ? ` · ${s.latest.inDevice}` : ""}
                               </div>
                             ) : null}
@@ -1128,10 +1232,28 @@ export default function TeamAttendancePage() {
                       <td className="whitespace-nowrap px-4 py-2.5 text-right font-medium tabular-nums">
                         {minutesLabel(s.minutes)}
                       </td>
+                      {/* Overtime in green: it is the one figure on this row that
+                          is good news, and reading it in the same weight as the
+                          absence counts made it disappear among them. */}
+                      <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums">
+                        {s.overtimeMinutes > 0
+                          ? <span className="font-medium text-emerald-600">{minutesLabel(s.overtimeMinutes)}</span>
+                          : <span className="text-muted-foreground">—</span>}
+                      </td>
                       <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums">
                         <span className="text-rose-600">{s.lateDays}</span>
                         <span className="text-muted-foreground"> / </span>
                         <span className="text-amber-600">{s.earlyOut}</span>
+                      </td>
+                      {/* Days and hours together. Four fifteen-minute permissions
+                          and one four-hour one are different months, and either
+                          figure alone reads as the other. */}
+                      <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums">
+                        {s.permissionDays > 0 ? (
+                          <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
+                            {s.permissionDays}d · {s.permissionHours}h
+                          </span>
+                        ) : <span className="text-muted-foreground">—</span>}
                       </td>
                       <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums">
                         {s.missing > 0 ? (
@@ -1209,6 +1331,7 @@ export default function TeamAttendancePage() {
                 <th className="px-4 py-2.5 text-right">Work hours</th>
                 <th className="px-4 py-2.5 text-right">Late By</th>
                 <th className="px-4 py-2.5 text-right">Overtime</th>
+                <th className="px-4 py-2.5">Permission</th>
                 <th className="px-4 py-2.5">Remarks</th>
                 <th className="px-4 py-2.5">Face</th>
                 <th className="px-4 py-2.5">Location</th>
@@ -1284,6 +1407,31 @@ export default function TeamAttendancePage() {
                       {att?.overtimeMinutes
                         ? <span className="font-medium text-emerald-600">{minutesLabel(att.overtimeMinutes)}</span>
                         : <span className="text-muted-foreground">—</span>}
+                    </td>
+                    {/* The times a permission covered, beside the punches it
+                        explains. A short day with a permission from three and a
+                        short day without one look identical in the punch columns,
+                        and only one of them is a question. */}
+                    <td className="whitespace-nowrap px-4 py-2.5">
+                      {(() => {
+                        const perms = permissionByKey.get(`${row._date}-${row.userId}`);
+                        if (!perms || perms.length === 0) {
+                          return <span className="text-xs text-muted-foreground">—</span>;
+                        }
+                        return (
+                          <div className="flex flex-col gap-0.5">
+                            {perms.map((p) => (
+                              <span
+                                key={p.id}
+                                className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
+                                title={p.reason || "Approved permission"}
+                              >
+                                {p.fromTime}–{p.toTime}
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-2.5">
                       {notes.length === 0 ? (

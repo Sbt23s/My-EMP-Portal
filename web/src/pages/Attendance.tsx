@@ -42,14 +42,20 @@ type AttendanceSummaryType = {
   month: number; year: number; presentDays: number; wfhDays: number;
   lateDays: number; absentDays: number; totalOvertimeMinutes: number;
   totalLateMinutes: number; workingDays: number;
+  /** Minutes on days that have both a punch-in and a punch-out. */
+  totalWorkedMinutes: number;
+  /** Present days over working days elapsed, not days in the month. */
+  attendancePercent: number;
 };
 
-const MODES = [
-  { value: "OFFICE", label: "Office", icon: Building2 },
-  { value: "WFH", label: "Work from home", icon: Home },
-  { value: "SITE", label: "Site / field", icon: HardHat }
-];
 
+/**
+ * The browser's own location, when it will give one.
+ *
+ * <p>Still needed after the mode selector went: a punch made in the portal
+ * rather than at the terminal is geofence-checked, and this is where the
+ * coordinates come from. It was removed by accident with the block above it.
+ */
 function getPosition(): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
@@ -71,117 +77,6 @@ interface FaceStatus {
   reason?: string;
 }
 
-/**
- * Face punching, and whether it is available at all.
- *
- * <p>Three states, and each says what to do about itself: the service is not
- * reachable, the person has not enrolled yet, or they have and can punch. The
- * first two used to be indistinguishable from the feature simply not existing —
- * the dialogs were written and wired to nothing.
- */
-function FaceStatusPanel({
-  userId, punchedIn, punchedOut, onPunched
-}: {
-  userId?: number;
-  punchedIn: boolean;
-  punchedOut: boolean;
-  onPunched: () => void;
-}) {
-  const [punchOpen, setPunchOpen] = useState(false);
-
-  const status = useQuery({
-    queryKey: ["face-status", userId],
-    enabled: !!userId,
-    retry: false,
-    queryFn: async (): Promise<FaceStatus> => {
-      const res = await fetch(`${ANALYTICS_BASE}/api/face/status/${userId}`);
-      if (!res.ok) throw new Error("unavailable");
-      return res.json();
-    }
-  });
-
-  const secure = typeof window !== "undefined" && window.isSecureContext;
-
-  if (!userId) return null;
-
-  // The service is down or was never started. Said plainly, because the rest of
-  // attendance works and this is the only part that does not.
-  if (status.isError || (status.data && status.data.available === false)) {
-    return (
-      <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs">
-        <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
-        <span>
-          Face verification is unavailable — the analytics service is not reachable.
-          Punching still works; the punch is recorded as unverified.
-        </span>
-      </div>
-    );
-  }
-
-  if (status.isLoading) return <PageLoader text="Loading attendance status..." />;
-
-  const enrolled = !!status.data?.enrolled;
-
-  return (
-    <div className="space-y-2">
-      {!secure && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs">
-          <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
-          <span>
-            The camera needs a secure (https) connection, so face punch cannot run here.
-            It works on localhost.
-          </span>
-        </div>
-      )}
-
-      {!enrolled ? (
-        /* Registration is not offered here. Somebody has to be able to confirm it
-           was the right face in front of the camera, so HR does it — an employee
-           enrolling their own face could enrol anybody's. */
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-          <div className="flex items-start gap-2">
-            <ScanFace className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold">Your face is not registered yet</div>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Attendance is marked by face, so you cannot punch until it is.
-                Ask HR or your admin to register it — it takes four quick photos
-                and is done once.
-              </p>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Face registered ({status.data?.photos} photo
-            {status.data?.photos === 1 ? "" : "s"})
-          </div>
-
-          {!punchedOut && (
-            <Button
-              className="h-11 w-full"
-              disabled={!secure}
-              onClick={() => setPunchOpen(true)}
-            >
-              <ScanFace className="mr-2 h-5 w-5" />
-              {punchedIn ? "Punch out with face" : "Punch in with face"}
-            </Button>
-          )}
-        </>
-      )}
-
-      <FacePunchDialog
-        open={punchOpen}
-        onOpenChange={setPunchOpen}
-        userId={userId}
-        isPunchIn={!punchedIn}
-        onDone={onPunched}
-      />
-    </div>
-  );
-}
 
 interface InsightFinding {
   code: string;
@@ -192,78 +87,6 @@ interface InsightFinding {
   employeeCode?: string;
 }
 
-/**
- * What the attendance data is trying to say.
- *
- * <p>Every one of these is a question somebody would otherwise have to think to
- * ask: was the whole team late this morning, did anybody forget to punch out, did
- * several people punch from one spot, has somebody quietly stopped coming in. The
- * server computes them from the punches that already exist — nothing here is a
- * guess, and each finding says what it was derived from.
- */
-function AttendanceInsights() {
-  const insights = useQuery({
-    queryKey: ["attendance-insights"],
-    queryFn: async () =>
-      (await api.get<ApiEnvelope<{
-        scope: string; people: number; windowDays: number;
-        allClear: boolean; findings: InsightFinding[];
-      }>>("/attendance/insights?days=30")).data.data
-  });
-
-  if (insights.isLoading) return <Skeleton className="h-28" />;
-  if (insights.isError || !insights.data) return null;
-
-  const { findings, scope, windowDays, allClear } = insights.data;
-  const icon = (tone: string) =>
-    tone === "alert" ? AlertTriangle : tone === "warn" ? ShieldAlert : Info;
-  const tint = (tone: string) =>
-    tone === "alert"
-      ? "border-destructive/40 bg-destructive/5 text-destructive"
-      : tone === "warn"
-        ? "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400"
-        : "border-border bg-muted/30 text-foreground";
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Sparkles className="h-4 w-4 text-primary" />
-          What the attendance says
-        </CardTitle>
-        <p className="text-xs text-muted-foreground">
-          Across {scope}, over the last {windowDays} days.
-        </p>
-      </CardHeader>
-      <CardContent>
-        {allClear ? (
-          <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2.5 text-sm">
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-            <span>Nothing unusual. Punches, punch-outs and locations all look ordinary.</span>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {findings.map((f, i) => {
-              const Icon = icon(f.tone);
-              return (
-                <div
-                  key={`${f.code}-${i}`}
-                  className={`flex items-start gap-2.5 rounded-lg border p-2.5 ${tint(f.tone)}`}
-                >
-                  <Icon className="mt-0.5 h-4 w-4 shrink-0" />
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold">{f.title}</div>
-                    <p className="text-xs opacity-80">{f.detail}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
 
 export default function AttendancePage() {
   const qc = useQueryClient();
@@ -499,37 +322,25 @@ export default function AttendancePage() {
               </div>
             )}
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Mode</label>
-              <Select value={mode} onChange={(e) => setMode(e.target.value)} disabled={punchedOut}>
-                {MODES.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </Select>
-              {mode !== "WFH" && (
-                <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <MapPin className="h-3 w-3" /> We'll capture your GPS location on punch.
-                </p>
-              )}
-            </div>
+            {/*
+              The mode selector, the face panel and the insights list are gone.
 
-            {/* Face verification, and whether it is available to this person.
-                Offered as the first way to punch rather than an extra button:
-                a punch nobody can tie to a face is worth less afterwards. */}
-            <FaceStatusPanel
-              userId={user?.id}
-              punchedIn={punchedIn}
-              punchedOut={punchedOut}
-              onPunched={() => {
-                qc.invalidateQueries({ queryKey: ["attendance"] });
-                qc.invalidateQueries({ queryKey: ["attendance-insights"] });
-              }}
-            />
+              Attendance is recorded at the biometric terminal now: a person
+              presents a face or a finger at the door and the punch arrives
+              here. Every one of those three was built for punching in the
+              browser, and each of them was actively misleading once the
+              terminal became the way in --
 
-            {/* Punching without a verified face is deliberately not offered. The
-                server refuses it too, so this is the rule and not a preference. */}
+                "Mode" offered a choice the terminal does not consult.
+                "Your face is not registered yet" told somebody they could not
+                punch, on a page showing the punch they had just made at the
+                door.
+                The insights panel reported on everybody in the company on a
+                page whose whole subject is one person's own attendance.
+
+              What replaces them is below: this employee's own month, and every
+              punch in it.
+            */}
             {punchedOut && (
               <div className="rounded-lg bg-success/10 p-3 text-center text-sm font-medium text-success">
                 Day complete — see you tomorrow.
@@ -537,11 +348,6 @@ export default function AttendancePage() {
             )}
           </CardContent>
         </Card>
-
-        {/* What the punches add up to, computed rather than guessed */}
-        <div className="lg:col-span-2">
-          <AttendanceInsights />
-        </div>
 
         {/* Month summary — an employee's own counts, which is exactly who needs them */}
         <Card className="lg:col-span-2">
@@ -552,7 +358,7 @@ export default function AttendancePage() {
               {summary.isLoading ? (
                 <Skeleton className="h-20" />
               ) : summary.data ? (
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
                   {[
                     {
                       label: "Present",
@@ -580,6 +386,22 @@ export default function AttendancePage() {
                       value: minutesToHours(summary.data.totalOvertimeMinutes),
                       note: "worked past 6 PM",
                       tone: "text-foreground"
+                    },
+                    {
+                      // Completed days only, which is why this can read lower
+                      // than the day count suggests on a morning still open.
+                      label: "Work hours",
+                      value: minutesToHours(summary.data.totalWorkedMinutes),
+                      note: "on days already finished",
+                      tone: "text-foreground"
+                    },
+                    {
+                      label: "Attendance",
+                      value: `${summary.data.attendancePercent}%`,
+                      note: `${summary.data.presentDays} of ${summary.data.workingDays} so far`,
+                      tone: summary.data.attendancePercent >= 90 ? "text-success"
+                        : summary.data.attendancePercent >= 70 ? "text-accent-foreground"
+                        : "text-destructive"
                     }
                   ].map((s) => (
                     <div key={s.label} className="rounded-lg border p-3 text-center">
@@ -698,6 +520,12 @@ export default function AttendancePage() {
                   <TableHead sortable>Employee ID</TableHead>
                   <TableHead sortable>In</TableHead>
                   <TableHead sortable>Out</TableHead>
+                  {/* The figures the day is actually judged on. They were only
+                      in the detail dialog, so seeing whether a week ran long
+                      meant opening five of them one at a time. */}
+                  <TableHead sortable>Work hours</TableHead>
+                  <TableHead sortable>Late by</TableHead>
+                  <TableHead sortable>Overtime</TableHead>
                   <TableHead sortable>Mode</TableHead>
                   <TableHead sortable>Status</TableHead>
                 </TableRow>
@@ -714,6 +542,19 @@ export default function AttendancePage() {
                       <TableCell className="code-chip text-xs">{user?.employeeCode ?? "—"}</TableCell>
                       <TableCell className="tabular-nums">{r.punchInAt ? dayjs(r.punchInAt).format("h:mm A") : "—"}</TableCell>
                       <TableCell className="tabular-nums">{r.punchOutAt ? dayjs(r.punchOutAt).format("h:mm A") : "—"}</TableCell>
+                      <TableCell className="tabular-nums">
+                        {r.workedMinutes ? minutesToHours(r.workedMinutes) : "—"}
+                      </TableCell>
+                      <TableCell className="tabular-nums">
+                        {r.lateMinutes
+                          ? <span className="font-medium text-destructive">{minutesToHours(r.lateMinutes)}</span>
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="tabular-nums">
+                        {r.overtimeMinutes
+                          ? <span className="font-medium text-success">{minutesToHours(r.overtimeMinutes)}</span>
+                          : "—"}
+                      </TableCell>
                       <TableCell>
                         <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{r.mode}</span>
                       </TableCell>

@@ -178,10 +178,28 @@ public class WfhService {
                         + describe(saved.getFromDate(), saved.getToDate()),
                 "WFH", "/leave/wfh");
 
-        notify(approver.getId(),
-                "Work from home request pending",
-                me.getName() + " asked to work from home "
-                        + describe(saved.getFromDate(), saved.getToDate()));
+        /*
+         * Everybody who can act on it.
+         *
+         * A request addressed to one HR account was announced to that account
+         * alone, so it sat unanswered whenever they were away and the rest of
+         * the desk had no idea it existed. The addressed approver is always
+         * told -- for an employee's request that is their team leader, who is
+         * not HR -- and the applicant never is, which matters because an HR
+         * employee asking to work from home is on the desk that receives it.
+         */
+        String pendingTitle = "Work from home request pending";
+        String pendingBody = me.getName() + " asked to work from home "
+                + describe(saved.getFromDate(), saved.getToDate());
+
+        java.util.LinkedHashSet<Long> told = new java.util.LinkedHashSet<>();
+        told.add(approver.getId());
+        if (hasRole(approver, HR_DESK)) {
+            userRepository.findByRoleCodes(java.util.List.of(HR_DESK))
+                    .forEach(u -> told.add(u.getId()));
+        }
+        told.remove(userId);
+        told.forEach(id -> notify(id, pendingTitle, pendingBody));
 
         return toView(saved, userId);
     }
@@ -220,11 +238,15 @@ public class WfhService {
         }
 
         String who = userRepository.findById(deciderId).map(User::getName).orElse("Your approver");
+        // Read once: the CTO's copy and the desk's copy say the same thing
+        // about the same person, and looking it up twice invited them to drift.
+        String applicantName = userRepository.findById(saved.getUserId())
+                .map(User::getName).orElse("Someone");
 
         // The decision and who made it.
         oversight.notifyCto(deciderId,
                 approve ? "Work from home approved" : "Work from home rejected",
-                userRepository.findById(saved.getUserId()).map(User::getName).orElse("Someone")
+                applicantName
                         + "'s request for " + describe(saved.getFromDate(), saved.getToDate())
                         + " was " + (approve ? "approved" : "rejected") + " by " + who + ".",
                 "WFH", "/leave/wfh");
@@ -233,6 +255,26 @@ public class WfhService {
                 who + " " + (approve ? "approved" : "rejected") + " your request for "
                         + describe(saved.getFromDate(), saved.getToDate())
                         + (comment == null ? "" : " — " + comment));
+
+        /*
+         * And the rest of the desk, who were all shown it as pending. Telling
+         * only the applicant leaves the others looking at a queue that is now
+         * wrong -- and their screens refresh off this notification, so it stays
+         * wrong until somebody reloads.
+         */
+        if (addressedToHrDesk(saved)) {
+            String deskBody = applicantName + "'s request for "
+                    + describe(saved.getFromDate(), saved.getToDate())
+                    + " was " + (approve ? "approved" : "rejected") + " by " + who + ".";
+            for (User hr : userRepository.findByRoleCodes(java.util.List.of(HR_DESK))) {
+                if (hr.getId().equals(deciderId) || hr.getId().equals(saved.getUserId())) {
+                    continue;
+                }
+                notify(hr.getId(),
+                        approve ? "Work from home approved" : "Work from home rejected",
+                        deskBody);
+            }
+        }
 
         return toView(saved, deciderId);
     }
@@ -273,9 +315,24 @@ public class WfhService {
                 .stream().map(r -> toView(r, userId)).toList();
     }
 
-    /** Addressed to me, whatever state it is in. */
+    /**
+     * Addressed to me, whatever state it is in — or to my desk.
+     *
+     * <p>Anyone on the HR desk sees every request, because any of them can act
+     * on it. A queue only one person can see is a queue that stalls the day
+     * they are away, and an approval one of them makes is invisible to the
+     * others.
+     *
+     * <p>A team leader still sees only their own inbox: an employee's request
+     * goes to the leader who knows whether the team can spare them, and
+     * widening that would make the rung meaningless.
+     */
     @Transactional(readOnly = true)
     public List<WfhDtos.WfhView> forMe(Long userId) {
+        if (onHrDesk(userId)) {
+            return repository.findAllByOrderByCreatedAtDesc()
+                    .stream().map(r -> toView(r, userId)).toList();
+        }
         return repository.findByRequestedToOrderByCreatedAtDesc(userId)
                 .stream().map(r -> toView(r, userId)).toList();
     }
@@ -444,11 +501,54 @@ public class WfhService {
      * somebody who can judge it, and an override quietly makes the chain
      * optional.
      */
+    /**
+     * Whether this person may decide this request.
+     *
+     * <p>The addressed approver, and — for a request addressed to HR — anyone
+     * else on the HR desk.
+     *
+     * <p>HR is a desk rather than a person: the approver list offers whichever
+     * HR account it happens to offer, and holding the request to that one
+     * account meant it waited for somebody who was on leave while colleagues
+     * who could have answered it were told it was not theirs to decide.
+     *
+     * <p>This widens the HR rung, it does not remove the chain. An
+     * administrator is not on the desk, and a request addressed to a team
+     * leader still belongs to that team leader — an employee's request reaches
+     * the person who knows whether the team can spare them.
+     */
     private boolean canDecide(WfhRequest r, Long viewerId) {
-        return r.isPending()
-                && viewerId != null
-                && viewerId.equals(r.getRequestedTo())
-                && !viewerId.equals(r.getUserId());
+        if (!r.isPending() || viewerId == null || viewerId.equals(r.getUserId())) {
+            return false;
+        }
+        if (viewerId.equals(r.getRequestedTo())) {
+            return true;
+        }
+        return addressedToHrDesk(r) && onHrDesk(viewerId);
+    }
+
+    /** The roles that make somebody part of the HR desk. */
+    private static final String[] HR_DESK = {"IT_HR", "CV_HR"};
+
+    /**
+     * Whether a request was sent to HR.
+     *
+     * <p>Reads the addressed approver rather than the applicant's rung, because
+     * that is what the request actually says. IT_MGR is not consulted here:
+     * it counts as HR for who may approve, and treating it as the desk would
+     * widen every manager's inbox into everyone else's.
+     */
+    private boolean addressedToHrDesk(WfhRequest r) {
+        if (r.getRequestedTo() == null) {
+            return false;
+        }
+        return userRepository.findById(r.getRequestedTo())
+                .map(u -> hasRole(u, HR_DESK)).orElse(false);
+    }
+
+    private boolean onHrDesk(Long userId) {
+        return userRepository.findById(userId)
+                .map(u -> hasRole(u, HR_DESK)).orElse(false);
     }
 
     private long countWorkingDays(LocalDate from, LocalDate to) {

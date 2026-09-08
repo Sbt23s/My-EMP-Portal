@@ -298,8 +298,23 @@ public class AttendanceService {
         // present already includes wfh, so subtracting both would count a
         // work-from-home day twice and invent an absence for a day worked.
         long absent = Math.max(0, workingDays - present);
+
+        // Only completed days. An open day has no duration yet, and treating a
+        // missing punch-out as zero would drag the month's total down every
+        // morning.
+        int workedMinutes = records.stream()
+                .filter(a -> a.getPunchInAt() != null && a.getPunchOutAt() != null)
+                .mapToInt(a -> a.getWorkedMinutes() == null ? 0 : a.getWorkedMinutes())
+                .sum();
+
+        // Against working days elapsed, not days in the month: on the 8th, a
+        // perfect record is 100% and not a quarter of one.
+        int percent = workingDays > 0
+                ? (int) Math.round(present * 100.0 / workingDays)
+                : 0;
+
         return new AttendanceSummary(month, year, present, wfh, late, absent,
-                overtime, lateMinutesTotal, workingDays);
+                overtime, lateMinutesTotal, workingDays, workedMinutes, percent);
     }
 
     @Transactional(readOnly = true)

@@ -43,10 +43,20 @@ public class HelpdeskService {
     /** Employee code of the one person HR's own support requests go to. */
     private static final String HR_TICKET_APPROVER_CODE = "PIX-E100";
 
+    /**
+     * The HR desk.
+     *
+     * <p>Three codes rather than one because the desk really is three: IT_HR
+     * and CV_HR are the HR desks on either side of the business, and the
+     * account everybody calls "HR" holds IT_MGR. Named here so the role test
+     * and the notification fan-out cannot drift apart.
+     */
+    static final java.util.List<String> HR_DESK = java.util.List.of("IT_HR", "CV_HR", "IT_MGR");
+
     private static boolean isHrRole(User u) {
         return u != null && u.getRoles().stream()
                 .map(com.pixous.hrportal.modules.user.Role::getCode)
-                .anyMatch(c -> "IT_MGR".equals(c) || "IT_HR".equals(c) || "CV_HR".equals(c));
+                .anyMatch(HR_DESK::contains);
     }
 
     /**
@@ -144,15 +154,42 @@ public class HelpdeskService {
         oversight.notifyCto(userId, "New support request " + saved.getTicketCode(),
                 safeName(userId) + " raised: " + saved.getTitle(),
                 "HELPDESK", "/helpdesk");
-        // Notify the HR this request is addressed to.
-        if (saved.getAssignedTo() != null && !saved.getAssignedTo().equals(userId)) {
-            notificationService.createAndPush(saved.getAssignedTo(),
+        /*
+         * Who is told a request arrived.
+         *
+         * <p>Two things were wrong here. The picker offers a single "HR (code)"
+         * entry, so a request addressed to HR reached exactly one account --
+         * and if that person was away it sat unread while their colleagues on
+         * the same desk, who can act on it perfectly well, never knew it
+         * existed. And when nothing was addressed at all, nobody was notified:
+         * the ticket was saved and simply never announced.
+         *
+         * <p>So: the addressed account first, then the rest of the HR desk when
+         * it went to HR, and the whole desk when it went to nobody. The raiser
+         * is never told about their own request.
+         */
+        java.util.Map<Long, User> targets = new java.util.LinkedHashMap<>();
+        User addressed = saved.getAssignedTo() == null
+                ? null
+                : userRepository.findById(saved.getAssignedTo()).orElse(null);
+        if (addressed != null) {
+            targets.put(addressed.getId(), addressed);
+        }
+        if (addressed == null || isHrRole(addressed)) {
+            userRepository.findByRoleCodes(HR_DESK).stream()
+                    .filter(User::isEnabled)
+                    .forEach(u -> targets.putIfAbsent(u.getId(), u));
+        }
+        targets.remove(userId);
+
+        targets.values().forEach(staff -> {
+            notificationService.createAndPush(staff.getId(),
                     "New support request " + saved.getTicketCode(),
                     safeName(userId) + " raised a support request",
                     "HELPDESK", "/helpdesk");
-            sms(saved.getAssignedTo(), safeName(userId) + " raised support request "
+            sms(staff.getId(), safeName(userId) + " raised support request "
                     + saved.getTicketCode() + ": " + saved.getTitle());
-        }
+        });
         return toResponse(saved);
     }
 

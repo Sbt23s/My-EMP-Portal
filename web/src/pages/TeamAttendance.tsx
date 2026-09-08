@@ -651,7 +651,14 @@ export default function TeamAttendancePage() {
     }
   };
 
-  const formatTime = (iso?: string) => (iso ? dayjs(iso).format("h:mm A") : "--:--");
+  /*
+   * There used to be a second formatTime declared here, shadowing the one at
+   * the top of the file. The two agreed on the time and disagreed on the
+   * absence: this one wrote "--:--" and the other "—", so the exported sheet
+   * carried both placeholders in the same column depending on which code path
+   * produced the cell. Removed rather than reconciled -- one definition cannot
+   * drift from itself.
+   */
 
   const isLoading = teamAttendance.isLoading || teamMembers.isLoading;
 

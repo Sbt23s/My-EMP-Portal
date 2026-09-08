@@ -153,7 +153,8 @@ public class BiometricAttendanceProcessor {
         PunchDirection direction = PunchDirection.decide(
                 event.getAttendanceStatus(),
                 attendance.getPunchInAt(),
-                attendance.getPunchOutAt());
+                attendance.getPunchOutAt(),
+                event.getOccurTime());
 
         boolean changed = false;
         if (direction == PunchDirection.IN) {

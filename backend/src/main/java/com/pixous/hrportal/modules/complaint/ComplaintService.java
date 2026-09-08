@@ -63,8 +63,32 @@ public class ComplaintService {
         String label = "NEED".equals(saved.getKind()) ? "need" : "complaint";
         java.util.List<User> targets;
         if (saved.getRequestedTo() != null) {
-            targets = userRepository.findById(saved.getRequestedTo())
-                    .map(java.util.List::of).orElseGet(java.util.List::of);
+            User addressed = userRepository.findById(saved.getRequestedTo()).orElse(null);
+            if (isHrRole(addressed)) {
+                /*
+                 * HR is a desk, not a person.
+                 *
+                 * The recipient picker offers a single "HR (code)" entry, so
+                 * every complaint sent to HR carried one user id -- and until
+                 * now only that one account was told. A complaint therefore sat
+                 * unread whenever that particular person was on leave, while
+                 * their colleagues on the same desk, who can see and act on it
+                 * perfectly well, were never notified it existed.
+                 *
+                 * The addressed account stays first in the list: the request
+                 * still names them, and the change is who else hears about it.
+                 */
+                java.util.Map<Long, User> desk = new java.util.LinkedHashMap<>();
+                desk.put(addressed.getId(), addressed);
+                userRepository.findByRoleCodes(HR_DESK).stream()
+                        .filter(User::isEnabled)
+                        .forEach(u -> desk.putIfAbsent(u.getId(), u));
+                targets = java.util.List.copyOf(desk.values());
+            } else {
+                targets = addressed == null
+                        ? java.util.List.of()
+                        : java.util.List.of(addressed);
+            }
         } else {
             // Nobody chosen — every HR and admin, deduplicated.
             java.util.Map<Long, User> everyone = new java.util.LinkedHashMap<>();
@@ -102,10 +126,22 @@ public class ComplaintService {
     /** Employee code of the one person HR's own complaints go to. */
     private static final String HR_COMPLAINT_APPROVER_CODE = "PIX-E100";
 
+    /**
+     * The HR desk.
+     *
+     * <p>Three codes rather than one because the desk really is three: IT_HR
+     * and CV_HR are the HR desks on either side of the business, and the
+     * account everybody calls "HR" holds IT_MGR. Every service in the portal
+     * that asks "is this person HR" asks it of these same three, and the list
+     * is named here so that the notification fan-out and the role test cannot
+     * drift apart.
+     */
+    static final List<String> HR_DESK = List.of("IT_HR", "CV_HR", "IT_MGR");
+
     private static boolean isHrRole(User u) {
         return u != null && u.getRoles().stream()
                 .map(com.pixous.hrportal.modules.user.Role::getCode)
-                .anyMatch(c -> "IT_MGR".equals(c) || "IT_HR".equals(c) || "CV_HR".equals(c));
+                .anyMatch(HR_DESK::contains);
     }
 
     /**

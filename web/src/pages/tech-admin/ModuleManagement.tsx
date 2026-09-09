@@ -405,11 +405,22 @@ export function TechAdminModuleManagement() {
                               {["Admin", "CTO", "HR", "TL", "Employee"].map(roleLabel => {
                                 const roleKeyMap: Record<string, string> = { Admin: "COMPANY_ADMIN", CTO: "CTO", HR: "HR_MANAGER", TL: "TEAM_LEAD", Employee: "EMPLOYEE" };
                                 const roleKey = roleKeyMap[roleLabel];
-                                // An untouched CTO shows what it actually gets:
-                                // the Company Admin setting.
+                                /*
+                                  An untouched CTO switch shows what the CTO
+                                  actually gets, which is the module.
+
+                                  This used to mirror the Company Admin
+                                  setting, and that was wrong on any module
+                                  configured for HR and Team Leaders alone:
+                                  Company Admin is absent there too, so the
+                                  badge read off and the CTO lost a module
+                                  nobody had decided to take from them. An
+                                  untouched switch is not an instruction --
+                                  see matchesVisibleRoles, which this mirrors.
+                                */
                                 const isVisible = roleKey === "CTO" && !module.ctoConfigured
                                   && !module.visibleRoles.includes("CTO")
-                                  ? module.visibleRoles.includes("COMPANY_ADMIN")
+                                  ? true
                                   : module.visibleRoles.includes(roleKey);
                                 return (
                                   <span
@@ -544,16 +555,21 @@ export function TechAdminModuleManagement() {
                         { key: "EMPLOYEE", label: "Employee", desc: "General employee self-service access" },
                       ].map((item) => {
                         /*
-                         * The CTO switch shows what the CTO can actually see.
-                         * Until somebody uses it, that is whatever Company
-                         * Admin is allowed -- the portal reads an untouched CTO
-                         * the same way, so the switch and the behaviour agree
-                         * rather than the switch reading off while access is
-                         * on.
+                         * The CTO switch shows what the CTO can actually see,
+                         * which until somebody uses it is the module.
+                         *
+                         * It used to mirror Company Admin, and that is wrong on
+                         * any module configured for HR and Team Leaders alone:
+                         * Company Admin is absent there too, so the switch read
+                         * off and the CTO lost a module nobody had decided to
+                         * take from them. An untouched switch is not an
+                         * instruction. matchesVisibleRoles in AuthContext reads
+                         * it the same way, so the switch and the behaviour
+                         * agree.
                          */
                         const isRoleActive = item.key === "CTO" && !selectedModuleObj.ctoConfigured
                           && !selectedModuleObj.visibleRoles.includes("CTO")
-                          ? selectedModuleObj.visibleRoles.includes("COMPANY_ADMIN")
+                          ? true
                           : selectedModuleObj.visibleRoles.includes(item.key);
                         return (
                           <div key={item.key} className="flex items-center justify-between">

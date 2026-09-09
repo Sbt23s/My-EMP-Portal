@@ -374,11 +374,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (user.employeeCode?.toUpperCase() === "PIX-E100") {
         if (vRoles.includes("CTO")) return true;
-        // No CTO key. Either it was turned off -- in which case the switch has
-        // been used and the answer is no -- or nobody has ever touched it, and
-        // the CTO keeps whatever Company Admin has, as it did before the rung
-        // existed.
-        return ctoConfigured ? false : vRoles.includes("COMPANY_ADMIN");
+        /*
+          No CTO key, so the question is whether anybody has ever been asked.
+
+          Turned off deliberately -- ctoConfigured, meaning the switch has been
+          used -- is no, and stays no.
+
+          Never asked is yes. It used to fall through to "whatever Company
+          Admin has", which is wrong twice over: on a module configured for
+          HR and Team Leaders alone, Company Admin is absent too, so the CTO
+          was hidden from a module nobody had ever decided to hide from them.
+          Employee Attendance disappeared from the CTO's sidebar that way --
+          the list said HR and TL, and the CTO inherited a "no" that was about
+          somebody else.
+
+          An untouched switch is not an instruction. The CTO sees the module
+          until a person says otherwise, which is what the rung is for.
+        */
+        return !ctoConfigured;
       }
 
       const isCompanyAdmin = roles.includes("SUPER_ADMIN") || roles.includes("COMPANY_ADMIN") || roles.includes("BOARD_ADMIN");

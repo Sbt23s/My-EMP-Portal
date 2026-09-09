@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Pixous.HrPortal.Api.Middleware;
+using Pixous.HrPortal.Api.RealTime;
 using Pixous.HrPortal.Infrastructure;
 
 /*
@@ -71,6 +72,18 @@ builder.Services.AddControllers()
 builder.Services.AddHrPortalInfrastructure(builder.Configuration);
 
 /*
+ * Real time: the STOMP-over-SockJS endpoint the existing React client already
+ * speaks to. See REALTIME.md for why this rather than SignalR -- eight files,
+ * nine destinations, and a client that never publishes.
+ *
+ * The registry is a singleton because it holds the open sockets, which is what
+ * Spring's enableSimpleBroker did in-process too.
+ */
+builder.Services.AddSingleton<StompRegistry>();
+builder.Services.AddSingleton<IStompPublisher>(sp => sp.GetRequiredService<StompRegistry>());
+builder.Services.AddSingleton<IStompAuthorizer, StompAuthorizer>();
+
+/*
  * CORS, matching WebConfig.corsConfigurationSource exactly: the configured
  * origins, six methods, any header, Authorization exposed, credentials allowed,
  * one hour of pre-flight cache.
@@ -91,11 +104,20 @@ builder.Services.AddCors(o => o.AddPolicy(CorsPolicy, p => p
 var app = builder.Build();
 
 app.UseForwardedHeaders();
+
+/*
+ * WebSockets, before routing so the upgrade is available to the endpoint.
+ * KeepAliveInterval matches the SockJS heart-beat the endpoint sends, so a
+ * proxy sees traffic from both layers rather than relying on either alone.
+ */
+app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(30) });
+
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseCors(CorsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapStomp();
 
 /*
  * The health endpoint Spring Boot Actuator exposed at /actuator/health, at the
@@ -105,5 +127,31 @@ app.MapControllers();
  * they are absent made hosts restart a healthy app.
  */
 app.MapGet("/actuator/health", () => Results.Json(new { status = "UP" }));
+
+/*
+ * A push, for proving the real-time path end to end during the migration.
+ *
+ * Development only -- it is behind app.Environment.IsDevelopment() and is not
+ * in the Java API, so it must never reach production. It exists because the
+ * alternative way to test a push is to drive a whole module through to the
+ * point where it publishes, and the socket needs proving before any module is
+ * written.
+ */
+if (app.Environment.IsDevelopment())
+{
+    app.MapPost("/__dev/publish", async (
+        string destination, string? user,
+        IStompPublisher publisher, HttpContext ctx) =>
+    {
+        using var reader = new StreamReader(ctx.Request.Body);
+        string body = await reader.ReadToEndAsync();
+        if (string.IsNullOrWhiteSpace(body)) body = "{}";
+
+        if (user is null) await publisher.PublishAsync(destination, body);
+        else await publisher.PublishToUserAsync(user, destination, body);
+
+        return Results.Ok(new { published = destination, user });
+    });
+}
 
 app.Run();

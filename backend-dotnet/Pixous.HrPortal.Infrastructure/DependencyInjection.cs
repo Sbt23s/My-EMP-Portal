@@ -26,6 +26,10 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<HttpCurrentUser>());
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<HttpCurrentUser>());
 
+        // Reads a token outside the authentication middleware -- the WebSocket
+        // CONNECT frame needs it before that middleware has run.
+        services.AddSingleton<Pixous.HrPortal.Domain.Security.IJwtReader, JwtReader>();
+
         var connection = config.GetConnectionString("HrPortal")
             ?? throw new InvalidOperationException(
                 "ConnectionStrings:HrPortal is not set. The Java side took this from "

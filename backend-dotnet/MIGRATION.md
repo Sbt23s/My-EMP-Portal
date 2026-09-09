@@ -57,7 +57,7 @@ all of them.
 | Config binding | `AppProperties` | `IOptions<AppSettings>` | ☐ |
 | Async executor | `AsyncConfig` | `Task` / `IHostedService` | ☐ |
 | Cache | `CacheConfig` (Redis, optional) | `IDistributedCache` | ☐ |
-| Real time | `WebSocketConfig` STOMP/SockJS | SignalR — **see Conflicts** | ☐ |
+| Real time | `WebSocketConfig` STOMP/SockJS | STOMP endpoint, client unchanged | ◐ |
 | Scheduling | 7 × `@Scheduled` | `BackgroundService` | ☐ |
 | Mail | `MailService` | `MailKit` | ☐ |
 | SMS | `SmsService` (Twilio) | Twilio SDK | ☐ |
@@ -143,7 +143,19 @@ the comment.
 Recorded here as they are found. Nothing on this list is worked around
 silently.
 
-### 1. STOMP over SockJS → SignalR — **frontend change unavoidable**
+### 1. STOMP over SockJS — **RESOLVED, no frontend change**
+
+Investigated properly and the answer changed. See REALTIME.md: the client never
+publishes, uses nine destinations and five frame types, and negotiates onto a
+plain WebSocket in production. A STOMP endpoint in ASP.NET is ~450 lines and is
+now written and passing against the real `@stomp/stompjs` + `sockjs-client`.
+
+The original write-up is kept below because the reasoning that led to the wrong
+recommendation is worth being able to check.
+
+---
+
+#### Original assessment (superseded)
 
 The React client speaks STOMP over SockJS (`@stomp/stompjs`, `sockjs-client`)
 against `/ws`, subscribing to `/topic/attendance` and

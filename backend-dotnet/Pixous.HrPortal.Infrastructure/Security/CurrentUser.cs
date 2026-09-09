@@ -32,21 +32,46 @@ public sealed class HttpCurrentUser(IHttpContextAccessor accessor) : ICurrentUse
 {
     private ClaimsPrincipal? Principal => accessor.HttpContext?.User;
 
+    /*
+     * The claim names are the Java token's, not .NET conventions.
+     *
+     * The token is issued and read by both backends during the migration -- a
+     * browser signed in against Java must work against .NET without signing in
+     * again -- so the shape is fixed by JwtService:
+     *
+     *   sub       the user id, as a string
+     *   username  the login name
+     *   roles     an array of role codes
+     *   userType  USER or TECHNICAL_ADMIN
+     *
+     * There is no employeeCode and no companyId in the token. Both are looked
+     * up from the user row, exactly as the Java UserPrincipal did -- putting
+     * them in the token would mean a role change needed a fresh login, which
+     * is a behaviour change.
+     */
     public long? UserId =>
-        long.TryParse(Principal?.FindFirst("uid")?.Value, out var id) ? id : null;
+        long.TryParse(Principal?.FindFirst("sub")?.Value
+                      ?? Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+                      out var id) ? id : null;
 
-    public string? Username => Principal?.FindFirst(ClaimTypes.Name)?.Value;
+    public string? Username =>
+        Principal?.FindFirst("username")?.Value
+        ?? Principal?.FindFirst(ClaimTypes.Name)?.Value;
 
+    /// <summary>
+    /// Filled from the user row by the authentication handler, not from the
+    /// token -- see the note above.
+    /// </summary>
     public string? EmployeeCode => Principal?.FindFirst("employeeCode")?.Value;
 
     public long? CompanyId =>
         long.TryParse(Principal?.FindFirst("companyId")?.Value, out var id) ? id : null;
 
     public IReadOnlySet<string> Roles =>
-        Principal?.FindAll("roles").Select(c => c.Value).ToHashSet() ?? [];
+        Principal?.FindAll("roles").Select(c => c.Value).ToHashSet(StringComparer.Ordinal) ?? [];
 
     public IReadOnlySet<string> Permissions =>
-        Principal?.FindAll("permissions").Select(c => c.Value).ToHashSet() ?? [];
+        Principal?.FindAll("permissions").Select(c => c.Value).ToHashSet(StringComparer.Ordinal) ?? [];
 
     /// <summary>
     /// Whether the caller holds an authority, matching Spring's

@@ -256,14 +256,23 @@ public class PayslipService {
         // What the absent days cost, at a working day's rate.
         BigDecimal absentDeduction = perDayGross.multiply(lopDays)
                 .setScale(2, RoundingMode.HALF_UP);
+        /*
+         * Loss of pay, all three sources of it, kept as its own figure.
+         *
+         * It used to be folded into otherDeductions before storage, so a
+         * payslip showed one "Other Deductions" number and nothing said how
+         * much of it was days not worked -- which is the deduction people
+         * actually query, and the one this month's attendance decides.
+         *
+         * The total is unchanged: what moved is which column carries it.
+         */
         BigDecimal lop = amt(req.lopDeduction()).add(absentDeduction).add(monthLeaveDed)
                 .setScale(2, RoundingMode.HALF_UP);
-        // Manual loss-of-pay is grouped with any other deductions for storage.
-        BigDecimal otherDed = amt(req.otherDeductions()).add(lop)
+        BigDecimal otherDed = amt(req.otherDeductions())
                 .add(monthOtherDed).add(zed(salary.getOtherDeduction()))
                 .setScale(2, RoundingMode.HALF_UP);
 
-        BigDecimal totalDed = pf.add(esi).add(pt).add(tds).add(otherDed).add(advance)
+        BigDecimal totalDed = pf.add(esi).add(pt).add(tds).add(otherDed).add(advance).add(lop)
                 .setScale(2, RoundingMode.HALF_UP);
         BigDecimal net = gross.subtract(totalDed).setScale(2, RoundingMode.HALF_UP);
 
@@ -276,7 +285,8 @@ public class PayslipService {
         p.setSpecialAllowance(special);
         p.setBonus(bonus);
         p.setOtherEarnings(otherEarnings);
-        p.setLeaveDeduction(monthLeaveDed);
+        // Loss of pay on its own line -- see where `lop` is computed above.
+        p.setLeaveDeduction(lop);
         p.setAdvanceDeduction(monthAdvanceDed);
         p.setOvertimePay(overtimePay);
         p.setPerformancePay(performance);
@@ -771,6 +781,42 @@ public class PayslipService {
                     return b.getPayMonth() - a.getPayMonth();
                 })
                 .map(PayrollRunSummary::from).toList();
+    }
+
+    /**
+     * Every payslip for a month, in full.
+     *
+     * <p>{@link #listByMonth} already answers "who has a payslip", but it
+     * returns PayslipSummary — gross, net and delivery status, and nothing
+     * else. A payroll report has to show the deductions that turned one into
+     * the other, and a summary cannot: PF, ESI, PT, TDS and the absence
+     * deduction are all on PayslipResponse and none of them on the summary.
+     *
+     * <p>Ordered by name so the sheet reads the same way twice. The map the
+     * summary returns has no order at all, which is fine for a lookup and
+     * wrong for a report.
+     */
+    @Transactional(readOnly = true)
+    public List<PayslipResponse> listByMonthDetailed(int month, int year) {
+        // One pass over the users involved rather than a lookup per payslip:
+        // a full month is every employee, and findById inside the map was the
+        // shape that made the run screen slow.
+        List<Payslip> slips = payslipRepository.findByPayMonthAndPayYear(month, year);
+        java.util.Map<Long, User> byId = userRepository
+                .findAllById(slips.stream().map(Payslip::getUserId).distinct().toList())
+                .stream().collect(Collectors.toMap(User::getId, u -> u, (a, b) -> a));
+
+        return slips.stream()
+                .map(p -> {
+                    User u = byId.get(p.getUserId());
+                    return PayslipResponse.from(p,
+                            u != null ? u.getName() : "?",
+                            u != null ? u.getEmployeeCode() : "?");
+                })
+                .sorted(java.util.Comparator.comparing(
+                        r -> r.employeeName() == null ? "" : r.employeeName(),
+                        String.CASE_INSENSITIVE_ORDER))
+                .toList();
     }
 
     @Transactional(readOnly = true)

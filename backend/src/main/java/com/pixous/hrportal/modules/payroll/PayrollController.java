@@ -119,6 +119,23 @@ public class PayrollController {
         return ApiResponse.ok(service.listByMonth(month, year));
     }
 
+    /**
+     * Every payslip for a month, in full — what the payroll report exports.
+     *
+     * <p>Separate from /payslips/month, which returns a summary keyed by user
+     * and cannot carry the deductions: a report has to show PF, ESI, PT, TDS
+     * and the absence deduction that turned gross into net, and none of those
+     * are on the summary.
+     *
+     * <p>Same PAYROLL_VIEW guard, because it is the same data at more detail.
+     */
+    @GetMapping("/payslips/month/detailed")
+    @PreAuthorize("hasAuthority('PAYROLL_VIEW')")
+    public ApiResponse<List<PayslipResponse>> payslipsByMonthDetailed(
+            @RequestParam int month, @RequestParam int year) {
+        return ApiResponse.ok(service.listByMonthDetailed(month, year));
+    }
+
     /** List the caller's own payslips. Mirrors payslip action=list. */
     @GetMapping("/payslip/list")
     public ApiResponse<List<PayslipSummary>> myPayslips() {

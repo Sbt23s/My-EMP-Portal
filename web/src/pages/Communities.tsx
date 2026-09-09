@@ -1,5 +1,6 @@
 import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState } from "react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -29,7 +30,8 @@ function CommunityCard({
   c: CommunityGroup;
   usersData: UserSummary[] | undefined;
   onboardingIds: number[] | undefined;
-  onDelete: (id: number) => void;
+  /** Asks for the community by name, so the dialog can say which one. */
+  onDelete: (c: CommunityGroup) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const groupCall = useGroupCall();
@@ -107,10 +109,25 @@ function CommunityCard({
           </CardTitle>
           <CardDescription className="mt-1">{c.description}</CardDescription>
           <p className="text-xs text-muted-foreground mt-1">{members?.length ?? 0} members</p>
-          {!isLoading && (members?.length ?? 0) <= 1 && (
+          {/*
+            The warning is about ordinary rooms, and it was shown on the
+            announcement channel too -- where it is simply false. An
+            announcement is visible to everybody in the company regardless of
+            its member list: CommunityService returns it to every viewer, not
+            only to members. So the amber line told HR nobody could see the one
+            channel everybody can, and invited them to "fix" it by adding
+            people who already had it.
+          */}
+          {!isLoading && !c.isAnnouncement && (members?.length ?? 0) <= 1 && (
             <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
               Only you are in this group, so nobody else can see it. Add people
               with Manage members.
+            </p>
+          )}
+          {c.isAnnouncement && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Visible to everyone in the company. The member list controls who
+              is rung on a call, not who can read it.
             </p>
           )}
         </div>
@@ -156,7 +173,7 @@ function CommunityCard({
             variant="ghost"
             size="icon"
             className="text-red-500 hover:text-red-600 hover:bg-red-50"
-            onClick={() => onDelete(c.id)}
+            onClick={() => onDelete(c)}
           >
             <Trash2 className="w-4 h-4" />
           </Button>
@@ -315,11 +332,18 @@ export default function CommunitiesPage() {
     }
   });
 
-  const handleDeleteGroup = (id: number) => {
-    if (confirm("Are you sure you want to delete this community?")) {
-      deleteGroup.mutate(id);
-    }
-  };
+  /*
+    Asking in the application's own dialog rather than the browser's.
+
+    window.confirm draws in the browser chrome -- a grey strip with the site's
+    hostname above it, no styling, no theme, and no room to say which community
+    is about to go. It also blocks the whole tab. Every other destructive action
+    in the portal already asks properly; these two were the last that did not.
+
+    Which one, by name: "this community" is not enough to check against when
+    six of them are on screen.
+  */
+  const [confirmDelete, setConfirmDelete] = useState<{ id: number; name: string } | null>(null);
 
   if (isLoadingCommunities || isLoadingUsers) {
     return (
@@ -369,11 +393,14 @@ export default function CommunitiesPage() {
           </div>
           <Button 
             disabled={!newGroupName || createGroup.isPending} 
-            onClick={() => {
-              if (confirm(`Are you sure you want to create the community group "${newGroupName}"?`)) {
-                createGroup.mutate();
-              }
-            }}
+            /*
+              No confirmation on create. It asked "are you sure you want to
+              create X" about a name the person had just typed into the box
+              beside it, and an empty new group is undone by deleting it. A
+              prompt in front of a reversible action teaches people to click
+              through prompts.
+            */
+            onClick={() => createGroup.mutate()}
           >
             {createGroup.isPending ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
             Create
@@ -388,13 +415,30 @@ export default function CommunitiesPage() {
             c={c}
             usersData={usersData}
             onboardingIds={onboardingIds}
-            onDelete={handleDeleteGroup}
+            onDelete={(g) => setConfirmDelete({ id: g.id, name: g.name })}
           />
         ))}
         {communities?.length === 0 && (
           <p className="text-muted-foreground text-center py-6">No community groups created yet.</p>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title={`Delete "${confirmDelete?.name ?? ""}"?`}
+        description={
+          "The group and its message history go with it, for everyone in it. "
+          + "This cannot be undone."
+        }
+        confirmLabel="Delete community"
+        cancelLabel="Keep it"
+        busy={deleteGroup.isPending}
+        onConfirm={() => {
+          if (confirmDelete) deleteGroup.mutate(confirmDelete.id);
+          setConfirmDelete(null);
+        }}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

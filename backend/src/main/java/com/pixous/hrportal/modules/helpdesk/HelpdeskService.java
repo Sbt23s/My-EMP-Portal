@@ -30,6 +30,13 @@ public class HelpdeskService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final com.pixous.hrportal.common.SmsService smsService;
+    /**
+     * The administrator's configuration of who this module may address.
+     *
+     * Narrows the list built below; a module with nothing configured is
+     * unrestricted, so this changes nothing until somebody sets it.
+     */
+    private final com.pixous.hrportal.modules.approvalconfig.ApprovalRecipientService approvalRecipients;
     private final com.pixous.hrportal.modules.notification.OversightNotifier oversight;
 
     /** Text a user if we have a usable mobile number for them. */
@@ -145,6 +152,23 @@ public class HelpdeskService {
                         map.putIfAbsent(u.getId(), m);
                     });
         }
+
+        /*
+         * The administrator's configuration, applied last.
+         *
+         * Last on purpose. Everything above encodes routing -- HR's own
+         * requests go above HR, nobody appears in their own list -- and this
+         * only narrows the result. A module with nothing configured is
+         * unrestricted, so until somebody ticks a box this returns exactly what
+         * it always did.
+         */
+        java.util.List<Long> permitted = approvalRecipients
+                .filter("HELPDESK", map.keySet().stream()
+                        .map(id -> userRepository.findById(id).orElse(null))
+                        .filter(java.util.Objects::nonNull)
+                        .toList())
+                .stream().map(User::getId).toList();
+        map.keySet().retainAll(new java.util.HashSet<>(permitted));
 
         return java.util.List.copyOf(map.values());
     }

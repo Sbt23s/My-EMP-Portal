@@ -3,7 +3,8 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   CalendarCheck, ClipboardList, Clock, Download, ListTodo,
-  Home, Map as MapIcon, Plane, UserX, Users
+  Home, IndianRupee, LifeBuoy, Map as MapIcon, MessageSquareWarning,
+  Plane, UserX, Users
 } from "lucide-react";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
@@ -56,13 +57,39 @@ const REPORTS = [
     rather than a chosen window, which is a different thing from a report.
   */
   { key: "wfh", label: "Work from home", icon: Home, fill: TILE_FILLS.slate,
-    hint: "Remote-working days, requested and decided" }
+    hint: "Remote-working days, requested and decided" },
+  /*
+    Three that had no report at all. Supports and Complaints each have an
+    export button on their own page, but that exports the tab you are looking
+    at rather than a chosen window -- which is a different thing from a report
+    somebody runs for a month and files.
+
+    Payroll had neither. Its own screen shows a run at a time and a payslip at
+    a time; nothing put every employee's gross, deductions and net on one sheet,
+    which is the thing finance asks for.
+  */
+  { key: "supports", label: "Support requests", icon: LifeBuoy, fill: TILE_FILLS.blue,
+    hint: "Tickets raised, who they went to and how they ended" },
+  { key: "complaints", label: "Complaints", icon: MessageSquareWarning, fill: TILE_FILLS.red,
+    hint: "Complaints and needs, with the response given" },
+  { key: "payroll", label: "Payroll", icon: IndianRupee, fill: TILE_FILLS.green,
+    hint: "Gross, every deduction and net, per employee" }
 ] as const;
 
 type ReportKey = typeof REPORTS[number]["key"];
 
 const fmt = (d?: string) => (d ? dayjs(d).format("DD MMM YYYY") : "");
 const time = (d?: string) => (d ? dayjs(d).format("h:mm A") : "");
+/*
+  Money as a number, not a string. Excel can sum a column of numbers and cannot
+  sum a column of "1,250.00", and a payroll sheet exists to be summed. Absent
+  and unparseable both become 0 -- a blank in a total column reads as a gap in
+  the data rather than as nothing owed.
+*/
+const num = (v: any) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
 
 /**
  * A Team Leader's own reports. Every sheet is built from an endpoint already
@@ -130,6 +157,14 @@ export default function TeamReportsPage({ orgWide = false }: { orgWide?: boolean
     page shows them, already scoped to the people whose requests reach them.
   */
   const WFH_URL = orgWide ? "/wfh/all" : "/wfh/for-me";
+  /*
+    Supports and Complaints have no team-scoped listing: /tickets/all and
+    /complaints already return exactly what this viewer may see -- the desk's
+    queue for HR, their own rows for anybody else -- so the same URL is right
+    for both modes.
+  */
+  const TICKETS_URL = "/tickets/all?size=1000";
+  const COMPLAINTS_URL = "/complaints?page=0&size=1000";
 
   const inWindow = (d?: string) =>
     !!d && d.slice(0, 10) >= range.from && d.slice(0, 10) <= range.to;
@@ -229,6 +264,87 @@ export default function TeamReportsPage({ orgWide = false }: { orgWide?: boolean
             r.reason ?? "", r.status ?? "", r.requestedToName ?? "",
             r.decidedByName ?? "", fmt(r.decidedAt), r.decisionComment ?? ""
           ])
+      };
+    }
+
+    if (key === "supports") {
+      const res = await api.get<ApiEnvelope<any>>(TICKETS_URL);
+      // /tickets/all is paged; the envelope carries content, older shapes an
+      // array. Both are handled rather than assumed.
+      const raw = res.data?.data ?? res.data;
+      const rows: any[] = Array.isArray(raw) ? raw : (raw?.content ?? []);
+      return {
+        name: "Support requests",
+        headers: ["Raised On", "Ticket", "Employee", "Employee ID", "Type", "Category",
+                  "Priority", "Subject", "Status", "Assigned To", "Resolved On", "Rating"],
+        cols: [14, 18, 22, 13, 10, 16, 10, 34, 14, 22, 14, 8],
+        rows: rows
+          .filter((t) => inWindow(t.createdAt))
+          .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
+          .map((t) => [
+            fmt(t.createdAt), t.ticketCode ?? "", t.raisedByName ?? "", t.raisedByCode ?? "",
+            t.type ?? "", t.category ?? "", t.priority ?? "", t.title ?? "",
+            t.status ?? "", t.assignedToName ?? "", fmt(t.resolvedAt),
+            t.rating ?? ""
+          ])
+      };
+    }
+
+    if (key === "complaints") {
+      const res = await api.get<ApiEnvelope<any>>(COMPLAINTS_URL);
+      const raw = res.data?.data ?? res.data;
+      const rows: any[] = Array.isArray(raw) ? raw : (raw?.content ?? []);
+      return {
+        name: "Complaints",
+        headers: ["Raised On", "Reference", "Kind", "Employee", "Employee ID", "Category",
+                  "Priority", "Subject", "Description", "Status", "Sent To",
+                  "Answered By", "Response", "Closed On"],
+        cols: [14, 18, 11, 22, 13, 18, 10, 30, 40, 12, 22, 22, 40, 14],
+        rows: rows
+          .filter((c) => inWindow(c.createdAt))
+          .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
+          .map((c) => [
+            fmt(c.createdAt), c.referenceCode ?? "", c.kind ?? "",
+            c.raisedByName ?? "", c.raisedByCode ?? "", c.category ?? "",
+            c.priority ?? "", c.subject ?? "", c.description ?? "",
+            c.status ?? "", c.requestedToName ?? "", c.handledByName ?? "",
+            c.hrResponse ?? "", fmt(c.resolvedAt)
+          ])
+      };
+    }
+
+    if (key === "payroll") {
+      /*
+        Payroll is a month, not a range. A payslip belongs to one month and
+        nothing about it is spread across days, so a from/to that lands inside
+        a month would produce either the whole month or nothing -- and both
+        would be a surprise. The month of the window's start is used, and the
+        sheet title says which.
+      */
+      const pm = dayjs(range.from).month() + 1;
+      const py = dayjs(range.from).year();
+      const rows = (await api.get<ApiEnvelope<any[]>>(
+        `/payroll/payslips/month/detailed?month=${pm}&year=${py}`)).data.data ?? [];
+      return {
+        name: `Payroll ${MONTHS[pm - 1]} ${py}`,
+        headers: ["Employee", "Employee ID", "Designation", "Basic", "HRA", "Allowances",
+                  "Conveyance", "Special", "Overtime", "Bonus", "Other Earnings",
+                  "Gross", "PF", "ESI", "PT", "TDS", "Leave / LOP", "Advance",
+                  "Other Deductions", "Total Deductions", "Net Pay",
+                  "LOP Days", "Working Days", "Payslip Sent"],
+        cols: [22, 13, 20, 11, 10, 12, 12, 11, 10, 10, 14,
+               12, 10, 10, 9, 10, 12, 11, 16, 16, 12, 10, 12, 13],
+        rows: rows.map((p) => [
+          p.employeeName ?? "", p.employeeCode ?? "", p.designation ?? "",
+          num(p.basicSalary), num(p.hra), num(p.allowances),
+          num(p.conveyanceAllowance), num(p.specialAllowance), num(p.overtimePay),
+          num(p.bonus), num(p.otherEarnings),
+          num(p.grossSalary), num(p.pfDeduction), num(p.esiDeduction),
+          num(p.ptDeduction), num(p.tdsDeduction), num(p.leaveDeduction),
+          num(p.advanceDeduction), num(p.otherDeductions),
+          num(p.totalDeductions), num(p.netPay),
+          num(p.lopDays), p.workingDays ?? "", p.deliveryStatus ?? "NOT_SENT"
+        ])
       };
     }
 

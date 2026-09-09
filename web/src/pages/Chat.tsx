@@ -1218,7 +1218,19 @@ export default function ChatPage() {
                   large audience, and ringing everybody on one would be the
                   opposite of what the room is for.
                 */}
-                {!isDirect && !isAnnouncement && activeGroup && (
+                {/*
+                  Calling the announcement channel, for the people who may post
+                  in it.
+
+                  It was hidden outright on announcements, which is right for
+                  an employee -- ringing the whole company is not theirs to do
+                  -- and wrong for HR, the CTO and the administrators, who are
+                  exactly the people who would want to address everyone live.
+                  The same three who can post are the three who can call, so
+                  the two permissions do not have to be reasoned about
+                  separately.
+                */}
+                {!isDirect && activeGroup && (!isAnnouncement || isAdminOrHr) && (
                   <>
                     <Button
                       type="button"

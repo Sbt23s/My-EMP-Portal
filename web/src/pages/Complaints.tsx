@@ -2,7 +2,7 @@ import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useMemo, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { Plus, Inbox, ChevronLeft, ChevronRight, Send,
-  Clock, CheckCircle, XCircle, X
+  Clock, CheckCircle, XCircle, X, MessageSquareWarning, UserRound, CalendarDays
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
@@ -35,6 +35,37 @@ const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
 ];
+
+/**
+ * One labelled fact in the complaint dialog.
+ *
+ * The same shape the Discipline record dialog uses: an icon in a muted tile,
+ * a small uppercase label, the value at reading size. Written here rather than
+ * imported because the two pages are separate and a shared component for four
+ * lines of markup would couple them for no gain -- but they should look
+ * identical, so this matches it deliberately.
+ */
+function CField({ label, icon: Icon, children }: {
+  label: string;
+  icon?: typeof UserRound;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex min-w-0 items-start gap-3">
+      {Icon && (
+        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+          <Icon className="h-4 w-4" />
+        </span>
+      )}
+      <div className="min-w-0">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+          {label}
+        </div>
+        <div className="mt-0.5 break-words text-sm font-medium">{children}</div>
+      </div>
+    </div>
+  );
+}
 
 function statusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
   switch (status) {
@@ -1008,45 +1039,104 @@ function RespondDialog({
   });
 
   return (
-    <Dialog open onClose={onClose} className="max-w-md">
-      <DialogHeader
-        title={`${readOnly ? "Complaint" : "Respond to Complaint"} #${complaint.referenceCode}`}
-        description={complaint.subject}
-      />
-      <div className="mt-3 space-y-3">
-        {/*
-          Both ends of the complaint, not just the one it came from: opening
-          it should answer "whose is this" without going back to the table.
-        */}
-        <div className="rounded-md border bg-muted/40 p-3 text-xs space-y-1">
-          <div className="font-semibold text-foreground">
-            Raised by: {complaint.raisedByName || "Employee"}
-            {complaint.raisedByCode ? ` (${complaint.raisedByCode})` : ""}
-          </div>
-          <div className="font-semibold text-foreground">
-            Sent to: {complaint.requestedToName || "HR & Admin"}
-          </div>
-          {complaint.handledByName && (
-            <div className="font-semibold text-foreground">
-              Answered by: {complaint.handledByName}
-              {complaint.resolvedAt
-                ? ` on ${dayjs(complaint.resolvedAt).format("DD MMM YYYY, HH:mm")}`
-                : ""}
-            </div>
-          )}
-          <div className="text-muted-foreground">{complaint.description}</div>
+    /*
+      Wider, and laid out as a record rather than as a paragraph.
+
+      This was a max-w-md box with everything crammed into one muted block at
+      text-xs -- who raised it, who it went to, who answered, and the complaint
+      itself, all the same size and the same colour. The complaint was the
+      smallest thing on screen, the date it was raised was not shown at all,
+      and neither were the category or the priority the person had chosen.
+
+      Same shape as the Discipline record dialog: an icon header, the status
+      and priority as pills, the facts in a two-column grid, and the complaint
+      itself given its own block at readable size. Two records of the same kind
+      should not look like two different products.
+    */
+    <Dialog open onClose={onClose} className="max-w-2xl">
+      <div className="mb-4 flex items-start gap-4 pr-8">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
+          <MessageSquareWarning className="h-7 w-7" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="font-display text-2xl font-bold tracking-tight">
+            {complaint.kind === "NEED" ? "Need" : "Complaint"}
+          </h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {complaint.referenceCode}
+            {complaint.raisedByName ? ` · ${complaint.raisedByName}` : ""}
+            {complaint.raisedByCode ? ` · ${complaint.raisedByCode}` : ""}
+          </p>
         </div>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Badge variant={statusVariant(complaint.status)}>
+          {complaint.status.replace("_", " ")}
+        </Badge>
+        {complaint.priority && (
+          <Badge variant={priorityVariant(complaint.priority)}>
+            {complaint.priority}
+          </Badge>
+        )}
+        {complaint.category && (
+          <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-bold text-muted-foreground">
+            {complaint.category}
+          </span>
+        )}
+      </div>
+
+      <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+        <CField icon={UserRound} label="Raised by">
+          {complaint.raisedByName || "Employee"}
+          {complaint.raisedByCode && (
+            <span className="ml-1.5 text-xs text-muted-foreground">{complaint.raisedByCode}</span>
+          )}
+        </CField>
+        <CField icon={CalendarDays} label="Raised on">
+          {complaint.createdAt
+            ? dayjs(complaint.createdAt).format("dddd, DD MMM YYYY")
+            : "—"}
+        </CField>
+        <CField icon={Send} label="Sent to">
+          {complaint.requestedToName || "HR & Admin"}
+        </CField>
+        <CField icon={CheckCircle} label="Answered by">
+          {complaint.handledByName
+            ? complaint.handledByName
+              + (complaint.resolvedAt
+                  ? ` · ${dayjs(complaint.resolvedAt).format("DD MMM YYYY")}`
+                  : "")
+            : "—"}
+        </CField>
+      </div>
+
+      <div className="mt-4 space-y-1.5">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+          Subject
+        </div>
+        <div className="rounded-md border bg-muted/30 p-3 text-sm font-medium">
+          {complaint.subject}
+        </div>
+      </div>
+
+      <div className="mt-3 space-y-1.5">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+          What was reported
+        </div>
+        {/* The complaint itself, at reading size and holding its own line
+            breaks -- somebody wrote paragraphs and they were being collapsed
+            into one run of muted 12px text. */}
+        <div className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-sm leading-relaxed">
+          {complaint.description}
+        </div>
+      </div>
+
+      <div className="mt-3 space-y-3">
 
         {readOnly ? (
           <>
-            <div className="space-y-1">
-              <Label>Status</Label>
-              <div>
-                <Badge variant={statusVariant(complaint.status)}>
-                  {complaint.status.replace("_", " ")}
-                </Badge>
-              </div>
-            </div>
+            {/* Status is a pill in the header now, so it is not repeated here. */}
             <div className="space-y-1">
               <Label>Response</Label>
               {complaint.hrResponse ? (

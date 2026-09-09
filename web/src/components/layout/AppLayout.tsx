@@ -6,7 +6,7 @@ import {
   LifeBuoy, User, Bell, Menu, X, Moon, Sun, LogOut,
   FileBarChart, ClipboardList, Settings, Map, MessageSquareWarning, FileText,
   FolderOpen, ListTodo, FileArchive, CalendarDays, ChevronDown, Bot, Users2, Eraser, ScrollText,
-  PartyPopper, MessageSquare, Building2, FolderGit2, History, ShieldAlert, Lock, Award
+  PartyPopper, MessageSquare, Building2, FolderGit2, History, ShieldAlert, Lock, Award, SlidersHorizontal
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useBranding } from "@/hooks/useBranding";
@@ -162,6 +162,14 @@ const NAV: NavEntry[] = [
   // them has a route, so switching the module on put a link in the sidebar that
   // led to the not-found page. Their entries in the tech-admin module list have
   // gone too; bring a link back at the same time as its page, not before.
+  /*
+    Who each module may address a request to. Beside the Audit Log because it
+    is the same kind of screen -- administration of how the portal behaves
+    rather than of the work in it -- and gated the same way: this decides who
+    can approve whose leave and who reads whose complaint.
+  */
+  { to: "/approval-config", label: "Approval Config", icon: SlidersHorizontal,
+    anyPermission: ["ORG_MANAGE"] },
   { to: "/audit", label: "Audit Log", icon: History, moduleCode: "AUDIT_LOG", onlyRole: ["SUPER_ADMIN", "COMPANY_ADMIN"] },
   { to: "/admin/reset", label: "Fresh Start", icon: Eraser, onlyRole: ["SUPER_ADMIN", "COMPANY_ADMIN"] }
 ];

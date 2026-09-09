@@ -228,6 +228,24 @@ public class ReportService {
         if (isPositive(p.getTdsDeduction()))
             deductions.add(new String[]{"TDS", moneyDed(p.getTdsDeduction(), rs)});
         deductions.add(new String[]{"Salary Advance", moneyDed(p.getSalaryAdvance(), rs)});
+        /*
+         * Loss of pay on its own line, and labelled with the days behind it.
+         *
+         * This used to be inside "Other Deductions", so a payslip showed one
+         * lump and nothing said how much of it was days not worked -- the one
+         * deduction people actually query, and the one the month's attendance
+         * decides. "Loss of Pay (2 days)" answers the question on the page
+         * instead of prompting it.
+         */
+        if (isPositive(p.getLeaveDeduction())) {
+            String days = p.getLopDays() == null
+                    ? null
+                    : p.getLopDays().stripTrailingZeros().toPlainString();
+            String label = days == null || "0".equals(days)
+                    ? "Loss of Pay"
+                    : "Loss of Pay (" + days + (("1".equals(days)) ? " day)" : " days)");
+            deductions.add(new String[]{label, moneyDed(p.getLeaveDeduction(), rs)});
+        }
         if (isPositive(p.getOtherDeductions()))
             deductions.add(new String[]{"Other Deductions", moneyDed(p.getOtherDeductions(), rs)});
 

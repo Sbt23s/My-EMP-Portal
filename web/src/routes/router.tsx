@@ -113,6 +113,7 @@ const ChatPage = safeLazy(() => import("@/pages/Chat"));
 const AdminChatbotSettings = safeLazy(() => import("@/pages/AdminChatbotSettings"));
 const DataResetPage = safeLazy(() => import("@/pages/DataReset"));
 const AuditLogPage = safeLazy(() => import("@/pages/AuditLog"));
+const ApprovalConfigPage = safeLazy(() => import("@/pages/ApprovalConfig"));
 const CalendarPage = safeLazy(() => import("@/pages/Calendar"));
 const TasksPage = safeLazy(() => import("@/pages/Tasks"));
 const TeamsPage = safeLazy(() => import("@/pages/Teams"));
@@ -223,6 +224,7 @@ export const router = createBrowserRouter([
       { path: "complaints", element: page(<ComplaintsPage />) },
       { path: "discipline", element: page(<DisciplinePage />) },
       { path: "appreciation", element: page(<AppreciationPage />) },
+      { path: "approval-config", element: page(<ApprovalConfigPage />) },
       { path: "notifications", element: page(<NotificationsPage />) },
       { path: "profile", element: page(<ProfilePage />) },
       { path: "ta-expenses", element: page(<TaExpensesPage />) },

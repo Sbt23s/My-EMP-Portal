@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Pixous.HrPortal.Api/Pixous.HrPortal.Api.csproj" />
+  <Project Path="Pixous.HrPortal.Domain/Pixous.HrPortal.Domain.csproj" />
+  <Project Path="Pixous.HrPortal.Infrastructure/Pixous.HrPortal.Infrastructure.csproj" />
+</Solution>

@@ -58,3 +58,7 @@ web/test-results/
 mobile-shell/.gradle/nb-cache/
 # Stray capture from a one-off go-live check.
 *.log.err
+
+# .NET build output
+backend-dotnet/**/bin/
+backend-dotnet/**/obj/

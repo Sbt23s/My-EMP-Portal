@@ -3,6 +3,7 @@ package com.pixous.hrportal.modules.approvalconfig;
 import com.pixous.hrportal.common.PlatformAccounts;
 import com.pixous.hrportal.modules.user.Role;
 import com.pixous.hrportal.modules.user.User;
+import com.pixous.hrportal.modules.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,6 +57,7 @@ public class ApprovalRecipientService {
             List.of("CTO", "SUPER_ADMIN", "COMPANY_ADMIN", "IT_MGR", "IT_HR", "CV_HR", "IT_TL");
 
     private final ApprovalRecipientConfigRepository repository;
+    private final UserRepository userRepository;
 
     /**
      * Whether this module may address requests to this person.
@@ -104,6 +106,43 @@ public class ApprovalRecipientService {
                 .map(Role::getCode)
                 .filter(java.util.Objects::nonNull)
                 .anyMatch(c -> allowed.contains(c.toUpperCase()));
+    }
+
+    /**
+     * Who actually holds each configurable role, by name.
+     *
+     * <p>The grid showed role codes -- "HR (Manager)", "HR", "Team Leader" --
+     * and an administrator ticking one could not tell who that was. HR is three
+     * accounts on this company's data, and which people a tick reaches is the
+     * whole question being answered.
+     *
+     * <p>Disabled and offboarded accounts are left out: a name on this screen
+     * is a person a request could be sent to, and neither of those can be.
+     *
+     * <p>An empty list against a role is worth showing rather than hiding. It
+     * says "nobody holds this yet", which is a real answer and stops a tick
+     * that would silently do nothing.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, List<String>> holders() {
+        Map<String, List<String>> out = new LinkedHashMap<>();
+        for (String role : RECIPIENT_ROLES) {
+            List<User> people = "CTO".equals(role)
+                    // CTO is an employee code, not a role -- see RECIPIENT_ROLES.
+                    ? userRepository.findByEmployeeCode(PlatformAccounts.CTO)
+                            .map(List::of).orElseGet(List::of)
+                    : userRepository.findByRoleCodes(List.of(role));
+
+            out.put(role, people.stream()
+                    .filter(User::isEnabled)
+                    .filter(u -> !"OFFBOARDED".equalsIgnoreCase(u.getProfileStatus()))
+                    .map(u -> u.getName() == null ? "" : u.getName().trim())
+                    .filter(n -> !n.isEmpty())
+                    .sorted(String.CASE_INSENSITIVE_ORDER)
+                    .distinct()
+                    .toList());
+        }
+        return out;
     }
 
     // ---- Administration ----

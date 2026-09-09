@@ -1,10 +1,13 @@
 import { Suspense, lazy, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router-dom";
 import { CalendarCheck, Clock, Home, CheckSquare, Settings } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PageLoader } from "@/components/ui/page-loader";
 import { Select } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/lib/api";
+import type { ApiEnvelope } from "@/types";
 import { cn } from "@/lib/utils";
 
 /**
@@ -54,14 +57,16 @@ interface TabDef {
   icon: LucideIcon;
   /** The path this tab keeps in the address bar. */
   path: string;
+  /** What the visibility configuration calls it. */
+  module: string;
 }
 
 const TABS: TabDef[] = [
-  { key: "leave", label: "Leave", icon: CalendarCheck, path: "/leave" },
-  { key: "permissions", label: "Permission", icon: Clock, path: "/leave/permissions" },
-  { key: "wfh", label: "Work From Home", icon: Home, path: "/leave/wfh" },
-  { key: "approvals", label: "Approvals", icon: CheckSquare, path: "/leave/approvals" },
-  { key: "policies", label: "Leave Policies", icon: Settings, path: "/leave/policies" }
+  { key: "leave", label: "Leave", icon: CalendarCheck, path: "/leave", module: "LEAVE" },
+  { key: "permissions", label: "Permission", icon: Clock, path: "/leave/permissions", module: "PERMISSION" },
+  { key: "wfh", label: "Work From Home", icon: Home, path: "/leave/wfh", module: "WFH" },
+  { key: "approvals", label: "Approvals", icon: CheckSquare, path: "/leave/approvals", module: "APPROVALS" },
+  { key: "policies", label: "Leave Policies", icon: Settings, path: "/leave/policies", module: "POLICIES" }
 ];
 
 export default function LeaveManagementPage() {
@@ -78,15 +83,46 @@ export default function LeaveManagementPage() {
     they cannot submit. Approvals needs LEAVE_APPROVE and Policies ORG_MANAGE,
     both as before.
   */
+  /*
+    What the administrator has configured for this person's roles.
+
+    A list of module codes, or undefined while it loads and on failure. Both are
+    treated as "no restriction", which is the same default the table itself has:
+    a screen that hides tabs because a request has not come back yet is worse
+    than one that shows them all for a moment.
+  */
+  const allowed = useQuery({
+    queryKey: ["leave-modules"],
+    // Cheap and small, and it decides what is on screen -- refetched when the
+    // window is focused so an administrator's change lands without a reload.
+    refetchOnWindowFocus: true,
+    queryFn: async () =>
+      (await api.get<ApiEnvelope<string[]>>(
+        "/admin/approval-config/visibility/me")).data.data
+  });
+
   const tabs = useMemo(() => {
     const isPlatformAdmin = hasRole("SUPER_ADMIN") || hasRole("COMPANY_ADMIN");
+    const configured = allowed.data;
     return TABS.filter((t) => {
-      if (t.key === "leave") return !isPlatformAdmin;
-      if (t.key === "approvals") return hasPermission("LEAVE_APPROVE");
-      if (t.key === "policies") return hasPermission("ORG_MANAGE");
+      /*
+        The permission rules come first and the configuration narrows them.
+
+        Order matters: configuration is a display preference and these are
+        entitlements. Ticking Approvals visible for a role that lacks
+        LEAVE_APPROVE must not put the tab on their screen -- the page behind it
+        would refuse them, which reads as a broken portal rather than as a
+        permission they do not have.
+      */
+      if (t.key === "leave" && isPlatformAdmin) return false;
+      if (t.key === "approvals" && !hasPermission("LEAVE_APPROVE")) return false;
+      if (t.key === "policies" && !hasPermission("ORG_MANAGE")) return false;
+      // Undefined while loading or after a failure: show it, as the table's own
+      // default does.
+      if (configured && !configured.includes(t.module)) return false;
       return true;
     });
-  }, [hasPermission, hasRole]);
+  }, [hasPermission, hasRole, allowed.data]);
 
   /*
     The tab the URL is asking for.

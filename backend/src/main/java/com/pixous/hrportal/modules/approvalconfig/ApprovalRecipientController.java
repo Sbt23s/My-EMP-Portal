@@ -23,6 +23,7 @@ import java.util.Map;
 public class ApprovalRecipientController {
 
     private final ApprovalRecipientService service;
+    private final ModuleVisibilityService visibility;
 
     /**
      * The whole grid: every module, every recipient, ticked or not.
@@ -36,7 +37,10 @@ public class ApprovalRecipientController {
         return ApiResponse.ok(Map.of(
                 "modules", ApprovalRecipientService.MODULES,
                 "roles", ApprovalRecipientService.RECIPIENT_ROLES,
-                "config", service.grid()
+                "config", service.grid(),
+                // Who holds each role, by name -- a tick on "HR" reaches three
+                // people on this company's data, and the grid could not say who.
+                "holders", service.holders()
         ));
     }
 
@@ -59,5 +63,47 @@ public class ApprovalRecipientController {
         return ApiResponse.ok(
                 service.save(moduleCode, roles, SecurityUtils.currentUserId()),
                 "Approval recipients updated");
+    }
+
+    /**
+     * The visibility grid: which Leave Management modules each role sees.
+     *
+     * <p>A different question from the recipient grid above -- "Team Leaders
+     * may be addressed on Permission" and "Team Leaders do not see Work From
+     * Home" are separate sentences, and neither expresses the other.
+     */
+    @GetMapping("/visibility")
+    @PreAuthorize("hasAuthority('ORG_MANAGE')")
+    public ApiResponse<Map<String, Object>> visibilityGrid() {
+        return ApiResponse.ok(Map.of(
+                "roles", ModuleVisibilityService.ROLES,
+                "modules", ModuleVisibilityService.MODULES,
+                "config", visibility.grid()
+        ));
+    }
+
+    /** Replace one role's ticks. An empty list hides every module from it. */
+    @PutMapping("/visibility/{roleCode}")
+    @PreAuthorize("hasAuthority('ORG_MANAGE')")
+    public ApiResponse<Map<String, Boolean>> saveVisibility(
+            @PathVariable String roleCode,
+            @RequestBody Map<String, List<String>> body) {
+        List<String> modules = body == null ? List.of() : body.getOrDefault("modules", List.of());
+        return ApiResponse.ok(
+                visibility.save(roleCode, modules, SecurityUtils.currentUserId()),
+                "Module visibility updated");
+    }
+
+    /**
+     * What the signed-in person may see, for the Leave Management tabs.
+     *
+     * <p>Not guarded on ORG_MANAGE: every employee's own page asks this about
+     * themselves, and it answers with a list of tab names. It is a display
+     * preference, and the pages behind those tabs are guarded individually --
+     * a tab appearing grants nothing.
+     */
+    @GetMapping("/visibility/me")
+    public ApiResponse<java.util.Set<String>> myVisibleModules() {
+        return ApiResponse.ok(visibility.visibleFor(SecurityUtils.currentUserId()));
     }
 }

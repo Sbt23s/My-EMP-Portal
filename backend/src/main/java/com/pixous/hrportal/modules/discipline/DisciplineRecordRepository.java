@@ -32,14 +32,27 @@ public interface DisciplineRecordRepository extends JpaRepository<DisciplineReco
     Page<DisciplineRecord> filterAll(@Param("status") String status, Pageable pageable);
 
     /**
-     * What the CTO has still to look at.
+     * Every record the CTO may see, whatever state it is in.
      *
-     * <p>Cancelled records are left out: they were withdrawn before anybody
-     * acted on them, and a review queue is a list of decisions still owed.
+     * <p>This used to return OPEN and UNDER_REVIEW only, on the reasoning that
+     * a review queue is a list of decisions still owed. The effect was that a
+     * record vanished from the CTO's screen the moment they reviewed it — they
+     * pressed Save, the row disappeared, and there was no way back to what they
+     * had just written. Filtering the page by Resolved showed "No discipline
+     * records yet" on a company that had two.
+     *
+     * <p>A record is not finished when it is decided; it is the decision. The
+     * page has a status filter and a Resolved tile precisely so somebody can
+     * look back at one, and both were reading a list that could never contain
+     * them.
+     *
+     * <p>CANCELLED is still excluded. Those were withdrawn before anybody acted,
+     * and they are visible to whoever raised them under their own tab — the
+     * CTO was never asked about them.
      */
     @Query("""
             SELECT d FROM DisciplineRecord d
-            WHERE d.status IN ('OPEN', 'UNDER_REVIEW')
+            WHERE d.status <> 'CANCELLED'
             ORDER BY d.incidentDate DESC, d.id DESC
             """)
     List<DisciplineRecord> findPendingReview();

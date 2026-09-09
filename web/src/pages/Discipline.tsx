@@ -2,7 +2,7 @@ import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Plus, Inbox, ShieldAlert, User, IdCard, Users, CalendarDays, Flag,
+  Plus, ShieldAlert, User, IdCard, Users, CalendarDays, Flag,
   Gavel, Paperclip, X, Search, Send,
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -25,7 +25,6 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ExportExcelButton } from "@/components/ui/export-excel-button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
-import { StatTile, TILE_FILLS } from "@/components/ui/stat-tile";
 import { resolvePhotoUrl } from "@/components/ui/avatar";
 import { DATE_MIN, todayIso } from "@/lib/dates";
 import type { ApiEnvelope } from "@/types";
@@ -187,13 +186,6 @@ export default function DisciplinePage() {
 
   const paged = usePagedRows(list, 15, [tab, q, severity, status, rawList]);
 
-  const counts = useMemo(() => ({
-    ALL: rawList.length,
-    OPEN: rawList.filter((d) => d.status === "OPEN").length,
-    UNDER_REVIEW: rawList.filter((d) => d.status === "UNDER_REVIEW").length,
-    RESOLVED: rawList.filter((d) => d.status === "RESOLVED").length,
-  }), [rawList]);
-
   const exportRecords = async () => {
     if (list.length === 0) { toast.error("Nothing to export."); return; }
     const XLSX = await import("xlsx");
@@ -268,26 +260,15 @@ export default function DisciplinePage() {
       )}
 
       {/*
-        The tiles are HR's, not the CTO's.
+        The four tiles are gone, for everybody.
 
-        They count a queue: how many raised, how many still waiting, how many
-        dealt with. That is the shape of somebody's workload, and the person
-        who reviews records rather than manages them is looking at one row at a
-        time -- on this company's data, one record in total, under four tiles
-        reading 1 / 1 / 0 / 0.
+        They counted a queue -- raised, waiting, dealt with -- which is a useful
+        shape when there are hundreds of rows and a poor one when there are
+        three: four large panels reading 3 / 0 / 0 / 2 above a table that says
+        the same thing in its status column, and says which records they are.
+        The status filter below already answers the question the tiles were
+        asking, and answers it by showing the rows.
       */}
-      {!isCto && (
-        <div className="mb-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          <StatTile label="All" value={counts.ALL} icon={Inbox} fill={TILE_FILLS.violet}
-                    hint="Every record in this list" />
-          <StatTile label="Open" value={counts.OPEN} icon={ShieldAlert} fill={TILE_FILLS.amber}
-                    hint="Raised, not yet reviewed" />
-          <StatTile label="Under review" value={counts.UNDER_REVIEW} icon={Gavel} fill={TILE_FILLS.blue}
-                    hint="With the CTO" />
-          <StatTile label="Resolved" value={counts.RESOLVED} icon={Flag} fill={TILE_FILLS.green}
-                    hint="Dealt with" />
-        </div>
-      )}
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div className="space-y-1">

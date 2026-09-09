@@ -101,7 +101,24 @@ function statusTone(s: string) {
   }
 }
 
-const pretty = (s?: string) => (s || "").replace(/_/g, " ");
+/**
+ * A status, as a person reads it.
+ *
+ * RESOLVED is stored but not shown. A disciplinary record is not a fault that
+ * gets fixed -- nothing about the incident is resolved by the CTO reading it --
+ * and the word made a warning look like a ticket that had been closed out. What
+ * actually happened is that the review is finished, so that is what it says.
+ *
+ * The stored value is untouched. Renaming it would mean a migration across
+ * every existing record and a rewrite of the filters and the export for a
+ * change that is entirely about wording.
+ */
+const STATUS_LABELS: Record<string, string> = {
+  RESOLVED: "Review complete"
+};
+
+const pretty = (s?: string) =>
+  STATUS_LABELS[(s || "").toUpperCase()] ?? (s || "").replace(/_/g, " ");
 
 export default function DisciplinePage() {
   const qc = useQueryClient();
@@ -939,7 +956,7 @@ function DetailDialog({ record, isCto, isSubject, onClose, onSaved }: {
           */}
           <div className="flex flex-wrap items-end justify-between gap-2">
             <p className="max-w-xs text-xs text-muted-foreground">
-              Saving marks this record resolved and tells the employee.
+              Saving marks the review complete and tells the employee.
             </p>
             <Button disabled={review.isPending} onClick={() => review.mutate()}>
               {review.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}

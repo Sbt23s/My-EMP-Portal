@@ -368,12 +368,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * exactly what it saw before -- rather than silently losing every module.
    */
   const matchesVisibleRoles = useCallback(
-    (vRoles: string[], ctoConfigured = false): boolean => {
+    (vRoles: string[], ctoConfigured = false, moduleForCto?: string): boolean => {
       if (!user) return false;
       const roles = user.roles || [];
 
       if (user.employeeCode?.toUpperCase() === "PIX-E100") {
         if (vRoles.includes("CTO")) return true;
+        /*
+          Attendance is not the Role Visibility screen's to take from the CTO.
+
+          The company head has to be able to see who is in. It is the one
+          reading nobody else can produce for them -- HR sees their own teams,
+          a Team Leader sees theirs, and only this screen puts the company on
+          one page. A rung meant for tailoring which modules a role bothers
+          with should not be able to switch it off, and on this company's data
+          it had: the list said HR and Team Leader, and Employee Attendance
+          left the CTO's sidebar.
+
+          Named here rather than enforced in the tech-admin screen because this
+          is where every reader passes. ATTENDANCE_MODULES covers both entries
+          that hang off it -- the personal page and the company one.
+        */
+        if (moduleForCto === "ATTENDANCE") return true;
         /*
           No CTO key, so the question is whether anybody has ever been asked.
 
@@ -445,7 +461,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
          */
         const vRoles = serverModules.roles?.[code];
         if (!vRoles) return true;
-        return matchesVisibleRoles(vRoles, serverModules.ctoConfigured?.includes(code) === true);
+        return matchesVisibleRoles(vRoles, serverModules.ctoConfigured?.includes(code) === true, code);
       }
       if (serverModules && !serverModules.configured) {
         return true; // nothing configured server-side: show everything
@@ -465,7 +481,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             // The same rule the server path uses, so a switch cannot mean one
             // thing here and another there.
-            return matchesVisibleRoles(mod.visibleRoles || [], mod.ctoConfigured === true);
+            return matchesVisibleRoles(mod.visibleRoles || [], mod.ctoConfigured === true,
+                                       (mod.code || "").toUpperCase());
           }
         }
       } catch (e) {}

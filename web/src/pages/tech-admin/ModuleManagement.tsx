@@ -418,8 +418,11 @@ export function TechAdminModuleManagement() {
                                   untouched switch is not an instruction --
                                   see matchesVisibleRoles, which this mirrors.
                                 */
-                                const isVisible = roleKey === "CTO" && !module.ctoConfigured
-                                  && !module.visibleRoles.includes("CTO")
+                                const isVisible = roleKey === "CTO"
+                                  // Attendance is the CTO's whatever this says
+                                  // -- see matchesVisibleRoles in AuthContext.
+                                  && (module.code === "ATTENDANCE"
+                                      || (!module.ctoConfigured && !module.visibleRoles.includes("CTO")))
                                   ? true
                                   : module.visibleRoles.includes(roleKey);
                                 return (
@@ -567,20 +570,45 @@ export function TechAdminModuleManagement() {
                          * it the same way, so the switch and the behaviour
                          * agree.
                          */
-                        const isRoleActive = item.key === "CTO" && !selectedModuleObj.ctoConfigured
-                          && !selectedModuleObj.visibleRoles.includes("CTO")
+                        /*
+                          Attendance cannot be taken from the CTO here. The
+                          company head has to be able to see who is in, and it
+                          is the one reading nobody else can produce for them.
+                          The switch is shown on and disabled rather than
+                          hidden, so the rule is visible instead of being a
+                          toggle that silently does nothing.
+                        */
+                        const ctoLockedOn =
+                          item.key === "CTO" && selectedModuleObj.code === "ATTENDANCE";
+                        const isRoleActive = ctoLockedOn
                           ? true
-                          : selectedModuleObj.visibleRoles.includes(item.key);
+                          : item.key === "CTO" && !selectedModuleObj.ctoConfigured
+                            && !selectedModuleObj.visibleRoles.includes("CTO")
+                            ? true
+                            : selectedModuleObj.visibleRoles.includes(item.key);
                         return (
                           <div key={item.key} className="flex items-center justify-between">
                             <div>
                               <div className="font-medium text-sm">{item.label}</div>
-                              <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{item.desc}</div>
+                              <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>
+                                {ctoLockedOn
+                                  ? "Always on — the company head has to be able to see who is in"
+                                  : item.desc}
+                              </div>
                             </div>
                             <button
                               type="button"
-                              onClick={() => toggleCompanyModuleRole(tenantId, selectedModuleObj.code, item.key)}
-                              className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                              disabled={ctoLockedOn}
+                              title={ctoLockedOn
+                                ? "Attendance cannot be hidden from the CTO"
+                                : undefined}
+                              onClick={() => {
+                                if (ctoLockedOn) return;
+                                toggleCompanyModuleRole(tenantId, selectedModuleObj.code, item.key);
+                              }}
+                              className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                ctoLockedOn ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                              } ${
                                 isRoleActive ? (isDark ? 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]' : 'bg-blue-600 shadow-sm') : (isDark ? 'bg-gray-700' : 'bg-slate-200')
                               }`}
                             >

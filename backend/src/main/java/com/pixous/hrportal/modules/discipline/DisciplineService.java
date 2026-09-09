@@ -276,9 +276,24 @@ public class DisciplineService {
                     + saved.getReferenceCode() + " is waiting in the portal.");
         }
         notify(saved.getReportedBy(), saved.getReferenceCode() + " reviewed",
-                "The CTO reviewed this record. It is now "
-                        + saved.getStatus().toLowerCase().replace('_', ' ') + ".");
+                "The CTO reviewed this record. " + statusSentence(saved.getStatus()));
         return toView(saved);
+    }
+
+    /**
+     * How a status reads in a sentence.
+     *
+     * <p>RESOLVED said "It is now resolved", which is the wrong word for a
+     * disciplinary record: nothing about the incident is resolved by the CTO
+     * reading it, and it made a warning sound like a ticket that had been
+     * closed out. The stored value stays RESOLVED -- renaming it would mean a
+     * migration across every record for a change that is entirely about
+     * wording -- and only what people read changes. The screen relabels it the
+     * same way.
+     */
+    private static String statusSentence(String status) {
+        if ("RESOLVED".equalsIgnoreCase(status)) return "The review is complete.";
+        return "It is now " + (status == null ? "" : status.toLowerCase().replace('_', ' ')) + ".";
     }
 
     // ----------------------------------------------------------------- helpers

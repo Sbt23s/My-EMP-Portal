@@ -153,7 +153,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
               AND (:status IS NULL
                    OR (:status = 'OFFBOARDED' AND u.profileStatus = 'OFFBOARDED')
                    OR (:status = 'ACTIVE' AND (u.profileStatus IS NULL OR u.profileStatus <> 'OFFBOARDED')))
-              -- The three platform accounts, as in search() above.
               AND (u.employeeCode IS NULL
                    OR UPPER(u.employeeCode) NOT IN ('PIX-E100', 'ADM0001', 'SADM001'))
             """)

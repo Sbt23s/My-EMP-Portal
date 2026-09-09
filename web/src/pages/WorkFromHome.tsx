@@ -191,7 +191,23 @@ export default function WorkFromHomePage() {
     refetchOnWindowFocus: true,
   });
 
-  const inboxRows = inbox.data ?? [];
+  /*
+    "Assigned to me" means addressed to me.
+
+    /wfh/for-me returns every request to anyone on the HR desk, which is right
+    for the desk-wide queue it was written to serve -- HR is a desk and a
+    request sent to one of them is the desk's to answer. This tab asks a
+    narrower question, and without the filter it showed the CTO ten requests
+    addressed to other people.
+
+    Narrowed here rather than in the endpoint, because "All" beside this tab
+    wants exactly what the endpoint returns. Own requests are excluded: those
+    are in My Requests, and a queue that lists your own back at you as work
+    waiting for you is one people stop trusting.
+  */
+  const inboxRows = (inbox.data ?? []).filter(
+    (r) => r.requestedTo === user?.id && r.userId !== user?.id
+  );
   const myRows = mine.data ?? [];
   const showInbox = inboxRows.length > 0 || hasPermission("LEAVE_APPROVE");
 

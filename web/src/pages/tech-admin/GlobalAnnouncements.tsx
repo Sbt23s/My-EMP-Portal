@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, Suspense, lazy } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Video,
@@ -25,7 +25,13 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { resolvePhotoUrl } from "@/components/ui/avatar";
-import { Lottie } from "lottie-react";
+/*
+  Lazily, as GlobalLoginAnnouncementModal loads it. lottie-react is 760 KB
+  across two chunks and renders one thing here: a preview of an effect the
+  administrator has just uploaded, which most visits to this page never do.
+*/
+const Lottie = lazy(() =>
+  import("lottie-react").then((m) => ({ default: m.Lottie })));
 
 interface Announcement {
   id: number;
@@ -386,7 +392,9 @@ export function TechAdminGlobalAnnouncements() {
                       effect is not judged against a white panel it never meets. */}
                   <div className="h-[92px] rounded-lg bg-slate-900 overflow-hidden flex items-center justify-center">
                     {effectPreviewUrl ? (
-                      <Lottie src={effectPreviewUrl} autoplay loop className="h-full w-full" />
+                      <Suspense fallback={null}>
+                        <Lottie src={effectPreviewUrl} autoplay loop className="h-full w-full" />
+                      </Suspense>
                     ) : (
                       <span className="text-[11px] text-slate-500">No effect chosen</span>
                     )}

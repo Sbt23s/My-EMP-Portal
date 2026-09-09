@@ -287,13 +287,32 @@ export default function PermissionsPage() {
   const myList = narrow((mine.data ?? []).filter((r) => tab === "ALL" || (r.status || "").toUpperCase() === tab));
   const myPaged = usePagedRows(myList, 15, [tab, mine.data, q, period, fromDate, toDate]);
 
-  const approverList = narrow((pending.data ?? []).filter((r) => tab === "ALL" || (r.status || "").toUpperCase() === tab));
-  const approverPaged = usePagedRows(approverList, 15, [tab, pending.data, q, period, fromDate, toDate]);
+  /*
+    "Assigned to me" means addressed to me.
+
+    /leave/permissions/for-me returns the whole pending queue to anyone on the
+    HR desk, which is right and deliberate -- HR is a desk and a request sent to
+    one of them is the desk's to answer. But this tab is not asking that. It
+    asks what is waiting on this person, and it was showing the CTO ten requests
+    addressed to Harish C and Amutha Kumari G.
+
+    Narrowed here rather than in the endpoint, because the endpoint's answer is
+    correct for the thing it is for -- the desk-wide queue -- and "All Requests"
+    beside this tab reads a different call. Own submissions are excluded: those
+    are in My Requests, and a queue that lists your own request back at you as
+    work waiting for you is one people stop trusting.
+  */
+  const assignedToMe = (pending.data ?? []).filter(
+    (r) => r.requestedTo === user?.id && r.userId !== user?.id
+  );
+  const approverList = narrow(assignedToMe.filter((r) => tab === "ALL" || (r.status || "").toUpperCase() === tab));
+  const approverPaged = usePagedRows(approverList, 15, [tab, pending.data, q, period, fromDate, toDate, user?.id]);
 
   // Counts for the tiles — of whichever view the Team Leader is looking at.
   const tileRows = view === "MINE" ? (mine.data ?? [])
     : view === "ALL_EMP" ? (all.data ?? [])
-      : (pending.data ?? []);
+      // Assigned to me, so the tiles count what that tab actually lists.
+      : assignedToMe;
   /*
     What the export writes: the rows the table is showing, after the search,
     the period and the date range. Exporting `tileRows` would have written the
@@ -368,7 +387,7 @@ export default function PermissionsPage() {
       ? [["ALL_EMP", `All Requests (${(all.data ?? []).length})`] as const]
       : []),
     ...(isApprover
-      ? [["TO_ME", `Assigned to me (${(pending.data ?? []).length})`] as const]
+      ? [["TO_ME", `Assigned to me (${assignedToMe.length})`] as const]
       : []),
     ...(isHead ? [] : [["MINE", `My Requests (${(mine.data ?? []).length})`] as const])
   ];

@@ -51,3 +51,10 @@ backend/localStorage.removeItem(k))
 docs/credentials/
 docs/downloads/Pixous_HR_Login_Credentials_v1.0.pdf
 docs/downloads/Pixous_HR_Login_Credentials_v1.0.html
+
+# Playwright's run marker, written on every test run.
+web/test-results/
+# Gradle's Netbeans cache, regenerated on demand.
+mobile-shell/.gradle/nb-cache/
+# Stray capture from a one-off go-live check.
+*.log.err

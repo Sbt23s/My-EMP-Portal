@@ -1,11 +1,28 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense, lazy } from "react";
 import { X, Volume2, VolumeX, Play, Pause, Megaphone } from "lucide-react";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import { api, tokenStore } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { resolvePhotoUrl } from "@/components/ui/avatar";
-import { Lottie } from "lottie-react";
+/*
+  lottie-react is 316 KB minified -- the fourth-largest chunk in the build, and
+  larger than React itself. It renders one thing: the optional entrance
+  animation over an announcement card, which most companies have never uploaded
+  and which is skipped entirely when effectEnabled is off.
+
+  Imported at the top of this file, it loaded on every page: this modal is
+  mounted unconditionally in AppLayout so it can listen for an announcement, so
+  every sign-in fetched a third of a megabyte for an effect that usually does
+  not exist. Behind a lazy import it is fetched only when an announcement
+  actually carries one.
+
+  Suspense fallback is null rather than a spinner: it is decoration over a card
+  that is already on screen, and a loading state for a flourish would be worse
+  than the flourish arriving a moment late.
+*/
+const Lottie = lazy(() =>
+  import("lottie-react").then((m) => ({ default: m.Lottie })));
 
 interface Announcement {
   id: number;
@@ -240,12 +257,14 @@ export function GlobalLoginAnnouncementModal() {
         {/* Entrance Lottie Effect Over Card */}
         {effectUrl ? (
           <div className="absolute inset-0 z-30 pointer-events-none">
-            <Lottie
-              src={effectUrl}
-              autoplay
-              loop={false}
-              className="h-full w-full"
-            />
+            <Suspense fallback={null}>
+              <Lottie
+                src={effectUrl}
+                autoplay
+                loop={false}
+                className="h-full w-full"
+              />
+            </Suspense>
           </div>
         ) : null}
 

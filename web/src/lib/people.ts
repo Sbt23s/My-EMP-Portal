@@ -62,3 +62,20 @@ export function displayPersonName(
 export function isCompanyHead(employeeCode?: string | null): boolean {
   return (employeeCode ?? "").trim().toUpperCase() === HEAD_CODE;
 }
+
+/**
+ * The three accounts that run the platform rather than work at the company:
+ * the super administrator, the system administrator and the company head.
+ *
+ * <p>They hold logins so the portal can be configured and approvals can reach
+ * a top, but they have no shift and no team, and they are not an audience —
+ * a read receipt is about whether the people a message was for have seen it.
+ *
+ * <p>Mirrors common/PlatformAccounts on the server, which is where the same
+ * three codes are named for the Java-side checks.
+ */
+const PLATFORM_CODES = new Set(["PIX-E100", "ADM0001", "SADM001"]);
+
+export function isPlatformAccount(employeeCode?: string | null): boolean {
+  return PLATFORM_CODES.has((employeeCode ?? "").trim().toUpperCase());
+}

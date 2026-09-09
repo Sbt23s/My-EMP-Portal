@@ -6,6 +6,7 @@ import { useGroupCall, MAX_GROUP_PARTICIPANTS, MAX_AUDIO_PARTICIPANTS } from "@/
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { Avatar } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
+import { isPlatformAccount } from "@/lib/people";
 import { useChat, type ChatMessage, type SendExtras } from "@/hooks/useChat";
 import {
   Send,
@@ -2135,29 +2136,27 @@ export default function ChatPage() {
               </p>
             ) : (
               (() => {
-                const validPeople = receipts.data.people.filter(p => {
-                  // Admin and system accounts shouldn't be counted in receipt stats
-                  if (!p.employeeCode) return false;
-                  if (p.employeeCode.includes("ADM")) return false;
-                  if (p.name.toLowerCase().includes("admin")) return false;
-                  
-                  // STRICT USER REQUIREMENT:
-                  // 1. Employment Status = Active
-                  if (p.enabled === false) return false;
-                  
-                  // 2. Onboarding Status = Onboarded / Completed
-                  // (Backend uses ACTIVE for newly signed up users, and ONBOARDED/COMPLETED for finished ones)
-                  // TEMPORARY FIX for testing: Allow PENDING and null so test seeded users show up.
-                  // The user requested to hide PENDING, but all test users are PENDING, causing the list to be empty.
-                  if (p.profileStatus) {
-                    const status = p.profileStatus.toUpperCase();
-                    if (status !== "ONBOARDED" && status !== "COMPLETED" && status !== "ACTIVE" && status !== "PENDING") {
-                      return false;
-                    }
-                  }
-                  
-                  return true;
-                });
+                /*
+                  The platform accounts are not an audience.
+
+                  The super administrator, the system administrator and the
+                  company head are excluded because a read receipt is about
+                  whether the people a message was for have seen it, and none
+                  of the three is one of them.
+
+                  Everything else this filter used to do is gone. It matched
+                  "ADM" anywhere in an employee code and the word "admin"
+                  anywhere in a name -- so an employee called Padmini, or one
+                  whose code happened to contain those letters, silently
+                  vanished from the list. It also dropped anybody whose
+                  profileStatus was not one of four spellings, which the
+                  comment beside it admitted was producing empty lists.
+
+                  The server decides who was addressed. It knows the channel
+                  and whether it is an announcement; this does not.
+                */
+                const validPeople = receipts.data.people.filter(p =>
+                  p.enabled !== false && !isPlatformAccount(p.employeeCode));
                 const validTotal = validPeople.length;
                 const validRead = validPeople.filter(p => p.readAt).length;
                 const validAck = validPeople.filter(p => p.acknowledgedAt).length;

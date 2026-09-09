@@ -902,9 +902,30 @@ public class CommunityService {
         java.util.Map<Long, MessageRead> byUser = readRepository.findByMessageId(messageId).stream()
                 .collect(Collectors.toMap(MessageRead::getUserId, r -> r, (a, b) -> a));
 
-        // An announcement channel reaches every member; so does any other room.
-        List<User> audience = memberRepository.findByCommunity_Id(msg.getCommunity().getId()).stream()
-                .map(CommunityMember::getUser).filter(java.util.Objects::nonNull).toList();
+        /*
+         * Who was actually addressed.
+         *
+         * An announcement channel is not a membership list. listFor returns it
+         * to everybody regardless of who is a member -- that is what makes it
+         * an announcement -- so its member table holds whoever happened to be
+         * added, usually just the person who created it.
+         *
+         * Reading the members here therefore asked the wrong question. On this
+         * company's data the channel has one member, so a message read by six
+         * people reported "0 / 1" and named nobody: the five who had read it
+         * were not members, so their receipts were dropped before the list was
+         * built. The bubble said "Read by 6" from a separate count, which is
+         * why the two disagreed on screen.
+         *
+         * For an announcement the audience is every active employee. For any
+         * other room it is the members, as before.
+         */
+        List<User> audience = msg.getCommunity().isAnnouncement()
+                ? userRepository.findByEnabledTrue().stream()
+                        .filter(u -> !"OFFBOARDED".equalsIgnoreCase(u.getProfileStatus()))
+                        .toList()
+                : memberRepository.findByCommunity_Id(msg.getCommunity().getId()).stream()
+                        .map(CommunityMember::getUser).filter(java.util.Objects::nonNull).toList();
 
         List<java.util.Map<String, Object>> people = audience.stream().map(u -> {
             MessageRead r = byUser.get(u.getId());

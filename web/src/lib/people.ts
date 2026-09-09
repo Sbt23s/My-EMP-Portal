@@ -47,3 +47,18 @@ export function displayPersonName(
   // -- keeps the name and corrects the title.
   return trimmed.replace(/\bCEO\b/g, "CTO");
 }
+
+/**
+ * Whether this account is the company head.
+ *
+ * <p>The literal "PIX-E100" appears in fifteen files, half of them upper-casing
+ * the code first and half not — so a code stored as "pix-e100" is the CTO on
+ * some screens and an ordinary employee on others. One expression, used
+ * everywhere, cannot disagree with itself.
+ *
+ * <p>An employee code rather than a role because that is what identifies them:
+ * there is no CTO role in this schema.
+ */
+export function isCompanyHead(employeeCode?: string | null): boolean {
+  return (employeeCode ?? "").trim().toUpperCase() === HEAD_CODE;
+}

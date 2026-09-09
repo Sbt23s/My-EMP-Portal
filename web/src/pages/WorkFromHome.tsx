@@ -31,6 +31,7 @@ import { usePagedRows, TablePagination } from "@/components/ui/table-pagination"
 import { StatTile, TILE_FILLS } from "@/components/ui/stat-tile";
 import { EmptyState } from "@/components/EmptyState";
 import { useAuth } from "@/hooks/useAuth";
+import { isCompanyHead } from "@/lib/people";
 import { DATE_MAX, FUTURE_DATE_MAX, todayIso } from "@/lib/dates";
 import type { ApiEnvelope } from "@/types";
 
@@ -103,6 +104,7 @@ function dateRange(r: WfhRow) {
 export default function WorkFromHomePage() {
   const qc = useQueryClient();
   const { user, hasPermission } = useAuth();
+  const isHead = isCompanyHead(user?.employeeCode);
 
   /*
     Who sees the inbox tab.
@@ -316,9 +318,19 @@ export default function WorkFromHomePage() {
                 exports `filtered` -- what is on screen after the search box
                 and the month range, not a different query of the same name. */}
             <ExportExcelButton onClick={exportExcel} />
-            <Button onClick={() => setApplyOpen(true)}>
-              <Plus className="mr-1.5 h-4 w-4" /> Apply for WFH
-            </Button>
+            {/*
+              The company head does not apply to work from home.
+
+              There is nobody above them for the request to go to, so the
+              approver list the form needs comes back empty and the request
+              cannot be submitted. A button that opens a form that cannot be
+              sent is worse than no button.
+            */}
+            {!isHead && (
+              <Button onClick={() => setApplyOpen(true)}>
+                <Plus className="mr-1.5 h-4 w-4" /> Apply for WFH
+              </Button>
+            )}
           </>
         }
       />

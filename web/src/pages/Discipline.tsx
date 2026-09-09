@@ -267,16 +267,27 @@ export default function DisciplinePage() {
         </div>
       )}
 
-      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        <StatTile label="All" value={counts.ALL} icon={Inbox} fill={TILE_FILLS.violet}
-                  hint="Every record in this list" />
-        <StatTile label="Open" value={counts.OPEN} icon={ShieldAlert} fill={TILE_FILLS.amber}
-                  hint="Raised, not yet reviewed" />
-        <StatTile label="Under review" value={counts.UNDER_REVIEW} icon={Gavel} fill={TILE_FILLS.blue}
-                  hint="With the CTO" />
-        <StatTile label="Resolved" value={counts.RESOLVED} icon={Flag} fill={TILE_FILLS.green}
-                  hint="Dealt with" />
-      </div>
+      {/*
+        The tiles are HR's, not the CTO's.
+
+        They count a queue: how many raised, how many still waiting, how many
+        dealt with. That is the shape of somebody's workload, and the person
+        who reviews records rather than manages them is looking at one row at a
+        time -- on this company's data, one record in total, under four tiles
+        reading 1 / 1 / 0 / 0.
+      */}
+      {!isCto && (
+        <div className="mb-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          <StatTile label="All" value={counts.ALL} icon={Inbox} fill={TILE_FILLS.violet}
+                    hint="Every record in this list" />
+          <StatTile label="Open" value={counts.OPEN} icon={ShieldAlert} fill={TILE_FILLS.amber}
+                    hint="Raised, not yet reviewed" />
+          <StatTile label="Under review" value={counts.UNDER_REVIEW} icon={Gavel} fill={TILE_FILLS.blue}
+                    hint="With the CTO" />
+          <StatTile label="Resolved" value={counts.RESOLVED} icon={Flag} fill={TILE_FILLS.green}
+                    hint="Dealt with" />
+        </div>
+      )}
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div className="space-y-1">
@@ -765,7 +776,6 @@ function DetailDialog({ record, isCto, isSubject, onClose, onSaved }: {
 }) {
   const [response, setResponse] = useState("");
   const [remarks, setRemarks] = useState(record.ctoRemarks || "");
-  const [status, setStatus] = useState(record.status);
 
   const files = (record.attachments || "").split(",").map((f) => f.trim()).filter(Boolean);
   const decided = record.status === "CLOSED" || record.status === "CANCELLED";
@@ -779,7 +789,8 @@ function DetailDialog({ record, isCto, isSubject, onClose, onSaved }: {
 
   const review = useMutation({
     mutationFn: async () =>
-      api.post(`/discipline/${record.id}/review`, { remarks: remarks.trim() || undefined, status }),
+      api.post(`/discipline/${record.id}/review`,
+               { remarks: remarks.trim() || undefined, status: "RESOLVED" }),
     onSuccess: () => { toast.success("Review saved"); onSaved(); },
     onError: (e) => toast.error(apiMessage(e, "Could not save that review")),
   });
@@ -931,16 +942,24 @@ function DetailDialog({ record, isCto, isSubject, onClose, onSaved }: {
                       onChange={(e) => setRemarks(e.target.value)}
                       placeholder="The employee is shown this and told about it." />
           </div>
+          {/*
+            No status picker.
+
+            It offered OPEN, UNDER_REVIEW and RESOLVED, and defaulted to
+            whatever the record already was -- so the usual outcome of writing
+            a review and pressing Save was a record that stayed OPEN, with the
+            remarks attached and nothing saying it had been dealt with. The
+            employee was told about a review of a record still marked as
+            waiting for one.
+
+            Reviewing it is what settles it. The status the save sends is
+            RESOLVED, decided below rather than chosen here, because there is
+            no third thing the CTO does on this screen.
+          */}
           <div className="flex flex-wrap items-end justify-between gap-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="d-status">Status</Label>
-              <Select id="d-status" value={status} onChange={(e) => setStatus(e.target.value)}
-                      className="w-44">
-                {STATUSES.filter((s) => s !== "CANCELLED").map((s) => (
-                  <option key={s} value={s}>{pretty(s)}</option>
-                ))}
-              </Select>
-            </div>
+            <p className="max-w-xs text-xs text-muted-foreground">
+              Saving marks this record resolved and tells the employee.
+            </p>
             <Button disabled={review.isPending} onClick={() => review.mutate()}>
               {review.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
               Save review

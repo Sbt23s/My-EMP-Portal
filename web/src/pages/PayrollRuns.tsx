@@ -56,11 +56,29 @@ export default function PayrollRunsPage() {
   const withSalary = staff.filter((e) => salaryByUser.has(e.id)).length;
   const withoutSalary = staff.length - withSalary;
 
+  /*
+    Runs that produced nothing are not shown.
+
+    Three cards sat at the bottom of this page reading "undefined / 0 Employees
+    Processed / Rs 0.00 / Rs 0.00 / Finance Approved" -- runs that were started,
+    generated no payslips, and were confirmed and approved anyway. The month
+    was undefined because of a field-name mismatch (fixed separately); the
+    zeroes were true.
+
+    An empty run is not a record of anything. It cannot be opened, it has no
+    payslip behind it, and three of them above the real ones is the first thing
+    somebody sees on this page. They are hidden rather than deleted: the rows
+    stay in the database, and a run that later produces payslips appears on its
+    own.
+  */
   const runs = useQuery({
     queryKey: ["payroll-runs"],
     queryFn: async () =>
       (await api.get<ApiEnvelope<PayrollRunResponse[]>>("/payroll/runs")).data.data
   });
+
+  /** Runs that actually produced payslips -- see the note above. */
+  const realRuns = (runs.data ?? []).filter((r) => (r.totalEmployees ?? 0) > 0);
 
   /*
     The run announces each payslip as it finishes, so a request that only
@@ -337,7 +355,7 @@ export default function PayrollRunsPage() {
             <Skeleton key={i} className="h-48" />
           ))}
         </div>
-      ) : (runs.data?.length ?? 0) === 0 ? (
+      ) : realRuns.length === 0 ? (
         <EmptyState
           icon={FileText}
           title="No payroll runs"
@@ -345,7 +363,7 @@ export default function PayrollRunsPage() {
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {runs.data!.map((run) => (
+          {realRuns.map((run) => (
             <Card key={run.id} className="transition-shadow hover:shadow-md">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between mb-2">

@@ -42,8 +42,20 @@ export default function AssetsPage() {
   // Can view full equipment inventory: System Admin, CTO, HR (IT_HR / IT_MGR), or ASSET_MANAGE
   const canView = isSysAdmin || hasPermission("ASSET_MANAGE") || hasRole("IT_HR") || hasRole("IT_MGR");
   
-  // Can register assets & allocate: ONLY System Admin & CTO (PIX-E100)
-  const canManage = isSysAdmin;
+  /*
+    Who can register and allocate.
+
+    This was System Admin and the CTO alone, while HR could see the inventory
+    and do nothing with it -- so the people who actually hand a laptop to a
+    joiner had to ask an administrator to record it. The server never agreed
+    with that: every write on AssetController is guarded on ASSET_MANAGE, which
+    HR holds, so the API would have accepted them all along and only the button
+    was missing.
+
+    ASSET_MANAGE is now what the button asks for, which makes the screen say
+    what the server already enforced.
+  */
+  const canManage = isSysAdmin || hasPermission("ASSET_MANAGE");
   const [invSearch, setInvSearch] = useState("");
   const [invStatus, setInvStatus] = useState("ALL");
   const [invCategory, setInvCategory] = useState("ALL");

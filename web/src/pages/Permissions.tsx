@@ -24,6 +24,7 @@ import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import type { ApiEnvelope, PermissionRow } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
+import { isCompanyHead } from "@/lib/people";
 import { cn } from "@/lib/utils";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
 import { StatTile, TILE_FILLS } from "@/components/ui/stat-tile";
@@ -156,6 +157,15 @@ export default function PermissionsPage() {
   const isSystemAdmin = hasRole("SUPER_ADMIN") || hasRole("COMPANY_ADMIN");
   const isHR = hasRole("IT_MGR") || hasRole("IT_HR");
   const isApprover = hasPermission("LEAVE_APPROVE");
+  /*
+    The company head does not apply for permission.
+
+    Their own requests tab was always offered, and it can only ever read zero:
+    there is nobody above them to address one to, so the form has no recipient
+    and the list has nothing in it. A tab that is structurally empty reads as a
+    page that failed to load.
+  */
+  const isHead = isCompanyHead(user?.employeeCode);
   const seesAll = isHR || isAdmin;
   const tiled = true;
   const [open, setOpen] = useState(false);
@@ -360,7 +370,7 @@ export default function PermissionsPage() {
     ...(isApprover
       ? [["TO_ME", `Assigned to me (${(pending.data ?? []).length})`] as const]
       : []),
-    [["MINE", `My Requests (${(mine.data ?? []).length})`] as const][0]
+    ...(isHead ? [] : [["MINE", `My Requests (${(mine.data ?? []).length})`] as const])
   ];
 
   const decide = useMutation({

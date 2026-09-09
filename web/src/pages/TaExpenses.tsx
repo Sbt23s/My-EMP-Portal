@@ -53,6 +53,16 @@ export default function TaExpensesPage() {
   // Correcting someone else's claim is HR's job alone. Admin and the company
   // head look at the same list, but read-only.
   const isCompanyHead = user?.employeeCode === "PIX-E100";
+  /*
+    Deciding a claim is HR's, and reading it is everybody's who can see it.
+
+    The company head held CLAIM_APPROVE through the blanket permission grant, so
+    Review appeared on their rows too -- and a claim is a small expense that HR
+    settles, not something to escalate. They keep the whole list and the View
+    button: oversight is seeing what is being spent, which is what this page
+    gives them.
+  */
+  const canReview = canApprove && !isCompanyHead;
   const canEditAnyClaim =
     hasRole("IT_MGR", "IT_HR", "CV_HR") && !isCompanyHead && !hasPermission("USER_MANAGE");
 
@@ -436,7 +446,7 @@ export default function TaExpensesPage() {
                             rows -- and a claim is money out, so the person
                             asking cannot be the one who agrees. The server
                             refuses it either way; this stops offering it. */}
-                        {canApprove && row.status === "PENDING" && row.userId !== user?.id && (
+                        {canReview && row.status === "PENDING" && row.userId !== user?.id && (
                           <Button size="sm" variant="outline" onClick={() => setDecideRow(row)}>
                             Review
                           </Button>

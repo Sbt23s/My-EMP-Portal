@@ -86,11 +86,11 @@ class RouteErrorBoundary extends Component<{ children: ReactNode }, { hasError: 
 const DashboardPage = safeLazy(() => import("@/pages/Dashboard"));
 const AttendancePage = safeLazy(() => import("@/pages/Attendance"));
 const TeamAttendancePage = safeLazy(() => import("@/pages/TeamAttendance"));
-const LeavePage = safeLazy(() => import("@/pages/Leave"));
-const LeaveApprovalsPage = safeLazy(() => import("@/pages/LeaveApprovals"));
-const LeavePoliciesPage = safeLazy(() => import("@/pages/LeavePolicies"));
-const PermissionsPage = safeLazy(() => import("@/pages/Permissions"));
-const WorkFromHomePage = safeLazy(() => import("@/pages/WorkFromHome"));
+/*
+  The five leave screens are imported by LeaveManagement, which renders whichever
+  tab is selected. They are not routed to directly any more.
+*/
+const LeaveManagementPage = safeLazy(() => import("@/pages/LeaveManagement"));
 const PayslipsPage = safeLazy(() => import("@/pages/Payslips"));
 const PayrollRunsPage = safeLazy(() => import("@/pages/PayrollRuns"));
 const PayrollRequestsPage = safeLazy(() => import("@/pages/PayrollRequests"));
@@ -181,14 +181,29 @@ export const router = createBrowserRouter([
           </RoleGuard>
         )
       },
-      { path: "leave", element: page(<LeavePage />) },
-      { path: "leave/permissions", element: page(<PermissionsPage />) },
-      { path: "leave/wfh", element: page(<WorkFromHomePage />) },
+      /*
+        Leave Management is one page with five tabs, and these five routes all
+        render it.
+
+        The paths are kept rather than collapsed into one, because they are in
+        bookmarks, in notification links and in the browser history. Each opens
+        the shell with the matching tab already selected -- LeaveManagement
+        reads the path to decide which -- so nothing that pointed at
+        /leave/permissions has to change.
+
+        The guards stay on the routes. LeaveManagement hides a tab the person
+        cannot use, but hiding a tab is a UI decision and this is the one that
+        refuses the URL: somebody typing /leave/approvals without
+        LEAVE_APPROVE still gets stopped here.
+      */
+      { path: "leave", element: page(<LeaveManagementPage />) },
+      { path: "leave/permissions", element: page(<LeaveManagementPage />) },
+      { path: "leave/wfh", element: page(<LeaveManagementPage />) },
       {
         path: "leave/approvals",
         element: page(
           <RoleGuard permission="LEAVE_APPROVE">
-            <LeaveApprovalsPage />
+            <LeaveManagementPage />
           </RoleGuard>
         )
       },
@@ -196,7 +211,7 @@ export const router = createBrowserRouter([
         path: "leave/policies",
         element: page(
           <RoleGuard permission="ORG_MANAGE">
-            <LeavePoliciesPage />
+            <LeaveManagementPage />
           </RoleGuard>
         )
       },

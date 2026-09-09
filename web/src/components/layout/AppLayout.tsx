@@ -4,7 +4,7 @@ import { useTheme } from "next-themes";
 import {
   LayoutDashboard, Clock, Home, CalendarCheck, CheckSquare, Wallet, Users, Boxes,
   LifeBuoy, User, Bell, Menu, X, Moon, Sun, LogOut,
-  FileBarChart, ClipboardList, Settings, Map, MessageSquareWarning, FileText,
+  FileBarChart, ClipboardList, Map, MessageSquareWarning, FileText,
   FolderOpen, ListTodo, FileArchive, CalendarDays, ChevronDown, Bot, Users2, Eraser, ScrollText,
   PartyPopper, MessageSquare, Building2, FolderGit2, History, ShieldAlert, Lock, Award, SlidersHorizontal
 } from "lucide-react";
@@ -88,24 +88,20 @@ const NAV: NavEntry[] = [
   { to: "/employees", label: "Employees", icon: Users, excludeRole: ["IT_TL", "CV_SUP", "IT_EMP", "CV_EMP", "EMPLOYEE", "TEAM_LEAD"] },
   { to: "/attendance", label: "Attendance", icon: Clock, excludeRole: ["SUPER_ADMIN", "COMPANY_ADMIN"], moduleCode: "ATTENDANCE" },
   { to: "/team-attendance", label: "    Employee Attendance      ", icon: Users, anyPermission: ["ATTENDANCE_TEAM"], moduleCode: "ATTENDANCE" },
-  // ─── Leave Management (collapsible group) ───────────────────────────────────
-  {
-    type: "group",
-    key: "leave-management",
-    label: "Leave Management",
-    icon: CalendarCheck,
-    matchPath: "/leave",
-    moduleCode: "LEAVE",
-    children: [
-      { to: "/leave", label: "Leave", icon: CalendarCheck, end: true, excludeRole: ["SUPER_ADMIN", "COMPANY_ADMIN"] },
-      { to: "/leave/permissions", label: "Permission", icon: Clock },
-      // Everybody can ask to work from home, so no permission gate --
-      // the same reasoning as Leave and Permission above it.
-      { to: "/leave/wfh", label: "Work From Home", icon: Home },
-      { to: "/leave/approvals", label: "Approvals", icon: CheckSquare, anyPermission: ["LEAVE_APPROVE"] },
-      { to: "/leave/policies", label: "Leave Policies", icon: Settings, anyPermission: ["ORG_MANAGE"] }
-    ]
-  },
+  /*
+    Leave Management is one page now, so it is one link.
+
+    It was a collapsible group of five: Leave, Permission, Work From Home,
+    Approvals and Leave Policies. All five are the same person doing the same
+    job, and moving between them cost a navigation and a scroll back to the top
+    each time. They are tabs inside /leave now, and the tab bar is where the
+    choosing happens -- a group in the sidebar that expands to reveal what the
+    page already shows across its top is the same list twice.
+
+    The role rules that gated the five entries moved with them: LeaveManagement
+    hides a tab this person cannot use, and the routes still carry the guards.
+  */
+  { to: "/leave", label: "Leave Management", icon: CalendarCheck, moduleCode: "LEAVE" },
   // ────────────────────────────────────────────────────────────────────────────
   // ─── Payroll (collapsible group) ────────────────────────────────────────────
   {

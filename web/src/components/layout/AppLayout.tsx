@@ -165,7 +165,7 @@ const NAV: NavEntry[] = [
     can approve whose leave and who reads whose complaint.
   */
   { to: "/approval-config", label: "Approval Config", icon: SlidersHorizontal,
-    anyPermission: ["ORG_MANAGE"] },
+    anyPermission: ["ORG_MANAGE"], moduleCode: "APPROVAL_CONFIG" },
   { to: "/audit", label: "Audit Log", icon: History, moduleCode: "AUDIT_LOG", onlyRole: ["SUPER_ADMIN", "COMPANY_ADMIN"] },
   { to: "/admin/reset", label: "Fresh Start", icon: Eraser, onlyRole: ["SUPER_ADMIN", "COMPANY_ADMIN"] }
 ];

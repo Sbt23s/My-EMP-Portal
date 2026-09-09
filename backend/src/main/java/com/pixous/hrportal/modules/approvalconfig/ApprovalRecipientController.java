@@ -38,6 +38,9 @@ public class ApprovalRecipientController {
                 "modules", ApprovalRecipientService.MODULES,
                 "roles", ApprovalRecipientService.RECIPIENT_ROLES,
                 "config", service.grid(),
+                // Named people per module, and everybody who could be named.
+                "people", service.peopleGrid(),
+                "candidates", service.candidates(),
                 // Who holds each role, by name -- a tick on "HR" reaches three
                 // people on this company's data, and the grid could not say who.
                 "holders", service.holders()
@@ -63,6 +66,24 @@ public class ApprovalRecipientController {
         return ApiResponse.ok(
                 service.save(moduleCode, roles, SecurityUtils.currentUserId()),
                 "Approval recipients updated");
+    }
+
+    /**
+     * Replace the people named on one module.
+     *
+     * <p>Separate from the role save because they are separate controls: a
+     * module can allow the HR role and additionally name one person, and
+     * saving either must not clear the other.
+     */
+    @PutMapping("/{moduleCode}/people")
+    @PreAuthorize("hasAuthority('ORG_MANAGE')")
+    public ApiResponse<List<Long>> savePeople(
+            @PathVariable String moduleCode,
+            @RequestBody Map<String, List<Long>> body) {
+        List<Long> users = body == null ? List.of() : body.getOrDefault("users", List.of());
+        return ApiResponse.ok(
+                service.savePeople(moduleCode, users, SecurityUtils.currentUserId()),
+                "Recipients updated");
     }
 
     /**

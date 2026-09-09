@@ -38,12 +38,23 @@ interface VisibilityResponse {
   config: Grid;
 }
 
+interface Candidate {
+  id: number;
+  name: string;
+  code: string;
+  roles: string[];
+}
+
 interface ConfigResponse {
   modules: string[];
   roles: string[];
   config: Grid;
   /** Who actually holds each role, by name. */
   holders: Record<string, string[]>;
+  /** The people named on each module, by id. */
+  people: Record<string, number[]>;
+  /** Everybody who could be named. */
+  candidates: Candidate[];
 }
 
 /** What each module code is called on screen. */
@@ -100,6 +111,15 @@ export default function ApprovalConfigPage() {
     Held here so switching roles keeps unsaved edits to the others.
   */
   const [subject, setSubject] = useState("IT_EMP");
+  /*
+    People named on a module, by module. Absent means "unchanged from the
+    server", the same convention the role draft uses.
+
+    Separate from the role draft because they are separate controls and save
+    separately: a module can allow the HR role and additionally name one
+    person, and saving either must not clear the other.
+  */
+  const [peopleDraft, setPeopleDraft] = useState<Record<string, number[]>>({});
   const [visDraft, setVisDraft] = useState<Grid>({});
 
   const query = useQuery({
@@ -137,6 +157,21 @@ export default function ApprovalConfigPage() {
     onError: (e) => toast.error(apiMessage(e, "Could not save that configuration"))
   });
 
+  const savePeople = useMutation({
+    mutationFn: async ({ module, users }: { module: string; users: number[] }) =>
+      api.put(`/admin/approval-config/${module}/people`, { users }),
+    onSuccess: (_res, v) => {
+      toast.success(`${MODULE_LABELS[v.module] ?? v.module} recipients updated`);
+      setPeopleDraft((d) => {
+        const next = { ...d };
+        delete next[v.module];
+        return next;
+      });
+      qc.invalidateQueries({ queryKey: ["approval-config"] });
+    },
+    onError: (e) => toast.error(apiMessage(e, "Could not save those recipients"))
+  });
+
   const save = useMutation({
     mutationFn: async ({ module, roles }: { module: string; roles: string[] }) =>
       api.put(`/admin/approval-config/${module}`, { roles }),
@@ -168,6 +203,24 @@ export default function ApprovalConfigPage() {
 
   const revert = (module: string) =>
     setDraft((d) => {
+      const next = { ...d };
+      delete next[module];
+      return next;
+    });
+
+  const peopleOf = (module: string): number[] =>
+    peopleDraft[module] ?? data.people?.[module] ?? [];
+
+  const togglePerson = (module: string, id: number) => {
+    const current = peopleOf(module);
+    setPeopleDraft((d) => ({
+      ...d,
+      [module]: current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
+    }));
+  };
+
+  const revertPeople = (module: string) =>
+    setPeopleDraft((d) => {
       const next = { ...d };
       delete next[module];
       return next;
@@ -388,6 +441,80 @@ export default function ApprovalConfigPage() {
                       </label>
                     );
                   })}
+                </div>
+
+                {/*
+                  Naming people, where a role is too broad.
+
+                  Ticking "HR" offers all three HR accounts, and on this
+                  company's data they are not interchangeable -- the question
+                  being asked is often "this person, not their colleagues".
+                  A role tick still has its place: it keeps working when
+                  somebody joins or leaves, where a list of names quietly stops
+                  offering the new person. Both are here and the administrator
+                  picks per module.
+
+                  Saved separately from the ticks above, because a module can
+                  do both and saving one must not clear the other.
+                */}
+                <div className="mt-4 border-t pt-3">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Or name people
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {peopleOf(module).length === 0
+                          ? "Nobody named — the ticks above decide it"
+                          : `${peopleOf(module).length} named`}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      {peopleDraft[module] && (
+                        <Button variant="outline" size="sm" onClick={() => revertPeople(module)}>
+                          <RotateCcw className="h-4 w-4" /> Undo
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!peopleDraft[module] || savePeople.isPending}
+                        onClick={() =>
+                          savePeople.mutate({ module, users: peopleOf(module) })
+                        }
+                      >
+                        <Save className="h-4 w-4" /> Save people
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid max-h-44 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
+                    {(data.candidates ?? []).map((c) => {
+                      const on = peopleOf(module).includes(c.id);
+                      return (
+                        <label
+                          key={c.id}
+                          className={cn(
+                            "flex cursor-pointer items-start gap-2 rounded-lg border p-2 transition",
+                            on ? "border-primary bg-primary/5" : "hover:bg-muted/40"
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            className="mt-0.5 h-4 w-4 accent-[hsl(var(--primary))]"
+                            checked={on}
+                            onChange={() => togglePerson(module, c.id)}
+                          />
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-semibold">{c.name}</span>
+                            <span className="block truncate text-[11px] leading-tight text-muted-foreground">
+                              {c.code}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               </CardContent>
             </Card>

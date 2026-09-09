@@ -68,9 +68,9 @@ public class ApprovalRecipientService {
     @Transactional(readOnly = true)
     public boolean allows(String moduleCode, User candidate) {
         if (candidate == null) return false;
-        Set<String> allowed = allowedRoles(moduleCode);
-        if (allowed.isEmpty()) return true;
-        return matches(allowed, candidate);
+        Rules rules = rulesFor(moduleCode);
+        if (rules.isEmpty()) return true;
+        return matches(rules, candidate);
     }
 
     /**
@@ -81,24 +81,51 @@ public class ApprovalRecipientService {
      */
     @Transactional(readOnly = true)
     public List<User> filter(String moduleCode, List<User> candidates) {
-        Set<String> allowed = allowedRoles(moduleCode);
-        if (allowed.isEmpty()) return candidates;
-        return candidates.stream().filter(u -> matches(allowed, u)).toList();
+        Rules rules = rulesFor(moduleCode);
+        if (rules.isEmpty()) return candidates;
+        return candidates.stream().filter(u -> matches(rules, u)).toList();
     }
 
-    /** The enabled role codes for a module, upper-cased. Empty when unconfigured. */
-    private Set<String> allowedRoles(String moduleCode) {
-        if (moduleCode == null) return Set.of();
-        return repository.findByModuleCode(moduleCode.toUpperCase()).stream()
-                .filter(ApprovalRecipientConfig::isEnabled)
-                .map(c -> c.getRoleCode().toUpperCase())
+    /**
+     * What a module is configured with: role codes, named people, or both.
+     *
+     * <p>Empty on both counts means unconfigured, and unconfigured means
+     * unrestricted -- see the class note.
+     */
+    private record Rules(Set<String> roles, Set<Long> users) {
+        boolean isEmpty() { return roles.isEmpty() && users.isEmpty(); }
+    }
+
+    private Rules rulesFor(String moduleCode) {
+        if (moduleCode == null) return new Rules(Set.of(), Set.of());
+        List<ApprovalRecipientConfig> rows =
+                repository.findByModuleCode(moduleCode.toUpperCase()).stream()
+                        .filter(ApprovalRecipientConfig::isEnabled)
+                        .toList();
+        Set<String> roles = rows.stream()
+                .map(ApprovalRecipientConfig::getRoleCode)
+                .filter(java.util.Objects::nonNull)
+                .map(String::toUpperCase)
                 .collect(Collectors.toSet());
+        Set<Long> users = rows.stream()
+                .map(ApprovalRecipientConfig::getUserId)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+        return new Rules(roles, users);
     }
 
-    /** Whether a user satisfies one of the allowed entries. */
-    private boolean matches(Set<String> allowed, User u) {
-        // CTO first, because it is matched on the employee code rather than on
-        // a role -- see RECIPIENT_ROLES.
+    /**
+     * Whether a user satisfies the configuration.
+     *
+     * <p>Role rules and person rules are alternatives, not conditions to be met
+     * together: naming Elandevan on a module that also allows the HR role
+     * offers both, rather than offering nobody because he is not both at once.
+     */
+    private boolean matches(Rules rules, User u) {
+        if (u.getId() != null && rules.users().contains(u.getId())) return true;
+        Set<String> allowed = rules.roles();
+        // CTO before the role check, because it is matched on the employee code
+        // rather than on a role -- see RECIPIENT_ROLES.
         if (allowed.contains("CTO") && PlatformAccounts.CTO.equalsIgnoreCase(u.getEmployeeCode())) {
             return true;
         }
@@ -161,6 +188,8 @@ public class ApprovalRecipientService {
         Map<String, Set<String>> saved = new LinkedHashMap<>();
         for (ApprovalRecipientConfig c : repository.findAllByOrderByModuleCodeAscRoleCodeAsc()) {
             if (!c.isEnabled()) continue;
+            // Person rows have no role and are reported by peopleGrid().
+            if (c.getRoleCode() == null) continue;
             saved.computeIfAbsent(c.getModuleCode().toUpperCase(), k -> new java.util.HashSet<>())
                     .add(c.getRoleCode().toUpperCase());
         }
@@ -175,6 +204,101 @@ public class ApprovalRecipientService {
             out.put(module, row);
         }
         return out;
+    }
+
+    /**
+     * The people named on each module, by id.
+     *
+     * <p>Separate from {@link #grid} because they are a different kind of rule
+     * and the screen shows them in a different control -- a picker of names
+     * rather than a row of role checkboxes.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, List<Long>> peopleGrid() {
+        Map<String, List<Long>> out = new LinkedHashMap<>();
+        for (String module : MODULES) out.put(module, new java.util.ArrayList<>());
+        for (ApprovalRecipientConfig c : repository.findAllByOrderByModuleCodeAscRoleCodeAsc()) {
+            if (!c.isEnabled() || c.getUserId() == null) continue;
+            out.computeIfAbsent(c.getModuleCode().toUpperCase(), k -> new java.util.ArrayList<>())
+                    .add(c.getUserId());
+        }
+        return out;
+    }
+
+    /**
+     * Everybody who could be named on a module, with the roles they hold.
+     *
+     * <p>The picker needs people rather than roles, and it needs enough beside
+     * each name to tell two colleagues apart -- the employee code and what they
+     * are on the desk. Offboarded and disabled accounts are left out: a name
+     * here is somebody a request could be sent to.
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> candidates() {
+        Set<String> wanted = new java.util.LinkedHashSet<>(RECIPIENT_ROLES);
+        wanted.remove("CTO");
+        List<User> people = new java.util.ArrayList<>(userRepository.findByRoleCodes(wanted));
+        // The CTO is matched by employee code, not by a role, so they are not
+        // in that query and would otherwise be unpickable.
+        userRepository.findByEmployeeCode(PlatformAccounts.CTO).ifPresent(people::add);
+
+        Map<Long, Map<String, Object>> byId = new LinkedHashMap<>();
+        for (User u : people) {
+            if (!u.isEnabled() || "OFFBOARDED".equalsIgnoreCase(u.getProfileStatus())) continue;
+            if (byId.containsKey(u.getId())) continue;
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("id", u.getId());
+            row.put("name", u.getName() == null ? "" : u.getName().trim());
+            row.put("code", u.getEmployeeCode() == null ? "" : u.getEmployeeCode());
+            row.put("roles", u.getRoles() == null ? List.of() : u.getRoles().stream()
+                    .map(Role::getCode).filter(java.util.Objects::nonNull).sorted().toList());
+            byId.put(u.getId(), row);
+        }
+        return byId.values().stream()
+                .sorted(java.util.Comparator.comparing(
+                        m -> String.valueOf(m.get("name")), String.CASE_INSENSITIVE_ORDER))
+                .toList();
+    }
+
+    /**
+     * Replace the people named on one module.
+     *
+     * <p>Leaves the module's role rules alone: the two are separate controls on
+     * screen and saving one must not clear the other. An empty list removes
+     * every name, which returns the module to whatever its role rules say --
+     * and to unrestricted if it has none.
+     */
+    @Transactional
+    public List<Long> savePeople(String moduleCode, List<Long> userIds, Long actorId) {
+        String module = moduleCode == null ? "" : moduleCode.trim().toUpperCase();
+        if (!MODULES.contains(module)) {
+            throw com.pixous.hrportal.common.ApiException.business("Unknown module: " + moduleCode);
+        }
+        Set<Long> wanted = userIds == null ? Set.of() : userIds.stream()
+                .filter(java.util.Objects::nonNull)
+                // Only real, addressable accounts -- an id typed into a request
+                // body must not create a rule naming somebody who left.
+                .filter(id -> userRepository.findById(id)
+                        .filter(User::isEnabled)
+                        .filter(u -> !"OFFBOARDED".equalsIgnoreCase(u.getProfileStatus()))
+                        .isPresent())
+                .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
+
+        repository.deleteAll(repository.findByModuleCode(module).stream()
+                .filter(c -> c.getUserId() != null)
+                .toList());
+        repository.flush();
+
+        for (Long id : wanted) {
+            ApprovalRecipientConfig c = new ApprovalRecipientConfig();
+            c.setModuleCode(module);
+            c.setUserId(id);
+            c.setEnabled(true);
+            c.setUpdatedBy(actorId);
+            c.setUpdatedAt(LocalDateTime.now());
+            repository.save(c);
+        }
+        return List.copyOf(wanted);
     }
 
     /**
@@ -205,7 +329,11 @@ public class ApprovalRecipientService {
         // Delete then insert, in one transaction. Diffing the two sets would
         // save a handful of writes on a table with at most thirty-five rows,
         // and cost the clarity of "what is stored is what was sent".
-        repository.deleteAll(repository.findByModuleCode(module));
+        // Role rows only. The people named on this module are a separate
+        // control on screen, and saving one must not clear the other.
+        repository.deleteAll(repository.findByModuleCode(module).stream()
+                .filter(c -> c.getRoleCode() != null)
+                .toList());
         repository.flush();
 
         for (String role : wanted) {

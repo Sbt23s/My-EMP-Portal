@@ -183,7 +183,20 @@ export const defaultModulesTemplate: CompanyModuleItem[] = [
   { id: 13, code: "CALENDAR", name: "Calendar", description: "Company calendar, events, and meeting scheduling", category: "Collaboration", enabled: false, visibleRoles: [...ALL_ROLES] },
   { id: 14, code: "TEAMS", name: "Teams", description: "Department and project team management", category: "Collaboration", enabled: false, visibleRoles: [...ALL_ROLES] },
   { id: 15, code: "AUDIT_LOG", name: "Audit Log", description: "Track system access and data modifications", category: "Operations", enabled: false, visibleRoles: ["COMPANY_ADMIN"] },
-  { id: 23, code: "COMMUNITIES", name: "Communities", description: "Employee interest groups and company clubs", category: "Collaboration", enabled: false, visibleRoles: [...ALL_ROLES] }
+  { id: 23, code: "COMMUNITIES", name: "Communities", description: "Employee interest groups and company clubs", category: "Collaboration", enabled: false, visibleRoles: [...ALL_ROLES] },
+  /*
+    Approval configuration. It decides who can be sent a request and which
+    Leave Management tabs a role sees, so it is administration of how the
+    portal behaves rather than of the work in it.
+
+    Enabled by default because the entry already exists and works: shipping it
+    off would take a working screen away from the people using it, which is not
+    what adding a switch is for. Turn it off here to remove it.
+
+    Company Admin and the CTO only. The page is guarded on ORG_MANAGE as well,
+    so this decides whether the entry exists rather than who may open it.
+  */
+  { id: 25, code: "APPROVAL_CONFIG", name: "Approval Configuration", description: "Who each module may address a request to, and which Leave tabs a role sees", category: "Operations", enabled: true, visibleRoles: ["COMPANY_ADMIN", "CTO", "HR_MANAGER"] }
 ];
 // PERFORMANCE, RECRUITMENT, TIME_TRACKING, LEARNING, SURVEYS, DIRECTORY and OKR
 // were listed above. None has a page behind it, so switching one on gave a

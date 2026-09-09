@@ -11,7 +11,7 @@ import {
   FileText, CalendarOff, Box, HelpCircle, BarChart3,
   CheckSquare, UserCheck, CreditCard,
   FolderGit2, Megaphone, Users2, CalendarDays, Bot, ShieldCheck,
-  LayoutDashboard
+  LayoutDashboard, SlidersHorizontal
 } from 'lucide-react';
 
 export function TechAdminModuleManagement() {
@@ -68,6 +68,7 @@ export function TechAdminModuleManagement() {
    */
   const MODULE_ICONS: Record<string, React.ReactNode> = {
     ATTENDANCE: <Calendar className="w-5 h-5 text-purple-500" />,
+    APPROVAL_CONFIG: <SlidersHorizontal className="w-5 h-5 text-indigo-500" />,
     CHAT: <MessageSquare className="w-5 h-5 text-blue-500" />,
     PAYROLL: <FileText className="w-5 h-5 text-emerald-500" />,
     LEAVE: <CalendarOff className="w-5 h-5 text-purple-500" />,

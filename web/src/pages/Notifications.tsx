@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { AlertCircle, BellRing, CheckCheck } from "lucide-react";
+import { useState } from "react";
+import { AlertCircle, BellRing, CheckCheck, Trash2 } from "lucide-react";
 import dayjs from "dayjs";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -9,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 import { useCalls } from "@/hooks/useCalls";
 import { describeCallNotification } from "@/lib/callNotifications";
@@ -16,9 +18,19 @@ import { describeCallNotification } from "@/lib/callNotifications";
 export default function NotificationsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { notifications, unreadCount, loading, failed, retry, markAllRead, markRead } = useNotifications(user?.id);
+  const { notifications, unreadCount, loading, failed, retry, markAllRead, markRead, clearAll } =
+    useNotifications(user?.id);
   const { callState, activeCallPartner } = useCalls();
   const liveCallerName = callState !== "idle" ? (activeCallPartner?.name ?? null) : null;
+
+  /*
+    Clearing is confirmed, marking read is not.
+
+    Marking read is reversible by scrolling — the rows are still there. Clearing
+    deletes them, and a misclick on a page whose whole content is a list is easy
+    to make and impossible to undo.
+  */
+  const [confirmClear, setConfirmClear] = useState(false);
 
   return (
     <div>
@@ -26,12 +38,39 @@ export default function NotificationsPage() {
         title="Notifications"
         subtitle="Everything that needs your attention, in one place."
         actions={
-          unreadCount > 0 ? (
-            <Button variant="outline" onClick={() => markAllRead()}>
-              <CheckCheck className="h-4 w-4" /> Mark all read
-            </Button>
-          ) : null
+          <div className="flex gap-2">
+            {unreadCount > 0 && (
+              <Button variant="outline" onClick={() => markAllRead()}>
+                <CheckCheck className="h-4 w-4" /> Mark all read
+              </Button>
+            )}
+            {notifications.length > 0 && (
+              <Button
+                variant="outline"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setConfirmClear(true)}
+              >
+                <Trash2 className="h-4 w-4" /> Clear all
+              </Button>
+            )}
+          </div>
         }
+      />
+
+      <ConfirmDialog
+        open={confirmClear}
+        title="Clear every notification?"
+        /* Says what survives, because that is the question somebody hesitating
+           over this button actually has. */
+        description={
+          `This removes all ${notifications.length} from your list, read and unread. `
+          + "The leave requests, tickets and payslips they point at are not affected — "
+          + "only the announcements about them."
+        }
+        confirmLabel="Clear all"
+        cancelLabel="Keep them"
+        onConfirm={async () => { await clearAll(); setConfirmClear(false); }}
+        onCancel={() => setConfirmClear(false)}
       />
 
       {loading ? (

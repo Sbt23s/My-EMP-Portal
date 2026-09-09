@@ -88,6 +88,26 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     long countByCompanyId(Long companyId);
 
+    /**
+     * The three platform accounts, excluded from every directory listing.
+     *
+     * <p>The super administrator, the system administrator and the company
+     * head hold logins so the portal can be configured and approvals can reach
+     * a top, but they are not staff: no shift, no salary structure, no team.
+     * The directory returned them anyway, so they turned up in every picker
+     * built on it -- somebody to write a disciplinary record about, somebody to
+     * set a monthly salary for, somebody counted absent every day for never
+     * punching in.
+     *
+     * <p>Filtered in the query rather than after it, so the page count and the
+     * page contents agree. Removing three rows from an already-paged result
+     * gives a page of seventeen and a total that says twenty.
+     *
+     * <p>Codes rather than roles because that is what identifies them: there is
+     * no SYSTEM_ADMIN role in this schema. They are also listed in
+     * common/PlatformAccounts, which is where the Java-side checks read them
+     * from; JPQL cannot call into it, so the literals appear once more here.
+     */
     @Query("""
             SELECT u FROM User u
             WHERE (:q IS NULL OR LOWER(u.name) LIKE LOWER(CONCAT('%', :q, '%'))
@@ -100,6 +120,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
               AND (:status IS NULL
                    OR (:status = 'OFFBOARDED' AND u.profileStatus = 'OFFBOARDED')
                    OR (:status = 'ACTIVE' AND (u.profileStatus IS NULL OR u.profileStatus <> 'OFFBOARDED')))
+              AND (u.employeeCode IS NULL
+                   OR UPPER(u.employeeCode) NOT IN ('PIX-E100', 'ADM0001', 'SADM001'))
             """)
     Page<User> search(@Param("q") String q,
                       @Param("industry") String industry,
@@ -131,6 +153,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
               AND (:status IS NULL
                    OR (:status = 'OFFBOARDED' AND u.profileStatus = 'OFFBOARDED')
                    OR (:status = 'ACTIVE' AND (u.profileStatus IS NULL OR u.profileStatus <> 'OFFBOARDED')))
+              -- The three platform accounts, as in search() above.
+              AND (u.employeeCode IS NULL
+                   OR UPPER(u.employeeCode) NOT IN ('PIX-E100', 'ADM0001', 'SADM001'))
             """)
     Page<User> searchFiltered(@Param("q") String q,
                               @Param("industry") String industry,

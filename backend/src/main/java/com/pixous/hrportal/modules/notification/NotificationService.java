@@ -58,6 +58,23 @@ public class NotificationService {
         repository.markAllRead(userId);
     }
 
+    /**
+     * Empty this person's own notification list.
+     *
+     * <p>Their own, and only their own — the user id comes from the security
+     * context at the controller, never from the request, so there is no shape
+     * of call that clears somebody else's.
+     *
+     * <p>A real delete rather than a hidden flag. The list is a feed of things
+     * that have already happened elsewhere: the leave request, the ticket and
+     * the payslip all still exist in their own modules, and keeping a
+     * tombstone of the announcement about them serves nobody.
+     */
+    @Transactional
+    public int clearAll(Long userId) {
+        return repository.deleteAllForUser(userId);
+    }
+
     @Transactional
     public void markRead(Long userId, Long id) {
         repository.findById(id)

@@ -283,6 +283,9 @@ public class OrgService {
         Holiday h = new Holiday();
         h.setName(req.name());
         h.setHolidayDate(req.holidayDate());
+        // Blank is stored as absent rather than as an empty string, so "no
+        // qualifier" is one value in the column instead of two.
+        h.setState(req.state() == null || req.state().isBlank() ? null : req.state().trim());
         Holiday saved = holidayRepository.save(h);
 
         // Tell every active employee about the new calendar entry — in-app and by SMS.

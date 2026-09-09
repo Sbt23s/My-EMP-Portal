@@ -84,8 +84,20 @@ public class DailyAbsenceNotifier {
      * without waiting for tomorrow.
      */
     public void sendFor(LocalDate day) {
+        /*
+         * Staff, which is not the same as everybody with a login.
+         *
+         * The super administrator, the system administrator and the company
+         * head never punch in -- they are not expected to -- so every one of
+         * them was named as absent in this digest, every working day. On
+         * 7 September it read "52 absent", and three of those were accounts
+         * that have no attendance to take. A roll call that always lists the
+         * same three people who were never expected is a roll call people stop
+         * reading, and it hides the absence that matters.
+         */
         List<User> staff = userRepository.findAll().stream()
                 .filter(u -> u.isEnabled() && !"OFFBOARDED".equalsIgnoreCase(u.getProfileStatus()))
+                .filter(com.pixous.hrportal.common.PlatformAccounts::isStaff)
                 .toList();
         if (staff.isEmpty()) return;
 

@@ -341,6 +341,19 @@ export function useNotifications(userId?: number) {
     qc.invalidateQueries({ queryKey: ["notifications"] });
   }
 
+  /**
+   * Empty the list.
+   *
+   * Distinct from marking everything read, which the page already offered and
+   * which leaves a hundred rows to scroll past. This deletes them — read and
+   * unread alike, because a Clear All that keeps the unread ones is not what
+   * the button says.
+   */
+  async function clearAll() {
+    await api.delete("/notifications");
+    qc.invalidateQueries({ queryKey: ["notifications"] });
+  }
+
   // Filtering here rather than at each screen, so the bell, its count, the
   // notifications page and the dashboard feed cannot disagree about what
   // exists. A count of nine over an empty list is its own bug.
@@ -365,6 +378,7 @@ export function useNotifications(userId?: number) {
     failed: feed.isError,
     retry: () => feed.refetch(),
     markAllRead,
-    markRead
+    markRead,
+    clearAll
   };
 }

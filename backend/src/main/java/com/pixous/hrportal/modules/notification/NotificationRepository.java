@@ -16,4 +16,20 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Modifying
     @Query("UPDATE Notification n SET n.read = true WHERE n.userId = :userId AND n.read = false")
     void markAllRead(@Param("userId") Long userId);
+
+    /**
+     * Empty one person's notification list.
+     *
+     * <p>Scoped to the user id in the query itself rather than loading and
+     * checking in Java: this is a delete, and a delete whose scope depends on
+     * a filter applied afterwards is one bad refactor away from clearing
+     * everybody's.
+     *
+     * <p>Read and unread alike. "Clear all" that leaves the unread ones behind
+     * is not what the button says, and somebody pressing it after reading a
+     * backlog wants the list gone, not tidied.
+     */
+    @Modifying
+    @Query("DELETE FROM Notification n WHERE n.userId = :userId")
+    int deleteAllForUser(@Param("userId") Long userId);
 }

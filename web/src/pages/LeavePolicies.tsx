@@ -505,8 +505,21 @@ function EditTypeDialog({ type, onClose }: { type: LeaveType; onClose: () => voi
 
 function CreateHolidayDialog({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
+  /*
+    The field is holidayDate, not date.
+
+    This form posted the raw object it collected -- { date, name, type } -- and
+    the server's HolidayRequest asks for { name, holidayDate }. Jackson ignored
+    the unknown "date", holidayDate arrived null, @NotNull rejected it, and the
+    toast said "Validation failed" without saying which field: HR could not add
+    a holiday at all, and nothing on screen pointed at the cause.
+
+    Named to match the DTO rather than mapped in the mutation, so the form and
+    the contract are one thing and the next field added cannot drift the same
+    way.
+  */
   const { register, handleSubmit } = useForm({
-    defaultValues: { date: todayIso(), name: "", type: "National" }
+    defaultValues: { holidayDate: todayIso(), name: "", state: "National" }
   });
 
   const createMutation = useMutation({
@@ -526,16 +539,21 @@ function CreateHolidayDialog({ onClose }: { onClose: () => void }) {
       <DialogHeader title="Add Holiday" />
       <form onSubmit={handleSubmit((d) => createMutation.mutate(d))} className="space-y-4 mt-2">
         <div>
-          <Label htmlFor="date">Date</Label>
-          <Input id="date" type="date" min={DATE_MIN} max={DATE_MAX} {...register("date", { required: true })} />
+          <Label htmlFor="holidayDate">Date</Label>
+          <Input id="holidayDate" type="date" min={DATE_MIN} max={DATE_MAX}
+                 {...register("holidayDate", { required: true })} />
         </div>
         <div>
           <Label htmlFor="name">Holiday Name</Label>
           <Input id="name" {...register("name", { required: true })} placeholder="e.g. Gandhi Jayanti" />
         </div>
         <div>
-          <Label htmlFor="type">Type</Label>
-          <Input id="type" {...register("type")} placeholder="e.g. National, Optional" />
+          {/* The column behind this is `state` -- it distinguishes a national
+              holiday from one observed in a single state. It was posted as
+              "type", which no DTO field matched, so whatever HR typed here was
+              silently dropped and every holiday saved without it. */}
+          <Label htmlFor="state">Type</Label>
+          <Input id="state" {...register("state")} placeholder="e.g. National, Optional" />
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>

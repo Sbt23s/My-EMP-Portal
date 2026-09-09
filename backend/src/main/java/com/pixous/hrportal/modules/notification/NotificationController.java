@@ -35,6 +35,19 @@ public class NotificationController {
         return ApiResponse.ok(null);
     }
 
+    /**
+     * Empty the signed-in person's notification list.
+     *
+     * <p>No path or body: the only list this can clear is the caller's own,
+     * taken from the token. An id parameter here would be an invitation to
+     * pass somebody else's.
+     */
+    @DeleteMapping
+    public ApiResponse<Map<String, Integer>> clearAll() {
+        int removed = service.clearAll(SecurityUtils.currentUserId());
+        return ApiResponse.ok(Map.of("cleared", removed));
+    }
+
     @PostMapping("/{id}/read")
     public ApiResponse<Void> markRead(@PathVariable Long id) {
         service.markRead(SecurityUtils.currentUserId(), id);

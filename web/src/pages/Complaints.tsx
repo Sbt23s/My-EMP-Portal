@@ -738,13 +738,20 @@ function AllComplaints() {
                         only while it is still open for a decision. Everyone
                         else -- including whoever raised it -- reads it.
                       */}
-                      <Button
-                        size="sm"
-                        variant="outline"
+                      {/*
+                        The shared ViewButton, as the employee table above
+                        already uses. This one was a plain outline button with
+                        no icon, so the same row action looked different
+                        depending on which tab you were on.
+
+                        The label still changes: a complaint this person can
+                        answer says Respond, because opening it is the first
+                        step of doing something rather than of reading.
+                      */}
+                      <ViewButton
+                        label={canDecide(c) ? "Respond" : "View"}
                         onClick={() => setActingOn(c)}
-                      >
-                        {canDecide(c) ? "Respond" : "View"}
-                      </Button>
+                      />
                     </TableCell>
                     <TableCell className="pl-6 font-medium code-chip">{c.referenceCode}</TableCell>
                     <TableCell>

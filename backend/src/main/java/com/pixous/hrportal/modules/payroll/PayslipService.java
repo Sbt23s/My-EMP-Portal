@@ -36,6 +36,20 @@ import com.pixous.hrportal.modules.user.BankDetailRepository;
 @lombok.extern.slf4j.Slf4j
 public class PayslipService {
 
+    /**
+     * What a single day of pay is divided by: {@code calendar} or {@code working}.
+     *
+     * <p>Not final and not in the constructor because {@code @Value} on a
+     * constructor parameter fights {@code @RequiredArgsConstructor} — Lombok
+     * generates the parameter without the annotation and Spring has nothing to
+     * bind. A field injection here is the smaller compromise.
+     *
+     * <p>Defaults to calendar: a 31-day month divides by 31. See the note where
+     * it is used for what the two bases actually cost.
+     */
+    @org.springframework.beans.factory.annotation.Value("${app.payroll.per-day-basis:calendar}")
+    private String perDayBasis;
+
     /*
      * This service, through its Spring proxy.
      *
@@ -169,20 +183,35 @@ public class PayslipService {
         BigDecimal bonus = structureBonus.add(monthBonus);
 
         /*
-         * A day's pay is a working day's pay, not a calendar day's.
+         * A day's pay is the monthly pay divided by the days in the month.
          *
-         * Dividing by 30 makes an absence cost less than the day was worth --
-         * somebody paid 20,000 for 26 working days earns 769 a day, and
-         * deducting 667 for missing one leaves the company paying for time
-         * nobody worked. Weekends and public holidays are already excluded
-         * from the count, so this is the figure both sides would recognise.
+         * Set by the company: a 31-day month divides by 31, a 30-day month by
+         * 30, February by 28. Configurable because the alternative is a real
+         * one and the choice belongs to whoever signs the payslips --
+         * app.payroll.per-day-basis, calendar (this) or working.
+         *
+         * The two differ, and it is worth being clear which way. Dividing by
+         * calendar days makes a day cost LESS than it was worth in worked
+         * terms: somebody on 20,000 across 26 working days earns 769 for each
+         * day they actually work, and a calendar basis deducts 645 when they
+         * miss one. The company absorbs the difference. Dividing by working
+         * days recovers the full 769.
+         *
+         * The calendar basis is the common Indian practice and the one this
+         * company asked for, so it is the default. Weekends and holidays are
+         * still never counted as absences -- that is decided in countMonth,
+         * separately from this -- so nobody is deducted for a Sunday either
+         * way; this only changes the size of one day's deduction.
          */
         AttendanceMonth att = countMonth(req.userId(), req.month(), req.year());
-        int workingDays = Math.max(1, att.workingDays());
+        boolean workingBasis = "working".equalsIgnoreCase(perDayBasis);
+        int perDayDivisor = workingBasis
+                ? Math.max(1, att.workingDays())
+                : java.time.YearMonth.of(req.year(), req.month()).lengthOfMonth();
         BigDecimal recurring = basic.add(hra).add(allowances)
                 .add(conveyance).add(special);
         BigDecimal perDayGross = recurring
-                .divide(BigDecimal.valueOf(workingDays), 2, RoundingMode.HALF_UP);
+                .divide(BigDecimal.valueOf(perDayDivisor), 2, RoundingMode.HALF_UP);
 
         // Overtime pay = hourly rate * OT hours
         BigDecimal otHours = BigDecimal.valueOf(

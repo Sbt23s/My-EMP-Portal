@@ -457,10 +457,24 @@ function CreateDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () =
   const [employeeId, setEmployeeId] = useState("");
   const [incidentDate, setIncidentDate] = useState(todayIso());
   const [disciplineType, setDisciplineType] = useState(TYPES[0]);
+  /*
+    What "Other" actually was.
+
+    Both lists end in Other, and picking it stored the literal word -- so a
+    record read "Other" and the reason lived only in the free-text description,
+    where nothing could count it. Three records of the same unlisted kind
+    looked like three unrelated ones.
+
+    Sent in place of the option rather than beside it: the columns are 60
+    characters, which fits a short label, and adding one would migrate a table
+    to hold what the existing column already takes.
+  */
+  const [otherType, setOtherType] = useState("");
   const [severity, setSeverity] = useState("MEDIUM");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [actionTaken, setActionTaken] = useState(ACTIONS[0]);
+  const [otherAction, setOtherAction] = useState("");
   const [files, setFiles] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -512,11 +526,13 @@ function CreateDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () =
       api.post("/discipline", {
         employeeId: Number(employeeId),
         incidentDate,
-        disciplineType,
+        disciplineType: disciplineType === "Other"
+          ? (otherType.trim() || "Other") : disciplineType,
         severity,
         subject: subject.trim(),
         description: description.trim(),
-        actionTaken,
+        actionTaken: actionTaken === "Other"
+          ? (otherAction.trim() || "Other") : actionTaken,
         attachments: files.join(",") || undefined,
       }),
     onSuccess: () => { toast.success("Discipline record created"); onSaved(); },
@@ -524,6 +540,10 @@ function CreateDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () =
   });
 
   const blocked = !employeeId ? "Choose the employee this record is about."
+    : disciplineType === "Other" && !otherType.trim()
+      ? "Say what kind of issue this is."
+    : actionTaken === "Other" && !otherAction.trim()
+      ? "Say what action was taken."
     : !incidentDate ? "Give the date of the incident."
       : !subject.trim() ? "Give a short subject."
         : !description.trim() ? "Describe what happened."
@@ -569,12 +589,28 @@ function CreateDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () =
           <Select id="d-type" value={disciplineType} onChange={(e) => setDisciplineType(e.target.value)}>
             {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </Select>
+          {disciplineType === "Other" && (
+            <Input
+              maxLength={60}
+              value={otherType}
+              onChange={(e) => setOtherType(e.target.value)}
+              placeholder="Name the type in a few words"
+            />
+          )}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="d-action">Action taken</Label>
           <Select id="d-action" value={actionTaken} onChange={(e) => setActionTaken(e.target.value)}>
             {ACTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
           </Select>
+          {actionTaken === "Other" && (
+            <Input
+              maxLength={60}
+              value={otherAction}
+              onChange={(e) => setOtherAction(e.target.value)}
+              placeholder="Name the action taken"
+            />
+          )}
         </div>
       </div>
 

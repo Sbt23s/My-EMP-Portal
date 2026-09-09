@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, LifeBuoy, Send, Star, MessageSquare,
   Ticket as TicketIcon, Clock, CheckCircle, Paperclip, Inbox,
-  Eye, Pencil, X, Search
+  Pencil, X, Search
 } from "lucide-react";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
@@ -495,29 +495,24 @@ export default function HelpdeskPage() {
                 {paged.pageRows.map((t) => (
                   <TableRow key={t.id}>
                     <TableCell className="text-right pr-6">
-                      {(t.status === "RESOLVED" || t.status === "CLOSED") ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setOpenId(t.id)}
-                        >
-                          <Eye className="mr-1 h-3.5 w-3.5" /> View
-                        </Button>
-                      ) : (t.assignedTo === user?.id || (!t.assignedTo && isAgent)) ? (
-                        <Button
-                          size="sm"
-                          onClick={() => setOpenId(t.id)}
-                        >
+                      {/*
+                        The shared ViewButton, as the card view beside this
+                        already used and as every other list in the portal
+                        uses. The desktop table hand-rolled its own twice, so
+                        the same action wore three different looks across two
+                        pages -- amber on mobile, plain outline here.
+
+                        The Respond branch keeps the filled primary button:
+                        that one is not "open and read", it is the row this
+                        person has to answer.
+                      */}
+                      {(t.assignedTo === user?.id || (!t.assignedTo && isAgent))
+                        && t.status !== "RESOLVED" && t.status !== "CLOSED" ? (
+                        <Button size="sm" onClick={() => setOpenId(t.id)}>
                           Respond
                         </Button>
                       ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setOpenId(t.id)}
-                        >
-                          <Eye className="mr-1 h-3.5 w-3.5" /> View
-                        </Button>
+                        <ViewButton onClick={() => setOpenId(t.id)} />
                       )}
                     </TableCell>
                     <TableCell className="pl-6 font-medium code-chip">{t.ticketCode}</TableCell>

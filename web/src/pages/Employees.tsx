@@ -132,13 +132,24 @@ export default function EmployeesPage() {
           `/users?${params.toString()}`
         );
         const data = res.data?.data;
+      /*
+        No filtering here any more.
+
+        This dropped the CTO record unless the viewer was the CTO, guessing at
+        which row that was from the employee code, the literal name "CTO", or
+        the word appearing anywhere in a designation -- so an employee whose
+        title read "CTO Office Assistant" vanished from the directory, and the
+        CTO saw their own row while HR did not.
+
+        The server now excludes all three platform accounts -- the super
+        administrator, the system administrator and the company head -- inside
+        the directory query itself, so the page count and the rows agree.
+        Filtering afterwards took three rows off an already-paged result and
+        then reported the shortened length as the total, which made the last
+        page of the directory unreachable.
+      */
       if (data?.content) {
-        const content = data.content.filter((e) => {
-          const isCtoRecord = e.employeeCode === "PIX-E100" || e.name === "CTO" || (e.designationTitle && e.designationTitle.includes("CTO"));
-          const isCurrentUserCto = user?.employeeCode === "PIX-E100";
-          return !isCtoRecord || isCurrentUserCto;
-        });
-        return { ...data, content, totalElements: content.length };
+        return data;
       }
       } catch {}
 

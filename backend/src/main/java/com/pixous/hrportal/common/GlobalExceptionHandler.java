@@ -8,6 +8,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -126,6 +127,23 @@ public class GlobalExceptionHandler {
         log.debug("Wrong method for this endpoint: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
                 .body(ApiResponse.fail("That endpoint does not accept this request method.", null));
+    }
+
+    /**
+     * The caller sent a body in a format no converter reads — a form post or plain
+     * text where JSON was expected.
+     *
+     * <p>Like the wrong method above, this is a client mistake, but it fell through
+     * to the catch-all and answered 500 with a reference id, which reads as a server
+     * fault. It showed only on the permitAll endpoints: everywhere else the security
+     * filter answers 401 before a converter is ever chosen, so `/auth/login` and
+     * `/auth/refresh` were the only two that reached it.
+     */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
+        log.debug("Unsupported content type: {}", ex.getContentType());
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(ApiResponse.fail("Send this request as JSON (Content-Type: application/json).", null));
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

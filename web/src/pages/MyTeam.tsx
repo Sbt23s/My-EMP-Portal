@@ -177,12 +177,16 @@ export default function MyTeamPage() {
       (await api.get<ApiEnvelope<TeamPresence[]>>("/attendance/my-team-today")).data.data
   });
 
-  // Private channel for this team — created on first visit, members kept in sync.
-  const teamRoom = useQuery({
-    queryKey: ["team-room"],
-    retry: false,
-    queryFn: async () => (await api.post<ChatGroup>("/communities/team")).data
-  });
+  /*
+    The team channel is not created from here any more.
+
+    This fired a POST on every visit to the page and then did nothing with the
+    result -- nothing read `teamRoom`. What it did do was create a group and
+    enrol everyone sharing the visitor's designation into it, so simply opening
+    My Team grew a group that nobody had chosen to add anyone to. Group
+    membership is decided in Communities now, by someone with the authority to
+    decide it.
+  */
 
   const members = useMemo(() => team.data?.members ?? [], [team.data]);
   const teamName = team.data?.teamName ?? "";

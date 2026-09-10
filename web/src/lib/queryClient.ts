@@ -38,17 +38,49 @@ export const queryClient = new QueryClient({
       // trusted to be current.
       refetchOnReconnect: true,
 
-      // Opening a page asks the server. "always" rather than true because
-      // true still respects staleTime, which is the setting that made a
-      // freshly-invalidated list answer from cache.
-      refetchOnMount: "always",
+      /*
+        Opening a page asks the server for anything it does not already hold
+        fresh.
 
-      // Long enough that a screen mounting twenty queries at once does not
-      // fire twenty requests, short enough that nothing here is what makes a
-      // page stale.
-      staleTime: 10 * 1000,
+        This was "always", on the reasoning that plain `true` respects
+        staleTime and would let a freshly-invalidated list answer from cache.
+        It would not: invalidateQueries marks data stale, and a stale query
+        refetches on mount under `true` exactly as it does under "always".
+        What "always" additionally did was refetch every query on every mount
+        regardless -- so returning to the dashboard fired all thirty-two of
+        its queries again even if you had left it two seconds earlier.
+
+        Everything that has to be immediate still is, because the code that
+        changes data invalidates it: a leave request approved on one screen
+        shows approved on the next, as before.
+      */
+      refetchOnMount: true,
+
+      /*
+        Thirty seconds, up from ten.
+
+        Long enough that moving between pages does not re-ask for the same
+        reference data over and over, short enough that nothing anyone reads
+        is meaningfully behind. Anything that must be fresher says so on the
+        query -- the live attendance and chat views set their own intervals,
+        and every mutation invalidates what it touched.
+      */
+      staleTime: 30 * 1000,
 
       gcTime: 1000 * 60 * 30,
+
+      /*
+        A hidden tab asks for nothing.
+
+        Fourteen of the fifteen polling queries in the app kept their timers
+        running while the tab sat in the background, so a portal left open in
+        a tab nobody was looking at went on requesting notifications, calendar
+        events, complaints and chat all day. Polling resumes the moment the
+        tab is looked at again, and refetchOnWindowFocus above means coming
+        back is already a refresh -- so nothing is missed, it is just not
+        fetched while there is no one to read it.
+      */
+      refetchIntervalInBackground: false,
     }
   }
 });

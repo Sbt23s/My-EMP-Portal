@@ -18,4 +18,15 @@ public interface CommunityMemberRepository extends JpaRepository<CommunityMember
 
     @Query("SELECT COUNT(cm) > 0 FROM CommunityMember cm WHERE cm.community.id = :communityId AND cm.user.id = :userId")
     boolean isMember(@Param("communityId") Long communityId, @Param("userId") Long userId);
+
+    /**
+     * Every group this person belongs to, in one query.
+     *
+     * <p>The chat listing walks every group and asked isMember for each one,
+     * so opening Chat cost one query per group in the company and grew with
+     * every group anyone created. Reading the memberships once and testing
+     * against the set is the same answer for one round trip.
+     */
+    @Query("SELECT cm.community.id FROM CommunityMember cm WHERE cm.user.id = :userId")
+    List<Long> findCommunityIdsByUserId(@Param("userId") Long userId);
 }

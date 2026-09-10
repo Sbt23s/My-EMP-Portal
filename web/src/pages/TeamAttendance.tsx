@@ -1258,10 +1258,8 @@ export default function TeamAttendancePage() {
                     <th>Employee</th>
                     <th>Team</th>
                     <th>Face</th>
-                    <th>Punches from</th>
                     <th className="text-right">Attendance</th>
                     <th className="text-right">Present</th>
-                    <th className="text-right">Leave</th>
                     <th className="text-right">Absent</th>
                     <th className="text-right">Work hours</th>
                     <th className="text-right">Overtime</th>
@@ -1317,52 +1315,6 @@ export default function TeamAttendancePage() {
                         )}
                       </td>
 
-                      {/* Where they punch from. The usual place, with the number of
-                          days they were somewhere else counted rather than hidden —
-                          one exception in a month is the thing worth seeing, and an
-                          average would bury it. */}
-                      <td className="px-4 py-2.5">
-                        {s.usualPlace ? (
-                          <div className="min-w-0">
-                            <LocationName name={s.usualPlace} />
-                            <div className="mt-0.5 text-[10px] text-muted-foreground">
-                              {s.usualPlaceDays}d here
-                              {s.elsewhereDays > 0 && !s.usualPlace.startsWith("Other location") && (
-                                <span className="text-amber-600">
-                                  {" · "}{s.elsewhereDays}d elsewhere
-                                </span>
-                              )}
-                              {s.placeCount > 1 && s.elsewhereDays === 0 && (
-                                <span>{" · "}{s.placeCount} places</span>
-                              )}
-                            </div>
-                            {/* The street, only when there is a real point to
-                                resolve. Substituting the head office's
-                                coordinates for a punch that has none printed an
-                                address the person was never at -- and a
-                                terminal punch never has coordinates. */}
-                            {s.latest?.inLatitude != null && s.latest?.inLongitude != null ? (
-                              <PunchLocation lat={s.latest.inLatitude} lng={s.latest.inLongitude} />
-                            ) : s.latest?.inAuthMethod ? (
-                              <div className="text-[10px] leading-tight text-muted-foreground">
-                                {methodLabel(s.latest.inAuthMethod)}
-                                {s.latest.inDevice ? ` · ${s.latest.inDevice}` : ""}
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : (
-                          /*
-                           * Nobody punched in this range, so there is no place
-                           * to report. This used to print the head office's
-                           * name and coordinates -- neither read from the data
-                           * -- which told the reader somebody had been
-                           * somewhere they had not been.
-                           */
-                          <span className="text-[11px] text-muted-foreground">
-                            No punches in this range
-                          </span>
-                        )}
-                      </td>
 
                       <td className="whitespace-nowrap px-4 py-2.5 text-right">
                         <span className={cn(
@@ -1376,9 +1328,6 @@ export default function TeamAttendancePage() {
                       </td>
                       <td className="whitespace-nowrap px-4 py-2.5 text-right font-semibold tabular-nums text-emerald-600">
                         {s.present}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums text-sky-600">
-                        {s.leaveDays || "—"}
                       </td>
                       <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums text-rose-600">
                         {s.absentDays || "—"}

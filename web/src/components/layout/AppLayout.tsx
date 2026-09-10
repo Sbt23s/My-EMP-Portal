@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
@@ -241,8 +241,52 @@ function notificationStyle(type?: string) {
   }
 }
 
-function AppShell() {
+/**
+ * Whether to show the loading indicator, smoothed.
+ *
+ * `useIsFetching` flips the moment any query starts and back the moment it
+ * settles, so a cached page produced a spinner that appeared and vanished
+ * within a frame or two -- a flicker in the corner of the header rather than
+ * anything a person could read as progress. Two thresholds fix that without
+ * misreporting anything:
+ *
+ *  - nothing is shown for the first 300ms, so a fast query never flashes;
+ *  - once shown it stays for at least 500ms, so a query that finishes just
+ *    after the spinner appears does not blink straight back out.
+ *
+ * The indicator still tracks real fetching -- it is only prevented from
+ * reporting durations too short to perceive.
+ */
+function useSmoothedFetching() {
   const isFetching = useIsFetching();
+  const [visible, setVisible] = useState(false);
+  const shownAt = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (isFetching > 0) {
+      if (visible) return;
+      const t = setTimeout(() => {
+        shownAt.current = Date.now();
+        setVisible(true);
+      }, 300);
+      return () => clearTimeout(t);
+    }
+
+    if (!visible) return;
+    const elapsed = shownAt.current ? Date.now() - shownAt.current : 0;
+    const remaining = Math.max(0, 500 - elapsed);
+    const t = setTimeout(() => {
+      shownAt.current = null;
+      setVisible(false);
+    }, remaining);
+    return () => clearTimeout(t);
+  }, [isFetching, visible]);
+
+  return visible;
+}
+
+function AppShell() {
+  const showLoading = useSmoothedFetching();
   const { user, loading, logout, hasPermission, hasRole, hasModule, hasDashboard } = useAuth();
 
   // Who is on a call right now, if anyone. A call notification reads "is
@@ -661,11 +705,25 @@ function AppShell() {
               )}
             </div>
 
-            {/* Real-time Loading Indicator */}
-            {isFetching > 0 && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-semibold shadow-xs" title="Loading data...">
+            {/*
+              Real-time loading indicator.
+
+              The spinner stands on its own. It used to sit beside the word
+              "Syncing...", which named the mechanism rather than telling anyone
+              anything: a spinner already says "wait", and the label only made
+              the pill wide enough to shift the icons beside it every time a
+              query ran. The title attribute keeps the explanation for anyone
+              who hovers or reads with a screen reader.
+            */}
+            {showLoading && (
+              <div
+                className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary border border-primary/20 shadow-xs animate-fade-in"
+                title="Loading data..."
+                role="status"
+                aria-live="polite"
+                aria-label="Loading data"
+              >
                 <CustomLoader className="h-4 w-4 text-primary" />
-                <span className="hidden sm:inline text-[11px] font-mono tracking-tight">Syncing...</span>
               </div>
             )}
 

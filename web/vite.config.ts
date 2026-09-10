@@ -96,7 +96,20 @@ export default defineConfig({
           "vendor-react": ["react", "react-dom", "react-router-dom"],
           "vendor-query": ["@tanstack/react-query", "@tanstack/react-table"],
           "vendor-realtime": ["@stomp/stompjs", "sockjs-client"],
-          "vendor-forms": ["react-hook-form", "@hookform/resolvers", "zod"]
+          "vendor-forms": ["react-hook-form", "@hookform/resolvers", "zod"],
+          /*
+            The animation engine, out of the entry chunk.
+
+            Exactly one screen uses it -- the login page -- and the login page
+            is eagerly imported so that a first-time visitor sees it without
+            waiting for a second request. That is worth keeping, but it was
+            dragging framer-motion into the entry bundle with it, so every
+            already-signed-in person downloaded an animation library for a
+            page they were not going to see. As its own chunk the browser
+            fetches it alongside the entry rather than inside it, and after
+            the first visit it is served from cache.
+          */
+          "vendor-motion": ["framer-motion"]
         }
       }
     }

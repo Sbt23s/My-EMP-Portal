@@ -144,16 +144,29 @@ export default function HelpdeskPage() {
       (await api.get<PageEnvelope<Ticket>>("/tickets?size=50")).data.content
   });
 
+  /*
+    Both of these load as soon as the person is allowed them, rather than
+    waiting for their tab to be opened.
+
+    They were gated on `activeTab` as well, which meant the tab labels -- which
+    count exactly these two lists -- read zero for whichever tab was not open.
+    "All tickets (0)" sat next to a table showing two of them. The tiles read
+    from `all` too, so they were wrong in the same way.
+
+    A count on a closed tab is the reason to open it, so it has to be right
+    before it is opened. Two small list requests on a page whose whole purpose
+    is those lists is a fair price for the numbers being true.
+  */
   const queue = useQuery({
     queryKey: ["tickets", "queue"],
-    enabled: isAgent && activeTab === "queue",
+    enabled: isAgent,
     queryFn: async () =>
       (await api.get<PageEnvelope<Ticket>>("/tickets/assigned-to-me?size=50")).data.content
   });
 
   const all = useQuery({
     queryKey: ["tickets", "all"],
-    enabled: canSeeAll && activeTab === "all",
+    enabled: canSeeAll,
     queryFn: async () =>
       (await api.get<PageEnvelope<Ticket>>("/tickets/all?size=200")).data.content
   });
@@ -358,8 +371,16 @@ export default function HelpdeskPage() {
         </div>
       )}
 
+      {/*
+        The heading names the tab the tiles are counting, not the widest list
+        on the page. It read "All Tickets" for anyone who could see them all,
+        so the CTO sitting on "Assigned to me" was told the two tickets below
+        were every ticket in the company.
+      */}
       {canSeeAll && (
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">All Tickets</h3>
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          {activeTab === "queue" ? "Assigned to me" : activeTab === "mine" ? "My tickets" : "All tickets"}
+        </h3>
       )}
 
       {/* Status counts over the chosen period — each tile is also its filter. */}

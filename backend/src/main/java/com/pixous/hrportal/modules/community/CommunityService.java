@@ -145,6 +145,15 @@ public class CommunityService {
      */
     @Transactional
     public CommunityDTOs.GroupResponse openTeamRoom(Long userId) {
+        /*
+         * Creating a room and enrolling a whole designation into it is the
+         * same act of authority as creating any other group, so it asks for
+         * the same permission. Without this check any employee could call it
+         * and pull every colleague sharing their job title into a group none
+         * of them had chosen to join -- the group-membership equivalent of
+         * adding yourself to somebody's address book.
+         */
+        assertCanManage(userId);
         User me = userRepository.findById(userId).orElseThrow();
         String title = me.getDesignationTitle() == null ? "" : me.getDesignationTitle().trim();
         if (title.isEmpty()) {
@@ -176,24 +185,25 @@ public class CommunityService {
     @Transactional
     public List<CommunityDTOs.GroupResponse> getUserCommunities(Long userId) {
         /*
-         * Make sure this person's team room exists before listing.
+         * Listing is listing. It does not create rooms and it does not enrol
+         * anybody.
          *
-         * openTeamRoom creates the room and enrols everyone on the team, and
-         * nothing in the web app ever called it -- so for most people the room
-         * simply did not exist, and being put on a team produced no
-         * conversation anywhere. Doing it here means membership alone is
-         * enough: whoever is on a team sees that team's group the next time
-         * Chat loads, without anyone opening a page first.
+         * This used to call openTeamRoom first, so that whoever was on a team
+         * found that team's conversation waiting for them. The cost was hidden
+         * and it was too high: openTeamRoom adds *every* user sharing the
+         * caller's designation to the room, so each time anyone opened Chat,
+         * a group quietly grew to include people nobody had chosen to add.
+         * A group HR or the CTO had created for a named few would pick up the
+         * rest of a designation on somebody else's page load, and the four
+         * __team__ rooms in production were created this way -- by people
+         * opening Chat, not by anyone deciding they should exist.
          *
-         * It is idempotent -- the room is looked up by name and members are
-         * added only if missing -- and it must not be able to break the chat
-         * list, so a failure here leaves the rest of the listing intact.
+         * Who is in a group is now only ever decided by someone adding them:
+         * POST /communities/{id}/members, or POST /communities/team for a room
+         * that is genuinely wanted. Both are deliberate acts by a person with
+         * the authority to perform them, which is what group membership has to
+         * be for the group to mean anything.
          */
-        try {
-            openTeamRoom(userId);
-        } catch (Exception e) {
-            log.debug("No team room for {}: {}", userId, e.getMessage());
-        }
         // A group belongs to the people who were added to it, so only those
         // people see it here. The company announcement channel is the exception:
         // it is meant for all staff, and only admin and HR can post to it.
@@ -205,26 +215,38 @@ public class CommunityService {
         // finding nothing there reads as having been left out of the team. The
         // membership check below is what keeps them private; excluding them
         // from the list only hid them from their own members.
+        /*
+         * Both of these are read once instead of once per group.
+         *
+         * The filter below asked isMember for every group in the company, and
+         * the DM branch asked again and then loaded the caller a third time --
+         * so listing chats cost upward of two queries per group, growing with
+         * every group anyone created. The answers do not change while this
+         * method runs, so one lookup each is enough.
+         */
+        java.util.Set<Long> myGroupIds =
+                new java.util.HashSet<>(memberRepository.findCommunityIdsByUserId(userId));
+        User me = userRepository.findById(userId).orElseThrow();
+
         return groupRepository.findAll().stream()
                 .filter(g -> isDirect(g) || g.isAnnouncement()
-                        || memberRepository.isMember(g.getId(), userId))
+                        || myGroupIds.contains(g.getId()))
                 .map(g -> {
                     if (isDirect(g)) {
-                        if (!memberRepository.isMember(g.getId(), userId)) return null; // not my DM
+                        if (!myGroupIds.contains(g.getId())) return null; // not my DM
                         User partner = memberRepository.findByCommunity_Id(g.getId()).stream()
                                 .map(CommunityMember::getUser)
                                 .filter(u -> !u.getId().equals(userId))
                                 .findFirst()
                                 .orElse(null);
                         if (partner == null) return null; // orphaned DM room — hide it
-                        
+
                         // STRICT COMPANY ISOLATION
-                        User me = userRepository.findById(userId).orElseThrow();
                         if (me.getCompanyId() != null && partner.getCompanyId() != null &&
                             !me.getCompanyId().equals(partner.getCompanyId())) {
                             return null;
                         }
-                        
+
                         return toDirectResponse(g, partner);
                     }
                     return new CommunityDTOs.GroupResponse(

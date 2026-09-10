@@ -2662,7 +2662,7 @@ export default function DashboardPage() {
             <ExecutiveStatCard
               icon={Clock}
               label="Today's Status"
-              value={d.punchedInToday ? "Punched In" : "Not In"}
+              value="Attendance"
               trend={d.punchInAt ? `Logged ${minutesToHours(d.workedMinutesToday)}` : "Tap to punch in"}
               color={d.punchedInToday ? "success" : "primary"}
               sparklineData={spark(d.workedMinutesToday ? d.workedMinutesToday / 60 : 0)}

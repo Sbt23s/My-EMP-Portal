@@ -19,7 +19,6 @@ import { ViewButton } from "@/components/ui/view-button";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { resolvePhotoUrl } from "@/components/ui/avatar";
 import { PhotoLightbox } from "@/components/PhotoLightbox";
-import { OfficeLocationsCard } from "@/components/OfficeLocationsCard";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import type { ApiEnvelope, AttendanceRecord, UserSummary, LeaveRequest, PermissionRow } from "@/types";
@@ -450,13 +449,6 @@ export default function TeamAttendancePage() {
 
   // A Team Leader (who is not also HR/admin) sees only their own team.
   const isTeamLeader = hasRole("IT_TL") && !hasRole("IT_MGR") && !hasRole("SUPER_ADMIN") && !hasRole("COMPANY_ADMIN");
-  /**
-   * Who may record an office. HR and the admin run the organisation's structure; a
-   * Team Leader reads the result of it. Moving an office changes how every punch
-   * in the company is named, which is not a team-level decision.
-   */
-  const canManageOffices = hasPermission("USER_MANAGE", "ORG_MANAGE", "EMPLOYEE_MANAGE");
-
   // Somebody arriving appears in this table on its own. HR watches this page in
   // the morning; refreshing it to find out who is in is the thing being removed.
   useAttendanceLive();
@@ -1106,9 +1098,114 @@ export default function TeamAttendancePage() {
     ws["!cols"] = wanted.map((c) => ({ wch: c.width }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Attendance");
+    /*
+      A second sheet: the same days, read across instead of down.
+
+      The daily log answers "what happened on this date"; the matrix answers
+      "what did this person's month look like", which is the question a
+      timesheet is usually opened to settle. Both come from the rows already
+      on screen, so the two sheets can never disagree -- and nothing extra is
+      fetched to build it.
+    */
+    XLSX.utils.book_append_sheet(wb, buildMatrixSheet(), "Attendance Matrix");
     XLSX.writeFile(wb, `Team_Attendance_${fromDate}_to_${toDate}.xlsx`);
     toast.success(`Exported ${rows.length} record${rows.length === 1 ? "" : "s"}`);
   };
+
+  /**
+   * The attendance matrix: one row per employee, one column per date.
+   *
+   * <p>A cell carries a single letter so a month fits on a screen -- P present,
+   * A absent, L leave, W work from home, H holiday, and a blank for a weekend.
+   * The counts at the end are what most people actually read.
+   *
+   * <p>Leave, work from home, holidays and weekends are kept distinct from
+   * absence, because calling an approved day "absent" is how a timesheet
+   * becomes an argument. The classification is the same one the table on
+   * screen uses; this only lays it out differently.
+   */
+  function buildMatrixSheet() {
+    const dates = rangeDates;
+    const header = [
+      "Employee ID",
+      "Employee Name",
+      "Team",
+      ...dates.map((d) => dayjs(d).format("D")),
+      "Present",
+      "Absent",
+      "Leave",
+      "WFH"
+    ];
+
+    // Index the rows once rather than searching them per cell: a month for
+    // sixty people is 1,800 lookups, and a scan each would be 1,800 scans.
+    const byKey = new Map<string, DisplayRow>();
+    rows.forEach((r) => byKey.set(`${r._date}-${r.userId}`, r));
+
+    const body = scopedMembers.map((m) => {
+      let present = 0, absent = 0, leaveDays = 0, wfhDays = 0;
+
+      const cells = dates.map((d) => {
+        const day = dayjs(d);
+        // A weekend is not attendance data and must not count as anything.
+        if (day.day() === 0 || day.day() === 6) return "";
+
+        const row = byKey.get(`${d}-${m.id}`);
+        if (row && !row.absent && row.record) {
+          // Working from home is carried on the attendance record itself --
+          // status or mode -- not on a leave type, which is why it is read
+          // here rather than from the leave map below.
+          const rec = row.record;
+          const wfh = "WFH" === String(rec.status ?? "").toUpperCase()
+                   || "WFH" === String(rec.mode ?? "").toUpperCase();
+          if (wfh) { wfhDays++; return "W"; }
+          present++;
+          return "P";
+        }
+
+        const lv = leaveByKey.get(`${d}-${m.id}`);
+        if (lv && String(lv.status).toUpperCase() === "APPROVED") {
+          leaveDays++;
+          return "L";
+        }
+
+        // Nothing recorded and nothing approved: absent. A future date inside
+        // the chosen range is left blank rather than marked absent, because
+        // nobody has failed to attend a day that has not happened.
+        if (day.isAfter(dayjs(), "day")) return "";
+        absent++;
+        return "A";
+      });
+
+      return [
+        m.employeeCode ?? "",
+        m.name ?? "",
+        (m.designationTitle || "").trim() || "No team",
+        ...cells,
+        present,
+        absent,
+        leaveDays,
+        wfhDays
+      ];
+    });
+
+    const ms = XLSX.utils.aoa_to_sheet([
+      [`Attendance matrix · ${dayjs(fromDate).format("DD MMM YYYY")} to ${dayjs(toDate).format("DD MMM YYYY")}`],
+      ["P = Present · A = Absent · L = Leave · W = Work from home · blank = weekend or not yet reached"],
+      [],
+      header,
+      ...body
+    ]);
+    ms["!cols"] = [
+      { wch: 13 }, { wch: 24 }, { wch: 18 },
+      ...dates.map(() => ({ wch: 4 })),
+      { wch: 9 }, { wch: 9 }, { wch: 8 }, { wch: 7 }
+    ];
+    // Freeze the name columns and the header, so scrolling into the middle of
+    // a month still shows whose row it is.
+    ms["!freeze"] = { xSplit: 3, ySplit: 4 };
+    return ms;
+  }
 
   return (
     <div>
@@ -1119,13 +1216,15 @@ export default function TeamAttendancePage() {
           : "View attendance for a date range across all employees."}
       />
 
-      {/* The offices every punch is matched against. HR and the admin manage them;
-          a Team Leader only reads the result, so this is not theirs to change. */}
-      {canManageOffices && (
-        <div className="mb-6">
-          <OfficeLocationsCard />
-        </div>
-      )}
+      {/*
+        The office-locations card used to sit here, above the filters.
+
+        It is gone from this page by request. Every punch is still matched
+        against the offices exactly as before -- the list, its API and the
+        card component are untouched -- but the attendance page is for reading
+        attendance, and a card for editing reference data was the first thing
+        on it for everyone who could manage offices.
+      */}
 
       <div className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4 shadow-sm">
         <div className="flex flex-col">
@@ -1470,11 +1569,13 @@ export default function TeamAttendancePage() {
                           <Badge variant="outline" className={getStatusColor(att.status, att.late)}>
                             {att.late ? "Late" : att.status}
                           </Badge>
-                          {incomplete && (
-                            <span className="whitespace-nowrap rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
-                              Missing punch
-                            </span>
-                          )}
+                          {/*
+                            The "Missing punch" badge that sat under the status
+                            is gone by request. The same fact is still on the
+                            row: the Punch Out column reads a dash, and the
+                            Remarks column says "No punch out". The badge was a
+                            third telling of it.
+                          */}
                         </div>
                       ) : leave ? (
                         // On leave, and whether it was granted, is still waiting,

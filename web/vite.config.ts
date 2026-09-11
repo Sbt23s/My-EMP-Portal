@@ -57,6 +57,7 @@ export default defineConfig({
         */
         globIgnores: [
           "**/xlsx-*.js",
+          "**/xlsxstyle-*.js",
           "**/generateCategoricalChart-*.js",
           "**/recharts-*.js",
           "**/Lottie-*.js",
@@ -64,7 +65,7 @@ export default defineConfig({
         ],
         runtimeCaching: [
           {
-            urlPattern: /\/assets\/(xlsx|recharts|generateCategoricalChart|lottie)-[\w-]+\.js$/,
+            urlPattern: /\/assets\/(xlsx|xlsxstyle|recharts|generateCategoricalChart|lottie)-[\w-]+\.js$/,
             handler: "CacheFirst",
             options: {
               cacheName: "heavy-chunks",
@@ -144,7 +145,17 @@ export default defineConfig({
             background on every deploy. Naming them fixes the precache rule
             above and keeps it fixed the next time the module graph shifts.
           */
-          "lottie": ["lottie-react"]
+          "lottie": ["lottie-react"],
+
+          /*
+            The spreadsheet writer, out of the page that uses it.
+
+            Without this it compiled into the attendance chunk and took it from
+            180 KB to 898 KB -- so every visit to the attendance page downloaded
+            a full Excel writer whether or not anyone exported anything. As its
+            own chunk it arrives only when an export actually runs.
+          */
+          "xlsxstyle": ["xlsx-js-style"]
         }
       }
     }

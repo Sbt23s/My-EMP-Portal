@@ -20,7 +20,10 @@ import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { resolvePhotoUrl } from "@/components/ui/avatar";
 import { PhotoLightbox } from "@/components/PhotoLightbox";
 import dayjs from "dayjs";
-import * as XLSX from "xlsx";
+// The styling fork of xlsx: same API, but it actually writes cell fills and
+// fonts into the file. The community build silently drops them, so a coloured
+// matrix exported with it arrives in Excel as plain text.
+import * as XLSX from "xlsx-js-style";
 import type { ApiEnvelope, AttendanceRecord, UserSummary, LeaveRequest, PermissionRow } from "@/types";
 import toast from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -1126,84 +1129,215 @@ export default function TeamAttendancePage() {
    */
   function buildMatrixSheet() {
     const dates = rangeDates;
-    const header = [
-      "Employee ID",
-      "Employee Name",
-      "Team",
-      ...dates.map((d) => dayjs(d).format("D")),
-      "Present",
-      "Absent",
-      "Leave",
-      "WFH"
-    ];
+
+    /*
+      Excel fills, as the spreadsheet itself would set them.
+
+      The palette is the one Excel uses for its own "Good / Bad / Neutral"
+      cell styles, so the sheet looks native rather than like something a
+      website produced: a pale ground with a dark version of the same hue for
+      the letter, which stays readable when the file is printed in greyscale.
+    */
+    const FILL = {
+      present: { bg: "FFC6EFCE", fg: "FF006100" },   // green
+      absent:  { bg: "FFFFC7CE", fg: "FF9C0006" },   // red
+      leave:   { bg: "FFFFEB9C", fg: "FF9C6500" },   // amber
+      wfh:     { bg: "FFBDD7EE", fg: "FF1F4E79" },   // blue
+      weekend: { bg: "FFE7E6E6", fg: "FF808080" },   // grey
+      empty:   { bg: "FFFFFFFF", fg: "FF808080" }
+    } as const;
+
+    const cellStyle = (tone: { bg: string; fg: string }) => ({
+      fill: { patternType: "solid", fgColor: { rgb: tone.bg } },
+      font: { color: { rgb: tone.fg }, bold: true, sz: 10 },
+      alignment: { horizontal: "center", vertical: "center" },
+      border: {
+        top:    { style: "thin", color: { rgb: "FFD9D9D9" } },
+        bottom: { style: "thin", color: { rgb: "FFD9D9D9" } },
+        left:   { style: "thin", color: { rgb: "FFD9D9D9" } },
+        right:  { style: "thin", color: { rgb: "FFD9D9D9" } }
+      }
+    });
+
+    const HEADER_STYLE = {
+      fill: { patternType: "solid", fgColor: { rgb: "FF2F5597" } },
+      font: { color: { rgb: "FFFFFFFF" }, bold: true, sz: 10 },
+      alignment: { horizontal: "center", vertical: "center", wrapText: true },
+      border: {
+        top:    { style: "thin", color: { rgb: "FF1F3864" } },
+        bottom: { style: "thin", color: { rgb: "FF1F3864" } },
+        left:   { style: "thin", color: { rgb: "FF1F3864" } },
+        right:  { style: "thin", color: { rgb: "FF1F3864" } }
+      }
+    };
+
+    // A weekend header is tinted too, so the columns that are meant to be
+    // empty are obviously meant to be empty rather than looking like data
+    // somebody forgot to fill in.
+    const WEEKEND_HEADER_STYLE = {
+      ...HEADER_STYLE,
+      fill: { patternType: "solid", fgColor: { rgb: "FF808080" } }
+    };
+
+    const NAME_STYLE = {
+      font: { sz: 10 },
+      alignment: { vertical: "center" },
+      border: {
+        top:    { style: "thin", color: { rgb: "FFD9D9D9" } },
+        bottom: { style: "thin", color: { rgb: "FFD9D9D9" } },
+        left:   { style: "thin", color: { rgb: "FFD9D9D9" } },
+        right:  { style: "thin", color: { rgb: "FFD9D9D9" } }
+      }
+    };
+
+    const COUNT_STYLE = (tone: { bg: string; fg: string }) => ({
+      ...cellStyle(tone),
+      font: { color: { rgb: tone.fg }, bold: true, sz: 11 }
+    });
+
+    const isWeekend = (d: string) => {
+      const wd = dayjs(d).day();
+      return wd === 0 || wd === 6;
+    };
 
     // Index the rows once rather than searching them per cell: a month for
     // sixty people is 1,800 lookups, and a scan each would be 1,800 scans.
     const byKey = new Map<string, DisplayRow>();
     rows.forEach((r) => byKey.set(`${r._date}-${r.userId}`, r));
 
-    const body = scopedMembers.map((m) => {
+    /** What one employee did on one date, as a letter and a fill. */
+    function classify(d: string, userId: number):
+      { text: string; tone: { bg: string; fg: string }; kind: "P" | "A" | "L" | "W" | "" } {
+      // Saturday and Sunday are not attendance and must never count as
+      // anything -- naming them is the whole point of shading them.
+      if (isWeekend(d)) {
+        return { text: dayjs(d).day() === 0 ? "Sun" : "Sat", tone: FILL.weekend, kind: "" };
+      }
+
+      const row = byKey.get(`${d}-${userId}`);
+      if (row && !row.absent && row.record) {
+        // Working from home is carried on the attendance record itself --
+        // status or mode -- not on a leave type, which is why it is read here
+        // rather than from the leave map below.
+        const rec = row.record;
+        const wfh = "WFH" === String(rec.status ?? "").toUpperCase()
+                 || "WFH" === String(rec.mode ?? "").toUpperCase();
+        if (wfh) return { text: "W", tone: FILL.wfh, kind: "W" };
+        return { text: "P", tone: FILL.present, kind: "P" };
+      }
+
+      const lv = leaveByKey.get(`${d}-${userId}`);
+      if (lv && String(lv.status).toUpperCase() === "APPROVED") {
+        return { text: "L", tone: FILL.leave, kind: "L" };
+      }
+
+      // A future date inside the chosen range is left blank rather than marked
+      // absent: nobody has failed to attend a day that has not happened.
+      if (dayjs(d).isAfter(dayjs(), "day")) {
+        return { text: "", tone: FILL.empty, kind: "" };
+      }
+      return { text: "A", tone: FILL.absent, kind: "A" };
+    }
+
+    const title = `Attendance · ${dayjs(fromDate).format("DD MMM YYYY")} to ${dayjs(toDate).format("DD MMM YYYY")}`;
+    const legend = "P = Present   A = Absent   L = Leave   W = Work from home   Sat/Sun = weekend";
+
+    // Row 1 title, row 2 legend, row 3 blank, row 4 headers, then the body.
+    const header = [
+      "Employee ID",
+      "Employee Name",
+      "Team",
+      ...dates.map((d) => dayjs(d).format("D MMM")),
+      "Present",
+      "Absent",
+      "Leave",
+      "WFH"
+    ];
+
+    const aoa: (string | number)[][] = [
+      [title],
+      [legend],
+      [],
+      header
+    ];
+
+    // Keep each row's classifications so the styling pass below does not have
+    // to work them out a second time.
+    const classified: ReturnType<typeof classify>[][] = [];
+
+    scopedMembers.forEach((m) => {
       let present = 0, absent = 0, leaveDays = 0, wfhDays = 0;
-
-      const cells = dates.map((d) => {
-        const day = dayjs(d);
-        // A weekend is not attendance data and must not count as anything.
-        if (day.day() === 0 || day.day() === 6) return "";
-
-        const row = byKey.get(`${d}-${m.id}`);
-        if (row && !row.absent && row.record) {
-          // Working from home is carried on the attendance record itself --
-          // status or mode -- not on a leave type, which is why it is read
-          // here rather than from the leave map below.
-          const rec = row.record;
-          const wfh = "WFH" === String(rec.status ?? "").toUpperCase()
-                   || "WFH" === String(rec.mode ?? "").toUpperCase();
-          if (wfh) { wfhDays++; return "W"; }
-          present++;
-          return "P";
-        }
-
-        const lv = leaveByKey.get(`${d}-${m.id}`);
-        if (lv && String(lv.status).toUpperCase() === "APPROVED") {
-          leaveDays++;
-          return "L";
-        }
-
-        // Nothing recorded and nothing approved: absent. A future date inside
-        // the chosen range is left blank rather than marked absent, because
-        // nobody has failed to attend a day that has not happened.
-        if (day.isAfter(dayjs(), "day")) return "";
-        absent++;
-        return "A";
+      const cs = dates.map((d) => {
+        const c = classify(d, m.id);
+        if (c.kind === "P") present++;
+        else if (c.kind === "A") absent++;
+        else if (c.kind === "L") leaveDays++;
+        else if (c.kind === "W") wfhDays++;
+        return c;
       });
-
-      return [
+      classified.push(cs);
+      aoa.push([
         m.employeeCode ?? "",
         m.name ?? "",
         (m.designationTitle || "").trim() || "No team",
-        ...cells,
-        present,
-        absent,
-        leaveDays,
-        wfhDays
-      ];
+        ...cs.map((c) => c.text),
+        present, absent, leaveDays, wfhDays
+      ]);
     });
 
-    const ms = XLSX.utils.aoa_to_sheet([
-      [`Attendance matrix · ${dayjs(fromDate).format("DD MMM YYYY")} to ${dayjs(toDate).format("DD MMM YYYY")}`],
-      ["P = Present · A = Absent · L = Leave · W = Work from home · blank = weekend or not yet reached"],
-      [],
-      header,
-      ...body
-    ]);
+    const ms = XLSX.utils.aoa_to_sheet(aoa);
+
+    // ---- styling ----
+    const at = (r: number, c: number) => XLSX.utils.encode_cell({ r, c });
+    const firstDateCol = 3;
+    const countCols = firstDateCol + dates.length;
+
+    // Title and legend.
+    if (ms[at(0, 0)]) {
+      ms[at(0, 0)].s = { font: { bold: true, sz: 13, color: { rgb: "FF1F3864" } } };
+    }
+    if (ms[at(1, 0)]) {
+      ms[at(1, 0)].s = { font: { sz: 9, color: { rgb: "FF808080" } } };
+    }
+
+    // Header row.
+    header.forEach((_h, i) => {
+      const ref = at(3, i);
+      if (!ms[ref]) return;
+      const weekendCol = i >= firstDateCol && i < countCols && isWeekend(dates[i - firstDateCol]);
+      ms[ref].s = weekendCol ? WEEKEND_HEADER_STYLE : HEADER_STYLE;
+    });
+
+    // Body.
+    classified.forEach((cs, rowIdx) => {
+      const r = 4 + rowIdx;
+      for (let c = 0; c < 3; c++) {
+        if (ms[at(r, c)]) ms[at(r, c)].s = NAME_STYLE;
+      }
+      cs.forEach((cell, i) => {
+        const ref = at(r, firstDateCol + i);
+        if (ms[ref]) ms[ref].s = cellStyle(cell.tone);
+      });
+      const counts = [FILL.present, FILL.absent, FILL.leave, FILL.wfh];
+      counts.forEach((tone, i) => {
+        const ref = at(r, countCols + i);
+        if (ms[ref]) ms[ref].s = COUNT_STYLE(tone);
+      });
+    });
+
     ms["!cols"] = [
-      { wch: 13 }, { wch: 24 }, { wch: 18 },
-      ...dates.map(() => ({ wch: 4 })),
+      { wch: 13 }, { wch: 26 }, { wch: 20 },
+      ...dates.map(() => ({ wch: 6 })),
       { wch: 9 }, { wch: 9 }, { wch: 8 }, { wch: 7 }
     ];
-    // Freeze the name columns and the header, so scrolling into the middle of
-    // a month still shows whose row it is.
+    ms["!rows"] = [{ hpt: 20 }, { hpt: 14 }, { hpt: 6 }, { hpt: 30 }];
+    // Freeze the identity columns and everything above the first employee, so
+    // scrolling into the middle of a month still shows whose row it is.
     ms["!freeze"] = { xSplit: 3, ySplit: 4 };
+    ms["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: Math.min(header.length - 1, 8) } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: Math.min(header.length - 1, 10) } }
+    ];
     return ms;
   }
 

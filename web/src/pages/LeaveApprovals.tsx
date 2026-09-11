@@ -1,7 +1,7 @@
 import { PixousLoader, PixousPanelLoader } from "@/components/ui/pixous-loader";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, X, CheckCheck, Inbox, ListTodo, Clock } from "lucide-react";
+import { Check, X, CheckCheck, Inbox, ListTodo, Clock, Search, CalendarDays, FilterX } from "lucide-react";
 import { ViewButton } from "@/components/ui/view-button";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
@@ -20,6 +20,51 @@ import type { ApiEnvelope, LeaveRequest, EmployeeTaskGroup } from "@/types";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
 import { useAuth } from "@/hooks/useAuth";
 import { StatTile, TILE_FILLS } from "@/components/ui/stat-tile";
+import { useTableSort } from "@/hooks/useTableSort";
+
+
+/**
+ * A sortable heading for this page's hand-built table.
+ *
+ * <p>The shared TableHead carries the same behaviour, but this table is plain
+ * markup rather than the Table components, so it needs its own. The arrow is
+ * always drawn -- faint until the column is the one in use -- so the header row
+ * does not shift when a sort turns on.
+ */
+function SortTh({
+  label, k, sort, align = "left"
+}: {
+  label: string;
+  k: string;
+  sort: { key: string | null; dir: "asc" | "desc"; toggle: (key: string) => void };
+  align?: "left" | "right";
+}) {
+  const active = sort.key === k;
+  return (
+    <th
+      className={align === "right" ? "text-right" : undefined}
+      aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : undefined}
+    >
+      <button
+        type="button"
+        onClick={() => sort.toggle(k)}
+        className={
+          "inline-flex items-center gap-1 rounded px-0.5 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 "
+          + (align === "right" ? "flex-row-reverse " : "")
+          + (active ? "text-foreground" : "")
+        }
+        title={active
+          ? sort.dir === "asc" ? "Sorted ascending — click for descending" : "Sorted descending — click to clear"
+          : `Sort by ${label}`}
+      >
+        {label}
+        <span className={"font-mono text-[10px] leading-none " + (active ? "opacity-90" : "opacity-30")}>
+          {active ? (sort.dir === "asc" ? "↑" : "↓") : "↕"}
+        </span>
+      </button>
+    </th>
+  );
+}
 
 export default function LeaveApprovalsPage() {
   const qc = useQueryClient();
@@ -32,6 +77,8 @@ export default function LeaveApprovalsPage() {
   const [tab, setTab] = useState<"PENDING" | "APPROVED" | "REJECTED" | "ALL">("ALL");
   const [teamFilter, setTeamFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   /*
     Which slice of the queue is on screen.
 
@@ -102,21 +149,25 @@ export default function LeaveApprovalsPage() {
     : viewMode === "ASSIGNED" ? assignedRows
     : (myQueue.data ?? []);
 
-  const counts = useMemo(() => ({
-    ALL: rawRows.length,
-    PENDING: rawRows.filter((r) => r.status === "PENDING").length,
-    APPROVED: rawRows.filter((r) => r.status === "APPROVED").length,
-    REJECTED: rawRows.filter((r) => r.status === "REJECTED").length
-  }), [rawRows]);
-
-  const teams = useMemo(
-    () => [...new Set(rawRows.map((r) => (r.team || "").trim()).filter(Boolean))].sort(),
-    [rawRows]
-  );
-
-  const list = rawRows.filter((r) => {
-    if (tab !== "ALL" && r.status !== tab) return false;
+  /**
+   * What the search, the team and the date window allow, before the status tab.
+   *
+   * <p>Kept apart from the table's own list because the tiles have to keep
+   * showing what each status would switch you to. Both read the same filters,
+   * so a keystroke or a date moves the table and the four figures together --
+   * the tiles counted the raw list before, and could sit there contradicting
+   * the rows underneath them.
+   */
+  const inScope = useMemo(() => rawRows.filter((r) => {
     if (teamFilter !== "all" && (r.team || "").trim() !== teamFilter) return false;
+    if (fromDate || toDate) {
+      // Matched on the first day of the leave, which is the date the table
+      // sorts and reads by.
+      const day = String(r.fromDate ?? "").slice(0, 10);
+      if (!day) return false;
+      if (fromDate && day < fromDate) return false;
+      if (toDate && day > toDate) return false;
+    }
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
       if (!r.employeeName?.toLowerCase().includes(q) &&
@@ -126,9 +177,44 @@ export default function LeaveApprovalsPage() {
       }
     }
     return true;
+  }), [rawRows, teamFilter, searchTerm, fromDate, toDate]);
+
+  const counts = useMemo(() => ({
+    ALL: inScope.length,
+    PENDING: inScope.filter((r) => r.status === "PENDING").length,
+    APPROVED: inScope.filter((r) => r.status === "APPROVED").length,
+    REJECTED: inScope.filter((r) => r.status === "REJECTED").length
+  }), [inScope]);
+
+  const teams = useMemo(
+    () => [...new Set(rawRows.map((r) => (r.team || "").trim()).filter(Boolean))].sort(),
+    [rawRows]
+  );
+
+  const byStatus = useMemo(
+    () => inScope.filter((r) => tab === "ALL" || r.status === tab),
+    [inScope, tab]
+  );
+
+  const sort = useTableSort<any>(byStatus, (row, key) => {
+    switch (key) {
+      case "employee": return row.employeeName ?? "";
+      case "team": return row.team ?? "";
+      case "type": return row.leaveTypeName ?? "";
+      case "days": return Number(row.workingDays) || 0;
+      case "from": return row.fromDate ?? "";
+      case "reason": return row.reason ?? "";
+      case "requestedTo": return row.requestedToName ?? "";
+      case "decidedBy": return row.decidedByName ?? "";
+      case "appliedOn": return row.createdAt ?? "";
+      case "status": return row.status ?? "";
+      default: return "";
+    }
   });
+  const list = sort.sorted;
+
   const { pageRows, page, setPage, totalPages, pageSize, setPageSize, total } =
-    usePagedRows(list, 15, [tab, teamFilter, searchTerm, viewMode, pending.data, myQueue.data]);
+    usePagedRows(list, 15, [tab, teamFilter, searchTerm, fromDate, toDate, sort.key, sort.dir, viewMode, pending.data, myQueue.data]);
 
   function toggle(id: number) {
     setSelected((prev) => {
@@ -233,6 +319,86 @@ export default function LeaveApprovalsPage() {
         )}
       </div>
 
+      {/*
+        Filters above the numbers they change.
+
+        These sat under the four tiles, so narrowing by name, team or date
+        moved figures the reader had already scrolled past.
+      */}
+      <div className="mb-4 flex flex-wrap items-center gap-4">
+        {teams.length > 1 && (
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Team
+            </span>
+            <Select
+              value={teamFilter}
+              onChange={(e) => setTeamFilter(e.target.value)}
+              className="w-[180px] h-9 bg-card"
+            >
+              <option value="all">All teams ({rawRows.length})</option>
+              {teams.map((t) => (
+                <option key={t} value={t}>
+                  {t} ({rawRows.filter((r) => (r.team || "").trim() === t).length})
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
+        <div className="relative min-w-[14rem] flex-1 max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search employee, team, or reason..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="h-9 bg-card pl-9"
+            aria-label="Search leave requests"
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm("")}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Leave starting between these dates. */}
+        <div className="flex items-center gap-1.5 rounded-lg bg-muted/40 px-2 py-1">
+          <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          <Input
+            type="date"
+            aria-label="From date"
+            className="h-[30px] w-[9rem] border-transparent bg-transparent px-1.5 text-xs focus-visible:border-input focus-visible:bg-background"
+            max={toDate || undefined}
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+          />
+          <span className="text-xs text-muted-foreground">to</span>
+          <Input
+            type="date"
+            aria-label="To date"
+            className="h-[30px] w-[9rem] border-transparent bg-transparent px-1.5 text-xs focus-visible:border-input focus-visible:bg-background"
+            min={fromDate || undefined}
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+          />
+        </div>
+
+        {(searchTerm.trim() || fromDate || toDate || teamFilter !== "all") && (
+          <button
+            type="button"
+            onClick={() => { setSearchTerm(""); setFromDate(""); setToDate(""); setTeamFilter("all"); }}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <FilterX className="h-3.5 w-3.5" /> Clear
+          </button>
+        )}
+      </div>
+
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile
           label="All requests" value={counts.ALL} icon={Inbox} fill={TILE_FILLS.violet}
@@ -254,36 +420,6 @@ export default function LeaveApprovalsPage() {
           hint="Turned down" active={tab === "REJECTED"}
           onClick={() => { setTab("REJECTED"); setSelected(new Set()); }}
         />
-      </div>
-
-      <div className="mb-4 flex flex-wrap items-center gap-4">
-        {teams.length > 1 && (
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Team
-            </span>
-            <Select
-              value={teamFilter}
-              onChange={(e) => setTeamFilter(e.target.value)}
-              className="w-[180px] h-9 bg-card"
-            >
-              <option value="all">All teams ({rawRows.length})</option>
-              {teams.map((t) => (
-                <option key={t} value={t}>
-                  {t} ({rawRows.filter((r) => (r.team || "").trim() === t).length})
-                </option>
-              ))}
-            </Select>
-          </div>
-        )}
-        <div className="flex flex-1 items-center gap-2 max-w-sm">
-          <Input
-            placeholder="Search employee, team, or reason..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-9 bg-card"
-          />
-        </div>
       </div>
 
       {pending.isLoading ? (
@@ -323,16 +459,16 @@ export default function LeaveApprovalsPage() {
               <thead>
                 <tr className="border-b bg-muted/50 text-left align-middle text-xs font-bold text-muted-foreground uppercase tracking-wider [&>th]:px-3.5 [&>th]:py-3">
                   <th>Action</th>
-                  <th>Employee</th>
-                  <th>Team</th>
-                  <th>Leave Type</th>
-                  <th className="text-right">Days</th>
-                  <th>Date Range</th>
-                  <th>Reason</th>
-                  <th>Requested To</th>
-                  <th>Decided By</th>
-                  <th>Applied On</th>
-                  <th>Status</th>
+                  <SortTh label="Employee" k="employee" sort={sort} />
+                  <SortTh label="Team" k="team" sort={sort} />
+                  <SortTh label="Leave Type" k="type" sort={sort} />
+                  <SortTh label="Days" k="days" sort={sort} align="right" />
+                  <SortTh label="Date Range" k="from" sort={sort} />
+                  <SortTh label="Reason" k="reason" sort={sort} />
+                  <SortTh label="Requested To" k="requestedTo" sort={sort} />
+                  <SortTh label="Decided By" k="decidedBy" sort={sort} />
+                  <SortTh label="Applied On" k="appliedOn" sort={sort} />
+                  <SortTh label="Status" k="status" sort={sort} />
                 </tr>
               </thead>
               <tbody className="divide-y">

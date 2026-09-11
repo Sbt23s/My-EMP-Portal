@@ -687,51 +687,12 @@ function AllComplaints() {
 
   const filterBar = (
     <>
-      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
-        {COMPLAINT_TILES.map((t) => (
-          <StatTile
-            key={t.key}
-            label={t.label}
-            value={counts[t.key] ?? 0}
-            hint={t.hint}
-            icon={t.icon}
-            fill={t.fill}
-            active={statusTab === t.key}
-            onClick={() => { setStatusTab(t.key); paged.setPage(0); }}
-          />
-        ))}
-      </div>
-
       {/*
-        Mine, or everybody's.
+        Filters above the numbers they change.
 
-        Shown as a count so the number of complaints actually waiting on this
-        person is visible without switching to find out.
+        These sat under the five tiles and the scope tabs, so a search or a
+        date moved counts the reader had already scrolled past.
       */}
-      <div className="flex gap-1 rounded-lg border bg-muted/60 p-1 w-fit">
-        {([
-          ["me", `Addressed to me (${addressedToMe.length})`] as const,
-          ...(isSystemAdminOrCto
-            ? []
-            : [["mine", `My requests (${raisedByMe.length})`] as const]),
-          ["all", `All complaints (${everything.length})`] as const,
-        ]).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => { setScope(key); paged.setPage(0); }}
-            className={
-              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors " +
-              (activeScope === key
-                ? "bg-background shadow-sm text-foreground"
-                : "text-muted-foreground hover:text-foreground")
-            }
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
           <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Year</label>
@@ -825,6 +786,52 @@ function AllComplaints() {
           onClick={exportAllComplaints}
         />
       </div>
+
+      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+        {COMPLAINT_TILES.map((t) => (
+          <StatTile
+            key={t.key}
+            label={t.label}
+            value={counts[t.key] ?? 0}
+            hint={t.hint}
+            icon={t.icon}
+            fill={t.fill}
+            active={statusTab === t.key}
+            onClick={() => { setStatusTab(t.key); paged.setPage(0); }}
+          />
+        ))}
+      </div>
+
+      {/*
+        Mine, or everybody's.
+
+        Shown as a count so the number of complaints actually waiting on this
+        person is visible without switching to find out.
+      */}
+      <div className="flex gap-1 rounded-lg border bg-muted/60 p-1 w-fit">
+        {([
+          ["me", `Addressed to me (${addressedToMe.length})`] as const,
+          ...(isSystemAdminOrCto
+            ? []
+            : [["mine", `My requests (${raisedByMe.length})`] as const]),
+          ["all", `All complaints (${everything.length})`] as const,
+        ]).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => { setScope(key); paged.setPage(0); }}
+            className={
+              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors " +
+              (activeScope === key
+                ? "bg-background shadow-sm text-foreground"
+                : "text-muted-foreground hover:text-foreground")
+            }
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
     </>
   );
 

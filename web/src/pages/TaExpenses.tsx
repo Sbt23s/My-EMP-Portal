@@ -34,6 +34,7 @@ import { resolvePhotoUrl } from "@/components/ui/avatar";
 import { ClaimInvoice } from "@/components/ClaimInvoice";
 import { StatTile, TILE_FILLS } from "@/components/ui/stat-tile";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
+import { useTableSort } from "@/hooks/useTableSort";
 
 const inr = (n: number) =>
   "₹" + (Number(n) || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
@@ -145,10 +146,27 @@ export default function TaExpensesPage() {
     });
   }, [taList.data, q, fromDate, toDate]);
 
-  const rows = useMemo(
+  const byStatus = useMemo(
     () => inScope.filter((r) => statusTab === "ALL" || r.status === statusTab),
     [inScope, statusTab]
   );
+
+  const sort = useTableSort<any>(byStatus, (row, key) => {
+    switch (key) {
+      case "employee": return row.userName ?? "";
+      case "code": return row.employeeCode ?? "";
+      case "team": return row.team ?? "";
+      case "date": return row.date ?? "";
+      case "location": return row.location ?? "";
+      case "category": return row.category ?? "";
+      // Money and distance sort as numbers, so 900 does not come after 1,000.
+      case "km": return Number(row.totalKm) || 0;
+      case "gross": return Number(row.grossTotal) || 0;
+      case "status": return row.status ?? "";
+      default: return "";
+    }
+  });
+  const rows = sort.sorted;
 
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailTo, setEmailTo] = useState("");
@@ -358,6 +376,82 @@ export default function TaExpensesPage() {
 
       */}
 
+      {/*
+        Filters above the numbers they change.
+
+        This sat inside the table card, underneath the five figures it moves,
+        so typing a name changed totals the reader had already scrolled past.
+      */}
+      <div className="mb-4 rounded-xl border bg-card/60 p-2.5 shadow-sm backdrop-blur-sm">
+        {/*
+          Search and the date window, as one toolbar.
+
+          The search box sat here alone and there was no way to narrow by
+          date at all -- on a page whose every row is dated, and whose
+          totals are money, that was the filter people needed most. Both
+          feed the same memo, so a keystroke or a date moves the table and
+          the five figures above it in the same render.
+        */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[13rem] flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder={
+                canApprove
+                  ? "Search employee, category or location…"
+                  : "Search category or location…"
+              }
+              className="h-[38px] w-full border-transparent bg-muted/40 pl-9 focus-visible:border-input focus-visible:bg-background"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              aria-label="Search claims"
+            />
+            {q && (
+              <button
+                type="button"
+                onClick={() => setQ("")}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Two fields, one window -- laid out as the single control it is. */}
+          <div className="flex items-center gap-1.5 rounded-lg bg-muted/40 px-2 py-1">
+            <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <Input
+              type="date"
+              aria-label="From date"
+              className="h-[30px] w-[9.5rem] border-transparent bg-transparent px-1.5 text-xs focus-visible:border-input focus-visible:bg-background"
+              max={toDate || undefined}
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+            />
+            <span className="text-xs text-muted-foreground">to</span>
+            <Input
+              type="date"
+              aria-label="To date"
+              className="h-[30px] w-[9.5rem] border-transparent bg-transparent px-1.5 text-xs focus-visible:border-input focus-visible:bg-background"
+              min={fromDate || undefined}
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+            />
+          </div>
+
+          {(q.trim() || fromDate || toDate) && (
+            <button
+              type="button"
+              onClick={() => { setQ(""); setFromDate(""); setToDate(""); }}
+              className="inline-flex h-[38px] items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <FilterX className="h-3.5 w-3.5" /> Clear
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Counts for whichever list is open — each tile is also its filter. */}
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <StatTile
@@ -406,73 +500,6 @@ export default function TaExpensesPage() {
                 </button>
               ))}
             </div>
-            {/*
-              Search and the date window, as one toolbar.
-
-              The search box sat here alone and there was no way to narrow by
-              date at all -- on a page whose every row is dated, and whose
-              totals are money, that was the filter people needed most. Both
-              feed the same memo, so a keystroke or a date moves the table and
-              the five figures above it in the same render.
-            */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative min-w-[13rem] flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder={
-                    canApprove
-                      ? "Search employee, category or location…"
-                      : "Search category or location…"
-                  }
-                  className="h-[38px] w-full border-transparent bg-muted/40 pl-9 focus-visible:border-input focus-visible:bg-background"
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  aria-label="Search claims"
-                />
-                {q && (
-                  <button
-                    type="button"
-                    onClick={() => setQ("")}
-                    aria-label="Clear search"
-                    className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Two fields, one window -- laid out as the single control it is. */}
-              <div className="flex items-center gap-1.5 rounded-lg bg-muted/40 px-2 py-1">
-                <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <Input
-                  type="date"
-                  aria-label="From date"
-                  className="h-[30px] w-[9.5rem] border-transparent bg-transparent px-1.5 text-xs focus-visible:border-input focus-visible:bg-background"
-                  max={toDate || undefined}
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                />
-                <span className="text-xs text-muted-foreground">to</span>
-                <Input
-                  type="date"
-                  aria-label="To date"
-                  className="h-[30px] w-[9.5rem] border-transparent bg-transparent px-1.5 text-xs focus-visible:border-input focus-visible:bg-background"
-                  min={fromDate || undefined}
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                />
-              </div>
-
-              {(q.trim() || fromDate || toDate) && (
-                <button
-                  type="button"
-                  onClick={() => { setQ(""); setFromDate(""); setToDate(""); }}
-                  className="inline-flex h-[38px] items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  <FilterX className="h-3.5 w-3.5" /> Clear
-                </button>
-              )}
-            </div>
           </div>
 
           {taList.isLoading ? (
@@ -498,14 +525,14 @@ export default function TaExpensesPage() {
                       all, so the control at the end of ten columns had nothing
                       above it to say what it was. */}
                   <TableHead className="px-4 text-center">Action</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Location</TableHead>
+                  <TableHead sortKey="date" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Date</TableHead>
+                  <TableHead sortKey="employee" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Employee</TableHead>
+                  <TableHead sortKey="category" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Category</TableHead>
+                  <TableHead sortKey="location" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Location</TableHead>
                   <TableHead>Bus Fare</TableHead>
                   <TableHead>Others</TableHead>
-                  <TableHead>Gross</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead sortKey="gross" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Gross</TableHead>
+                  <TableHead sortKey="status" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Status</TableHead>
                   <TableHead>Decided by</TableHead>
                 </TableRow>
               </TableHeader>

@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/table";
 import { RequestThread } from "@/components/RequestThread";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
+import { useTableSort } from "@/hooks/useTableSort";
 import { StatTile, TILE_FILLS } from "@/components/ui/stat-tile";
 import { EmptyState } from "@/components/EmptyState";
 import { useAuth } from "@/hooks/useAuth";
@@ -237,17 +238,39 @@ export default function WorkFromHomePage() {
         .some((v) => String(v).toLowerCase().includes(needle)));
   }, [rows, q, tab, fromMonth, toMonth]);
 
-  const paged = usePagedRows(filtered, 15, [tab, q, rows, fromMonth, toMonth]);
+  const sort = useTableSort<any>(filtered, (row, key) => {
+    switch (key) {
+      case "employee": return row.employeeName ?? "";
+      case "role": return row.applicantRole ?? "";
+      case "from": return row.fromDate ?? "";
+      case "days": return Number(row.workingDays) || 0;
+      case "reason": return row.reason ?? "";
+      case "team": return row.team ?? row.requestedToName ?? "";
+      case "status": return row.status ?? "";
+      case "decidedBy": return row.decidedByName ?? row.approvedByName ?? "";
+      default: return "";
+    }
+  });
+  const sortedRows = sort.sorted;
 
+  const paged = usePagedRows(sortedRows, 15, [tab, q, rows, fromMonth, toMonth, sort.key, sort.dir]);
+
+  /*
+    The tiles follow the filters.
+
+    They counted the raw list, so searching a name or narrowing the months
+    changed the table underneath and left the four figures above it saying
+    something else.
+  */
   const counts = useMemo(() => {
-    const c = { ALL: rows.length, PENDING: 0, APPROVED: 0, REJECTED: 0 };
-    rows.forEach((r) => {
+    const c = { ALL: filtered.length, PENDING: 0, APPROVED: 0, REJECTED: 0 };
+    filtered.forEach((r) => {
       if (r.status === "PENDING") c.PENDING += 1;
       else if (r.status === "APPROVED") c.APPROVED += 1;
       else if (r.status === "REJECTED") c.REJECTED += 1;
     });
     return c;
-  }, [rows]);
+  }, [filtered]);
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["wfh"] });
@@ -283,11 +306,13 @@ export default function WorkFromHomePage() {
     be the list somebody is looking at, or the filters they set were pointless.
   */
   const exportExcel = () => {
-    if (filtered.length === 0) {
+    if (sortedRows.length === 0) {
       toast.error("Nothing to export.");
       return;
     }
-    const sheet = filtered.map((r, i) => ({
+    // The rows as the table has them: filters applied and the chosen sort
+    // kept, so the file matches the screen it came from.
+    const sheet = sortedRows.map((r, i) => ({
       "#": i + 1,
       Employee: r.employeeName,
       "Employee ID": r.employeeCode || "",
@@ -397,29 +422,12 @@ export default function WorkFromHomePage() {
         );
       })()}
 
-      <div className="mb-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-        <StatTile
-          label={tab === "today" ? "At home" : "All"}
-          value={counts.ALL}
-          icon={tab === "today" ? Home : Inbox}
-          fill={TILE_FILLS.violet}
-          hint={
-            tab === "inbox" ? "Sent to you"
-            : tab === "all" ? "Across the organisation"
-            : tab === "today"
-              ? (boardDate === boardTo
-                  ? dayjs(boardDate).format("DD MMM YYYY")
-                  : `${dayjs(boardDate).format("DD MMM")} – ${dayjs(boardTo).format("DD MMM YYYY")}`)
-            : "Requests you raised"
-          } />
-        <StatTile label="Pending" value={counts.PENDING} icon={Clock} fill={TILE_FILLS.amber}
-          hint="Waiting on a decision" />
-        <StatTile label="Approved" value={counts.APPROVED} icon={CheckCircle2} fill={TILE_FILLS.green}
-          hint="Counted as present" />
-        <StatTile label="Rejected" value={counts.REJECTED} icon={XCircle} fill={TILE_FILLS.red}
-          hint="Turned down" />
-      </div>
+      {/*
+        Filters above the numbers they change.
 
+        These sat under the four tiles, so narrowing by name or by date
+        moved figures the reader had already scrolled past.
+      */}
       <div className="mb-3 flex flex-wrap items-end gap-3">
         <div className="max-w-sm flex-1">
           <div className="relative">
@@ -521,11 +529,34 @@ export default function WorkFromHomePage() {
         )}
       </div>
 
+      <div className="mb-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <StatTile
+          label={tab === "today" ? "At home" : "All"}
+          value={counts.ALL}
+          icon={tab === "today" ? Home : Inbox}
+          fill={TILE_FILLS.violet}
+          hint={
+            tab === "inbox" ? "Sent to you"
+            : tab === "all" ? "Across the organisation"
+            : tab === "today"
+              ? (boardDate === boardTo
+                  ? dayjs(boardDate).format("DD MMM YYYY")
+                  : `${dayjs(boardDate).format("DD MMM")} – ${dayjs(boardTo).format("DD MMM YYYY")}`)
+            : "Requests you raised"
+          } />
+        <StatTile label="Pending" value={counts.PENDING} icon={Clock} fill={TILE_FILLS.amber}
+          hint="Waiting on a decision" />
+        <StatTile label="Approved" value={counts.APPROVED} icon={CheckCircle2} fill={TILE_FILLS.green}
+          hint="Counted as present" />
+        <StatTile label="Rejected" value={counts.REJECTED} icon={XCircle} fill={TILE_FILLS.red}
+          hint="Turned down" />
+      </div>
+
       <Card>
         <CardContent className="p-0">
           {loading ? (
             <Skeleton className="m-4 h-32" />
-          ) : filtered.length === 0 ? (
+          ) : sortedRows.length === 0 ? (
             <EmptyState
               icon={Home}
               title={
@@ -556,13 +587,13 @@ export default function WorkFromHomePage() {
                       Whose request it is matters on every list except the one
                       showing only your own.
                     */}
-                    {tab !== "mine" && <TableHead>Employee</TableHead>}
-                    {tab !== "mine" && <TableHead>Role</TableHead>}
-                    <TableHead>Dates</TableHead>
-                    <TableHead>Days</TableHead>
-                    <TableHead>Reason</TableHead>
-                    <TableHead>{tab === "mine" ? "Sent to" : "Team"}</TableHead>
-                    <TableHead>Status</TableHead>
+                    {tab !== "mine" && <TableHead sortKey="employee" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Employee</TableHead>}
+                    {tab !== "mine" && <TableHead sortKey="role" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Role</TableHead>}
+                    <TableHead sortKey="from" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Dates</TableHead>
+                    <TableHead sortKey="days" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Days</TableHead>
+                    <TableHead sortKey="reason" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Reason</TableHead>
+                    <TableHead sortKey="team" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>{tab === "mine" ? "Sent to" : "Team"}</TableHead>
+                    <TableHead sortKey="status" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Status</TableHead>
                     <TableHead>{tab === "today" ? "Approved by" : "Decided by"}</TableHead>
                   </TableRow>
                 </TableHeader>

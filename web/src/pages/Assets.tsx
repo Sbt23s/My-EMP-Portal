@@ -8,7 +8,7 @@ import * as XLSX from "xlsx";
 import dayjs from "dayjs";
 import {
   Plus, Boxes, QrCode, CheckCircle2, PackageCheck, PackageX, Trash2,
-  Download, Eye
+  Download, Eye, CalendarDays
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
@@ -31,6 +31,7 @@ import {
 import type { ApiEnvelope, PageEnvelope, Asset, UserSummary } from "@/types";
 import { StatTile, TILE_FILLS } from "@/components/ui/stat-tile";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
+import { useTableSort } from "@/hooks/useTableSort";
 import { Search, UserCheck, Wrench } from "lucide-react";
 
 export default function AssetsPage() {
@@ -68,6 +69,8 @@ export default function AssetsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Asset | null>(null);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [invFrom, setInvFrom] = useState("");
+  const [invTo, setInvTo] = useState("");
 
   const [searchParams, setSearchParams] = useSearchParams();
   const lookupCode = searchParams.get("code");
@@ -172,15 +175,39 @@ export default function AssetsPage() {
       if (invStatus !== "ALL" && a.status !== invStatus) return false;
       if (invCategory !== "ALL" && a.category !== invCategory) return false;
       if (invHolder !== "ALL" && String(a.assignedTo ?? "") !== invHolder) return false;
+      // Purchased between these dates. An asset with no purchase date recorded
+      // is left out while a window is set: it cannot be shown to fall inside
+      // one, and guessing either way would be wrong.
+      if (invFrom || invTo) {
+        const day = String(a.purchaseDate ?? "").slice(0, 10);
+        if (!day) return false;
+        if (invFrom && day < invFrom) return false;
+        if (invTo && day > invTo) return false;
+      }
       if (!needle) return true;
       return `${a.assetCode ?? ""} ${a.assetType ?? ""} ${a.brand ?? ""} ${a.model ?? ""} ${a.serialNumber ?? ""}`
         .toLowerCase().includes(needle);
     });
-  }, [invAll, invSearch, invStatus, invCategory, invHolder]);
+  }, [invAll, invSearch, invStatus, invCategory, invHolder, invFrom, invTo]);
+
+  const invSort = useTableSort<any>(invRows, (row, key) => {
+    switch (key) {
+      case "code": return row.assetCode ?? "";
+      case "type": return row.assetType ?? "";
+      case "category": return row.category ?? "";
+      case "status": return row.status ?? "";
+      case "holder": return nameById.get(row.assignedTo) ?? "";
+      case "stock": return Number(row.quantity ?? 0);
+      case "warranty": return row.warrantyEnd ?? "";
+      case "purchased": return row.purchaseDate ?? "";
+      default: return "";
+    }
+  });
+  const invSorted = invSort.sorted;
 
   // The shared hook rather than a hand-rolled slice, so the inventory gains the
   // page numbers and the rows-per-page choice like every other table.
-  const invPaged = usePagedRows(invRows, 15, [invSearch, invStatus, invCategory, invHolder]);
+  const invPaged = usePagedRows(invSorted, 15, [invSearch, invStatus, invCategory, invHolder, invFrom, invTo, invSort.key, invSort.dir]);
   const invPageRows = invPaged.pageRows;
 
   // The employee's own equipment pages the same way. Somebody holding a laptop,
@@ -291,28 +318,12 @@ export default function AssetsPage() {
               </span>
             </div>
 
-            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <StatTile
-                compact label="Total assets" value={invStats.total} icon={Boxes}
-                fill={TILE_FILLS.violet} hint="Everything registered"
-                active={invStatus === "ALL"} onClick={() => { setInvStatus("ALL"); setInvPage(0); }}
-              />
-              <StatTile
-                compact label="In stock" value={invStats.inStock} icon={PackageCheck}
-                fill={TILE_FILLS.green} hint="Ready to allocate"
-              />
-              <StatTile
-                compact label="Allocated" value={invStats.allocated} icon={UserCheck}
-                fill={TILE_FILLS.blue} hint="With an employee"
-              />
-              <StatTile
-                compact label="Out of stock" value={invStats.outOfStock} icon={PackageX}
-                fill={TILE_FILLS.amber} hint="Nothing left to allocate"
-                active={invStatus === "OUT_OF_STOCK"}
-                onClick={() => { setInvStatus(invStatus === "OUT_OF_STOCK" ? "ALL" : "OUT_OF_STOCK"); setInvPage(0); }}
-              />
-            </div>
+            {/*
+              Filters above the numbers they change.
 
+              These sat under the four tiles, so a search or a status moved
+              counts the reader had already scrolled past.
+            */}
             <div className="mt-3 flex flex-wrap items-end gap-3">
               <div className="relative w-full sm:w-72">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -362,17 +373,65 @@ export default function AssetsPage() {
                   ))}
                 </Select>
               </div>
-              {(invSearch || invStatus !== "ALL" || invCategory !== "ALL" || invHolder !== "ALL") && (
+              {/* Purchased between, for narrowing the register to a period. */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Purchased
+                </label>
+                <div className="flex items-center gap-1.5 rounded-lg bg-muted/40 px-2 py-[5px]">
+                  <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <Input
+                    type="date"
+                    aria-label="Purchased from"
+                    className="h-[30px] w-[9rem] border-transparent bg-transparent px-1.5 text-xs focus-visible:border-input focus-visible:bg-background"
+                    max={invTo || undefined}
+                    value={invFrom}
+                    onChange={(e) => { setInvFrom(e.target.value); setInvPage(0); }}
+                  />
+                  <span className="text-xs text-muted-foreground">to</span>
+                  <Input
+                    type="date"
+                    aria-label="Purchased to"
+                    className="h-[30px] w-[9rem] border-transparent bg-transparent px-1.5 text-xs focus-visible:border-input focus-visible:bg-background"
+                    min={invFrom || undefined}
+                    value={invTo}
+                    onChange={(e) => { setInvTo(e.target.value); setInvPage(0); }}
+                  />
+                </div>
+              </div>
+              {(invSearch || invStatus !== "ALL" || invCategory !== "ALL" || invHolder !== "ALL" || invFrom || invTo) && (
                 <Button
                   variant="outline"
                   onClick={() => {
                     setInvSearch(""); setInvStatus("ALL"); setInvCategory("ALL");
-                    setInvHolder("ALL"); setInvPage(0);
+                    setInvHolder("ALL"); setInvFrom(""); setInvTo(""); setInvPage(0);
                   }}
                 >
                   Reset
                 </Button>
               )}
+            </div>
+
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <StatTile
+                compact label="Total assets" value={invStats.total} icon={Boxes}
+                fill={TILE_FILLS.violet} hint="Everything registered"
+                active={invStatus === "ALL"} onClick={() => { setInvStatus("ALL"); setInvPage(0); }}
+              />
+              <StatTile
+                compact label="In stock" value={invStats.inStock} icon={PackageCheck}
+                fill={TILE_FILLS.green} hint="Ready to allocate"
+              />
+              <StatTile
+                compact label="Allocated" value={invStats.allocated} icon={UserCheck}
+                fill={TILE_FILLS.blue} hint="With an employee"
+              />
+              <StatTile
+                compact label="Out of stock" value={invStats.outOfStock} icon={PackageX}
+                fill={TILE_FILLS.amber} hint="Nothing left to allocate"
+                active={invStatus === "OUT_OF_STOCK"}
+                onClick={() => { setInvStatus(invStatus === "OUT_OF_STOCK" ? "ALL" : "OUT_OF_STOCK"); setInvPage(0); }}
+              />
             </div>
           </CardHeader>
           <CardContent>
@@ -387,14 +446,14 @@ export default function AssetsPage() {
                 <TableHeader>
                   <TableRow>
                     {canManage && <TableHead className="text-right">Action</TableHead>}
-                    <TableHead>Code</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Allocated to</TableHead>
-                    <TableHead className="text-right">Stock</TableHead>
-                    <TableHead>Warranty</TableHead>
-                    <TableHead>Purchased</TableHead>
+                    <TableHead sortKey="code" activeKey={invSort.key} sortDir={invSort.dir} onSort={invSort.toggle}>Code</TableHead>
+                    <TableHead sortKey="type" activeKey={invSort.key} sortDir={invSort.dir} onSort={invSort.toggle}>Type</TableHead>
+                    <TableHead sortKey="category" activeKey={invSort.key} sortDir={invSort.dir} onSort={invSort.toggle}>Category</TableHead>
+                    <TableHead sortKey="status" activeKey={invSort.key} sortDir={invSort.dir} onSort={invSort.toggle}>Status</TableHead>
+                    <TableHead sortKey="holder" activeKey={invSort.key} sortDir={invSort.dir} onSort={invSort.toggle}>Allocated to</TableHead>
+                    <TableHead className="text-right" sortKey="stock" activeKey={invSort.key} sortDir={invSort.dir} onSort={invSort.toggle}>Stock</TableHead>
+                    <TableHead sortKey="warranty" activeKey={invSort.key} sortDir={invSort.dir} onSort={invSort.toggle}>Warranty</TableHead>
+                    <TableHead sortKey="purchased" activeKey={invSort.key} sortDir={invSort.dir} onSort={invSort.toggle}>Purchased</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -516,7 +575,12 @@ export default function AssetsPage() {
         )}
       </Dialog>
       {registerOpen && <RegisterDialog onClose={() => setRegisterOpen(false)} />}
-      {exportOpen && <ExportDialog inventoryData={inventory.data ?? []} onClose={() => setExportOpen(false)} />}
+      {/*
+        The export takes the rows the filters left, in the order the table has
+        them. It read the raw inventory, so narrowing to one category and
+        exporting still produced the whole register.
+      */}
+      {exportOpen && <ExportDialog inventoryData={invSorted} onClose={() => setExportOpen(false)} />}
 
       {lookupCode && (
         <Dialog open onClose={() => setSearchParams({})} className="max-w-md">

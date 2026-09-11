@@ -1,4 +1,4 @@
-import { PixousLoader } from "@/components/ui/pixous-loader";
+import { PixousLoader, PixousPanelLoader } from "@/components/ui/pixous-loader";
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Wallet, FileText, Download, IndianRupee, Eye, Users, Clock, Banknote, WalletCards, ReceiptText, CheckCircle2, Mail, AlertCircle } from "lucide-react";
@@ -594,7 +594,7 @@ export default function PayrollPage() {
       )}
 
       {loading ? (
-        <Skeleton className="h-64 w-full rounded-xl" />
+        <PixousPanelLoader height="h-64" />
       ) : rows.length === 0 ? (
         <EmptyState
           icon={Wallet}

@@ -129,6 +129,41 @@ export function PixousOverlayLoader({ label = "Working" }: { label?: string }) {
 }
 
 /**
+ * A panel that has not loaded yet: the mark centred in the space the content
+ * will occupy.
+ *
+ * <p>This replaces the single full-height grey block that several pages used
+ * while their data arrived. A lone skeleton rectangle is only a placeholder
+ * shape when it stands for something -- a row, a card, a chart. One box the
+ * size of the whole panel stands for nothing, so it reads as a page that has
+ * broken rather than one that is working, and nothing on screen says to wait.
+ *
+ * <p>Skeletons are still the right answer where the shape is known and
+ * repeated. This is for where it is not.
+ *
+ * @param height Tailwind height class for the area being filled, so the panel
+ *               does not jump when the content arrives
+ */
+export function PixousPanelLoader({
+  height = "h-64",
+  label = "Loading"
+}: {
+  height?: string;
+  label?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex w-full items-center justify-center rounded-lg border border-dashed bg-muted/20",
+        height
+      )}
+    >
+      <PixousLoader size="lg" label={label} />
+    </div>
+  );
+}
+
+/**
  * The mark at button size, for an action that is in flight.
  *
  * <p>Sized and spaced to sit before a label without shifting it, which is

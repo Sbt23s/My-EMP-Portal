@@ -15,7 +15,7 @@ import {
   Sparkles,
   Check
 } from "lucide-react";
-import { PixousLoader } from "@/components/ui/pixous-loader";
+import { PixousLoader, PixousPanelLoader } from "@/components/ui/pixous-loader";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
 import { api, apiMessage } from "@/lib/api";
@@ -468,7 +468,7 @@ export function TechAdminGlobalAnnouncements() {
           </div>
 
           {listQuery.isLoading ? (
-            <Skeleton className="h-64 w-full rounded-xl" />
+            <PixousPanelLoader height="h-64" />
           ) : (listQuery.data?.length ?? 0) === 0 ? (
             <div className="py-12 text-center text-sm text-muted-foreground">
               No announcements published yet.

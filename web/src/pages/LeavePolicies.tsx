@@ -1,4 +1,4 @@
-import { PixousLoader } from "@/components/ui/pixous-loader";
+import { PixousLoader, PixousPanelLoader } from "@/components/ui/pixous-loader";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -211,7 +211,7 @@ export default function LeavePoliciesPage() {
           </div>
 
           {leaveTypes.isLoading ? (
-            <Skeleton className="h-40 w-full" />
+            <PixousPanelLoader height="h-40" />
           ) : (
             <Card>
               <CardContent className="p-0">
@@ -295,7 +295,7 @@ export default function LeavePoliciesPage() {
             )}
           </div>
           {holidays.isLoading ? (
-            <Skeleton className="h-40 w-full" />
+            <PixousPanelLoader height="h-40" />
           ) : (
             <Card>
               <CardContent className="p-0">

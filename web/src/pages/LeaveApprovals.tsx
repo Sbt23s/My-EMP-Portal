@@ -1,4 +1,4 @@
-import { PixousLoader } from "@/components/ui/pixous-loader";
+import { PixousLoader, PixousPanelLoader } from "@/components/ui/pixous-loader";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, X, CheckCheck, Inbox, ListTodo, Clock } from "lucide-react";
@@ -287,7 +287,7 @@ export default function LeaveApprovalsPage() {
       </div>
 
       {pending.isLoading ? (
-        <Skeleton className="h-64 w-full rounded-lg" />
+        <PixousPanelLoader height="h-64" />
       ) : list.length === 0 ? (
         <EmptyState
           icon={Inbox}

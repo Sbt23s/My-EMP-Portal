@@ -11,7 +11,7 @@ import { ExportColumnsDialog, type ExportChoice, type ExportColumn }
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PixousLoader } from "@/components/ui/pixous-loader";
+import { PixousLoader, PixousPanelLoader } from "@/components/ui/pixous-loader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExportExcelButton } from "@/components/ui/export-excel-button";
@@ -1240,7 +1240,7 @@ export default function TeamAttendancePage() {
       {!validRange ? (
         <EmptyState icon={Users} title="Pick a valid date range" description="Choose a From date on or before the To date." />
       ) : isLoading ? (
-        <Skeleton className="h-64 w-full rounded-lg" />
+        <PixousPanelLoader height="h-64" />
       ) : view === "SUMMARY" ? (
         summary.length === 0 ? (
           <EmptyState icon={Users} title="No employees" description="Nobody matches this team or search." />

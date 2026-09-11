@@ -1,4 +1,4 @@
-import { PixousLoader } from "@/components/ui/pixous-loader";
+import { PixousLoader, PixousPanelLoader } from "@/components/ui/pixous-loader";
 import type { ComponentType } from "react";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -259,7 +259,7 @@ export default function PayslipsPage() {
       )}
 
       {payslips.isLoading ? (
-        <Skeleton className="h-64 w-full rounded-xl" />
+        <PixousPanelLoader height="h-64" />
       ) : list.length === 0 ? (
         <EmptyState
           icon={Wallet}

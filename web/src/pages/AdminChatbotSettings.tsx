@@ -1,4 +1,4 @@
-import { PixousLoader } from "@/components/ui/pixous-loader";
+import { PixousLoader, PixousPanelLoader } from "@/components/ui/pixous-loader";
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Bot, KeyRound, Globe, Trash2, Save, RefreshCw, Database, ShieldCheck } from "lucide-react";
@@ -187,7 +187,7 @@ export default function AdminChatbotSettings() {
       </div>
 
       {settings.isLoading || !s ? (
-        <Skeleton className="h-96 w-full rounded-xl" />
+        <PixousPanelLoader height="h-96" />
       ) : (
         <>
           {/* Providers / keys */}

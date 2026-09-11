@@ -93,10 +93,20 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
-      {/* Video background */}
+      {/*
+        Video background, but the poster is what people actually wait for.
+
+        The clip is 2.6 MB and this is the first page of the product, so it
+        was 2.6 MB standing between somebody and the sign-in form -- on a
+        slow connection, a blank screen while a decorative background
+        downloaded. preload="none" lets the browser paint the poster frame
+        immediately and fetch the video afterwards; autoPlay still starts it
+        as soon as enough has arrived, so the page looks the same a moment
+        later and is usable straight away.
+      */}
       <video
         className="absolute inset-0 h-full w-full object-cover"
-        autoPlay muted loop playsInline poster="/video/poster.jpg"
+        autoPlay muted loop playsInline preload="none" poster="/video/poster.jpg"
       >
         <source src="/video/login-bg.mp4" type="video/mp4" />
       </video>

@@ -36,14 +36,35 @@ export default defineConfig({
           chart is as fast as it was before and the first is no slower than
           it would have been without a service worker at all.
         */
+        /*
+          Named by what the chunk contains, not by what Rollup happened to
+          call it last time.
+
+          These read "AreaChart-*" and "Lottie-*", which were the chunk names
+          when the rule was written. Rollup names a chunk after a module
+          inside it, and both had since been renamed -- the chart chunk is now
+          "generateCategoricalChart-*" and the animation chunk is plain
+          "index-*". So two of the three patterns matched nothing, and 1.1 MB
+          the rule existed to keep out of the precache was being downloaded in
+          the background by every user on every deploy. The whole point of
+          lazy-loading them was undone by the service worker fetching them
+          anyway.
+
+          Matching on size rather than name would be sturdier still, but
+          Workbox globs cannot express that; naming every heavy chunk
+          explicitly at least fails visibly when one is renamed again, because
+          the precache total jumps.
+        */
         globIgnores: [
           "**/xlsx-*.js",
-          "**/AreaChart-*.js",
-          "**/Lottie-*.js"
+          "**/generateCategoricalChart-*.js",
+          "**/recharts-*.js",
+          "**/Lottie-*.js",
+          "**/lottie-*.js"
         ],
         runtimeCaching: [
           {
-            urlPattern: /\/assets\/(xlsx|AreaChart|Lottie)-[\w-]+\.js$/,
+            urlPattern: /\/assets\/(xlsx|recharts|generateCategoricalChart|lottie)-[\w-]+\.js$/,
             handler: "CacheFirst",
             options: {
               cacheName: "heavy-chunks",
@@ -109,7 +130,21 @@ export default defineConfig({
             fetches it alongside the entry rather than inside it, and after
             the first visit it is served from cache.
           */
-          "vendor-motion": ["framer-motion"]
+          "vendor-motion": ["framer-motion"],
+
+          /*
+            The animation player and the chart library, each in a chunk named
+            after itself.
+
+            Neither was named, so Rollup called them after whichever module it
+            happened to pick -- the player landed in a 743 KB chunk called
+            "index-*", indistinguishable from the entry chunk. That made them
+            impossible to exclude from the service worker precache by name,
+            which is how 1.1 MB nobody had asked for was being fetched in the
+            background on every deploy. Naming them fixes the precache rule
+            above and keeps it fixed the next time the module graph shifts.
+          */
+          "lottie": ["lottie-react"]
         }
       }
     }

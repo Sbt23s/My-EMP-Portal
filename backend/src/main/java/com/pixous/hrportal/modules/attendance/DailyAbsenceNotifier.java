@@ -128,16 +128,21 @@ public class DailyAbsenceNotifier {
             // on a full-attendance day is a bell people stop opening.
             if (leaveNames.isEmpty() && absentNames.isEmpty()) return;
 
-            String title = "Today: " + absentNames.size() + " absent, "
-                    + leaveNames.size() + " on leave";
+            // One count, not two.
+            //
+            // This read "9 absent, 0 on leave" and then split the names into
+            // "Absent (no leave applied)" and "On approved leave". For the
+            // person reading it at ten in the morning the distinction does not
+            // change anything -- either way the desk is short of that person
+            // today -- and the parenthetical made a plain fact sound like an
+            // accusation. Whether leave was applied for is on the leave page,
+            // where it is actionable.
+            List<String> away = new ArrayList<>(absentNames);
+            away.addAll(leaveNames);
+
+            String title = "Today: " + away.size() + " absent";
             StringBuilder body = new StringBuilder();
-            if (!absentNames.isEmpty()) {
-                body.append("Absent (no leave applied): ").append(join(absentNames));
-            }
-            if (!leaveNames.isEmpty()) {
-                if (body.length() > 0) body.append(" · ");
-                body.append("On approved leave: ").append(join(leaveNames));
-            }
+            body.append(join(away));
 
             recipients(companyId).forEach(id -> notificationService.createAndPush(
                     id, title, body.toString(), "ATTENDANCE_DIGEST", "/attendance"));

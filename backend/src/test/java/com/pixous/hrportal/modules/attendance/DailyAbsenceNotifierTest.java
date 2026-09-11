@@ -93,10 +93,16 @@ class DailyAbsenceNotifierTest {
         verify(notificationService).createAndPush(
                 eq(1L), title.capture(), body.capture(), eq("ATTENDANCE_DIGEST"), anyString());
 
-        // User 4 never punched in and has no leave; user 3 is accounted for.
-        assertThat(title.getValue()).isEqualTo("Today: 1 absent, 1 on leave");
-        assertThat(body.getValue()).contains("Absent (no leave applied): User 4 (PIX-E004)");
-        assertThat(body.getValue()).contains("On approved leave: User 3 (PIX-E003)");
+        // Both are away today: user 4 never punched in, user 3 is on approved
+        // leave. The digest counts them together and names them together --
+        // whether leave was applied for is a question for the leave page, not
+        // for a ten-o'clock headcount.
+        assertThat(title.getValue()).isEqualTo("Today: 2 absent");
+        assertThat(body.getValue()).contains("User 4 (PIX-E004)");
+        assertThat(body.getValue()).contains("User 3 (PIX-E003)");
+        // The old wording drew a line between the two. It should be gone.
+        assertThat(body.getValue()).doesNotContain("no leave applied");
+        assertThat(body.getValue()).doesNotContain("On approved leave");
         // Somebody who punched in is in neither list.
         assertThat(body.getValue()).doesNotContain("User 2");
     }

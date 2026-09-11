@@ -14,12 +14,12 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { roleCodeLabel } from "@/lib/roles";
+import { roleLabels } from "@/lib/roles";
 import dayjs from "dayjs";
 import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { ApiEnvelope } from "@/types";
-import { CustomLoader } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 /*
   These two are loaded after the first paint instead of with it.
 
@@ -304,7 +304,7 @@ function AppShell() {
   if (loading || !user) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
-        <CustomLoader className="h-8 w-8 text-primary animate-spin" />
+        <PixousLoader size="md" />
       </div>
     );
   }
@@ -723,7 +723,7 @@ function AppShell() {
                 aria-live="polite"
                 aria-label="Loading data"
               >
-                <CustomLoader className="h-4 w-4 text-primary" />
+                <PixousLoader size="xs" />
               </div>
             )}
 
@@ -766,10 +766,11 @@ function AppShell() {
                     <div className="px-3 py-2">
                       <div className="text-sm font-medium">{userName}</div>
                       <div className="text-xs text-muted-foreground">{user?.email}</div>
+                      {/* One badge per label: several codes share one, so roleLabels dedupes. */}
                       <div className="mt-1.5 flex flex-wrap gap-1">
-                        {user?.roles?.slice(0, 3).map((r) => (
-                          <Badge key={r} variant="secondary" className="text-[10px]">
-                            {roleCodeLabel(r)}
+                        {roleLabels(user?.roles).slice(0, 3).map((label) => (
+                          <Badge key={label} variant="secondary" className="text-[10px]">
+                            {label}
                           </Badge>
                         ))}
                       </div>

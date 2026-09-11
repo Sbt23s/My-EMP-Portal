@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "@/lib/api";
@@ -109,7 +109,7 @@ export function TechAdminCompanyConfig() {
     }
   };
 
-  if (loading) return <div className="flex p-12 justify-center"><Loader2 className="animate-spin text-blue-500 w-8 h-8"/></div>;
+  if (loading) return <div className="flex p-12 justify-center"><PixousLoader size="md" /></div>;
 
   const cardBg = isDark ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900 shadow-sm";
   const borderClass = isDark ? "border-slate-800" : "border-slate-200";
@@ -130,7 +130,7 @@ export function TechAdminCompanyConfig() {
           </p>
         </div>
         <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white">
-          {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+          {saving ? <PixousLoader size="xs" className="mr-2" /> : <Save className="w-4 h-4 mr-2" />}
           Save Configuration
         </Button>
       </div>
@@ -263,7 +263,7 @@ export function TechAdminCompanyConfig() {
             </div>
 
             <Button onClick={runSimulation} disabled={simulating} className="bg-blue-600 hover:bg-blue-700 text-white w-full">
-              {simulating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Run Access Evaluation"}
+              {simulating ? <PixousLoader size="xs" className="mr-2" /> : "Run Access Evaluation"}
             </Button>
 
             {simResult && (

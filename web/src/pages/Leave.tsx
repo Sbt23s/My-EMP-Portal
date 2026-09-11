@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -816,7 +816,7 @@ export default function LeavePage() {
               Cancel
             </Button>
             <Button type="submit" disabled={apply.isPending}>
-              {apply.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              {apply.isPending && <PixousLoader size="xs" />}
               Submit request
             </Button>
           </div>

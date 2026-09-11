@@ -15,7 +15,7 @@ import {
   Sparkles,
   Check
 } from "lucide-react";
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
 import { api, apiMessage } from "@/lib/api";
@@ -452,7 +452,7 @@ export function TechAdminGlobalAnnouncements() {
               onClick={() => publishMutation.mutate()}
               className="bg-primary hover:bg-primary/90"
             >
-              {publishMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {publishMutation.isPending && <PixousLoader size="xs" className="mr-2" />}
               Confirm / Publish
             </Button>
           </div>

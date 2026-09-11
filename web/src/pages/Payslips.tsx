@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import type { ComponentType } from "react";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -328,7 +328,7 @@ export default function PayslipsPage() {
                             onClick={() => download(p.id, label)}
                           >
                             {downloading === p.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              <PixousLoader size="xs" />
                             ) : (
                               <Download className="h-3.5 w-3.5" />
                             )}
@@ -351,7 +351,7 @@ export default function PayslipsPage() {
                             title="Email this payslip to yourself"
                           >
                             {emailing === p.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              <PixousLoader size="xs" />
                             ) : (
                               <Mail className="h-3.5 w-3.5" />
                             )}

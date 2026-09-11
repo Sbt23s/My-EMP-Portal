@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState } from "react";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -201,7 +201,7 @@ export default function LoginPage() {
                 className="group relative w-full overflow-hidden rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {submitting && <PixousLoader size="xs" className="mr-2" />}
                 {submitting ? "Signing in..." : "Sign in"}
               </motion.button>
             </motion.div>

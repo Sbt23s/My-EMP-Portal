@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
@@ -326,7 +326,7 @@ export function SalaryDialog({ employee, current, monthBasic, periodLabel, onClo
         <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
           <Button type="submit" disabled={save.isPending || errors.length > 0}>
-            {save.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {save.isPending ? <PixousLoader size="xs" className="mr-2" /> : null}
             Save Salary
           </Button>
         </div>

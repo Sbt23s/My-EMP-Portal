@@ -1,4 +1,3 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
 import { useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";

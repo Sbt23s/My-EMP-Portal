@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, ChevronRight, ChevronDown, CheckCircle2, Users2, X, Star } from "lucide-react";
@@ -651,7 +651,7 @@ function SkillsDialog({ member, onClose, onSaved }: { member: UserSummary; onClo
       <div className="mt-4 flex justify-end gap-2">
         <Button variant="outline" onClick={onClose}>Cancel</Button>
         <Button disabled={save.isPending} onClick={() => save.mutate()}>
-          {save.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {save.isPending ? <PixousLoader size="xs" className="mr-2" /> : null}
           Save
         </Button>
       </div>
@@ -753,7 +753,7 @@ function AssignLeaderDialog({ team, leaders, assigned, busy, onAssign, onRemove,
         <div className="flex justify-end gap-2 pt-1">
           <Button variant="outline" onClick={onClose}>Close</Button>
           <Button disabled={!chosen || busy} onClick={() => chosen && onAssign(chosen)}>
-            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Star className="mr-2 h-4 w-4" />}
+            {busy ? <PixousLoader size="xs" className="mr-2" /> : <Star className="mr-2 h-4 w-4" />}
             Assign
           </Button>
         </div>
@@ -803,7 +803,7 @@ function CreateTeamDialog({ onClose, onCreated }: { onClose: () => void; onCreat
         <div className="flex justify-end gap-2 pt-1">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button disabled={!name.trim() || create.isPending} onClick={() => create.mutate()}>
-            {create.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+            {create.isPending ? <PixousLoader size="xs" className="mr-2" /> : <Plus className="mr-2 h-4 w-4" />}
             Create
           </Button>
         </div>
@@ -883,7 +883,7 @@ function AddToDesignationDialog({ label, employees, onClose, onAdded }: {
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button disabled={!empId || assign.isPending} onClick={doAssign}>
-            {assign.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+            {assign.isPending ? <PixousLoader size="xs" className="mr-2" /> : <Plus className="mr-2 h-4 w-4" />}
             {currentTeam && norm(currentTeam) !== norm(label) ? "Move here" : "Add"}
           </Button>
         </div>

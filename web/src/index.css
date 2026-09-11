@@ -537,3 +537,42 @@ textarea,
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/*
+  The Pixous loading mark.
+
+  One keyframe, driven per dot by an animation-delay, so the brightening
+  travels around the ring. Only opacity and scale change -- both composited,
+  so the browser does no layout or paint per frame and it holds 60fps on a
+  mid-range Android.
+*/
+@keyframes pixous-dot {
+  0%,
+  100% {
+    opacity: 0.18;
+    transform: scale(0.7);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  55% {
+    opacity: 0.45;
+    transform: scale(0.9);
+  }
+}
+
+/*
+  Reduced motion: the ring stops turning, and the dots settle at a steady
+  brightness. The element still reads as "busy" to anyone watching, and it
+  still announces itself to a screen reader, without the movement.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .pixous-loader svg circle {
+    animation: pixous-dot-still 1.6s ease-in-out infinite !important;
+  }
+  @keyframes pixous-dot-still {
+    0%, 100% { opacity: 0.35; }
+    50%      { opacity: 0.85; }
+  }
+}

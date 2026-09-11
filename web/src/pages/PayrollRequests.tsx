@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Wallet, FileText, Download, IndianRupee, Eye, Users, Clock, Banknote, WalletCards, ReceiptText, CheckCircle2, Mail, AlertCircle } from "lucide-react";
@@ -725,7 +725,7 @@ export default function PayrollPage() {
                                 title={`Email this payslip to ${e.name}`}
                               >
                                 {emailing === payslip.id
-                                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                                  ? <PixousLoader size="xs" />
                                   : <Mail className="h-4 w-4" />}
                               </button>
                               {/*
@@ -945,7 +945,7 @@ function GenerateDialog({ employee, grossMonthly, standingBasic, salary, default
           </span>
           <span className="text-right">
             {basicPreview.isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <PixousLoader size="xs" />
             ) : (
               <>
                 <span className="font-semibold tabular-nums">{inr(effectiveBasic)}</span>
@@ -1063,7 +1063,7 @@ function GenerateDialog({ employee, grossMonthly, standingBasic, salary, default
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button disabled={gen.isPending} onClick={() => gen.mutate()}>
-              {gen.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+              {gen.isPending ? <PixousLoader size="xs" className="mr-2" /> : <FileText className="mr-2 h-4 w-4" />}
               Generate
             </Button>
           </div>

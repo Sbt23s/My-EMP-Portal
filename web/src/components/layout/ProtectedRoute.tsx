@@ -1,4 +1,5 @@
 import { Navigate, useLocation } from "react-router-dom";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { tokenStore } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -13,7 +14,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <PixousLoader size="md" />
       </div>
     );
   }

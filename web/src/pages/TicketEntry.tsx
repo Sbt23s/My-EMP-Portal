@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useRef, useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -365,7 +365,7 @@ export default function TicketEntryPage() {
               )}
             >
               {uploading ? (
-                <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+                <PixousLoader size="md" className="mx-auto" />
               ) : (
                 <UploadCloud className="mx-auto h-6 w-6 text-muted-foreground" />
               )}
@@ -436,7 +436,7 @@ export default function TicketEntryPage() {
             </Button>
             <Button disabled={create.isPending || uploading} onClick={submit}>
               {create.isPending
-                ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ? <PixousLoader size="xs" className="mr-1.5" />
                 : <Send className="mr-1.5 h-4 w-4" />}
               Raise ticket
             </Button>

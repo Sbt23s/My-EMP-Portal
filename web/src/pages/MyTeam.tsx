@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -820,7 +820,7 @@ function TeamChatRail({
                 disabled={sendingFiles}
               />
               <Button size="sm" onClick={send} disabled={(!draft.trim() && pendingFiles.length === 0) || sendingFiles}>
-                {sendingFiles ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {sendingFiles ? <PixousLoader size="xs" /> : <Send className="h-4 w-4" />}
               </Button>
             </div>
             

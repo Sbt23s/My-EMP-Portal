@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import {
@@ -196,7 +196,7 @@ function OnboardingDetail({
               disabled={startMutation.isPending}
             >
               {startMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <PixousLoader size="xs" />
               ) : (
                 <PlayCircle className="h-4 w-4" />
               )}

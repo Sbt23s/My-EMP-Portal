@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -316,7 +316,7 @@ function OfficeDialog({
             </span>
             <Button size="sm" variant="outline" disabled={locating || !secure} onClick={useMyLocation}>
               {locating
-                ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                ? <PixousLoader size="xs" className="mr-1.5" />
                 : <Crosshair className="mr-1.5 h-3.5 w-3.5" />}
               Use my current location
             </Button>
@@ -388,7 +388,7 @@ function OfficeDialog({
         <div className="flex justify-end gap-2 pt-1">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button disabled={!ready || save.isPending} onClick={() => save.mutate()}>
-            {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {save.isPending && <PixousLoader size="xs" className="mr-2" />}
             {office ? "Save changes" : "Add office"}
           </Button>
         </div>

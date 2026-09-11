@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState } from "react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -220,7 +220,7 @@ function CommunityCard({
           <div className="max-h-64 overflow-y-auto space-y-2 border rounded-lg p-3 bg-slate-50/50">
             {isLoading ? (
               <div className="flex justify-center py-4">
-                <Loader2 className="animate-spin text-muted-foreground w-5 h-5" />
+                <PixousLoader size="sm" />
               </div>
             ) : (
               members?.map(m => (
@@ -348,7 +348,7 @@ export default function CommunitiesPage() {
   if (isLoadingCommunities || isLoadingUsers) {
     return (
       <div className="flex justify-center p-8">
-        <Loader2 className="animate-spin text-muted-foreground w-8 h-8" />
+        <PixousLoader size="md" />
       </div>
     );
   }
@@ -402,7 +402,7 @@ export default function CommunitiesPage() {
             */
             onClick={() => createGroup.mutate()}
           >
-            {createGroup.isPending ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+            {createGroup.isPending ? <PixousLoader size="xs" className="mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
             Create
           </Button>
         </CardContent>

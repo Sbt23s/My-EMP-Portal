@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -505,7 +505,7 @@ export default function AssetsPage() {
                 onClick={() => deleteAsset.mutate(deleteTarget.id)}
               >
                 {deleteAsset.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <PixousLoader size="xs" className="mr-2" />
                 ) : (
                   <Trash2 className="mr-2 h-4 w-4" />
                 )}
@@ -522,7 +522,7 @@ export default function AssetsPage() {
         <Dialog open onClose={() => setSearchParams({})} className="max-w-md">
           {lookupAsset.isLoading ? (
             <div className="flex flex-col items-center justify-center p-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <PixousLoader size="md" />
               <p className="mt-2 text-sm text-muted-foreground">Loading asset details...</p>
             </div>
           ) : lookupAsset.isError ? (
@@ -655,7 +655,7 @@ function AllocateDialog({ asset, onClose }: { asset: Asset; onClose: () => void 
           <Label htmlFor="userId">Select Employee</Label>
           {employees.isLoading ? (
             <div className="flex items-center gap-2 text-xs text-muted-foreground h-10 border rounded-md px-3 bg-muted/20">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading employees...
+              <PixousLoader size="xs" /> Loading employees...
             </div>
           ) : (
             <Select
@@ -679,7 +679,7 @@ function AllocateDialog({ asset, onClose }: { asset: Asset; onClose: () => void 
             Cancel
           </Button>
           <Button disabled={!userId || allocate.isPending} onClick={() => allocate.mutate()}>
-            {allocate.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {allocate.isPending && <PixousLoader size="xs" className="mr-2" />}
             Allocate
           </Button>
         </div>
@@ -779,7 +779,7 @@ function RegisterDialog({ onClose }: { onClose: () => void }) {
             Cancel
           </Button>
           <Button type="submit" disabled={create.isPending}>
-            {create.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            {create.isPending && <PixousLoader size="xs" />}
             Register
           </Button>
         </div>

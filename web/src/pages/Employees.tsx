@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import {
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ViewButton } from "@/components/ui/view-button";
 import { ExportExcelButton } from "@/components/ui/export-excel-button";
+import { EmployeeHistoryDialog } from "@/components/EmployeeHistoryDialog";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, resolvePhotoUrl } from "@/components/ui/avatar";
 import { Select } from "@/components/ui/select";
@@ -37,7 +38,7 @@ import { useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { EMAIL_PATTERN, digitsOnly } from "@/lib/validation";
 import { TablePagination } from "@/components/ui/table-pagination";
-import { roleCodeLabel } from "@/lib/roles";
+import { roleCodeLabel, roleLabels } from "@/lib/roles";
 import { DATE_MIN, DATE_MAX } from "@/lib/dates";
 
 const column = createColumnHelper<UserSummary>();
@@ -57,6 +58,7 @@ export default function EmployeesPage() {
   const [addIndustry, setAddIndustry] = useState<"IT" | "CIVIL" | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [exportingLogins, setExportingLogins] = useState(false);
   // Add, Import and Edit. HR reaches these through EMPLOYEE_MANAGE; offboarding
   // and deleting an employee remain admin-only.
@@ -247,7 +249,7 @@ export default function EmployeesPage() {
         u.email ?? "",
         u.phone ?? "",
         industryLabel(u.industry) ?? "",
-        (u.roles ?? []).map(roleCodeLabel).join(", "),
+        roleLabels(u.roles).join(", "),
         u.designationTitle || desigMap.get(u.designationId ?? -1) || "",
         u.dob ? dayjs(u.dob).format("DD MMM YYYY") : "",
         u.profileStatus ?? ""
@@ -688,6 +690,23 @@ export default function EmployeesPage() {
                   <FilterX className="h-3.5 w-3.5" /> Clear filters
                 </Button>
               )}
+
+              {/*
+                Service record, at the far right of the filter row.
+
+                It belongs beside the filters rather than with the header
+                actions: those four create and move data, this one only looks
+                back at it. ml-auto pushes it into the space the filters leave.
+              */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setHistoryOpen(true)}
+                className="ml-auto h-[36px] gap-1.5 text-xs font-medium"
+              >
+                <HistoryIcon className="h-3.5 w-3.5" /> Employee History
+              </Button>
             </div>
           )}
 
@@ -810,6 +829,8 @@ export default function EmployeesPage() {
           </div>
         </div>
       )}
+
+      {historyOpen && <EmployeeHistoryDialog onClose={() => setHistoryOpen(false)} />}
     </div>
   );
 }
@@ -1073,7 +1094,7 @@ function PastImports() {
         <div className="border-t px-3 py-2.5">
           {imports.isLoading ? (
             <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+              <PixousLoader size="xs" /> Loading…
             </div>
           ) : rows.length === 0 ? (
             /* This said "nothing has been imported yet", which on a database whose
@@ -1148,7 +1169,7 @@ function PastImports() {
                           onClick={() => forget.mutate(r.id)}
                         >
                           {forget.isPending && forget.variables === r.id ? (
-                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                            <PixousLoader size="xs" className="mr-1" />
                           ) : (
                             <X className="mr-1 h-3 w-3" />
                           )}
@@ -1193,7 +1214,7 @@ function PastImports() {
               onClick={() => matchRef.current?.click()}
             >
               {matching ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                <PixousLoader size="xs" className="mr-1.5" />
               ) : (
                 <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5" />
               )}
@@ -1267,7 +1288,7 @@ function RevertImportDialog({
 
       {preview.isLoading ? (
         <div className="flex h-24 items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <PixousLoader size="sm" />
         </div>
       ) : (
         <div className="space-y-3">
@@ -1332,7 +1353,7 @@ function RevertImportDialog({
               onClick={() => revert.mutate()}
             >
               {revert.isPending
-                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ? <PixousLoader size="xs" className="mr-2" />
                 : <Trash2 className="mr-2 h-4 w-4" />}
               Remove {removable.length}
             </Button>
@@ -1449,7 +1470,7 @@ function ImportEmployeesDialog({ onClose }: { onClose: () => void }) {
             onClick={() => fileRef.current?.click()}
             className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border py-8 text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
           >
-            {parsing ? <Loader2 className="h-7 w-7 animate-spin" /> : <UploadCloud className="h-7 w-7" />}
+            {parsing ? <PixousLoader size="md" /> : <UploadCloud className="h-7 w-7" />}
             <span className="text-sm font-medium">{fileName || "Click to choose an .xlsx file"}</span>
           </button>
 
@@ -1580,7 +1601,7 @@ function ImportEmployeesDialog({ onClose }: { onClose: () => void }) {
               onClick={() => importMutation.mutate()}
               disabled={payloads.length === 0 || importMutation.isPending}
             >
-              {importMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
+              {importMutation.isPending ? <PixousLoader size="xs" className="mr-2" /> : <UploadCloud className="mr-2 h-4 w-4" />}
               Import {payloads.length || ""} employees
             </Button>
           </div>
@@ -1829,7 +1850,7 @@ function EmployeeDetail({ id, onClose }: { id: number | null; onClose: () => voi
         ["Date of Joining", p.dateOfJoining ? dayjs(p.dateOfJoining).format("DD MMM YYYY") : undefined],
         ["Emergency Contact", p.emergencyContact ? `${p.emergencyContact}${p.emergencyContactRelation ? ` (${p.emergencyContactRelation})` : ""}` : undefined],
         ["Status", p.profileStatus],
-        ["Roles", p.roles?.map(roleCodeLabel).join(", ")],
+        ["Roles", roleLabels(p.roles).join(", ")],
         ["Address", addressStr]
       ];
 
@@ -1885,9 +1906,9 @@ function EmployeeDetail({ id, onClose }: { id: number | null; onClose: () => voi
                 >
                   {p.profileStatus || "ACTIVE"}
                 </Badge>
-                {p.roles?.map((r) => (
-                  <Badge key={r} className="code-chip">
-                    {roleCodeLabel(r)}
+                {roleLabels(p.roles).map((label) => (
+                  <Badge key={label} className="code-chip">
+                    {label}
                   </Badge>
                 ))}
               </div>
@@ -1959,7 +1980,7 @@ function EmployeeDetail({ id, onClose }: { id: number | null; onClose: () => voi
                         onClick={revealPassword}
                       >
                         {loadingPassword
-                          ? <Loader2 className="h-3 w-3 animate-spin" />
+                          ? <PixousLoader size="xs" />
                           : <Eye className="h-3 w-3" />}
                         Show
                       </button>
@@ -2083,7 +2104,7 @@ function EmployeeDetail({ id, onClose }: { id: number | null; onClose: () => voi
               {!showOffboard ? (
                 <div className="flex flex-wrap gap-2">
                   <Button variant="outline" onClick={downloadProfile} disabled={downloading}>
-                    {downloading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />}
+                    {downloading ? <PixousLoader size="xs" className="mr-1.5" /> : <Download className="mr-1.5 h-4 w-4" />}
                     Download Profile
                   </Button>
                   <Button
@@ -2132,7 +2153,7 @@ function EmployeeDetail({ id, onClose }: { id: number | null; onClose: () => voi
                 <Badge variant="destructive">OFFBOARDED</Badge>
                 <div className="flex flex-wrap gap-2">
                   <Button variant="outline" size="sm" onClick={downloadProfile} disabled={downloading}>
-                    {downloading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />}
+                    {downloading ? <PixousLoader size="xs" className="mr-1.5" /> : <Download className="mr-1.5 h-4 w-4" />}
                     Download Profile
                   </Button>
                   {!showDelete && (
@@ -2177,7 +2198,7 @@ function EmployeeDetail({ id, onClose }: { id: number | null; onClose: () => voi
                       onClick={() => deleteMutation.mutate()}
                     >
                       {deleteMutation.isPending
-                        ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                        ? <PixousLoader size="xs" className="mr-1.5" />
                         : <Trash2 className="mr-1.5 h-4 w-4" />}
                       Delete permanently
                     </Button>
@@ -2249,7 +2270,7 @@ function EmployeeDetail({ id, onClose }: { id: number | null; onClose: () => voi
               }
             }}
           >
-            {savingLogin && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+            {savingLogin && <PixousLoader size="xs" className="mr-1.5" />}
             Save login
           </Button>
         </div>
@@ -3101,7 +3122,7 @@ function AddEmployeeDialog({ onClose, defaultIndustry }: { onClose: () => void; 
             onClick={() => docsInput.current?.click()}
           >
             {uploadingDocs
-              ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              ? <PixousLoader size="xs" className="mr-1.5" />
               : <Upload className="mr-1.5 h-4 w-4" />}
             {uploadingDocs ? "Uploading…" : "Add files"}
           </Button>
@@ -3129,7 +3150,7 @@ function AddEmployeeDialog({ onClose, defaultIndustry }: { onClose: () => void; 
           Cancel
         </Button>
         <Button onClick={submit} disabled={createMutation.isPending}>
-          {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {createMutation.isPending && <PixousLoader size="xs" className="mr-2" />}
           {createMutation.isPending ? "Creating…" : "Create Employee"}
         </Button>
       </div>
@@ -3431,7 +3452,7 @@ function EditEmployeeDialog({ id, onClose }: { id: number; onClose: () => void }
       <Dialog open onClose={onClose} className="max-w-2xl">
         <DialogHeader title="Edit Employee" />
         <div className="flex items-center justify-center p-8">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <PixousLoader size="md" />
         </div>
       </Dialog>
     );
@@ -3772,7 +3793,7 @@ function EditEmployeeDialog({ id, onClose }: { id: number; onClose: () => void }
           Cancel
         </Button>
         <Button onClick={submit} disabled={updateMutation.isPending}>
-          {updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {updateMutation.isPending && <PixousLoader size="xs" className="mr-2" />}
           {updateMutation.isPending ? "Saving…" : "Save Changes"}
         </Button>
       </div>

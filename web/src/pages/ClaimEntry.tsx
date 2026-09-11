@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
@@ -618,7 +618,7 @@ export default function ClaimEntryPage() {
                   className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed p-6 transition-colors hover:border-primary/50 hover:bg-muted/30"
                 >
                   {uploadingSlip
-                    ? <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    ? <PixousLoader size="md" />
                     : <Upload className="h-6 w-6 text-muted-foreground" />}
                   <span className="text-sm font-medium">Upload the expense slip</span>
                   <span className="text-[11px] text-muted-foreground">JPG, PNG or PDF</span>
@@ -658,7 +658,7 @@ export default function ClaimEntryPage() {
                   className="flex h-28 flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed transition-colors hover:border-primary/50 hover:bg-muted/30"
                 >
                   {uploadingPhotos
-                    ? <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    ? <PixousLoader size="sm" />
                     : <Upload className="h-5 w-5 text-muted-foreground" />}
                   <span className="text-xs font-medium">Add photos</span>
                 </button>
@@ -766,7 +766,7 @@ export default function ClaimEntryPage() {
                 onClick={() => save.mutate()}
               >
                 {save.isPending
-                  ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  ? <PixousLoader size="xs" className="mr-1.5" />
                   : <Send className="mr-1.5 h-4 w-4" />}
                 {editId === null ? "Submit claim" : "Save changes"}
               </Button>

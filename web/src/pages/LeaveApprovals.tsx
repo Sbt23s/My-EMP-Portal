@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, X, CheckCheck, Inbox, ListTodo, Clock } from "lucide-react";
@@ -192,7 +192,7 @@ export default function LeaveApprovalsPage() {
                 <X className="h-4 w-4" /> Reject {selected.size}
               </Button>
               <Button size="sm" disabled={bulk.isPending} onClick={() => bulk.mutate({ decision: "APPROVED" })}>
-                {bulk.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCheck className="h-4 w-4" />}
+                {bulk.isPending ? <PixousLoader size="xs" /> : <CheckCheck className="h-4 w-4" />}
                 Approve {selected.size}
               </Button>
             </div>
@@ -534,7 +534,7 @@ export default function LeaveApprovalsPage() {
                     }}
                   >
                     {decide.isPending
-                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      ? <PixousLoader size="xs" />
                       : "Approve"}
                   </Button>
                   <Button
@@ -586,7 +586,7 @@ export default function LeaveApprovalsPage() {
               disabled={!rejectReason.trim() || decide.isPending || bulk.isPending}
               onClick={confirmReject}
             >
-              {(decide.isPending || bulk.isPending) && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              {(decide.isPending || bulk.isPending) && <PixousLoader size="xs" className="mr-1.5" />}
               Reject
             </Button>
           </div>

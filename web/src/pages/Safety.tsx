@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { Plus, ShieldCheck, AlertTriangle, ChevronLeft, ChevronRight, CheckCircle2, MapPin, Clock } from "lucide-react";
@@ -528,7 +528,7 @@ function ReportDialog({ onClose }: { onClose: () => void }) {
           Cancel
         </Button>
         <Button onClick={submit} disabled={mutation.isPending}>
-          {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {mutation.isPending && <PixousLoader size="xs" className="mr-2" />}
           {mutation.isPending ? "Submitting…" : "Report Incident"}
         </Button>
       </div>
@@ -697,7 +697,7 @@ function IncidentDetailDialog({
                 onClick={() => resolveMutation.mutate()}
                 disabled={resolveMutation.isPending}
               >
-                {resolveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {resolveMutation.isPending && <PixousLoader size="xs" className="mr-2" />}
                 {resolveMutation.isPending ? "Saving…" : "Update Status"}
               </Button>
             )}

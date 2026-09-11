@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Paperclip, Send, Trash2, FileText, Download, Loader2, X } from "lucide-react";
+import { Paperclip, Send, Trash2, FileText, Download, X } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { api, apiMessage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, resolvePhotoUrl } from "@/components/ui/avatar";
 import { PhotoLightbox } from "@/components/PhotoLightbox";
@@ -205,7 +206,7 @@ export function RequestThread({
                 onClick={() => fileInput.current?.click()}
               >
                 {upload.isPending ? (
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  <PixousLoader size="xs" className="mr-1.5" />
                 ) : (
                   <Paperclip className="mr-1.5 h-3.5 w-3.5" />
                 )}
@@ -393,7 +394,7 @@ export function RequestThread({
             title="Send"
           >
             {send.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <PixousLoader size="xs" />
             ) : (
               <Send className="h-4 w-4" />
             )}

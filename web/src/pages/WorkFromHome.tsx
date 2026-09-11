@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -737,7 +737,7 @@ export default function WorkFromHomePage() {
                   setDecisionNote("");
                 }}
               >
-                {decide.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+                {decide.isPending && <PixousLoader size="xs" className="mr-1.5" />}
                 {decideOn.approve ? "Yes, approve" : "Reject request"}
               </Button>
             </div>
@@ -897,7 +897,7 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
         <div className="flex justify-end gap-2 border-t pt-3">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button disabled={!valid || apply.isPending} onClick={() => apply.mutate()}>
-            {apply.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+            {apply.isPending && <PixousLoader size="xs" className="mr-1.5" />}
             Submit request
           </Button>
         </div>

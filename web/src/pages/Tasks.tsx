@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -2087,7 +2087,7 @@ function ExportDialog({
           Cancel
         </Button>
         <Button onClick={download} disabled={busy}>
-          {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+          {busy ? <PixousLoader size="xs" className="mr-2" /> : <Download className="mr-2 h-4 w-4" />}
           {busy ? "Exporting…" : "Download Excel"}
         </Button>
       </div>
@@ -2196,7 +2196,7 @@ function EditTaskDialog({
             save.mutate();
           }}
         >
-          {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {save.isPending && <PixousLoader size="xs" className="mr-2" />}
           Save changes
         </Button>
       </div>
@@ -2691,7 +2691,7 @@ function AssignTaskDialog({
           Cancel
         </Button>
         <Button onClick={submit} disabled={createMutation.isPending}>
-          {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {createMutation.isPending && <PixousLoader size="xs" className="mr-2" />}
           {createMutation.isPending ? "Assigning…" : "Assign Task"}
         </Button>
       </div>
@@ -2782,7 +2782,7 @@ function TaskChatDialog({
         <div className="flex-1 space-y-2.5 overflow-y-auto bg-muted/10 p-3">
           {isLoading ? (
             <div className="flex h-full items-center justify-center">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <PixousLoader size="sm" />
             </div>
           ) : isError ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
@@ -2914,7 +2914,7 @@ function TaskChatDialog({
               disabled={sending || (!draft.trim() && staged.length === 0)}
               className="h-9 w-9 shrink-0 rounded-full"
             >
-              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {sending ? <PixousLoader size="xs" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
         </form>
@@ -3172,7 +3172,7 @@ function TaskReminderCard({ canEdit }: { canEdit: boolean }) {
                   disabled={!time || save.isPending}
                   onClick={() => save.mutate({ enabled, time, leadDays: Number(lead) || 0 })}
                 >
-                  {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <BellRing className="h-4 w-4" />}
+                  {save.isPending ? <PixousLoader size="xs" /> : <BellRing className="h-4 w-4" />}
                   Save
                 </Button>
                 <Button
@@ -3191,7 +3191,7 @@ function TaskReminderCard({ canEdit }: { canEdit: boolean }) {
                   disabled={sendNow.isPending}
                   onClick={() => sendNow.mutate()}
                 >
-                  {sendNow.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {sendNow.isPending ? <PixousLoader size="xs" /> : null}
                   Send today&apos;s now
                 </Button>
               </>

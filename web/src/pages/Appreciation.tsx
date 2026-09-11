@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Award, Search, Send, Download, Trash2, X } from "lucide-react";
@@ -552,7 +552,7 @@ function CreateDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () =
           Save draft
         </Button>
         <Button disabled={!!blocked || save.isPending} onClick={() => save.mutate(true)}>
-          {save.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+          {save.isPending && <PixousLoader size="xs" className="mr-1.5" />}
           <Send className="mr-1.5 h-4 w-4" /> Create &amp; send
         </Button>
       </div>
@@ -724,7 +724,7 @@ function ViewDialog({ letter, isSubject, onClose, onDownloaded }: {
         </div>
         <Button variant="outline" size="sm" onClick={download} disabled={downloading}>
           {downloading
-            ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            ? <PixousLoader size="xs" className="mr-1.5" />
             : <Download className="mr-1.5 h-4 w-4" />}
           Download PDF
         </Button>

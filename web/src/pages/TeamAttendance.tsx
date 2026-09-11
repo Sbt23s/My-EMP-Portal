@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Users, FileSpreadsheet, MapPin, Loader2, Eye, Building2, AlertTriangle,
+  Users, FileSpreadsheet, MapPin, Eye, Building2, AlertTriangle,
   ScanFace, Fingerprint, DoorOpen
 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -11,6 +11,7 @@ import { ExportColumnsDialog, type ExportChoice, type ExportColumn }
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExportExcelButton } from "@/components/ui/export-excel-button";
@@ -327,7 +328,7 @@ function PunchLocation({ lat, lng }: { lat: number; lng: number }) {
       <MapPin className="h-3.5 w-3.5 shrink-0" />
       {address
         ? <span className="truncate">{address}</span>
-        : <span className="flex items-center gap-1 text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /> locating…</span>}
+        : <span className="flex items-center gap-1 text-muted-foreground"><PixousLoader size="xs" /> locating…</span>}
     </a>
   );
 }

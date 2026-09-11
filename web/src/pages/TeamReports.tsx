@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -688,7 +688,7 @@ export default function TeamReportsPage({ orgWide = false }: { orgWide?: boolean
 
           <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
             <Button disabled={busy} onClick={downloadOne} className="bg-green-600 text-white hover:bg-green-700">
-              {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />}
+              {busy ? <PixousLoader size="xs" className="mr-1.5" /> : <Download className="mr-1.5 h-4 w-4" />}
               Download {active.label.toLowerCase()}
               {chosen ? ` — ${chosen.name}` : ""}
             </Button>

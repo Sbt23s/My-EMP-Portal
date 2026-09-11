@@ -124,6 +124,41 @@ export interface BankResponse {
   primary: boolean;
 }
 
+/**
+ * One employee's service record, as returned by /users/history.
+ *
+ * Assembled server-side from the joining date, employment status, offboarding
+ * record and audit log. Everything is optional except the identity, because a
+ * record that has not reached a stage yet has nothing to show for it.
+ */
+export interface EmployeeHistoryRow {
+  id: number;
+  employeeCode: string | null;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  designationTitle: string | null;
+  departmentName: string | null;
+  roles: string[];
+  dateOfJoining: string | null;
+  probationEndDate: string | null;
+  employmentStatus: string | null;
+  profileStatus: string | null;
+  relievingDate: string | null;
+  relievingReason: string | null;
+  fnfStatus: string | null;
+  tenureMonths: number | null;
+  events: EmployeeHistoryEvent[];
+}
+
+export interface EmployeeHistoryEvent {
+  date: string;
+  /** JOINED | PROBATION_END | CHANGE | RELIEVED */
+  type: string;
+  detail: string;
+  actor: string | null;
+}
+
 export interface UserSummary {
   id: number;
   employeeCode: string;

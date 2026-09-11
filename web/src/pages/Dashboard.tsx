@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
@@ -497,7 +497,7 @@ function PayslipApprovalsDialog({
                       disabled={uploadingLogo}
                       onClick={() => logoInputRef.current?.click()}
                     >
-                      {uploadingLogo ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-2 h-3.5 w-3.5" />}
+                      {uploadingLogo ? <PixousLoader size="xs" className="mr-2" /> : <Upload className="mr-2 h-3.5 w-3.5" />}
                       {companyLogo ? "Change" : "Upload logo"}
                     </Button>
                     {companyLogo && (
@@ -528,7 +528,7 @@ function PayslipApprovalsDialog({
           <div className="mt-5 flex justify-end gap-2 border-t pt-4">
             <Button variant="ghost" onClick={() => setActive(null)}>Cancel</Button>
             <Button onClick={() => approve.mutate()} disabled={approve.isPending}>
-              {approve.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Receipt className="mr-2 h-4 w-4" />}
+              {approve.isPending ? <PixousLoader size="xs" className="mr-2" /> : <Receipt className="mr-2 h-4 w-4" />}
               Generate &amp; Send
             </Button>
           </div>
@@ -739,7 +739,7 @@ function LeaveApprovalsDialog({ onClose }: { onClose: () => void }) {
                         id: r.id, decision: "REJECTED", comment: reason.trim()
                       })}
                     >
-                      {decide.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+                      {decide.isPending && <PixousLoader size="xs" className="mr-1.5" />}
                       Confirm rejection
                     </Button>
                   </div>
@@ -1023,7 +1023,7 @@ function TasksQuickCard() {
         </div>
         <Button className="w-full" disabled={!canSubmit || assign.isPending}
           onClick={() => assign.mutate()}>
-          {assign.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Plus className="mr-1.5 h-4 w-4" />}
+          {assign.isPending ? <PixousLoader size="xs" className="mr-1.5" /> : <Plus className="mr-1.5 h-4 w-4" />}
           Assign Task
         </Button>
       </CardContent>
@@ -2457,7 +2457,7 @@ export default function DashboardPage() {
             title="Change the banner image"
           >
             {uploadCover.isPending
-              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ? <PixousLoader size="xs" />
               : <Camera className="h-3.5 w-3.5" />}
             {coverUrl ? "Change cover" : "Add cover"}
           </button>

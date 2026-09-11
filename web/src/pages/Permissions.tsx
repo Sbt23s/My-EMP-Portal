@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState, useCallback, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -1155,7 +1155,7 @@ export default function PermissionsPage() {
                   setApproveNote("");
                 }}
               >
-                {decide.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+                {decide.isPending && <PixousLoader size="xs" className="mr-1.5" />}
                 {decideOn.approve ? "Yes, approve" : "Reject request"}
               </Button>
             </div>
@@ -1509,7 +1509,7 @@ function ApplyDialog({ onClose, onDone }: { onClose: () => void; onDone: () => v
             Cancel
           </Button>
           <Button disabled={!valid || apply.isPending} onClick={() => apply.mutate()}>
-            {apply.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Submit
+            {apply.isPending ? <PixousLoader size="xs" className="mr-2" /> : null} Submit
           </Button>
         </div>
         {/* Beside the button that will not work, which is where somebody is

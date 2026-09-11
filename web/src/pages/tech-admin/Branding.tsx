@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { api } from "@/lib/api";
@@ -205,7 +205,7 @@ export function TechAdminBranding() {
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+        <PixousLoader size="md" />
       </div>
     );
   }
@@ -230,7 +230,7 @@ export function TechAdminBranding() {
             Discard
           </Button>
           <Button type="button" disabled={!dirty || saving} onClick={save}>
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+            {saving ? <PixousLoader size="xs" className="mr-2" /> : <Check className="mr-2 h-4 w-4" />}
             {saving ? "Saving…" : dirty ? "Save changes" : "Saved"}
           </Button>
         </div>

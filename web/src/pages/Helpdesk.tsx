@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -779,7 +779,7 @@ function EditTicketDialog({ ticket, onClose }: { ticket: Ticket; onClose: () => 
             save.mutate();
           }}
         >
-          {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {save.isPending && <PixousLoader size="xs" className="mr-2" />}
           Save changes
         </Button>
       </div>
@@ -1008,7 +1008,7 @@ function TicketDetail({
                   onClick={() => addComment.mutate()}
                 >
                   {addComment.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <PixousLoader size="xs" />
                   ) : (
                     <Send className="h-4 w-4" />
                   )}

@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTechAdminAuth } from "@/context/TechAdminAuthContext";
@@ -163,7 +163,7 @@ export function TechAdminLogin() {
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <PixousLoader size="xs" className="mr-2" />
                 Authenticating...
               </>
             ) : (

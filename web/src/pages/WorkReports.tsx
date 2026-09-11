@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -823,7 +823,7 @@ function MyWorkReports({
             </div>
             <Button onClick={submit} disabled={add.isPending} className="h-10">
               {add.isPending ? (
-                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                <PixousLoader size="xs" className="mr-1.5" />
               ) : (
                 <Plus className="mr-1.5 h-4 w-4" />
               )}
@@ -1102,7 +1102,7 @@ function EditEntry({ row, saving, onClose, onSave }: {
         <div className="flex justify-end gap-2 pt-1">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button disabled={!valid || saving} onClick={() => onSave(form)}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {saving ? <PixousLoader size="xs" /> : <Save className="h-4 w-4" />}
             Save changes
           </Button>
         </div>
@@ -1311,7 +1311,7 @@ function AttachmentsDialog({
               onClick={() => picker.current?.click()}
             >
               {upload.isPending
-                ? <Loader2 className="h-4 w-4 animate-spin" />
+                ? <PixousLoader size="xs" />
                 : <Paperclip className="h-4 w-4" />}
               Choose files
             </Button>
@@ -1464,7 +1464,7 @@ function ReminderCard() {
             disabled={!time || save.isPending}
             onClick={() => save.mutate({ enabled, time })}
           >
-            {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {save.isPending ? <PixousLoader size="xs" /> : <Save className="h-4 w-4" />}
             Save time
           </Button>
           <Button
@@ -1526,7 +1526,7 @@ function ReminderCard() {
                 disabled={sendNow.isPending}
                 onClick={() => sendNow.mutate()}
               >
-                {sendNow.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <BellRing className="h-4 w-4" />}
+                {sendNow.isPending ? <PixousLoader size="xs" /> : <BellRing className="h-4 w-4" />}
                 Remind them now
               </Button>
             </>

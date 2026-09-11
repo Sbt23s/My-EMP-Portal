@@ -15,3 +15,18 @@ export function roleCodeLabel(code: string): string {
   if (code === "COMPANY_ADMIN" || code === "SUPER_ADMIN") return "SYSTEM_ADMIN";
   return code;
 }
+
+/**
+ * The labels for a set of role codes, each appearing once.
+ *
+ * <p>Because several codes deliberately share a label — IT_MGR shows as IT_HR,
+ * and COMPANY_ADMIN and SUPER_ADMIN both show as SYSTEM_ADMIN — an account
+ * holding two of them rendered the same word twice wherever roles were listed,
+ * which reads as a bug rather than as two roles. Mapping first and deduping
+ * after means it stays correct for any pair of codes that come to share a name.
+ *
+ * <p>Order is preserved: the first code to produce a label decides its position.
+ */
+export function roleLabels(codes: readonly string[] | null | undefined): string[] {
+  return [...new Set((codes ?? []).map(roleCodeLabel))];
+}

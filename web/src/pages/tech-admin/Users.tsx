@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -614,7 +614,7 @@ export function TechAdminUsers() {
     ? "bg-slate-900/40 backdrop-blur-xl border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.15)] text-slate-100"
     : "bg-white/90 backdrop-blur-md border border-white text-slate-800 shadow-xl shadow-slate-200/50";
 
-  if (loading) return <div className="flex p-12 justify-center"><Loader2 className="animate-spin text-blue-500 w-8 h-8"/></div>;
+  if (loading) return <div className="flex p-12 justify-center"><PixousLoader size="md" /></div>;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -1091,7 +1091,7 @@ export function TechAdminUsers() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isSubmitting} className={isDark ? "bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold border border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.4)]" : "bg-purple-600 hover:bg-purple-500 text-white border border-purple-400 "}>
-                  {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />} Create User Account
+                  {isSubmitting ? <PixousLoader size="xs" className="mr-2" /> : <Plus className="w-4 h-4 mr-2" />} Create User Account
                 </Button>
               </div>
             </form>

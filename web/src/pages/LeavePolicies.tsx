@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -182,7 +182,7 @@ export default function LeavePoliciesPage() {
                       setConfirmAllocate(true);
                     }}
                   >
-                    {allocateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Users className="h-4 w-4 mr-2" />}
+                    {allocateMutation.isPending ? <PixousLoader size="xs" className="mr-2" /> : <Users className="h-4 w-4 mr-2" />}
                     Allocate to all
                   </Button>
                 </div>

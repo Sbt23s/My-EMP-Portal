@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Bot, KeyRound, Globe, Trash2, Save, RefreshCw, Database, ShieldCheck } from "lucide-react";
@@ -315,7 +315,7 @@ export default function AdminChatbotSettings() {
 
           <div className="flex justify-end">
             <Button onClick={() => save.mutate()} disabled={save.isPending} className="gap-2">
-              {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {save.isPending ? <PixousLoader size="xs" /> : <Save className="h-4 w-4" />}
               Save settings
             </Button>
           </div>
@@ -350,7 +350,7 @@ export default function AdminChatbotSettings() {
                   className="gap-2"
                 >
                   {ingest.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <PixousLoader size="xs" />
                   ) : (
                     <Globe className="h-4 w-4" />
                   )}

@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState } from "react";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
@@ -240,7 +240,7 @@ export function ClaimInvoice({
                 <X className="mr-1.5 h-4 w-4" /> Reject
               </Button>
               <Button disabled={pending} onClick={() => decide("APPROVED")}>
-                {pending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Check className="mr-1.5 h-4 w-4" />}
+                {pending ? <PixousLoader size="xs" className="mr-1.5" /> : <Check className="mr-1.5 h-4 w-4" />}
                 Approve
               </Button>
             </div>

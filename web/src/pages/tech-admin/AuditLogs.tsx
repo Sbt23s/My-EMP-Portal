@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { History, Clock, Users, Activity, Filter, Search } from "lucide-react";
@@ -163,7 +163,7 @@ export function TechAdminAuditLogs() {
   if (loading) {
     return (
       <div className="flex p-12 justify-center">
-        <Loader2 className="animate-spin text-blue-500 w-8 h-8" />
+        <PixousLoader size="md" />
       </div>
     );
   }

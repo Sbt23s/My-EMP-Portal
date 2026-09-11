@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
@@ -364,7 +364,7 @@ export function TechAdminCompanies() {
                 Cancel
               </Button>
               <Button className="flex-1" onClick={saveEdit} disabled={savingEdit}>
-                {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save changes"}
+                {savingEdit ? <PixousLoader size="xs" /> : "Save changes"}
               </Button>
             </div>
           </div>
@@ -515,7 +515,7 @@ export function TechAdminCompanies() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isSubmitting} className={`${isDark ? "bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold border border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.4)]" : "bg-purple-600 hover:bg-purple-500 text-white border border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.5)]"}`}>
-                  {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />} Provision Tenant Company
+                  {isSubmitting ? <PixousLoader size="xs" className="mr-2" /> : <Plus className="w-4 h-4 mr-2" />} Provision Tenant Company
                 </Button>
               </div>
             </form>

@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { Volume2, VolumeX, Mic, Square, Send, X, Sparkles } from "lucide-react";
@@ -716,7 +716,7 @@ export function ChatBotWidget() {
               title={isRecording ? "Stop recording" : "Speak"}
             >
               {isTranscribing ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <PixousLoader size="sm" />
               ) : isRecording ? (
                 <Square className="h-5 w-5" />
               ) : (

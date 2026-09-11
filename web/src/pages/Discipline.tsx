@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -653,7 +653,7 @@ function CreateDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () =
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" variant="outline" size="sm" disabled={uploading}
                   onClick={() => fileInput.current?.click()}>
-            {uploading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Paperclip className="mr-1.5 h-4 w-4" />}
+            {uploading ? <PixousLoader size="xs" className="mr-1.5" /> : <Paperclip className="mr-1.5 h-4 w-4" />}
             Attach a file
           </Button>
           {files.map((f) => (
@@ -671,7 +671,7 @@ function CreateDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () =
       <div className="mt-5 flex justify-end gap-2 border-t pt-4">
         <Button variant="outline" onClick={onClose} disabled={save.isPending}>Cancel</Button>
         <Button disabled={!!blocked || save.isPending} onClick={() => save.mutate()}>
-          {save.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+          {save.isPending && <PixousLoader size="xs" className="mr-1.5" />}
           Submit
         </Button>
       </div>
@@ -755,7 +755,7 @@ function EditDialog({ record, onClose, onSaved }: {
         <Button variant="outline" onClick={onClose} disabled={save.isPending}>Cancel</Button>
         <Button disabled={save.isPending || !subject.trim() || !description.trim()}
                 onClick={() => save.mutate()}>
-          {save.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+          {save.isPending && <PixousLoader size="xs" className="mr-1.5" />}
           Save changes
         </Button>
       </div>
@@ -920,7 +920,7 @@ function DetailDialog({ record, isCto, isSubject, onClose, onSaved }: {
           <div className="flex justify-end">
             <Button size="sm" disabled={!response.trim() || respond.isPending}
                     onClick={() => respond.mutate()}>
-              {respond.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              {respond.isPending ? <PixousLoader size="xs" className="mr-1.5" />
                 : <Send className="mr-1.5 h-4 w-4" />}
               Submit response
             </Button>
@@ -959,7 +959,7 @@ function DetailDialog({ record, isCto, isSubject, onClose, onSaved }: {
               Saving marks the review complete and tells the employee.
             </p>
             <Button disabled={review.isPending} onClick={() => review.mutate()}>
-              {review.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              {review.isPending && <PixousLoader size="xs" className="mr-1.5" />}
               Save review
             </Button>
           </div>

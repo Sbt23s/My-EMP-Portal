@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useGroupCall, MAX_GROUP_PARTICIPANTS, MAX_AUDIO_PARTICIPANTS } from "@/hooks/useGroupCall";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { Avatar } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { isPlatformAccount } from "@/lib/people";
@@ -31,7 +32,6 @@ import {
   SmilePlus,
   Eye,
   BarChart3,
-  Loader2,
   Clock,
   CheckCircle2,
   Plus,
@@ -367,7 +367,7 @@ function RetentionDialog({ onClose }: { onClose: () => void }) {
 
         {current.isLoading ? (
           <div className="flex h-28 items-center justify-center">
-            <Loader2 className="animate-spin text-primary" />
+            <PixousLoader size="sm" />
           </div>
         ) : (
           <div className="space-y-3 p-4">
@@ -405,7 +405,7 @@ function RetentionDialog({ onClose }: { onClose: () => void }) {
                 disabled={!valid || save.isPending}
                 onClick={() => save.mutate(parsed)}
               >
-                {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                {save.isPending ? <PixousLoader size="xs" /> : "Save"}
               </Button>
             </div>
           </div>
@@ -833,7 +833,7 @@ export default function ChatPage() {
   if (groupsLoading) {
     return (
       <div className="flex h-[70vh] items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <PixousLoader size="md" />
       </div>
     );
   }
@@ -1108,7 +1108,7 @@ export default function ChatPage() {
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
               {contactsLoading ? (
                 <div className="flex h-full items-center justify-center">
-                  <Loader2 className="animate-spin text-primary" />
+                  <PixousLoader size="sm" />
                 </div>
               ) : filteredContacts.length === 0 ? (
                 <div className="p-6 text-sm text-muted-foreground text-center flex flex-col items-center gap-2">
@@ -1129,7 +1129,7 @@ export default function ChatPage() {
                       <div className="text-xs text-muted-foreground truncate">{c.employeeCode}</div>
                     </div>
                     {startDirect.isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                      <PixousLoader size="xs" />
                     ) : (
                       <MessageSquare className="w-4 h-4 text-muted-foreground" />
                     )}
@@ -1316,7 +1316,7 @@ export default function ChatPage() {
                   <p className="mt-2 text-xs text-muted-foreground">Type two or more letters.</p>
                 ) : searchResults.isFetching ? (
                   <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Searching…
+                    <PixousLoader size="xs" /> Searching…
                   </div>
                 ) : trimmedSearch.length >= 2 ? (
                   (searchResults.data || []).length === 0 ? (
@@ -1405,7 +1405,7 @@ export default function ChatPage() {
             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#e5ddd5]/30 dark:bg-muted/5">
               {chatLoading ? (
                 <div className="flex h-full items-center justify-center">
-                  <Loader2 className="animate-spin text-primary" />
+                  <PixousLoader size="sm" />
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm">
@@ -2067,7 +2067,7 @@ export default function ChatPage() {
                       title="Record voice message"
                       className="ml-2 rounded-full h-9 w-9 shrink-0 border-0 bg-rose-500 text-white shadow-sm hover:bg-rose-600 disabled:opacity-50"
                     >
-                      {sendingVoice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+                      {sendingVoice ? <PixousLoader size="xs" /> : <Mic className="w-4 h-4" />}
                     </Button>
                     <Button
                       type="submit"
@@ -2075,7 +2075,7 @@ export default function ChatPage() {
                       disabled={(!draft.trim() && pendingFiles.length === 0) || sendingFiles}
                       className="rounded-full h-9 w-9 shrink-0"
                     >
-                      {sendingFiles ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      {sendingFiles ? <PixousLoader size="xs" /> : <Send className="w-4 h-4" />}
                     </Button>
                   </form>
                 </div>
@@ -2128,7 +2128,7 @@ export default function ChatPage() {
 
             {receipts.isLoading ? (
               <div className="flex h-32 items-center justify-center">
-                <Loader2 className="animate-spin text-primary" />
+                <PixousLoader size="sm" />
               </div>
             ) : receipts.isError || !receipts.data ? (
               <p className="p-6 text-center text-sm text-muted-foreground">

@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { nameRules, emailRules, pincodeRules, digitsOnly } from "@/lib/validation";
@@ -21,7 +21,7 @@ import { Avatar, resolvePhotoUrl } from "@/components/ui/avatar";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ApiEnvelope, Profile, BankResponse, DropdownItem } from "@/types";
-import { roleCodeLabel } from "@/lib/roles";
+import { roleLabels } from "@/lib/roles";
 
 function genderLabel(g?: string): string | undefined {
   if (!g) return undefined;
@@ -199,7 +199,7 @@ export default function ProfilePage() {
       ? `${p.emergencyContact}${p.emergencyContactRelation ? ` (${p.emergencyContactRelation})` : ""}`
       : undefined],
     ["Status", p.profileStatus],
-    ["Roles", p.roles?.map(roleCodeLabel).join(", ")],
+    ["Roles", roleLabels(p.roles).join(", ")],
     ["Address", addressStr]
   ] : [];
 
@@ -263,7 +263,7 @@ export default function ProfilePage() {
         subtitle="Your details and bank accounts for payroll."
         actions={
           <Button variant="outline" disabled={!p || downloading} onClick={downloadProfile}>
-            {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            {downloading ? <PixousLoader size="xs" /> : <Download className="h-4 w-4" />}
             Download profile
           </Button>
         }
@@ -294,7 +294,7 @@ export default function ProfilePage() {
                   title="Add / change photo"
                 >
                   {uploadPhoto.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <PixousLoader size="xs" />
                   ) : (
                     <Camera className="h-4 w-4" />
                   )}
@@ -322,7 +322,7 @@ export default function ProfilePage() {
                       className="inline-flex items-center gap-1 text-destructive hover:underline disabled:opacity-60"
                     >
                       {removePhoto.isPending
-                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        ? <PixousLoader size="xs" />
                         : <Trash2 className="h-3 w-3" />}
                       Remove photo
                     </button>
@@ -336,9 +336,9 @@ export default function ProfilePage() {
                 {p.profileStatus || "Active"}
               </div>
               <div className="mt-4 flex flex-wrap justify-center gap-1.5">
-                {p.roles?.map((r) => (
-                  <Badge key={r} className="code-chip">
-                    {roleCodeLabel(r)}
+                {roleLabels(p.roles).map((label) => (
+                  <Badge key={label} className="code-chip">
+                    {label}
                   </Badge>
                 ))}
               </div>
@@ -469,7 +469,7 @@ export default function ProfilePage() {
                   <div className="flex justify-end">
                     <Button type="submit" disabled={save.isPending}>
                       {save.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <PixousLoader size="xs" />
                       ) : (
                         <Save className="h-4 w-4" />
                       )}
@@ -648,7 +648,7 @@ function AddBankDialog({ onClose }: { onClose: () => void }) {
             Cancel
           </Button>
           <Button type="submit" disabled={add.isPending}>
-            {add.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            {add.isPending && <PixousLoader size="xs" />}
             Add account
           </Button>
         </div>

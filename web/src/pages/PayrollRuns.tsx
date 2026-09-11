@@ -1,4 +1,4 @@
-import { CustomLoader as Loader2 } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Play, Check, CheckCircle2, FileText, IndianRupee } from "lucide-react";
@@ -192,7 +192,7 @@ export default function PayrollRunsPage() {
                     : `Generate payslips for ${withSalary} employees`}
                 >
                   {generateMutation.isPending
-                    ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ? <PixousLoader size="xs" className="mr-2" />
                     : <Play className="h-4 w-4 mr-2" />}
                   Generate All ({withSalary})
                 </Button>
@@ -396,7 +396,7 @@ export default function PayrollRunsPage() {
                       onClick={() => confirmMutation.mutate(run.id)}
                       disabled={confirmMutation.isPending}
                     >
-                      {confirmMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
+                      {confirmMutation.isPending ? <PixousLoader size="xs" className="mr-2" /> : <Check className="h-4 w-4 mr-2" />}
                       Confirm Run
                     </Button>
                   )}
@@ -406,7 +406,7 @@ export default function PayrollRunsPage() {
                       onClick={() => approveMutation.mutate(run.id)}
                       disabled={approveMutation.isPending}
                     >
-                      {approveMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+                      {approveMutation.isPending ? <PixousLoader size="xs" className="mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
                       Finance Approve
                     </Button>
                   )}

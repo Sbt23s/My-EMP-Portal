@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { RoleGuard } from "@/components/layout/RoleGuard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CustomLoader } from "@/components/ui/custom-loader";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -141,7 +141,7 @@ const ModulePlaceholder = safeLazy(() =>
 function PageFallback() {
   return (
     <div className="flex h-full w-full items-center justify-center min-h-[50vh]" aria-busy="true" aria-label="Loading">
-      <CustomLoader className="h-16 w-16" />
+      <PixousLoader size="xl" />
     </div>
   );
 }

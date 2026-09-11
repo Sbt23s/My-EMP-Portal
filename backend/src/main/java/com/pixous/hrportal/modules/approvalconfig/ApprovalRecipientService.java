@@ -274,14 +274,23 @@ public class ApprovalRecipientService {
         if (!MODULES.contains(module)) {
             throw com.pixous.hrportal.common.ApiException.business("Unknown module: " + moduleCode);
         }
-        Set<Long> wanted = userIds == null ? Set.of() : userIds.stream()
-                .filter(java.util.Objects::nonNull)
-                // Only real, addressable accounts -- an id typed into a request
-                // body must not create a rule naming somebody who left.
-                .filter(id -> userRepository.findById(id)
+        // Only real, addressable accounts -- an id typed into a request body
+        // must not create a rule naming somebody who left. Resolved in one
+        // query rather than one per id, and the caller's order is preserved
+        // because the ids drive the result rather than the lookup.
+        Set<Long> addressable = userIds == null || userIds.isEmpty()
+                ? Set.of()
+                : userRepository.findAllById(
+                                userIds.stream().filter(java.util.Objects::nonNull).toList())
+                        .stream()
                         .filter(User::isEnabled)
                         .filter(u -> !"OFFBOARDED".equalsIgnoreCase(u.getProfileStatus()))
-                        .isPresent())
+                        .map(User::getId)
+                        .collect(java.util.stream.Collectors.toSet());
+
+        Set<Long> wanted = userIds == null ? Set.of() : userIds.stream()
+                .filter(java.util.Objects::nonNull)
+                .filter(addressable::contains)
                 .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
 
         repository.deleteAll(repository.findByModuleCode(module).stream()

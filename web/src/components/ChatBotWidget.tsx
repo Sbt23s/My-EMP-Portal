@@ -152,7 +152,7 @@ function unlockAudio() {
   try {
     const silentPlay = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAAAD");
     silentPlay.volume = 0;
-    silentPlay.play().catch(e => console.log("Audio unlock failed/already unlocked", e));
+    silentPlay.play().catch((e) => console.debug("Audio unlock failed or already unlocked", e));
   } catch (e) {
     console.warn("Audio unlock helper error", e);
   }

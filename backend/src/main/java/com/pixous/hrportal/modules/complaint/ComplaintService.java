@@ -256,10 +256,9 @@ public class ComplaintService {
          * it always did.
          */
         java.util.List<Long> permitted = approvalRecipients
-                .filter("COMPLAINT", map.keySet().stream()
-                        .map(id -> userRepository.findById(id).orElse(null))
-                        .filter(java.util.Objects::nonNull)
-                        .toList())
+                // findAllById rather than findById per recipient: one query
+                // for the group instead of one per complaint on the board.
+                .filter("COMPLAINT", userRepository.findAllById(map.keySet()))
                 .stream().map(User::getId).toList();
         map.keySet().retainAll(new java.util.HashSet<>(permitted));
 

@@ -163,10 +163,8 @@ public class HelpdeskService {
          * it always did.
          */
         java.util.List<Long> permitted = approvalRecipients
-                .filter("HELPDESK", map.keySet().stream()
-                        .map(id -> userRepository.findById(id).orElse(null))
-                        .filter(java.util.Objects::nonNull)
-                        .toList())
+                // One query for the group rather than one per ticket.
+                .filter("HELPDESK", userRepository.findAllById(map.keySet()))
                 .stream().map(User::getId).toList();
         map.keySet().retainAll(new java.util.HashSet<>(permitted));
 

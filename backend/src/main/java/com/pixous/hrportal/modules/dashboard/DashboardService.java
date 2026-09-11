@@ -143,9 +143,19 @@ public class DashboardService {
         // ---- joins and exits, month by month over the last year ----
         // An exit belongs to the month somebody actually left, which is the
         // relieving date on their offboarding record.
+        //
+        // One query for the whole group rather than one per leaver. At sixty
+        // employees the difference is invisible; at ten thousand it is ten
+        // thousand statements to draw one chart.
         java.util.Map<Long, LocalDate> relievedOn = new java.util.HashMap<>();
-        gone.forEach(u -> offboardingRecordRepository.findByUserId(u.getId())
-                .ifPresent(r -> relievedOn.put(u.getId(), r.getRelievingDate())));
+        java.util.List<Long> goneIds = gone.stream().map(User::getId).toList();
+        if (!goneIds.isEmpty()) {
+            for (var r : offboardingRecordRepository.findByUserIdIn(goneIds)) {
+                if (r.getRelievingDate() != null) {
+                    relievedOn.put(r.getUserId(), r.getRelievingDate());
+                }
+            }
+        }
 
         List<java.util.Map<String, Object>> growth = new java.util.ArrayList<>();
         for (int back = 11; back >= 0; back--) {

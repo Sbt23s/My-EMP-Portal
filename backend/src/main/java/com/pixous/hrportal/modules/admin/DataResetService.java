@@ -48,6 +48,8 @@ public class DataResetService {
                 "The rooms themselves and who is in them stay"),
         HELPDESK("Support tickets and their comments", ""),
         COMPLAINTS("Complaints and needs", ""),
+        DISCIPLINE("Disciplinary records", ""),
+        APPRECIATION("Appreciation letters", ""),
         CLAIMS("Travel and expense claims", ""),
         NOTIFICATIONS("Notifications", ""),
         ASSET_ALLOCATIONS("Who is holding which asset", "The asset inventory itself stays"),
@@ -86,6 +88,8 @@ public class DataResetService {
     private final com.pixous.hrportal.modules.helpdesk.TicketRepository ticketRepository;
     private final com.pixous.hrportal.modules.helpdesk.TicketCommentRepository ticketCommentRepository;
     private final com.pixous.hrportal.modules.complaint.ComplaintNeedRepository complaintNeedRepository;
+    private final com.pixous.hrportal.modules.discipline.DisciplineRecordRepository disciplineRecordRepository;
+    private final com.pixous.hrportal.modules.appreciation.AppreciationLetterRepository appreciationLetterRepository;
     private final com.pixous.hrportal.modules.expense.TaExpenseRepository taExpenseRepository;
     private final com.pixous.hrportal.modules.notification.NotificationRepository notificationRepository;
     private final com.pixous.hrportal.modules.asset.AssetAllocationRepository assetAllocationRepository;
@@ -162,6 +166,8 @@ public class DataResetService {
             case CHAT -> communityMessageRepository.count();
             case HELPDESK -> ticketRepository.count();
             case COMPLAINTS -> complaintNeedRepository.count();
+            case DISCIPLINE -> disciplineRecordRepository.count();
+            case APPRECIATION -> appreciationLetterRepository.count();
             case CLAIMS -> taExpenseRepository.count();
             case NOTIFICATIONS -> notificationRepository.count();
             case ASSET_ALLOCATIONS -> assetAllocationRepository.count();
@@ -236,6 +242,17 @@ public class DataResetService {
             }
 
             case COMPLAINTS -> complaintNeedRepository.deleteAllInBatch();
+
+            /*
+             * Discipline and appreciation are records ABOUT a person, not part
+             * of the person: a warning issued last quarter and a letter of thanks
+             * both belong to the period being cleared, not to the employee file
+             * that survives it. They were the two areas a Fresh Start left behind
+             * while clearing everything around them, which read as the reset
+             * having missed them rather than having spared them.
+             */
+            case DISCIPLINE -> disciplineRecordRepository.deleteAllInBatch();
+            case APPRECIATION -> appreciationLetterRepository.deleteAllInBatch();
 
             case CLAIMS -> taExpenseRepository.deleteAllInBatch();
 

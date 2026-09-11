@@ -1,7 +1,7 @@
 import { useState, useMemo, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { Plus, Inbox, ChevronLeft, ChevronRight, Send,
-  Clock, CheckCircle, XCircle, X, MessageSquareWarning, UserRound, CalendarDays
+  Clock, CheckCircle, XCircle, X, MessageSquareWarning, UserRound, CalendarDays, Search, FilterX
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/hooks/useAuth";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
+import { useTableSort } from "@/hooks/useTableSort";
 import { StatTile, TILE_FILLS } from "@/components/ui/stat-tile";
 import type { ApiEnvelope, PageEnvelope, ComplaintNeed } from "@/types";
 import dayjs from "dayjs";
@@ -493,6 +494,9 @@ function AllComplaints() {
   const [statusTab, setStatusTab] = useState("ALL");
   const [year, setYear] = useState("all");
   const [month, setMonth] = useState("all");
+  const [q, setQ] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [day, setDay] = useState("");
   const [actingOn, setActingOn] = useState<ComplaintNeed | null>(null);
   const { user: me } = useAuth();
@@ -576,14 +580,38 @@ function AllComplaints() {
     return [...set].sort((a, b) => b.localeCompare(a));
   }, [all]);
 
-  const inPeriod = useMemo(() => all.filter((c) => {
-    if (!c.createdAt) return year === "all" && month === "all" && !day;
-    const d = dayjs(c.createdAt);
-    if (day) return d.format("YYYY-MM-DD") === day;
-    if (year !== "all" && d.format("YYYY") !== year) return false;
-    if (month !== "all" && d.format("MM") !== month) return false;
-    return true;
-  }), [all, year, month, day]);
+  const inPeriod = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return all.filter((c) => {
+      // Search first: it is the cheapest test and the one most likely to
+      // rule a row out.
+      if (needle) {
+        const hay = `${c.referenceCode ?? ""} ${c.subject ?? ""} ${c.category ?? ""} `
+          + `${c.raisedByName ?? ""} ${c.requestedToName ?? ""} ${c.description ?? ""}`;
+        if (!hay.toLowerCase().includes(needle)) return false;
+      }
+
+      if (!c.createdAt) {
+        return year === "all" && month === "all" && !day && !fromDate && !toDate;
+      }
+      const d = dayjs(c.createdAt);
+
+      // A date window, when one is set, decides on its own -- picking a span
+      // and then being held to a single day as well would be two filters
+      // fighting over the same field.
+      if (fromDate || toDate) {
+        const iso = d.format("YYYY-MM-DD");
+        if (fromDate && iso < fromDate) return false;
+        if (toDate && iso > toDate) return false;
+        return true;
+      }
+
+      if (day) return d.format("YYYY-MM-DD") === day;
+      if (year !== "all" && d.format("YYYY") !== year) return false;
+      if (month !== "all" && d.format("MM") !== month) return false;
+      return true;
+    });
+  }, [all, year, month, day, q, fromDate, toDate]);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { ALL: inPeriod.length, OPEN: 0, IN_REVIEW: 0, RESOLVED: 0, REJECTED: 0 };
@@ -591,13 +619,29 @@ function AllComplaints() {
     return c;
   }, [inPeriod]);
 
-  const filtered = useMemo(() => {
+  const byStatus = useMemo(() => {
     const list = statusTab === "ALL" ? inPeriod : inPeriod.filter((c) => c.status === statusTab);
+    // Newest first is the order this table has always had, and it is the one
+    // to come back to when a column sort is switched off.
     return [...list].sort((a, b) =>
       String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? "")));
   }, [inPeriod, statusTab]);
 
-  const paged = usePagedRows(filtered, 10, [statusTab, year, month, day, inPeriod]);
+  const sort = useTableSort<ComplaintNeed>(byStatus, (row, key) => {
+    switch (key) {
+      case "code": return row.referenceCode ?? "";
+      case "subject": return row.subject ?? "";
+      case "category": return row.category ?? "";
+      case "raisedBy": return row.raisedByName ?? "";
+      case "sentTo": return row.requestedToName ?? "";
+      case "status": return row.status ?? "";
+      case "createdAt": return row.createdAt ?? "";
+      default: return "";
+    }
+  });
+  const filtered = sort.sorted;
+
+  const paged = usePagedRows(filtered, 10, [statusTab, year, month, day, q, fromDate, toDate, sort.key, sort.dir, inPeriod]);
   const rows = paged.pageRows;
 
   /*
@@ -709,12 +753,66 @@ function AllComplaints() {
           <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Date</label>
           <Input type="date" min={DATE_MIN} max={DATE_MAX} value={day} onChange={(e) => { setDay(e.target.value); paged.setPage(0); }} className="w-40" />
         </div>
-        {filtersOn && (
+        {/* A span of days, for the times one date is not the question. */}
+        <div className="space-y-1">
+          <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Date range</label>
+          <div className="flex items-center gap-1.5 rounded-lg bg-muted/40 px-2 py-[3px]">
+            <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <Input
+              type="date"
+              aria-label="From date"
+              className="h-[30px] w-[9rem] border-transparent bg-transparent px-1.5 text-xs focus-visible:border-input focus-visible:bg-background"
+              max={toDate || undefined}
+              value={fromDate}
+              onChange={(e) => { setFromDate(e.target.value); setDay(""); paged.setPage(0); }}
+            />
+            <span className="text-xs text-muted-foreground">to</span>
+            <Input
+              type="date"
+              aria-label="To date"
+              className="h-[30px] w-[9rem] border-transparent bg-transparent px-1.5 text-xs focus-visible:border-input focus-visible:bg-background"
+              min={fromDate || undefined}
+              value={toDate}
+              onChange={(e) => { setToDate(e.target.value); setDay(""); paged.setPage(0); }}
+            />
+          </div>
+        </div>
+
+        {/* Search: the page had no way to find a complaint by what it says. */}
+        <div className="min-w-[14rem] flex-1 space-y-1">
+          <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Search</label>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="h-[38px] w-full border-transparent bg-muted/40 pl-9 focus-visible:border-input focus-visible:bg-background"
+              placeholder="Reference, subject, category, who raised it…"
+              value={q}
+              onChange={(e) => { setQ(e.target.value); paged.setPage(0); }}
+              aria-label="Search complaints"
+            />
+            {q && (
+              <button
+                type="button"
+                onClick={() => { setQ(""); paged.setPage(0); }}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {(filtersOn || q.trim() || fromDate || toDate) && (
           <Button
             variant="outline"
-            onClick={() => { setYear("all"); setMonth("all"); setDay(""); setStatusTab("ALL"); paged.setPage(0); }}
+            onClick={() => {
+              setYear("all"); setMonth("all"); setDay("");
+              setQ(""); setFromDate(""); setToDate("");
+              setStatusTab("ALL"); paged.setPage(0);
+            }}
           >
-            Reset
+            <FilterX className="mr-1.5 h-3.5 w-3.5" /> Reset
           </Button>
         )}
         <span className="ml-auto text-xs text-muted-foreground">
@@ -750,13 +848,13 @@ function AllComplaints() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="pr-6 text-right">Action</TableHead>
-                  <TableHead className="pl-6">Reference</TableHead>
-                  <TableHead>Raised by</TableHead>
-                  <TableHead>Sent to</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Category</TableHead>
+                  <TableHead className="pl-6" sortKey="code" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Reference</TableHead>
+                  <TableHead sortKey="raisedBy" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Raised by</TableHead>
+                  <TableHead sortKey="sentTo" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Sent to</TableHead>
+                  <TableHead sortKey="subject" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Subject</TableHead>
+                  <TableHead sortKey="category" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Category</TableHead>
                   <TableHead>Priority</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead sortKey="status" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

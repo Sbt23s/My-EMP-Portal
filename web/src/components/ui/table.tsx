@@ -41,27 +41,71 @@ export const TableRow = React.forwardRef<
 ));
 TableRow.displayName = "TableRow";
 
+/**
+ * A column heading.
+ *
+ * <p>Pass {@code sortKey} with the state from {@code useTableSort} to make it
+ * sort when clicked. The arrow is always drawn, faint until this is the column
+ * in use -- so a reader can see which headings sort without hovering each one,
+ * and the row does not shift by a few pixels when a sort turns on.
+ *
+ * <p>{@code sortable} on its own still works and still draws the old static
+ * hint, so the tables that use it keep rendering exactly as before.
+ */
 export const TableHead = React.forwardRef<
   HTMLTableCellElement,
-  React.ThHTMLAttributes<HTMLTableCellElement> & { sortable?: boolean }
->(({ className, children, sortable, ...props }, ref) => (
-  <th
-    ref={ref}
-    className={cn(
-      "h-11 px-3.5 py-3 text-left align-middle text-xs font-semibold text-slate-800 dark:text-slate-200 border-r border-b border-slate-300 dark:border-slate-700 last:border-r-0 bg-slate-100/90 dark:bg-slate-800/90 whitespace-nowrap",
-      sortable && "cursor-pointer select-none hover:bg-slate-200/80 dark:hover:bg-slate-700/80",
-      className
-    )}
-    {...props}
-  >
-    <div className="flex items-center gap-1.5">
-      <span>{children}</span>
-      {sortable && (
-        <span className="text-[10px] text-slate-400 font-mono tracking-tighter">↑↓</span>
+  React.ThHTMLAttributes<HTMLTableCellElement> & {
+    sortable?: boolean;
+    /** This column's key, as the sort hook knows it. */
+    sortKey?: string;
+    /** Which column the table is sorted by right now, if any. */
+    activeKey?: string | null;
+    sortDir?: "asc" | "desc";
+    onSort?: (key: string) => void;
+  }
+>(({ className, children, sortable, sortKey, activeKey, sortDir = "asc", onSort, ...props }, ref) => {
+  const interactive = !!sortKey && !!onSort;
+  const active = interactive && activeKey === sortKey;
+
+  return (
+    <th
+      ref={ref}
+      className={cn(
+        "h-11 px-3.5 py-3 text-left align-middle text-xs font-semibold text-slate-800 dark:text-slate-200 border-r border-b border-slate-300 dark:border-slate-700 last:border-r-0 bg-slate-100/90 dark:bg-slate-800/90 whitespace-nowrap",
+        (sortable || interactive) && "cursor-pointer select-none hover:bg-slate-200/80 dark:hover:bg-slate-700/80",
+        className
       )}
-    </div>
-  </th>
-));
+      aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : undefined}
+      onClick={interactive ? () => onSort!(sortKey!) : props.onClick}
+      title={
+        interactive
+          ? active
+            ? sortDir === "asc"
+              ? "Sorted ascending — click for descending"
+              : "Sorted descending — click to clear"
+            : "Click to sort"
+          : props.title
+      }
+      {...props}
+    >
+      <div className="flex items-center gap-1.5">
+        <span>{children}</span>
+        {interactive ? (
+          <span
+            className={cn(
+              "font-mono text-[10px] leading-none tracking-tighter",
+              active ? "text-slate-700 dark:text-slate-200" : "text-slate-400/60"
+            )}
+          >
+            {active ? (sortDir === "asc" ? "↑" : "↓") : "↕"}
+          </span>
+        ) : sortable ? (
+          <span className="font-mono text-[10px] tracking-tighter text-slate-400">↑↓</span>
+        ) : null}
+      </div>
+    </th>
+  );
+});
 TableHead.displayName = "TableHead";
 
 export const TableCell = React.forwardRef<

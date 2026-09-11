@@ -3,7 +3,7 @@ import { useState, useCallback, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Check, X, Clock, Paperclip, Inbox, Search, AlertTriangle, Ban, TrendingUp, Timer,
-  ShieldCheck, User, Users, IdCard, CalendarDays, CalendarCheck, Flag, UserCheck
+  ShieldCheck, User, Users, IdCard, CalendarDays, CalendarCheck, Flag, UserCheck, FilterX
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import toast from "react-hot-toast";
@@ -515,6 +515,83 @@ export default function PermissionsPage() {
       {/* Counts on top, then one view at a time. */}
       {tiled && (
         <>
+          {/*
+            Filters above the numbers they change.
+
+            These sat underneath the count tiles, which put the cause below the
+            effect: typing a name moved five figures the reader had already
+            scrolled past. One toolbar across the top, in reading order --
+            search, then the date window, then the way out of both.
+
+            Nothing about the filtering changed. It was always instant: the
+            state drives a useMemo that every list and every count reads from,
+            so a keystroke updates the tiles and the table in the same render.
+          */}
+          <div className="rounded-xl border bg-card/60 p-2.5 shadow-sm backdrop-blur-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Search takes the room that is going spare, so it grows on a
+                  wide screen and wraps last on a narrow one. */}
+              <div className="relative min-w-[15rem] flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="h-[38px] w-full border-transparent bg-muted/40 pl-9 focus-visible:border-input focus-visible:bg-background"
+                  placeholder="Search name, employee ID, team, reason or approver…"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  aria-label="Search permission requests"
+                />
+                {q && (
+                  <button
+                    type="button"
+                    onClick={() => setQ("")}
+                    aria-label="Clear search"
+                    className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* The two dates read as one control, because they are one:
+                  a window, not two unrelated fields. */}
+              <div className="flex items-center gap-1.5 rounded-lg bg-muted/40 px-2 py-1">
+                <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <Input
+                  id="perm-from"
+                  type="date"
+                  aria-label="From date"
+                  className="h-[30px] w-[9.5rem] border-transparent bg-transparent px-1.5 text-xs focus-visible:border-input focus-visible:bg-background"
+                  min={DATE_MIN}
+                  max={toDate || undefined}
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                />
+                <span className="text-xs text-muted-foreground">to</span>
+                <Input
+                  id="perm-to"
+                  type="date"
+                  aria-label="To date"
+                  className="h-[30px] w-[9.5rem] border-transparent bg-transparent px-1.5 text-xs focus-visible:border-input focus-visible:bg-background"
+                  min={fromDate || DATE_MIN}
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                />
+              </div>
+
+              {/* Only here when there is something to clear, so the toolbar
+                  does not carry a dead button most of the time. */}
+              {(q.trim() || period || fromDate || toDate) && (
+                <button
+                  type="button"
+                  onClick={() => { setQ(""); setPeriod(""); setFromDate(""); setToDate(""); }}
+                  className="inline-flex h-[38px] items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  <FilterX className="h-3.5 w-3.5" /> Clear
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <StatTile
               label="All" value={counts.ALL} icon={Inbox} fill={TILE_FILLS.violet}
@@ -548,57 +625,6 @@ export default function PermissionsPage() {
             />
           </div>
 
-          {/* One search across the things people actually search by. */}
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex flex-col">
-              <label className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">Search</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  className="h-[38px] w-[22rem] pl-9"
-                  placeholder="Name, employee ID, team, reason or approver…"
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="flex flex-col">
-              <label htmlFor="perm-from" className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
-                From date
-              </label>
-              <Input
-                id="perm-from"
-                type="date"
-                className="h-[38px] w-[10.5rem]"
-                min={DATE_MIN}
-                max={toDate || undefined}
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col">
-              <label htmlFor="perm-to" className="mb-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
-                To date
-              </label>
-              <Input
-                id="perm-to"
-                type="date"
-                className="h-[38px] w-[10.5rem]"
-                min={fromDate || DATE_MIN}
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-              />
-            </div>
-            {(q.trim() || period || fromDate || toDate) && (
-              <button
-                type="button"
-                onClick={() => { setQ(""); setPeriod(""); setFromDate(""); setToDate(""); }}
-                className="h-[38px] self-end rounded-md border px-3 text-xs font-medium text-muted-foreground hover:bg-muted"
-              >
-                Clear search
-              </button>
-            )}
-          </div>
         </>
       )}
 

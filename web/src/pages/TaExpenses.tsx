@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Map, Plus, Settings, Upload, ImagePlus, Pencil, Clock, Check, X, Mail } from "lucide-react";
+import { Map, Plus, Settings, Upload, ImagePlus, Pencil, Clock, Check, X, Mail, Search, CalendarDays, FilterX } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
@@ -67,6 +67,8 @@ export default function TaExpensesPage() {
 
   const [statusTab, setStatusTab] = useState<"ALL" | "PENDING" | "APPROVED" | "REJECTED">("ALL");
   const [q, setQ] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [viewRow, setViewRow] = useState<any | null>(null);
   const [decideRow, setDecideRow] = useState<any | null>(null);
@@ -116,16 +118,37 @@ export default function TaExpensesPage() {
   });
 
   // Status tabs + search over whichever list this role is looking at.
-  const rows = useMemo(() => {
+  /**
+   * Everything the search and the date window allow, before the status tab.
+   *
+   * <p>Kept separate from {@link rows} because the tiles and the table want
+   * different things from it: the table wants the chosen status, the tiles
+   * have to keep showing what each status would switch you to. Both read the
+   * same search and the same dates, so a keystroke or a date moves the table
+   * and the five figures above it in one render.
+   */
+  const inScope = useMemo(() => {
     const all: any[] = taList.data ?? [];
     const needle = q.trim().toLowerCase();
     return all.filter((r) => {
-      if (statusTab !== "ALL" && r.status !== statusTab) return false;
+      if (fromDate || toDate) {
+        // The claim's own date, trimmed to a day so a timestamp cannot fall
+        // outside a window that should contain it.
+        const day = String(r.date ?? "").slice(0, 10);
+        if (!day) return false;
+        if (fromDate && day < fromDate) return false;
+        if (toDate && day > toDate) return false;
+      }
       if (!needle) return true;
       return `${r.userName ?? ""} ${r.employeeCode ?? ""} ${r.category ?? ""} ${r.location ?? ""}`
         .toLowerCase().includes(needle);
     });
-  }, [taList.data, statusTab, q]);
+  }, [taList.data, q, fromDate, toDate]);
+
+  const rows = useMemo(
+    () => inScope.filter((r) => statusTab === "ALL" || r.status === statusTab),
+    [inScope, statusTab]
+  );
 
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailTo, setEmailTo] = useState("");
@@ -255,22 +278,19 @@ export default function TaExpensesPage() {
   // Paged like every other table, with the numbers and rows-per-page.
   const paged = usePagedRows(rows, 15, [statusTab, q, taList.data]);
 
-  const counts = useMemo(() => {
-    const all: any[] = taList.data ?? [];
-    return {
-      ALL: all.length,
-      PENDING: all.filter((r) => r.status === "PENDING").length,
-      APPROVED: all.filter((r) => r.status === "APPROVED").length,
-      REJECTED: all.filter((r) => r.status === "REJECTED").length
-    };
-  }, [taList.data]);
+  const counts = useMemo(() => ({
+    ALL: inScope.length,
+    PENDING: inScope.filter((r) => r.status === "PENDING").length,
+    APPROVED: inScope.filter((r) => r.status === "APPROVED").length,
+    REJECTED: inScope.filter((r) => r.status === "REJECTED").length
+  }), [inScope]);
 
   // Money actually granted — more useful on the Approved tile than a bare count.
   const approvedTotal = useMemo(
-    () => (taList.data ?? [])
+    () => inScope
       .filter((r: any) => r.status === "APPROVED")
       .reduce((s: number, r: any) => s + (Number(r.grossTotal) || 0), 0),
-    [taList.data]
+    [inScope]
   );
 
   /*
@@ -283,10 +303,10 @@ export default function TaExpensesPage() {
    * neither belongs in a figure labelled as the total.
    */
   const totalGrossAmount = useMemo(
-    () => (taList.data ?? [])
+    () => inScope
       .filter((r: any) => r.status === "APPROVED")
       .reduce((s: number, r: any) => s + (Number(r.grossTotal) || 0), 0),
-    [taList.data]
+    [inScope]
   );
 
   return (
@@ -386,16 +406,73 @@ export default function TaExpensesPage() {
                 </button>
               ))}
             </div>
-            <Input
-              placeholder={
-                canApprove
-                  ? "Search employee, category or location…"
-                  : "Search category or location…"
-              }
-              className="max-w-xs"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
+            {/*
+              Search and the date window, as one toolbar.
+
+              The search box sat here alone and there was no way to narrow by
+              date at all -- on a page whose every row is dated, and whose
+              totals are money, that was the filter people needed most. Both
+              feed the same memo, so a keystroke or a date moves the table and
+              the five figures above it in the same render.
+            */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[13rem] flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder={
+                    canApprove
+                      ? "Search employee, category or location…"
+                      : "Search category or location…"
+                  }
+                  className="h-[38px] w-full border-transparent bg-muted/40 pl-9 focus-visible:border-input focus-visible:bg-background"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  aria-label="Search claims"
+                />
+                {q && (
+                  <button
+                    type="button"
+                    onClick={() => setQ("")}
+                    aria-label="Clear search"
+                    className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Two fields, one window -- laid out as the single control it is. */}
+              <div className="flex items-center gap-1.5 rounded-lg bg-muted/40 px-2 py-1">
+                <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <Input
+                  type="date"
+                  aria-label="From date"
+                  className="h-[30px] w-[9.5rem] border-transparent bg-transparent px-1.5 text-xs focus-visible:border-input focus-visible:bg-background"
+                  max={toDate || undefined}
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                />
+                <span className="text-xs text-muted-foreground">to</span>
+                <Input
+                  type="date"
+                  aria-label="To date"
+                  className="h-[30px] w-[9.5rem] border-transparent bg-transparent px-1.5 text-xs focus-visible:border-input focus-visible:bg-background"
+                  min={fromDate || undefined}
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                />
+              </div>
+
+              {(q.trim() || fromDate || toDate) && (
+                <button
+                  type="button"
+                  onClick={() => { setQ(""); setFromDate(""); setToDate(""); }}
+                  className="inline-flex h-[38px] items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  <FilterX className="h-3.5 w-3.5" /> Clear
+                </button>
+              )}
+            </div>
           </div>
 
           {taList.isLoading ? (

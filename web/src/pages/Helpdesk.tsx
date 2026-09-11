@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, LifeBuoy, Send, Star, MessageSquare,
   Ticket as TicketIcon, Clock, CheckCircle, Paperclip, Inbox,
-  Pencil, X, Search
+  Pencil, X, Search, CalendarDays
 } from "lucide-react";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
@@ -31,6 +31,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
+import { useTableSort } from "@/hooks/useTableSort";
 import { StatTile, TILE_FILLS } from "@/components/ui/stat-tile";
 import type { ApiEnvelope, PageEnvelope, Ticket } from "@/types";
 import { DATE_MIN, DATE_MAX } from "@/lib/dates";
@@ -191,18 +192,32 @@ export default function HelpdeskPage() {
   const [type, setType] = useState("all");
   /** One box across the ticket, the person and the code. */
   const [q, setQ] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   // Date-filtered but status-agnostic, so the tiles keep counting the whole
   // period while a status tile is selected.
   const inPeriod = useMemo(() => rawList.filter((t) => {
-    if (!t.createdAt) return year === "all" && month === "all" && !day;
+    if (!t.createdAt) {
+      return year === "all" && month === "all" && !day && !fromDate && !toDate;
+    }
     const d = dayjs(t.createdAt);
+
+    // A span of days answers on its own. Holding a range to a single date as
+    // well would be two filters arguing over the same field.
+    if (fromDate || toDate) {
+      const iso = d.format("YYYY-MM-DD");
+      if (fromDate && iso < fromDate) return false;
+      if (toDate && iso > toDate) return false;
+      return true;
+    }
+
     // An exact date wins over the year/month pickers.
     if (day) return d.format("YYYY-MM-DD") === day;
     if (year !== "all" && d.format("YYYY") !== year) return false;
     if (month !== "all" && d.format("MM") !== month) return false;
     return true;
-  }), [rawList, year, month, day]);
+  }), [rawList, year, month, day, fromDate, toDate]);
 
   const statusCounts = useMemo(() => {
     const c: Record<string, number> = { ALL: inPeriod.length };
@@ -240,19 +255,44 @@ export default function HelpdeskPage() {
       }
       return true;
     });
+    // Newest first, which is the order to return to when a column sort is
+    // switched off.
     return [...filtered].sort((a, b) =>
       String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? "")));
-  }, [inPeriod, statusTab, priority, type, q]);
+  }, [inPeriod, statusTab, priority, type, q, fromDate, toDate]);
 
-  const paged = usePagedRows(list, 15, [activeTab, year, month, day, statusTab, priority, type, q, rawList]);
+  const sort = useTableSort<Ticket>(list, (row, key) => {
+    switch (key) {
+      case "code": return row.ticketCode ?? "";
+      case "subject": return row.title ?? "";
+      case "type": return row.type ?? "";
+      case "category": return row.category ?? "";
+      case "priority": {
+        // Ordered by urgency rather than alphabetically: sorting priority
+        // A-to-Z puts HIGH between CRITICAL and LOW, which is no order at all.
+        const rank: Record<string, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+        return rank[String(row.priority ?? "").toUpperCase()] ?? 9;
+      }
+      case "status": return row.status ?? "";
+      case "raisedBy": return row.raisedByName ?? "";
+      case "assignedTo": return row.assignedToName ?? "";
+      case "createdAt": return row.createdAt ?? "";
+      default: return "";
+    }
+  });
+  const sortedList = sort.sorted;
+
+  const paged = usePagedRows(sortedList, 15, [activeTab, year, month, day, statusTab, priority, type, q, fromDate, toDate, sort.key, sort.dir, rawList]);
 
   /** The tickets the filters leave, as a spreadsheet. */
   const exportTickets = async () => {
-    if (list.length === 0) { toast.error("Nothing to export."); return; }
+    if (sortedList.length === 0) { toast.error("Nothing to export."); return; }
     const XLSX = await import("xlsx");
     const headers = ["#", "Ticket ID", "Subject", "Type", "Category", "Priority",
                      "Status", "Requested to", "Raised by", "Date"];
-    const body = list.map((t, i) => [
+    // The rows as the table has them: filters applied and the chosen sort
+    // kept, so the file matches the screen it was exported from.
+    const body = sortedList.map((t, i) => [
       i + 1,
       t.ticketCode ?? "",
       t.title ?? "",
@@ -336,7 +376,7 @@ export default function HelpdeskPage() {
                 date, and the status tile -- so the file matches the page
                 rather than being a second query of the same name. */}
             <ExportExcelButton
-              disabled={list.length === 0}
+              disabled={sortedList.length === 0}
               title={list.length ? "Download these tickets as a spreadsheet" : "Nothing to export"}
               onClick={exportTickets}
             />
@@ -421,6 +461,31 @@ export default function HelpdeskPage() {
           <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Date</label>
           <Input type="date" min={DATE_MIN} max={DATE_MAX} value={day} onChange={(e) => setDay(e.target.value)} className="w-40" />
         </div>
+
+        {/* A span of days, for the times one date is not the question. */}
+        <div className="space-y-1">
+          <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Date range</label>
+          <div className="flex items-center gap-1.5 rounded-lg bg-muted/40 px-2 py-[3px]">
+            <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <Input
+              type="date"
+              aria-label="From date"
+              className="h-[30px] w-[9rem] border-transparent bg-transparent px-1.5 text-xs focus-visible:border-input focus-visible:bg-background"
+              max={toDate || undefined}
+              value={fromDate}
+              onChange={(e) => { setFromDate(e.target.value); setDay(""); }}
+            />
+            <span className="text-xs text-muted-foreground">to</span>
+            <Input
+              type="date"
+              aria-label="To date"
+              className="h-[30px] w-[9rem] border-transparent bg-transparent px-1.5 text-xs focus-visible:border-input focus-visible:bg-background"
+              min={fromDate || undefined}
+              value={toDate}
+              onChange={(e) => { setToDate(e.target.value); setDay(""); }}
+            />
+          </div>
+        </div>
         <div className="space-y-1">
           <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Priority</label>
           <Select value={priority} onChange={(e) => setPriority(e.target.value)} className="w-32">
@@ -473,7 +538,7 @@ export default function HelpdeskPage() {
             <Skeleton key={i} className="h-20" />
           ))}
         </div>
-      ) : list.length === 0 ? (
+      ) : sortedList.length === 0 ? (
         <EmptyState
           icon={LifeBuoy}
           title={
@@ -500,16 +565,16 @@ export default function HelpdeskPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-px whitespace-nowrap">Action</TableHead>
-                  <TableHead className="pl-6">Ticket ID</TableHead>
+                  <TableHead className="pl-6" sortKey="code" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Ticket ID</TableHead>
                   <TableHead>Employee ID</TableHead>
-                  <TableHead>Employee Name</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Approved By</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead sortKey="raisedBy" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Employee Name</TableHead>
+                  <TableHead sortKey="subject" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Subject</TableHead>
+                  <TableHead sortKey="type" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Type</TableHead>
+                  <TableHead sortKey="category" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Category</TableHead>
+                  <TableHead sortKey="priority" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Priority</TableHead>
+                  <TableHead sortKey="status" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Status</TableHead>
+                  <TableHead sortKey="assignedTo" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Approved By</TableHead>
+                  <TableHead sortKey="createdAt" activeKey={sort.key} sortDir={sort.dir} onSort={sort.toggle}>Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

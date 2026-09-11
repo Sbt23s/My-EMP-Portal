@@ -27,7 +27,7 @@ import { Avatar, resolvePhotoUrl } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { usePagedRows, TablePagination } from "@/components/ui/table-pagination";
-import { StatTile } from "@/components/ui/stat-tile";
+import { StatTile, TILE_TONE } from "@/components/ui/stat-tile";
 import { MonthlySummaryCard } from "@/components/MonthlySummaryCard";
 import { useAuth } from "@/hooks/useAuth";
 import { useTaskChat } from "@/hooks/useTaskChat";
@@ -578,13 +578,12 @@ export default function TasksPage() {
 
 // ---------------- Everyone: my assigned tasks ----------------
 
-/** Solid fills for the employee task stat tiles. */
-const TILE_FILLS = {
-  pink:  "linear-gradient(135deg, #db2777 0%, #ec5a9c 100%)",
-  blue:  "linear-gradient(135deg, #1d6fd8 0%, #3f8ce8 100%)",
-  green: "linear-gradient(135deg, #0a9d68 0%, #21a87c 100%)",
-  red:   "linear-gradient(135deg, #dc2626 0%, #ef5350 100%)"
-} as const;
+/**
+ * The tones these tiles use. A second copy of the gradients used to live here;
+ * it is the shared tone map now, so the task tiles cannot drift away from every
+ * other tile in the product.
+ */
+const TILE_FILLS = { pink: "pink", blue: "blue", green: "green", red: "red" } as const;
 
 function MyTasks() {
   const qc = useQueryClient();
@@ -739,18 +738,15 @@ function MyTasks() {
     label: string, value: string, sub: string, icon: React.ReactNode,
     fill: keyof typeof TILE_FILLS
   ) => (
-    <Card
-      className="border-0 text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
-      style={{ background: TILE_FILLS[fill] }}
-    >
+    <Card className={cn("shadow-none transition-all duration-200 hover:shadow-sm", TILE_TONE[fill].surface)}>
       <CardContent className="flex items-start gap-3 p-4">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/20 text-white">
+        <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-xl", TILE_TONE[fill].icon)}>
           {icon}
         </span>
         <div className="min-w-0">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-white/85">{label}</div>
-          <div className="text-2xl font-bold leading-tight text-white">{value}</div>
-          <div className="text-[11px] text-white/80">{sub}</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+          <div className={cn("text-2xl font-bold leading-tight", TILE_TONE[fill].value)}>{value}</div>
+          <div className="text-[11px] text-muted-foreground">{sub}</div>
         </div>
       </CardContent>
     </Card>
@@ -799,22 +795,21 @@ function MyTasks() {
           <CheckCircle2 className="h-5 w-5" />, "green")}
         {statTile("Overdue", String(stats.overdue), stats.overdue > 0 ? "Need attention" : "All on time",
           <Clock className="h-5 w-5" />, "red")}
-        <Card
-          className="border-0 text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
-          style={{ background: TILE_FILLS.green }}
-        >
+        <Card className={cn("shadow-none transition-all duration-200 hover:shadow-sm", TILE_TONE.green.surface)}>
           <CardContent className="flex items-center gap-3 p-4">
+            {/* The dial keeps its colour: it is the one place on the tile where
+                the fill is carrying a value rather than decorating a number. */}
             <div
               className="grid h-14 w-14 shrink-0 place-items-center rounded-full"
-              style={{ background: `conic-gradient(#ffffff 0 ${stats.rate}%, rgb(255 255 255 / 0.28) 0)` }}
+              style={{ background: `conic-gradient(#0a9d68 0 ${stats.rate}%, rgb(10 157 104 / 0.16) 0)` }}
             >
-              <div className="grid h-10 w-10 place-items-center rounded-full text-[11px] font-bold text-emerald-700" style={{ background: "#ffffff" }}>
+              <div className="grid h-10 w-10 place-items-center rounded-full bg-background text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
                 {stats.rate}%
               </div>
             </div>
             <div>
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-white/85">Completion Rate</div>
-              <div className="text-sm text-white/80">{stats.completed} of {stats.total} done</div>
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Completion Rate</div>
+              <div className="text-sm text-muted-foreground">{stats.completed} of {stats.total} done</div>
             </div>
           </CardContent>
         </Card>

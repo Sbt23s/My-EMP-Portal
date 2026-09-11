@@ -1,18 +1,94 @@
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** Solid fills for count tiles. Shared so every page's tiles match. */
+/**
+ * The tint each tile is drawn in.
+ *
+ * <p>These were solid gradients and the tile was filled edge to edge in them,
+ * white text on top. A row of six read as six blocks of colour competing with
+ * each other and with the table underneath, and the number -- the only thing
+ * anybody is actually reading -- was the quietest part of it.
+ *
+ * <p>Now each entry is a tint: a pale wash for the surface, a matching border,
+ * and a saturated value kept for the icon and the accent alone. The card is
+ * light, the type is the page's own foreground colour, and the colour does the
+ * one job it is good at, which is telling the tiles apart at a glance.
+ *
+ * <p>The keys are unchanged, so every page that already asks for
+ * {@code TILE_FILLS.green} keeps working and simply looks lighter.
+ */
 export const TILE_FILLS = {
-  violet: "linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%)",
-  amber:  "linear-gradient(135deg, #b45309 0%, #d97706 100%)",
-  green:  "linear-gradient(135deg, #0a9d68 0%, #21a87c 100%)",
-  red:    "linear-gradient(135deg, #dc2626 0%, #ef5350 100%)",
-  blue:   "linear-gradient(135deg, #1d6fd8 0%, #3f8ce8 100%)",
-  orange: "linear-gradient(135deg, #c2410c 0%, #ea7317 100%)",
-  slate:  "linear-gradient(135deg, #475569 0%, #64748b 100%)",
-  pink:   "linear-gradient(135deg, #db2777 0%, #ec5a9c 100%)",
-  yellow: "linear-gradient(135deg, #ca8a04 0%, #eab308 100%)"
+  violet: "violet",
+  amber: "amber",
+  green: "green",
+  red: "red",
+  blue: "blue",
+  orange: "orange",
+  slate: "slate",
+  pink: "pink",
+  yellow: "yellow"
 } as const;
+
+export type TileTone = (typeof TILE_FILLS)[keyof typeof TILE_FILLS];
+
+/**
+ * Surface, border and accent per tone, for both themes.
+ *
+ * <p>Written as literal Tailwind classes rather than composed at runtime,
+ * because Tailwind only ships the classes it can see in the source -- a
+ * template string like `bg-${tone}-50` produces a tile with no background at
+ * all in a production build.
+ */
+export const TILE_TONE: Record<string, { surface: string; icon: string; value: string }> = {
+  violet: {
+    surface: "bg-violet-50/70 border-violet-200/70 dark:bg-violet-500/10 dark:border-violet-400/20",
+    icon: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300",
+    value: "text-violet-900 dark:text-violet-100"
+  },
+  amber: {
+    surface: "bg-amber-50/70 border-amber-200/70 dark:bg-amber-500/10 dark:border-amber-400/20",
+    icon: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
+    value: "text-amber-900 dark:text-amber-100"
+  },
+  green: {
+    surface: "bg-emerald-50/70 border-emerald-200/70 dark:bg-emerald-500/10 dark:border-emerald-400/20",
+    icon: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
+    value: "text-emerald-900 dark:text-emerald-100"
+  },
+  red: {
+    surface: "bg-rose-50/70 border-rose-200/70 dark:bg-rose-500/10 dark:border-rose-400/20",
+    icon: "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300",
+    value: "text-rose-900 dark:text-rose-100"
+  },
+  blue: {
+    surface: "bg-sky-50/70 border-sky-200/70 dark:bg-sky-500/10 dark:border-sky-400/20",
+    icon: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300",
+    value: "text-sky-900 dark:text-sky-100"
+  },
+  orange: {
+    surface: "bg-orange-50/70 border-orange-200/70 dark:bg-orange-500/10 dark:border-orange-400/20",
+    icon: "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300",
+    value: "text-orange-900 dark:text-orange-100"
+  },
+  slate: {
+    surface: "bg-slate-50 border-slate-200/80 dark:bg-slate-500/10 dark:border-slate-400/20",
+    icon: "bg-slate-200 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300",
+    value: "text-slate-900 dark:text-slate-100"
+  },
+  pink: {
+    surface: "bg-pink-50/70 border-pink-200/70 dark:bg-pink-500/10 dark:border-pink-400/20",
+    icon: "bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-300",
+    value: "text-pink-900 dark:text-pink-100"
+  },
+  yellow: {
+    surface: "bg-yellow-50/70 border-yellow-200/70 dark:bg-yellow-500/10 dark:border-yellow-400/20",
+    icon: "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300",
+    value: "text-yellow-900 dark:text-yellow-100"
+  }
+};
+
+/** Anything unrecognised falls back to slate rather than rendering untinted. */
+const toneOf = (fill: string) => TILE_TONE[fill] ?? TILE_TONE.slate;
 
 /**
  * A count tile that doubles as a filter. When `onClick` is given it renders as a
@@ -32,26 +108,32 @@ export function StatTile({
   compact?: boolean;
 }) {
   const Tag = onClick ? "button" : "div";
+  const tone = toneOf(fill);
 
   if (compact) {
     return (
       <Tag
         {...(onClick ? { type: "button" as const, onClick } : {})}
-        style={{ backgroundImage: fill }}
         title={hint}
         className={cn(
-          "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-white shadow-sm transition-all",
+          "flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all",
+          tone.surface,
           onclickable(onClick),
-          active ? "ring-2 ring-white/70 ring-offset-2 ring-offset-background" : "opacity-90"
+          // The selected tile is marked by a ring in its own colour rather than
+          // by dimming every other one -- six faded tiles read as six disabled
+          // tiles, which is not what a filter is saying.
+          active && "ring-2 ring-primary/40 ring-offset-1 ring-offset-background"
         )}
       >
-        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white/20">
+        <span className={cn("grid h-7 w-7 shrink-0 place-items-center rounded-lg", tone.icon)}>
           <Icon className="h-3.5 w-3.5" />
         </span>
-        <span className="min-w-0 flex-1 truncate text-[10px] font-bold uppercase tracking-wider">
+        <span className="min-w-0 flex-1 truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
           {label}
         </span>
-        <span className="text-lg font-bold leading-none tabular-nums">{value}</span>
+        <span className={cn("text-lg font-bold leading-none tabular-nums", tone.value)}>
+          {value}
+        </span>
       </Tag>
     );
   }
@@ -59,26 +141,28 @@ export function StatTile({
   return (
     <Tag
       {...(onClick ? { type: "button" as const, onClick } : {})}
-      style={{ backgroundImage: fill }}
       className={cn(
-        "rounded-2xl p-4 text-left text-white shadow-sm transition-all",
+        "rounded-2xl border p-4 text-left transition-all",
+        tone.surface,
         onclickable(onClick),
-        active ? "ring-2 ring-white/70 ring-offset-2 ring-offset-background" : "opacity-90"
+        active && "ring-2 ring-primary/40 ring-offset-1 ring-offset-background"
       )}
     >
       <div className="flex items-center gap-2">
-        <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/20">
+        <span className={cn("grid h-8 w-8 place-items-center rounded-lg", tone.icon)}>
           <Icon className="h-4 w-4" />
         </span>
-        <span className="text-[11px] font-bold uppercase tracking-wider">{label}</span>
+        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+          {label}
+        </span>
       </div>
-      <div className="mt-2.5 text-3xl font-bold tabular-nums">{value}</div>
-      {hint && <div className="text-[11px] text-white/80">{hint}</div>}
+      <div className={cn("mt-2.5 text-3xl font-bold tabular-nums", tone.value)}>{value}</div>
+      {hint && <div className="text-[11px] text-muted-foreground">{hint}</div>}
     </Tag>
   );
 }
 
 const onclickable = (onClick?: () => void) =>
   onClick
-    ? "hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+    ? "hover:shadow-sm hover:brightness-[0.98] dark:hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
     : "";

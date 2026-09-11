@@ -478,14 +478,31 @@ public class AuthService {
         return new TokenPair(access, refresh.getToken(), "Bearer", jwtService.getAccessTtlSeconds());
     }
 
+    /**
+     * Write the audit row for a sign-in attempt.
+     *
+     * <p>Every field written here is trimmed to what its column will hold. The
+     * user agent already was; the username was not, and login_history.username
+     * is varchar(60) — so an attempt with a longer name threw a data-truncation
+     * error out of the audit write, which surfaced to the caller as
+     * <em>"That username is already in use." (409)</em>. On a sign-in form that
+     * is both wrong and confusing: the answer to a bad username is 401, and the
+     * record of the attempt must never decide the outcome of the attempt.
+     */
     private void recordLogin(Long userId, String username, boolean success, String ip, String ua) {
         LoginHistory history = new LoginHistory();
         history.setUserId(userId);
-        history.setUsername(username);
+        history.setUsername(trim(username, 60));
         history.setSuccess(success);
-        history.setIpAddress(ip);
-        history.setUserAgent(ua != null && ua.length() > 250 ? ua.substring(0, 250) : ua);
+        history.setIpAddress(trim(ip, 45));
+        history.setUserAgent(trim(ua, 250));
         loginHistoryRepository.save(history);
+    }
+
+    /** {@code value} cut to {@code max} characters, or null if it was null. */
+    private static String trim(String value, int max) {
+        if (value == null) return null;
+        return value.length() > max ? value.substring(0, max) : value;
     }
 
     /**

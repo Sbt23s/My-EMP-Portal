@@ -16,6 +16,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -144,6 +145,24 @@ public class GlobalExceptionHandler {
         log.debug("Unsupported content type: {}", ex.getContentType());
         return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
                 .body(ApiResponse.fail("Send this request as JSON (Content-Type: application/json).", null));
+    }
+
+    /**
+     * A multipart request the container could not take apart.
+     *
+     * <p>Usually a {@code multipart/form-data} content type sent without the
+     * boundary that makes it parseable. It fell through to the catch-all and
+     * answered 500 with a reference id, which reads as a server fault for what
+     * is a malformed request — the sibling case to the wrong content type
+     * above, and answered the same way.
+     */
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMultipart(MultipartException ex) {
+        log.debug("Unreadable multipart request: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(ApiResponse.fail(
+                        "That upload could not be read. Send it as a well-formed multipart request, "
+                                + "or as JSON if the endpoint expects JSON.", null));
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

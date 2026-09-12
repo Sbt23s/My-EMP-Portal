@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
+import { useRoster } from "@/hooks/useRoster";
 import { useAuth } from "@/hooks/useAuth";
 import type { ApiEnvelope, EmployeeTaskGroup, UserSummary, AttendanceRecord } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -257,14 +258,9 @@ export default function CalendarPage() {
   }, [eventsQ.data]);
 
   // Admin: list of all team members to resolve names/avatars for attendance.
-  const employeesQ = useQuery({
-    queryKey: ["employees"],
-    // Also needed by whoever adds events, to offer the list of teams an event
-    // can be limited to.
-    enabled: isAdmin || canManageEvents,
-    queryFn: async () =>
-      (await api.get<ApiEnvelope<{ content: UserSummary[] }>>("/users?size=1000")).data.data.content ?? []
-  });
+  // Also needed by whoever adds events, to offer the list of teams an event
+  // can be limited to. Shared with every other screen that wants the roster.
+  const employeesQ = useRoster(isAdmin || canManageEvents);
 
   const employeesMap = useMemo(() => {
     const map = new Map<number, UserSummary>();

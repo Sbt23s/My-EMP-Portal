@@ -650,13 +650,27 @@ export default function EmployeesPage() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search by employee name, ID, email, phone or designation…"
-                className="pl-9 text-sm"
+                className="pl-9 pr-9 text-sm"
                 value={q}
                 onChange={(e) => {
                   setQ(e.target.value);
                   setPage(0);
                 }}
               />
+              {/*
+                A spinner while the search is in flight.
+
+                The box debounces, so between the last keystroke and the new
+                rows there is a quarter-second where the old results are still
+                on screen and nothing says why. That gap is most of what "the
+                search feels slow" describes -- the work is quick, the silence
+                is not. isFetching covers both the wait and the request.
+              */}
+              {(directory.isFetching || q !== dq) && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <PixousLoader size="xs" />
+                </span>
+              )}
             </div>
           </div>
 

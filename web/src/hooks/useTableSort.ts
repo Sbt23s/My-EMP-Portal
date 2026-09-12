@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 export type SortDir = "asc" | "desc";
 
@@ -24,6 +24,23 @@ export function useTableSort<T>(
   const [key, setKey] = useState<string | null>(null);
   const [dir, setDir] = useState<SortDir>("asc");
 
+  /*
+    The getter, held still.
+
+    Every caller passes an inline arrow, so it is a new function on every
+    render -- and it was in the memo's dependency list, which made the memo
+    miss every time. A table of a thousand rows re-sorted on each render of
+    its page, including renders that had nothing to do with the table: a
+    keystroke in a search box, a hover, a tooltip.
+
+    Keeping the latest in a ref and leaving it out of the dependencies means
+    the sort runs when the rows, the column or the direction change, which is
+    when the answer can actually differ. The ref is always the current one, so
+    a getter that closes over fresh state still reads fresh state.
+  */
+  const getterRef = useRef(getter);
+  getterRef.current = getter;
+
   /** Advance a column: off → ascending → descending → off. */
   const toggle = (next: string) => {
     if (key !== next) { setKey(next); setDir("asc"); return; }
@@ -38,8 +55,8 @@ export function useTableSort<T>(
     // A copy: sorting the array in place would mutate the memo the caller
     // passed in, and the next render would read an order nobody asked for.
     return [...rows].sort((a, b) => {
-      const av = getter(a, key);
-      const bv = getter(b, key);
+      const av = getterRef.current(a, key);
+      const bv = getterRef.current(b, key);
 
       // Blanks sort last in both directions. A row with no value has not got
       // a small value; it has no value, and burying it under the ones that do
@@ -60,7 +77,10 @@ export function useTableSort<T>(
         sensitivity: "base"
       }) * factor;
     });
-  }, [rows, key, dir, getter]);
+    // getter is deliberately absent -- see the ref above. Including it made
+    // this memo useless, which is worse than the lint rule it satisfies.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, key, dir]);
 
   return { sorted, key, dir, toggle };
 }

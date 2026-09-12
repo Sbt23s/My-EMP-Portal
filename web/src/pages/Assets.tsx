@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
+import { useRoster } from "@/hooks/useRoster";
 import { todayIso, DATE_MIN, DATE_MAX } from "@/lib/dates";
 import { useAuth } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/PageHeader";
@@ -137,12 +138,7 @@ export default function AssetsPage() {
 
   // Names for the "Allocated to" column and filter. The allocate dialog already
   // reads this list, so it is usually in cache by the time it is needed here.
-  const peopleQ = useQuery({
-    enabled: canView,
-    queryKey: ["employees"],
-    queryFn: async () =>
-      (await api.get<ApiEnvelope<{ content: UserSummary[] }>>("/users?size=1000")).data.data.content ?? []
-  });
+  const peopleQ = useRoster(canView);
   const nameById = useMemo(() => {
     const m = new Map<number, string>();
     (peopleQ.data ?? []).forEach((u) => m.set(u.id, u.name));

@@ -69,8 +69,15 @@ export default function OnboardingPage() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Search employees…"
-                className="pl-9"
+                className="pl-9 pr-9"
               />
+              {/* The debounce means a quiet quarter-second between the last
+                  keystroke and the new rows; this says the wait is deliberate. */}
+              {(directory.isFetching || q !== dq) && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <PixousLoader size="xs" />
+                </span>
+              )}
             </div>
 
             <div className="max-h-[65vh] space-y-1 overflow-y-auto">

@@ -8,6 +8,7 @@ import {
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
 import { api, apiMessage } from "@/lib/api";
+import { useRoster } from "@/hooks/useRoster";
 import { useAuth } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
@@ -490,11 +491,7 @@ function CreateDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () =
 
   /* /users returns a page, not a list -- the other screens all read .content
      off it, and treating it as an array leaves the dropdown empty. */
-  const employees = useQuery({
-    queryKey: ["employees", "for-discipline"],
-    queryFn: async () =>
-      (await api.get<ApiEnvelope<{ content: any[] }>>("/users?size=1000")).data.data?.content ?? [],
-  });
+  const employees = useRoster();
 
   /*
     People still working here. An offboarded account cannot be disciplined --
@@ -579,7 +576,11 @@ function CreateDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () =
         </div>
         <div className="space-y-1.5">
           <Label>Department</Label>
-          <Input readOnly value={chosen?.designationTitle || chosen?.department || ""} placeholder="—" />
+          {/* designationTitle only. The `|| chosen?.department` beside it was
+              reading a field /users has never returned -- the list was typed
+              any[], so nothing caught it, and the fallback was always
+              undefined. */}
+          <Input readOnly value={chosen?.designationTitle || ""} placeholder="—" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="d-sev">Severity <span className="text-destructive">*</span></Label>

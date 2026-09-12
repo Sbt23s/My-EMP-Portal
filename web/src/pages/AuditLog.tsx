@@ -9,6 +9,7 @@ import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
 import { api } from "@/lib/api";
+import { PixousLoader } from "@/components/ui/pixous-loader";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
@@ -339,10 +340,15 @@ export default function AuditLogPage() {
                   placeholder={tab === "actions"
                     ? "Name, employee ID, what happened…"
                     : "Name, username, IP address…"}
-                  className="h-[38px] pl-9"
+                  className="h-[38px] pl-9 pr-9"
                   value={q}
                   onChange={(e) => { setQ(e.target.value); setPage(0); }}
                 />
+                {(logins.isFetching || q !== dq) && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <PixousLoader size="xs" />
+                  </span>
+                )}
               </div>
             </div>
             <Button

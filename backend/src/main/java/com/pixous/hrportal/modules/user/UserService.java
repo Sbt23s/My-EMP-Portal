@@ -755,7 +755,35 @@ public class UserService {
                 u.getPhone(), u.getIndustry(), u.getDepartmentId(), u.getProfileStatus(),
                 u.getPhotoPath(), u.getDob(), u.getRoles().stream().map(Role::getCode).toList(),
                 u.getDesignationId(), u.getDesignationTitle(), u.getTechStack(), plainPassword,
-                u.getCompanyId(), companyNameOf(u.getCompanyId()));
+                u.getCompanyId(), companyNameOf(u.getCompanyId()), attends(u));
+    }
+
+    /** The roles a desk login holds. An employee account holds none of them. */
+    private static final java.util.Set<String> DESK_ROLES = java.util.Set.of(
+            "IT_HR", "IT_MGR", "SUPER_ADMIN", "COMPANY_ADMIN", "TECHNICAL_ADMIN");
+
+    /**
+     * Whether this account turns up for work.
+     *
+     * <p>Two signals together: an administrative role, and no team. Both are
+     * needed, and the reason is in the data.
+     *
+     * <p>Role alone is wrong -- PIX-E001 and PIX-E058 hold IT_HR, sit on the
+     * Office Administrator team and punch in like everyone else. No team alone
+     * is wrong too: four IT_EMP accounts have no designation recorded and are
+     * perfectly ordinary employees who simply have not been assigned one.
+     *
+     * <p>Together they describe exactly the four desk logins -- the HR inbox,
+     * the two company-admin accounts and the system admin -- none of which has
+     * a single punch between them. A new desk login is caught on its own,
+     * without a code change; giving one a team puts it back on the roll, which
+     * is the right way round.
+     */
+    private boolean attends(User u) {
+        boolean hasTeam = u.getDesignationId() != null
+                || (u.getDesignationTitle() != null && !u.getDesignationTitle().isBlank());
+        if (hasTeam) return true;
+        return u.getRoles().stream().map(Role::getCode).noneMatch(DESK_ROLES::contains);
     }
 
     /**

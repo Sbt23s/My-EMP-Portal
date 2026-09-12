@@ -192,6 +192,13 @@ export interface UserSummary {
   companyId?: string;
   joiningDate?: string;
   createdAt?: string;
+  /**
+   * Whether this account turns up for work.
+   *
+   * False for desk logins -- the HR inbox, the company-admin account -- which
+   * have nobody behind them to punch in. Computed on the server.
+   */
+  attends?: boolean;
 }
 
 export interface AttendanceRecord {

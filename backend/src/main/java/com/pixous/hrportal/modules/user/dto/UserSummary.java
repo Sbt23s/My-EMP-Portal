@@ -23,5 +23,22 @@ public record UserSummary(
         String techStack,
         String password,
         Long companyId,
-        String companyName
+        String companyName,
+
+        /**
+         * Whether this account is somebody who turns up for work.
+         *
+         * <p>False for the desk logins -- the HR inbox, the company-admin and
+         * system-admin accounts -- which have nobody behind them to punch in.
+         * They were sitting on the attendance roll at 0% with an absence
+         * against every working day, which is not an attendance problem to
+         * chase; it is a mailbox.
+         *
+         * <p>Computed from the record rather than configured, so a new desk
+         * login needs no code change. Two signals together: an administrative
+         * role and no team. Either alone is wrong -- real HR staff hold IT_HR
+         * and punch in daily, and four ordinary employees simply have no
+         * designation recorded yet.
+         */
+        boolean attends
 ) {}

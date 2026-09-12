@@ -1136,7 +1136,11 @@ public class CommunityService {
                 u.getTechStack(),
                 null,
                 u.getCompanyId(),
-                null
+                null,
+                // Chat does not ask whether somebody is on the attendance roll;
+                // everyone in a room is a participant. True rather than false so
+                // nothing downstream mistakes a chat member for a desk login.
+                true
         );
     }
 }

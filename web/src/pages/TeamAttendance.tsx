@@ -613,10 +613,24 @@ export default function TeamAttendancePage() {
   // The set of employees this viewer is responsible for. HR/admins get
   // everyone; a Team Leader gets only their own designation team.
   const scopedMembers = useMemo(() => {
-    // Only active/onboarding employees — offboarded staff are excluded.
-    const all = (teamMembers.data ?? []).filter(
-      (u) => (u.profileStatus || "ACTIVE") !== "OFFBOARDED"
-    );
+    const all = (teamMembers.data ?? []).filter((u) => {
+      // Offboarded staff are gone from the roll.
+      if ((u.profileStatus || "ACTIVE") === "OFFBOARDED") return false;
+      /*
+        And so are the desk logins.
+
+        The HR inbox, the company-admin account and the system-admin account
+        are addresses rather than people: nobody punches in as them, so they
+        sat here reading 0% with an absence against every working day. That is
+        not an attendance problem to chase.
+
+        The server decides -- an account with no team and no biometric
+        enrolment -- so a new desk login drops off this roll on its own.
+        Undefined means an older response that predates the flag, and those
+        are kept rather than hidden.
+      */
+      return u.attends !== false;
+    });
     if (!isTeamLeader) return all;
     const myTitle = (all.find((u) => u.id === user?.id)?.designationTitle || "").trim().toLowerCase();
     return all.filter((u) => (u.designationTitle || "").trim().toLowerCase() === myTitle);

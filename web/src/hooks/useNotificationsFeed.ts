@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { describeCallNotification } from "@/lib/callNotifications";
 import { getLiveCaller } from "@/lib/liveCall";
 import { api, tokenStore } from "@/lib/api";
+import { resolveNotificationLink } from "@/lib/notificationLink";
 import { notificationAllowed } from "@/lib/notificationModules";
 import { useAuth } from "@/context/AuthContext";
 import type { ApiEnvelope, AppNotification, PageEnvelope } from "@/types";
@@ -108,7 +109,8 @@ export function useNotificationsInternal(userId?: number) {
         });
         notif.onclick = () => {
           window.focus();
-          if (n.link) navigate(n.link);
+          const to = resolveNotificationLink(n.link, n.title);
+          if (to) navigate(to);
           notif.close();
         };
       } catch (e) {}
@@ -119,7 +121,11 @@ export function useNotificationsInternal(userId?: number) {
         React.createElement(
           "div",
           {
-            onClick: () => { toast.dismiss(t.id); if (n.link) navigate(n.link); },
+            onClick: () => {
+              toast.dismiss(t.id);
+              const to = resolveNotificationLink(n.link, n.title);
+              if (to) navigate(to);
+            },
             className:
               "flex w-80 items-start gap-3 rounded-lg border border-border bg-popover p-3 shadow-lg transition-opacity relative group"
               + (n.link ? " cursor-pointer" : ""),

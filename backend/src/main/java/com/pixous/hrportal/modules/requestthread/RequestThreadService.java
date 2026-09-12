@@ -83,6 +83,52 @@ public class RequestThreadService {
                 .stream().map(this::toView).toList();
     }
 
+    /**
+     * Every comment written to this person, across every request.
+     *
+     * <p>The notification tells them something was said; this is where they
+     * read it. Each entry names the request it came from and who wrote it,
+     * because in one list nothing else can.
+     *
+     * <p>Comments on requests they raised and on requests sent to them, with
+     * their own excluded -- a list of things said to you should not be half
+     * your own voice. Access needs no separate check: the two queries only
+     * return comments on requests where this person is one of the two sides.
+     */
+    @Transactional(readOnly = true)
+    public List<RequestThreadDtos.InboxComment> inbox() {
+        Long me = SecurityUtils.currentUserId();
+        if (me == null) return List.of();
+
+        List<RequestThreadDtos.InboxComment> out = new java.util.ArrayList<>();
+
+        for (RequestComment c : comments.findLeaveCommentsFor(me)) {
+            leaveRepository.findById(c.getRequestId()).ifPresent(r ->
+                    out.add(new RequestThreadDtos.InboxComment(
+                            c.getId(), "LEAVE", r.getId(), "LV-" + r.getId(),
+                            nameOf(c.getAuthorId()), codeOf(c.getAuthorId()),
+                            c.getMessage(), c.getAttachmentPath(),
+                            nameOf(r.getUserId()), r.getStatus(),
+                            r.getFromDate(), r.getToDate(), c.getCreatedAt())));
+        }
+        for (RequestComment c : comments.findPermissionCommentsFor(me)) {
+            permissionRepository.findById(c.getRequestId()).ifPresent(r ->
+                    out.add(new RequestThreadDtos.InboxComment(
+                            c.getId(), "PERMISSION", r.getId(), "PR-" + r.getId(),
+                            nameOf(c.getAuthorId()), codeOf(c.getAuthorId()),
+                            c.getMessage(), c.getAttachmentPath(),
+                            nameOf(r.getUserId()), r.getStatus(),
+                            r.getRequestDate(), r.getRequestDate(), c.getCreatedAt())));
+        }
+
+        // Newest first across both kinds. Each query is already sorted, but
+        // two sorted lists concatenated are not one sorted list.
+        out.sort(java.util.Comparator.comparing(
+                RequestThreadDtos.InboxComment::createdAt,
+                java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())));
+        return out;
+    }
+
     // --------------------------------------------------------------- write --
 
     @Transactional

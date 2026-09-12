@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { resolveNotificationLink } from "@/lib/notificationLink";
 import { useState } from "react";
 import { AlertCircle, BellRing, CheckCheck, Trash2 } from "lucide-react";
 import dayjs from "dayjs";
@@ -114,7 +115,8 @@ export default function NotificationsPage() {
                 )}
                 onClick={() => {
                   if (!n.read) markRead(n.id);
-                  if (n.link) navigate(n.link);
+                  const to = resolveNotificationLink(n.link, n.title);
+                  if (to) navigate(to);
                 }}
               >
                 <CardContent className="flex items-start gap-3 p-4">

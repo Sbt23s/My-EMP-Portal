@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
   LayoutDashboard, Clock, Home, CalendarCheck, CheckSquare, Wallet, Users, Boxes,
-  LifeBuoy, User, Bell, Menu, X, Moon, Sun, LogOut, PanelLeftClose, PanelLeftOpen,
+  LifeBuoy, User, Bell, Menu, X, Moon, Sun, LogOut, PanelLeftClose, PanelLeftOpen, MessagesSquare,
   FileBarChart, ClipboardList, Map, MessageSquareWarning, FileText,
   FolderOpen, ListTodo, FileArchive, CalendarDays, ChevronDown, Bot, Users2, Eraser, ScrollText,
   PartyPopper, MessageSquare, Building2, FolderGit2, History, ShieldAlert, Lock, Award, SlidersHorizontal
@@ -18,6 +18,7 @@ import { roleLabels } from "@/lib/roles";
 import dayjs from "dayjs";
 import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { resolveNotificationLink } from "@/lib/notificationLink";
 import type { ApiEnvelope } from "@/types";
 import { PixousLoader } from "@/components/ui/pixous-loader";
 /*
@@ -138,6 +139,14 @@ const NAV: NavEntry[] = [
   // same people, and the counterweight to it.
   { to: "/appreciation", label: "Appreciation", icon: Award, moduleCode: "HELPDESK" },
   { to: "/reports", label: "Reports", icon: FileBarChart, anyPermission: ["REPORT_VIEW"], excludeRole: ["SUPER_ADMIN", "COMPANY_ADMIN"], moduleCode: "REPORTS" },
+  /*
+    No permission and no module: everybody raises leave or permission
+    requests, so everybody can be commented on. What the page shows is decided
+    by the data -- only comments on requests where you are the applicant or
+    the approver -- so an empty list is the honest answer for somebody with
+    nothing waiting, not a page they should not have found.
+  */
+  { to: "/comments", label: "Comments", icon: MessagesSquare },
   { to: "/chat", label: "Chat", icon: MessageSquareWarning, moduleCode: "CHAT" },
   /*
     HR runs their own groups here as well as the administrator, so this
@@ -719,7 +728,8 @@ function AppShell() {
                               onClick={() => {
                                 setBellOpen(false);
                                 if (!n.read) markRead(n.id);
-                                if (n.link) navigate(n.link);
+                                const to = resolveNotificationLink(n.link, n.title);
+                                if (to) navigate(to);
                               }}
                               className={cn(
                                 "flex w-full gap-3 border-b px-4 py-3 text-left transition-colors last:border-0 hover:bg-muted/60",

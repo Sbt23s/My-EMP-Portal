@@ -308,15 +308,31 @@ export default function WorkReportsPage() {
 // Brand green leads, then hues far enough apart to stay separable in a donut.
 const DONUT_COLORS = ["#15803D", "#0ea5e9", "#f59e0b", "#ec4899", "#8b5cf6", "#94a3b8"];
 
-/**
- * Solid fills for the four employee stat tiles. Yellow carries dark type —
- * white on amber is too faint to read — the rest carry white.
- */
+/*
+  Tinted surfaces for the four stat tiles, matching every other page.
+
+  These were solid gradients with white type on them -- four saturated blocks
+  across the top of the page, shouting where every other count tile in the
+  portal shades. They also needed their own text colours, and yellow needed an
+  exception because white on amber cannot be read.
+
+  A light wash and the page's own foreground removes all of that: the colour
+  tells the tiles apart, which is the only job it had, and the numbers are set
+  in the ink everything else uses.
+*/
 const TILE_FILLS = {
-  green:  { bg: "linear-gradient(135deg, #0a9d68 0%, #21a87c 100%)", onDark: false },
-  yellow: { bg: "linear-gradient(135deg, #eab308 0%, #f6c945 100%)", onDark: true },
-  blue:   { bg: "linear-gradient(135deg, #1d6fd8 0%, #3f8ce8 100%)", onDark: false },
-  pink:   { bg: "linear-gradient(135deg, #db2777 0%, #ec5a9c 100%)", onDark: false }
+  green:  "border-green-200/70 bg-green-50/70 dark:border-green-400/20 dark:bg-green-500/10",
+  yellow: "border-amber-200/70 bg-amber-50/70 dark:border-amber-400/20 dark:bg-amber-500/10",
+  blue:   "border-sky-200/70 bg-sky-50/70 dark:border-sky-400/20 dark:bg-sky-500/10",
+  pink:   "border-pink-200/70 bg-pink-50/70 dark:border-pink-400/20 dark:bg-pink-500/10"
+} as const;
+
+/** The icon chip on each tile, in the same hue as its surface. */
+const TILE_CHIPS = {
+  green:  "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300",
+  yellow: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
+  blue:   "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300",
+  pink:   "bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-300"
 } as const;
 
 function MyWorkReports({
@@ -621,24 +637,21 @@ function MyWorkReports({
     icon: React.ReactNode, label: string, value: string, sub: string,
     fill: keyof typeof TILE_FILLS
   ) => {
-    const { bg, onDark } = TILE_FILLS[fill];
-    // Dark type for the light (yellow) fill, white for the deeper ones.
-    const labelCls = onDark ? "text-black/60" : "text-white/85";
-    const valueCls = onDark ? "text-black/85" : "text-white";
-    const subCls = onDark ? "text-black/55" : "text-white/80";
-    const chipCls = onDark ? "bg-black/10 text-black/70" : "bg-white/20 text-white";
+    // One set of type colours now, because the surface is light in every tone
+    // -- no more picking black or white per fill.
     return (
-      <Card
-        className="border-0 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
-        style={{ background: bg }}
-      >
+      <Card className={cn("shadow-sm transition-colors duration-150", TILE_FILLS[fill])}>
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
-            <span className={cn("text-[11px] font-semibold uppercase tracking-wide", labelCls)}>{label}</span>
-            <span className={cn("grid h-8 w-8 place-items-center rounded-lg", chipCls)}>{icon}</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {label}
+            </span>
+            <span className={cn("grid h-8 w-8 place-items-center rounded-lg", TILE_CHIPS[fill])}>
+              {icon}
+            </span>
           </div>
-          <div className={cn("mt-2 text-2xl font-bold", valueCls)}>{value}</div>
-          <div className={cn("mt-0.5 text-xs", subCls)}>{sub}</div>
+          <div className="mt-2 text-2xl font-bold text-foreground">{value}</div>
+          <div className="mt-0.5 text-xs text-muted-foreground">{sub}</div>
         </CardContent>
       </Card>
     );
@@ -1563,12 +1576,20 @@ function ReminderCard() {
   );
 }
 
-/** Fills for the team summary tiles — all carry white type. */
+/*
+  Tone names for the team summary tiles, not CSS.
+
+  StatTile takes a tone key -- "green", "blue" -- and looks up its own light
+  surface for it. These were CSS gradient strings, which that lookup has no
+  entry for, so every one of these four tiles fell through to the slate
+  fallback and rendered grey. They were meant to be four colours and had been
+  one for some time.
+*/
 const TEAM_TILE_FILLS = {
-  green:  "linear-gradient(135deg, #0a9d68 0%, #21a87c 100%)",
-  blue:   "linear-gradient(135deg, #1d6fd8 0%, #3f8ce8 100%)",
-  violet: "linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%)",
-  pink:   "linear-gradient(135deg, #db2777 0%, #ec5a9c 100%)"
+  green:  "green",
+  blue:   "blue",
+  violet: "violet",
+  pink:   "pink"
 } as const;
 
 /** Read-only view of the Team Leader's own team's work reports. */

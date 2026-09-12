@@ -165,7 +165,7 @@ function BotAvatar({ className = "" }: { className?: string }) {
     <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
       <defs>
         <linearGradient id="botGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#6366f1" />
+          <stop offset="0%" stopColor="#22C55E" />
           <stop offset="100%" stopColor="#8b5cf6" />
         </linearGradient>
       </defs>
@@ -176,14 +176,14 @@ function BotAvatar({ className = "" }: { className?: string }) {
       {/* head */}
       <rect x="12" y="13" width="24" height="19" rx="6" fill="#fff" />
       {/* eyes */}
-      <circle cx="19.5" cy="22" r="2.6" fill="#4f46e5">
+      <circle cx="19.5" cy="22" r="2.6" fill="#15803D">
         <animate attributeName="r" values="2.6;0.6;2.6" dur="4s" repeatCount="indefinite" />
       </circle>
-      <circle cx="28.5" cy="22" r="2.6" fill="#4f46e5">
+      <circle cx="28.5" cy="22" r="2.6" fill="#15803D">
         <animate attributeName="r" values="2.6;0.6;2.6" dur="4s" repeatCount="indefinite" />
       </circle>
       {/* smile */}
-      <path d="M19 27 q5 4 10 0" stroke="#4f46e5" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+      <path d="M19 27 q5 4 10 0" stroke="#15803D" strokeWidth="1.8" fill="none" strokeLinecap="round" />
       {/* ears */}
       <rect x="9.5" y="19" width="2.5" height="7" rx="1.25" fill="#fff" />
       <rect x="36" y="19" width="2.5" height="7" rx="1.25" fill="#fff" />

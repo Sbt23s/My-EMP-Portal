@@ -22,7 +22,32 @@ export interface Theme {
  * to stay legible on the surface beside it.
  */
 export const THEMES: Theme[] = [
-  { id: "indigo", name: "Indigo", accent: "#4F46E5", surface: "#FFFFFF", ink: "#0F172A" },
+  /*
+    The portal's own colour, and the first entry because THEMES[0] is what an
+    unrecognised themeId falls back to.
+
+    #15803D rather than the brighter #22C55E: this accent becomes --primary,
+    which is the fill behind button labels, and white on #22C55E is 2.28:1 --
+    under the 4.5:1 a label needs. The brighter green stays as --accent in
+    index.css for rings and icons, where nothing is written on top of it.
+  */
+  { id: "pixous", name: "Pixous Green", accent: "#15803D", surface: "#FFFFFF", ink: "#17211B" },
+  /*
+    Was indigo, and is the portal's green now.
+
+    This company has "indigo" saved in company_modules.feature_flags from
+    before the rebrand, and applyBranding writes the chosen accent onto the
+    root element as an inline custom property -- which outranks :root and
+    .dark both. So a stored "indigo" repainted --primary back to #4F46E5 at
+    runtime and the sidebar, the buttons and every active state stayed indigo
+    no matter what the stylesheet said.
+
+    Changing the preset rather than the stored row: the row is live company
+    data, and a colour that no longer exists in the product should not still
+    be reachable by anybody else either. The id stays "indigo" so the saved
+    value keeps resolving; the name says what it now is.
+  */
+  { id: "indigo", name: "Pixous Green (was Indigo)", accent: "#15803D", surface: "#FFFFFF", ink: "#17211B" },
   { id: "royal", name: "Royal Blue", accent: "#2563EB", surface: "#FFFFFF", ink: "#0F172A" },
   { id: "sky", name: "Sky", accent: "#0284C7", surface: "#F8FAFC", ink: "#0F172A" },
   { id: "teal", name: "Teal", accent: "#0D9488", surface: "#FFFFFF", ink: "#0F172A" },
@@ -95,7 +120,7 @@ export interface BrandingDoc {
 }
 
 export const EMPTY_BRANDING: BrandingDoc = {
-  base: { themeId: "indigo", fontId: "system", productName: "", welcomeText: "" },
+  base: { themeId: "pixous", fontId: "system", productName: "", welcomeText: "" },
   roles: {},
   modules: {}
 };

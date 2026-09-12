@@ -305,7 +305,8 @@ export default function WorkReportsPage() {
 
 // ---------------- Employee: my rows (spreadsheet-style entry) ----------------
 
-const DONUT_COLORS = ["#6366f1", "#0ea5e9", "#10b981", "#f59e0b", "#ec4899", "#94a3b8"];
+// Brand green leads, then hues far enough apart to stay separable in a donut.
+const DONUT_COLORS = ["#15803D", "#0ea5e9", "#f59e0b", "#ec4899", "#8b5cf6", "#94a3b8"];
 
 /**
  * Solid fills for the four employee stat tiles. Yellow carries dark type —

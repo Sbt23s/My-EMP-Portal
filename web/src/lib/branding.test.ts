@@ -16,10 +16,10 @@ import {
  */
 describe("hexToHslTriple", () => {
   it("matches the value the stylesheet already holds", () => {
-    // index.css sets --primary: 243 75% 59% for the default indigo. If this
-    // drifts, choosing "Indigo" would visibly change a portal that had not
-    // asked for anything.
-    expect(hexToHslTriple("#4F46E5")).toBe("243 75% 59%");
+    // index.css sets --primary: 142 72% 29%, and the default preset's accent
+    // is the #15803D that converts to it. If this drifts, a portal that had
+    // never chosen a theme would change colour on its own.
+    expect(hexToHslTriple("#15803D")).toBe("142 72% 29%");
   });
 
   it("handles the achromatic ends without dividing by zero", () => {

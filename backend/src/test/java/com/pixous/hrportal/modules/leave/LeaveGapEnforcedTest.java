@@ -72,6 +72,23 @@ class LeaveGapEnforcedTest {
         u.setId(7L);
         u.setName("Test Employee");
         when(users.findById(7L)).thenReturn(Optional.of(u));
+        // The shared allowance resolves CL and SL by code; both exist live.
+        when(types.findByCodeIgnoreCase("CL")).thenReturn(Optional.of(typeOf("CL", "Casual Leave")));
+        when(types.findByCodeIgnoreCase("SL")).thenReturn(Optional.of(typeOf("SL", "Sick Leave")));
+
+        /*
+          A balance with days left on it.
+
+          The balance check runs after the two rules under test but refuses
+          first when there is no allocation at all, so without this every
+          assertion below was reading "No leave balance allocated" and passing
+          or failing for the wrong reason.
+        */
+        LeaveBalance bal = new LeaveBalance();
+        bal.setAllocated(new java.math.BigDecimal("12"));
+        bal.setUsed(java.math.BigDecimal.ZERO);
+        when(balances.findByUserIdAndLeaveTypeIdAndYear(anyLong(), anyLong(), Mockito.anyInt()))
+                .thenReturn(Optional.of(bal));
         when(requests.findOverlapping(anyLong(), any(), any(), any())).thenReturn(List.of());
     }
 
@@ -86,7 +103,7 @@ class LeaveGapEnforcedTest {
         when(types.findById(1L)).thenReturn(Optional.of(typeOf("CL", "Casual Leave")));
         // One already on the books this quarter -- pending counts, which is the
         // case that matters: the first has not been approved yet.
-        when(requests.countRequestsInRange(anyLong(), anyLong(), any(), any())).thenReturn(1L);
+        when(requests.countRequestsInRangeForTypes(anyLong(), any(), any(), any())).thenReturn(1L);
 
         assertThatThrownBy(() -> service.apply(7L, request(
                 LocalDate.of(2026, 9, 28), LocalDate.of(2026, 9, 29))))
@@ -98,7 +115,7 @@ class LeaveGapEnforcedTest {
     @DisplayName("Sick leave is refused on the same rule, not only casual")
     void sickLeaveIsRefusedToo() {
         when(types.findById(1L)).thenReturn(Optional.of(typeOf("SL", "Sick Leave")));
-        when(requests.countRequestsInRange(anyLong(), anyLong(), any(), any())).thenReturn(1L);
+        when(requests.countRequestsInRangeForTypes(anyLong(), any(), any(), any())).thenReturn(1L);
 
         assertThatThrownBy(() -> service.apply(7L, request(
                 LocalDate.of(2026, 9, 28), LocalDate.of(2026, 9, 29))))
@@ -112,8 +129,8 @@ class LeaveGapEnforcedTest {
         when(types.findById(1L)).thenReturn(Optional.of(typeOf("CL", "Casual Leave")));
         // Nothing in this calendar quarter, so only the rolling gap can catch it:
         // last taken 30 September, asked for 1 October -- one day apart.
-        when(requests.countRequestsInRange(anyLong(), anyLong(), any(), any())).thenReturn(0L);
-        when(requests.findLatestDayTaken(anyLong(), anyLong()))
+        when(requests.countRequestsInRangeForTypes(anyLong(), any(), any(), any())).thenReturn(0L);
+        when(requests.findLatestDayTakenForTypes(anyLong(), any()))
                 .thenReturn(LocalDate.of(2026, 9, 30));
 
         assertThatThrownBy(() -> service.apply(7L, request(
@@ -123,13 +140,45 @@ class LeaveGapEnforcedTest {
     }
 
     @Test
+    @DisplayName("A sick leave is refused when a casual leave already used the quarter")
+    void theAllowanceIsSharedBetweenCasualAndSick() {
+        // Applying for Sick Leave; the quarter's one leave was a Casual.
+        // Counted per type this passed -- an empty Sick quarter of its own --
+        // which made the allowance two rather than one.
+        when(types.findById(1L)).thenReturn(Optional.of(typeOf("SL", "Sick Leave")));
+        when(requests.countRequestsInRangeForTypes(anyLong(), any(), any(), any())).thenReturn(1L);
+
+        assertThatThrownBy(() -> service.apply(7L, request(
+                LocalDate.of(2026, 9, 28), LocalDate.of(2026, 9, 29))))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("share one allowance");
+    }
+
+    @Test
+    @DisplayName("The cap counts over both types, not just the one applied for")
+    void theCapQueryCoversBothTypes() {
+        when(types.findById(1L)).thenReturn(Optional.of(typeOf("CL", "Casual Leave")));
+        when(requests.countRequestsInRangeForTypes(anyLong(), any(), any(), any())).thenReturn(0L);
+        when(requests.findLatestDayTakenForTypes(anyLong(), any())).thenReturn(null);
+
+        org.assertj.core.api.Assertions.catchThrowable(
+                () -> service.apply(7L, request(
+                        LocalDate.of(2026, 9, 28), LocalDate.of(2026, 9, 29))));
+
+        // Both ids reach the query, which is what makes the allowance shared.
+        org.mockito.ArgumentCaptor<java.util.Collection<Long>> ids =
+                org.mockito.ArgumentCaptor.forClass(java.util.Collection.class);
+        Mockito.verify(requests).countRequestsInRangeForTypes(
+                anyLong(), ids.capture(), any(), any());
+        assertThat(ids.getValue()).hasSize(2);
+    }
+
+    @Test
     @DisplayName("The first request of all is not refused by either rule")
     void theFirstRequestPasses() {
         when(types.findById(1L)).thenReturn(Optional.of(typeOf("CL", "Casual Leave")));
-        when(requests.countRequestsInRange(anyLong(), anyLong(), any(), any())).thenReturn(0L);
-        when(requests.findLatestDayTaken(anyLong(), anyLong())).thenReturn(null);
-        when(balances.findByUserIdAndLeaveTypeIdAndYear(anyLong(), anyLong(), Mockito.anyInt()))
-                .thenReturn(Optional.empty());
+        when(requests.countRequestsInRangeForTypes(anyLong(), any(), any(), any())).thenReturn(0L);
+        when(requests.findLatestDayTakenForTypes(anyLong(), any())).thenReturn(null);
 
         // It gets past both gates. Whatever stops it after this is a different
         // rule (a balance, an approver) and not the concern of this test.

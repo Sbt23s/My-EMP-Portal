@@ -33,6 +33,29 @@ public final class RequestThreadDtos {
             LocalDateTime createdAt
     ) {}
 
+    /**
+     * What the request is, for a page opened straight from a notification.
+     *
+     * <p>Enough to know what you are reading before you read the thread --
+     * which kind of request it is, whose it is, when it is for and where it
+     * has got to. A notification that lands somebody on a bare conversation
+     * with no idea which request it belongs to is only half a link.
+     */
+    public record RequestSummary(
+            String type,
+            Long id,
+            String reference,
+            String employeeName,
+            String employeeCode,
+            String requestedToName,
+            String status,
+            String detail,
+            java.time.LocalDate fromDate,
+            java.time.LocalDate toDate,
+            String reason,
+            LocalDateTime createdAt
+    ) {}
+
     /** Posting a message. */
     public record CommentRequest(
             @NotBlank(message = "Write something before sending")

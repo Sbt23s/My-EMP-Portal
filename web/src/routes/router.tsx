@@ -103,6 +103,7 @@ const DisciplinePage = safeLazy(() => import("@/pages/Discipline"));
 const AppreciationPage = safeLazy(() => import("@/pages/Appreciation"));
 const ProfilePage = safeLazy(() => import("@/pages/Profile"));
 const NotificationsPage = safeLazy(() => import("@/pages/Notifications"));
+const RequestThreadPage = safeLazy(() => import("@/pages/RequestThreadPage"));
 const TaExpensesPage = safeLazy(() => import("@/pages/TaExpenses"));
 const ClaimEntryPage = safeLazy(() => import("@/pages/ClaimEntry"));
 const ReportsPage = safeLazy(() => import("@/pages/Reports"));
@@ -241,6 +242,16 @@ export const router = createBrowserRouter([
       { path: "appreciation", element: page(<AppreciationPage />) },
       { path: "approval-config", element: page(<ApprovalConfigPage />) },
       { path: "notifications", element: page(<NotificationsPage />) },
+      /*
+        One conversation, reachable by the request it belongs to.
+
+        No permission gate: who may read a request is a relationship, not a
+        role -- the person who raised it, the person it was sent to, and HR --
+        and the endpoint behind this decides that. Gating the route by
+        permission instead would put us back where we started, with an
+        applicant shown "Restricted" for a message written to them.
+      */
+      { path: "requests/:type/:id/thread", element: page(<RequestThreadPage />) },
       { path: "profile", element: page(<ProfilePage />) },
       { path: "ta-expenses", element: page(<TaExpensesPage />) },
       { path: "ta-expenses/new", element: page(<ClaimEntryPage />) },

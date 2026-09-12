@@ -30,6 +30,13 @@ public class RequestThreadController {
 
     private final RequestThreadService service;
 
+    @GetMapping("/summary")
+    @Operation(summary = "What this request is — for a thread opened from a notification")
+    public ApiResponse<RequestThreadDtos.RequestSummary> summary(
+            @PathVariable String type, @PathVariable Long id) {
+        return ApiResponse.ok(service.summary(type, id));
+    }
+
     @GetMapping("/attachments")
     @Operation(summary = "Files attached to this request")
     public ApiResponse<List<RequestThreadDtos.AttachmentView>> attachments(

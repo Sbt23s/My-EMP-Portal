@@ -60,6 +60,7 @@ public class RequestThreadService {
     private final RequestCommentRepository comments;
     private final LeaveRequestRepository leaveRepository;
     private final PermissionRequestRepository permissionRepository;
+    private final com.pixous.hrportal.modules.leave.LeaveTypeRepository leaveTypeRepository;
     private final UserRepository userRepository;
     private final StorageService storageService;
     private final NotificationService notificationService;
@@ -193,6 +194,55 @@ public class RequestThreadService {
         return owner;
     }
 
+    /**
+     * What this request is, for somebody arriving from a notification.
+     *
+     * <p>Behind the same access check as the thread itself, so this cannot
+     * become a way to read a request whose conversation you could not open.
+     */
+    @Transactional(readOnly = true)
+    public RequestThreadDtos.RequestSummary summary(String type, Long id) {
+        String kind = normaliseType(type);
+        requireAccess(kind, id);
+
+        if (RequestAttachment.LEAVE.equals(kind)) {
+            LeaveRequest r = leaveRepository.findById(id)
+                    .orElseThrow(() -> ApiException.notFound("Leave request"));
+            String typeName = r.getLeaveTypeId() == null ? null
+                    : leaveTypeRepository.findById(r.getLeaveTypeId())
+                            .map(com.pixous.hrportal.modules.leave.LeaveType::getName)
+                            .orElse(null);
+            return new RequestThreadDtos.RequestSummary(
+                    "LEAVE", r.getId(), "LV-" + r.getId(),
+                    nameOf(r.getUserId()), codeOf(r.getUserId()),
+                    nameOf(r.getRequestedTo()), r.getStatus(),
+                    typeName,
+                    r.getFromDate(), r.getToDate(), r.getReason(), r.getCreatedAt());
+        }
+
+        PermissionRequest r = permissionRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Permission request"));
+        return new RequestThreadDtos.RequestSummary(
+                "PERMISSION", r.getId(), "PR-" + r.getId(),
+                nameOf(r.getUserId()), codeOf(r.getUserId()),
+                nameOf(r.getRequestedTo()), r.getStatus(),
+                // A permission is hours within one day, so the window is the
+                // detail that matters rather than a type.
+                (r.getFromTime() == null ? "" : r.getFromTime())
+                        + (r.getToTime() == null ? "" : " – " + r.getToTime()),
+                r.getRequestDate(), r.getRequestDate(), r.getReason(), r.getCreatedAt());
+    }
+
+    private String nameOf(Long userId) {
+        return userId == null ? null
+                : userRepository.findById(userId).map(User::getName).orElse(null);
+    }
+
+    private String codeOf(Long userId) {
+        return userId == null ? null
+                : userRepository.findById(userId).map(User::getEmployeeCode).orElse(null);
+    }
+
     private Owner ownerOf(String kind, Long id) {
         if (RequestAttachment.LEAVE.equals(kind)) {
             LeaveRequest r = leaveRepository.findById(id)
@@ -221,8 +271,23 @@ public class RequestThreadService {
 
             String who = userRepository.findById(author).map(User::getName).orElse("Someone");
             String label = RequestAttachment.LEAVE.equals(kind) ? "leave" : "permission";
-            String link = RequestAttachment.LEAVE.equals(kind)
-                    ? "/leave/approvals" : "/leave/permissions";
+
+            /*
+              The comment itself, not the screen the approver happens to use.
+
+              This pointed at /leave/approvals for every leave comment, which
+              is an approver-only page -- so when the approver commented, the
+              applicant was sent to a screen they are not allowed to open and
+              got "Restricted" instead of the message somebody had just written
+              to them. Half the notifications this method sends were a dead end
+              by construction.
+
+              The thread has its own address now, carrying which kind of
+              request it belongs to and which one, so the page can show the
+              comment, where it came from and who wrote it -- to whichever side
+              of the conversation is reading.
+            */
+            String link = "/requests/" + kind.toLowerCase() + "/" + id + "/thread";
 
             notificationService.createAndPush(other,
                     "New comment on a " + label + " request",

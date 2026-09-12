@@ -322,7 +322,17 @@ public class DashboardService {
         double pct = headcount == 0 ? 0.0 : BigDecimal.valueOf(presentToday * 100.0 / headcount)
                 .setScale(1, RoundingMode.HALF_UP).doubleValue();
 
-        long pendingApprovals = leaveRequestRepository.findAll().stream()
+        /*
+          Read the leave table once, not twice.
+
+          This was fetched here for the pending count and fetched again further
+          down for the utilisation chart -- the same whole table, twice, in one
+          request.
+        */
+        List<com.pixous.hrportal.modules.leave.LeaveRequest> allLeave =
+                leaveRequestRepository.findAll();
+
+        long pendingApprovals = allLeave.stream()
                 .filter(r -> "PENDING".equals(r.getStatus()))
                 .filter(r -> inFilter.test(r.getUserId()))
                 .count();
@@ -358,6 +368,28 @@ public class DashboardService {
         java.util.List<java.util.Map<String, Object>> monthlyAttendanceTrend = new java.util.ArrayList<>();
         java.time.format.DateTimeFormatter monthLabel =
                 java.time.format.DateTimeFormatter.ofPattern("MMM");
+        /*
+          One query for the whole six-month window, not one per working day.
+
+          This walked every day of every month and asked findByWorkDate for
+          each -- about a hundred and thirty round trips to draw one chart,
+          each returning the whole company's rows for that date so that the
+          three filters below could throw most of them away in Java. It is the
+          reason the executive dashboard sat on "Loading..." for so long.
+
+          Counted into a map keyed by day, so the loop below reads what it
+          needs without going back to the database at all.
+        */
+        LocalDate trendStart = today.minusMonths(5).withDayOfMonth(1);
+        java.util.Map<LocalDate, Long> presentByDay = attendanceRepository
+                .findByWorkDateBetween(trendStart, today).stream()
+                .filter(a -> a.getPunchInAt() != null)
+                .filter(a -> activeUserIds.contains(a.getUserId()))
+                .filter(a -> inFilter.test(a.getUserId()))
+                .collect(java.util.stream.Collectors.groupingBy(
+                        Attendance::getWorkDate,
+                        java.util.stream.Collectors.counting()));
+
         for (int back = 5; back >= 0; back--) {
             LocalDate monthStart = today.minusMonths(back).withDayOfMonth(1);
             LocalDate monthEnd = monthStart.plusMonths(1).minusDays(1);
@@ -370,11 +402,7 @@ public class DashboardService {
                 // attendance and made every month's rate look worse than it was.
                 if (com.pixous.hrportal.common.WorkCalendar.isWeekend(d)) continue;
                 workingDays++;
-                present += attendanceRepository.findByWorkDate(d).stream()
-                        .filter(a -> a.getPunchInAt() != null)
-                        .filter(a -> activeUserIds.contains(a.getUserId()))
-                        .filter(a -> inFilter.test(a.getUserId()))
-                        .count();
+                present += presentByDay.getOrDefault(d, 0L);
             }
             long expected = workingDays * headcount;
             monthlyAttendanceTrend.add(java.util.Map.of(
@@ -387,7 +415,7 @@ public class DashboardService {
         java.util.Map<Long, String> leaveTypeNames = leaveService.types().stream()
                 .collect(java.util.stream.Collectors.toMap(
                         t -> t.id(), t -> t.name(), (a, b) -> a));
-        java.util.Map<String, Long> leaveUtilization = leaveRequestRepository.findAll().stream()
+        java.util.Map<String, Long> leaveUtilization = allLeave.stream()
                 .filter(r -> "APPROVED".equalsIgnoreCase(r.getStatus()))
                 .filter(r -> inFilter.test(r.getUserId()))
                 .filter(r -> r.getWorkingDays() != null)

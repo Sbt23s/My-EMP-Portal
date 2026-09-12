@@ -24,6 +24,15 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
      * company's rows for that day. This asks the database the question that was
      * actually being asked, and lets the (work_date, user_id) index answer it.
      */
+    /**
+     * Every row across a span of days.
+     *
+     * <p>For the callers that genuinely want the whole company -- the executive
+     * dashboard's six-month trend, which was asking one date at a time and
+     * issuing something like a hundred and thirty queries to build one chart.
+     */
+    List<Attendance> findByWorkDateBetween(LocalDate from, LocalDate to);
+
     List<Attendance> findByWorkDateBetweenAndUserIdIn(
             LocalDate from, LocalDate to, java.util.Collection<Long> userIds);
 

@@ -1615,7 +1615,7 @@ export default function TeamAttendancePage() {
                       </td>
                       <td className="whitespace-nowrap px-4 py-2.5">
                         {s.wfh > 0
-                          ? <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                          ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-300">
                               {s.wfh}d work from home
                             </span>
                           : <span className="text-xs text-muted-foreground">—</span>}
@@ -1797,7 +1797,7 @@ export default function TeamAttendancePage() {
                               className={cn(
                                 "whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold",
                                 n === "Work from home"
-                                  ? "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
+                                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
                                   : n === "Off-site"
                                     ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
                                     : "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300"

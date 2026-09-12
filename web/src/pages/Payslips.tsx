@@ -390,7 +390,7 @@ export default function PayslipsPage() {
  * colour, so the set stays consistent if the palette is ever retuned.
  */
 const SLIP_TONES = {
-  violet: { text: "text-violet-600", badge: "bg-violet-100" },
+  violet: { text: "text-green-600", badge: "bg-green-100" },
   green: { text: "text-green-600", badge: "bg-green-100" },
   blue: { text: "text-blue-600", badge: "bg-blue-100" },
   rose: { text: "text-rose-600", badge: "bg-rose-100" },

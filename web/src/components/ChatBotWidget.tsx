@@ -578,7 +578,7 @@ export function ChatBotWidget() {
           style={{ boxShadow: "0 24px 48px -12px rgba(0,0,0,0.25)" }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3 text-white">
+          <div className="flex items-center justify-between bg-gradient-to-r from-green-600 to-green-600 px-4 py-3 text-white">
             <div className="flex items-center gap-3">
               <BotAvatar className="h-9 w-9" />
               <div>

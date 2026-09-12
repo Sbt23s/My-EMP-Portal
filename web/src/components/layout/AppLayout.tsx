@@ -219,11 +219,11 @@ function getRoleDisplayName(roles: string[] = []): string {
 function notificationStyle(type?: string) {
   switch (type) {
     case "LEAVE":
-      return { icon: CalendarCheck, className: "bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400" };
+      return { icon: CalendarCheck, className: "bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400" };
     case "PERMISSION":
       return { icon: Clock, className: "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400" };
     case "TASK":
-      return { icon: CheckSquare, className: "bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400" };
+      return { icon: CheckSquare, className: "bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400" };
     case "HELPDESK":
       return { icon: LifeBuoy, className: "bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-400" };
     case "CHAT":

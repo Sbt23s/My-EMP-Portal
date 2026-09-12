@@ -691,15 +691,15 @@ function DayDetail({ record, code, onClose }: {
     if (value === "—") return "text-muted-foreground";
     if (tone === "good") return "rounded-md bg-emerald-50 px-2.5 py-1 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300";
     if (tone === "warn") return "rounded-md bg-amber-50 px-2.5 py-1 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300";
-    if (tone === "plain") return "rounded-md bg-indigo-50 px-2.5 py-1 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300";
+    if (tone === "plain") return "rounded-md bg-green-50 px-2.5 py-1 text-green-700 dark:bg-green-500/10 dark:text-green-300";
     return "text-foreground";
   };
 
   return (
     <Dialog open onClose={onClose} className="max-w-xl p-0">
-      <div className="rounded-lg bg-gradient-to-b from-indigo-50/70 to-transparent p-6 dark:from-indigo-500/10">
+      <div className="rounded-lg bg-gradient-to-b from-green-50/70 to-transparent p-6 dark:from-green-500/10">
         <div className="mb-5 flex items-start gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-green-100 text-green-600 dark:bg-green-500/15 dark:text-green-300">
             {isWfh ? <Home className="h-7 w-7" /> : <Calendar className="h-7 w-7" />}
           </div>
           <div className="pr-8">

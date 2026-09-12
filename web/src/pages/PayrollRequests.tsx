@@ -518,9 +518,9 @@ export default function PayrollPage() {
           value={payrollCounts.total.toString()}
           subtitle="Active Employees"
           icon={Users}
-          color="text-violet-600"
-          bg="bg-violet-100"
-          titleColor="text-violet-600"
+          color="text-green-600"
+          bg="bg-green-100"
+          titleColor="text-green-600"
         />
         <StatCard
           title="Processed"
@@ -705,7 +705,7 @@ export default function PayrollPage() {
                               </button>
                               <button
                                 type="button"
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30 transition-colors"
                                 onClick={() => downloadPayslipPdf(payslip.id, e.name)}
                                 title="Download PDF"
                               >

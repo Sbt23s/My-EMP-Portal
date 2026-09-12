@@ -309,7 +309,7 @@ export default function TeamsPage() {
           spokenTa={summaryText.spokenTa}
           stats={[
             { icon: Layers, value: teamSummary.teams, label: "Total teams",
-              tone: "bg-violet-100 text-violet-600 dark:bg-violet-500/20" },
+              tone: "bg-green-100 text-green-600 dark:bg-green-500/20" },
             { icon: UsersIcon, value: teamSummary.employees, label: "Total employees",
               tone: "bg-sky-100 text-sky-600 dark:bg-sky-500/20" },
             { icon: UserCheck, value: teamSummary.present, label: "Present today",

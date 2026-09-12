@@ -533,7 +533,7 @@ export default function LeavePage() {
       {/* Reading a decided request. */}
       {viewing && (
         <Dialog open onClose={() => setViewing(null)} className="max-w-xl p-0" hideCloseButton>
-          <div className="rounded-lg bg-gradient-to-b from-indigo-50/70 to-transparent p-6 dark:from-indigo-500/10">
+          <div className="rounded-lg bg-gradient-to-b from-green-50/70 to-transparent p-6 dark:from-green-500/10">
             <button
               type="button"
               onClick={() => setViewing(null)}
@@ -544,7 +544,7 @@ export default function LeavePage() {
             </button>
 
             <div className="mb-5 flex items-start gap-4">
-              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-green-100 text-green-600 dark:bg-green-500/15 dark:text-green-300">
                 <CalendarDays className="h-7 w-7" />
               </span>
               <div className="pr-8">
@@ -593,7 +593,7 @@ export default function LeavePage() {
                       ) : value === "—" ? (
                         <span className="text-muted-foreground">—</span>
                       ) : (
-                        <span className="rounded-md bg-indigo-50 px-2.5 py-1 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+                        <span className="rounded-md bg-green-50 px-2.5 py-1 text-green-700 dark:bg-green-500/10 dark:text-green-300">
                           {value}
                         </span>
                       )}

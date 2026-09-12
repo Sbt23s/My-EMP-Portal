@@ -478,7 +478,7 @@ export default function MyTeamPage() {
                                 <span className="font-medium">{m.name}</span>
                                 {isMe && <span className="text-[11px] text-muted-foreground">(you)</span>}
                                 {(m.roles ?? []).includes("IT_TL") && (
-                                  <Badge className="border-0 bg-violet-100 text-violet-700 text-[10px] dark:bg-violet-900/30 dark:text-violet-400">
+                                  <Badge className="border-0 bg-green-100 text-green-700 text-[10px] dark:bg-green-900/30 dark:text-green-400">
                                     Team Leader
                                   </Badge>
                                 )}

@@ -76,12 +76,12 @@ function PermissionStatus({ status, requestDate }: { status: string; requestDate
   const tone =
     s === "APPROVED" ? "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
       : s === "REJECTED" ? "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300"
-        : s === "CANCELLED" ? "border-violet-300 bg-violet-100 text-violet-700 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300"
+        : s === "CANCELLED" ? "border-green-300 bg-green-100 text-green-700 dark:border-green-800 dark:bg-green-950/40 dark:text-green-300"
           : "border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300";
   const dot =
     s === "APPROVED" ? "bg-emerald-500"
       : s === "REJECTED" ? "bg-rose-500"
-        : s === "CANCELLED" ? "bg-violet-500" : "bg-amber-500";
+        : s === "CANCELLED" ? "bg-green-500" : "bg-amber-500";
   return (
     <span className={cn(
       "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-bold",
@@ -927,7 +927,7 @@ export default function PermissionsPage() {
           {/* The heading carries the icon and the name, so the first line of
               the dialog says what this is and whose it is at a glance. */}
           <div className="mb-4 flex items-start gap-4 pr-8">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-green-100 text-green-600 dark:bg-green-500/15 dark:text-green-300">
               <ShieldCheck className="h-7 w-7" />
             </span>
             <div className="min-w-0">

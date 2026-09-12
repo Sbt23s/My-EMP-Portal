@@ -161,7 +161,7 @@ function ControlButton({
       >
         <Icon className="h-5 w-5" />
         {!!badge && badge > 0 && (
-          <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-indigo-500 px-1 text-[10px] font-semibold text-white">
+          <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-green-500 px-1 text-[10px] font-semibold text-white">
             {badge}
           </span>
         )}
@@ -238,7 +238,7 @@ export function GroupCallOverlay() {
     return (
       <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/95 p-6">
         <div className="w-full max-w-sm rounded-2xl bg-slate-900 p-8 text-center ring-1 ring-white/10">
-          <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-indigo-500/20 text-2xl font-semibold text-indigo-300">
+          <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-green-500/20 text-2xl font-semibold text-green-300">
             {initials(g.invite.roomName)}
           </div>
           <h2 className="mt-5 text-xl font-semibold text-white">{g.invite.roomName}</h2>
@@ -346,7 +346,7 @@ export function GroupCallOverlay() {
 
           <ul className="max-h-52 shrink-0 overflow-y-auto px-2 py-2">
             <li className="flex items-center gap-2.5 rounded-lg px-2 py-1.5">
-              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-indigo-500/25 text-[11px] font-semibold text-indigo-200">
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-green-500/25 text-[11px] font-semibold text-green-200">
                 {initials(user?.name)}
               </span>
               <span className="flex-1 truncate text-sm text-white">You</span>

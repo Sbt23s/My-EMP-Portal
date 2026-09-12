@@ -65,8 +65,8 @@ const EVENT_STYLE: Record<CalendarEvent["type"], {
   label: string; dot: string; chip: string; text: string; icon: typeof Cake;
 }> = {
   BIRTHDAY: {
-    label: "Birthday", dot: "bg-violet-500", chip: "bg-violet-500/15",
-    text: "text-violet-700 dark:text-violet-300", icon: Cake
+    label: "Birthday", dot: "bg-green-500", chip: "bg-green-500/15",
+    text: "text-green-700 dark:text-green-300", icon: Cake
   },
   ANNIVERSARY: {
     label: "Work anniversary", dot: "bg-orange-500", chip: "bg-orange-500/15",
@@ -77,8 +77,8 @@ const EVENT_STYLE: Record<CalendarEvent["type"], {
     text: "text-pink-700 dark:text-pink-300", icon: PartyPopper
   },
   MEETING: {
-    label: "Meeting", dot: "bg-indigo-500", chip: "bg-indigo-500/15",
-    text: "text-indigo-700 dark:text-indigo-300", icon: Users
+    label: "Meeting", dot: "bg-green-500", chip: "bg-green-500/15",
+    text: "text-green-700 dark:text-green-300", icon: Users
   },
   TRAINING: {
     label: "Training", dot: "bg-teal-500", chip: "bg-teal-500/15",

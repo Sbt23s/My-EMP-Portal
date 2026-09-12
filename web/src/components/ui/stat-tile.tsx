@@ -40,10 +40,23 @@ export type TileTone = (typeof TILE_FILLS)[keyof typeof TILE_FILLS];
  * all in a production build.
  */
 export const TILE_TONE: Record<string, { surface: string; icon: string; value: string }> = {
+  /*
+    The "All" tile, and the one place the green rename could not simply follow.
+
+    This tone was violet, and violet became green with the rest of the brand --
+    which put it on the same hue as the tone literally named green, the one the
+    Approved and Present tiles use. Two tiles side by side, the total and the
+    approved count, in the same colour: the row stopped telling them apart,
+    which is the only job the colour has here.
+
+    Teal instead. Adjacent to the brand green so the row still reads as one
+    family, far enough round the wheel to stay a different tile. The key stays
+    "violet" because a dozen pages ask for TILE_FILLS.violet by name.
+  */
   violet: {
-    surface: "bg-violet-50/70 border-violet-200/70 dark:bg-violet-500/10 dark:border-violet-400/20",
-    icon: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300",
-    value: "text-violet-900 dark:text-violet-100"
+    surface: "bg-teal-50/70 border-teal-200/70 dark:bg-teal-500/10 dark:border-teal-400/20",
+    icon: "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300",
+    value: "text-teal-900 dark:text-teal-100"
   },
   amber: {
     surface: "bg-amber-50/70 border-amber-200/70 dark:bg-amber-500/10 dark:border-amber-400/20",

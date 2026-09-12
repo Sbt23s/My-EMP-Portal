@@ -421,7 +421,7 @@ function useTaskMonthly(
 function taskMonthlyStats(c: { total: number; completed: number; inProgress: number; overdue: number }) {
   return [
     { icon: ListTodo, value: c.total, label: "Tasks this month",
-      tone: "bg-violet-100 text-violet-600 dark:bg-violet-500/20" },
+      tone: "bg-green-100 text-green-600 dark:bg-green-500/20" },
     { icon: CheckCircle2, value: c.completed, label: "Completed",
       tone: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20" },
     { icon: Clock, value: c.inProgress, label: "In progress",
@@ -1778,7 +1778,7 @@ function AdminTasks({ isAdmin, assignsToAnyone = false, isHR, isTL = false, canA
                       <div className="flex flex-col items-start gap-1">
                         <Badge variant="secondary">{r.team}</Badge>
                         {r.isLeader && (
-                          <Badge className="border-0 bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
+                          <Badge className="border-0 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                             Team Leader
                           </Badge>
                         )}
@@ -2710,7 +2710,7 @@ const taskFileName = (path: string) =>
 
 function TaskFileIcon({ path }: { path: string }) {
   if (TASK_IMAGE_RE.test(path)) return <ImageIcon className="h-3.5 w-3.5 shrink-0 text-sky-600" />;
-  if (TASK_VIDEO_RE.test(path)) return <Film className="h-3.5 w-3.5 shrink-0 text-violet-600" />;
+  if (TASK_VIDEO_RE.test(path)) return <Film className="h-3.5 w-3.5 shrink-0 text-green-600" />;
   if (TASK_SHEET_RE.test(path)) return <Sheet className="h-3.5 w-3.5 shrink-0 text-emerald-600" />;
   return <FileText className="h-3.5 w-3.5 shrink-0 opacity-70" />;
 }

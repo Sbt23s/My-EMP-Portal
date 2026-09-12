@@ -475,7 +475,7 @@ function CreateDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () =
   return (
     <Dialog open onClose={onClose} className="max-w-5xl">
       <div className="mb-4 flex items-start gap-4 pr-8">
-        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-green-100 text-green-600 dark:bg-green-500/15 dark:text-green-300">
           <Award className="h-7 w-7" />
         </span>
         <div className="min-w-0">

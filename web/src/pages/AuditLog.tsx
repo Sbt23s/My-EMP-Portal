@@ -67,7 +67,7 @@ interface LoginRow {
 const CATEGORIES: Record<string, { label: string; icon: typeof Wallet; tint: string }> = {
   PAYROLL:    { label: "Payroll",    icon: Wallet,        tint: "text-emerald-600 bg-emerald-500/10" },
   EMPLOYEE:   { label: "Employee",   icon: Users,         tint: "text-sky-600 bg-sky-500/10" },
-  ATTENDANCE: { label: "Attendance", icon: Clock,         tint: "text-violet-600 bg-violet-500/10" },
+  ATTENDANCE: { label: "Attendance", icon: Clock,         tint: "text-green-600 bg-green-500/10" },
   LEAVE:      { label: "Leave",      icon: CalendarCheck, tint: "text-amber-600 bg-amber-500/10" },
   FACE:       { label: "Face",       icon: ScanFace,      tint: "text-fuchsia-600 bg-fuchsia-500/10" },
   CHAT:       { label: "Chat",       icon: MessageSquare, tint: "text-teal-600 bg-teal-500/10" },
@@ -236,7 +236,7 @@ export default function AuditLogPage() {
           hint={summary.data?.busiest?.[0]
             ? `${summary.data.busiest[0].count} actions`
             : "No activity yet"}
-          tint="text-violet-600 bg-violet-500/10"
+          tint="text-green-600 bg-green-500/10"
         />
       </div>
 

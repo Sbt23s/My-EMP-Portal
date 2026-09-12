@@ -749,7 +749,7 @@ function MyWorkReports({
               </div>
             </div>
             <div className="flex items-center gap-2.5">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-green-100 text-green-600 dark:bg-green-500/20">
                 <Clock className="h-4 w-4" />
               </span>
               <div>
@@ -1151,7 +1151,7 @@ const attachmentName = (path: string) => {
 function AttachmentIcon({ path }: { path: string }) {
   if (isLink(path)) return <LinkIcon className="h-3.5 w-3.5 shrink-0 text-blue-600" />;
   if (WORK_IMAGE_RE.test(path)) return <ImageIcon className="h-3.5 w-3.5 shrink-0 text-sky-600" />;
-  if (WORK_VIDEO_RE.test(path)) return <Film className="h-3.5 w-3.5 shrink-0 text-violet-600" />;
+  if (WORK_VIDEO_RE.test(path)) return <Film className="h-3.5 w-3.5 shrink-0 text-green-600" />;
   if (WORK_SHEET_RE.test(path)) return <Sheet className="h-3.5 w-3.5 shrink-0 text-emerald-600" />;
   return <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />;
 }
@@ -2094,7 +2094,7 @@ function EmployeeWorkListSection({ fromDate, toDate, teamById }: { fromDate: str
         { icon: FolderKanban, value: monthly.projects.length, label: "Projects",
           tone: "bg-sky-100 text-sky-600 dark:bg-sky-500/20" },
         { icon: ListChecks, value: monthly.entries, label: "Entries logged",
-          tone: "bg-violet-100 text-violet-600 dark:bg-violet-500/20" },
+          tone: "bg-green-100 text-green-600 dark:bg-green-500/20" },
         { icon: Users, value: monthly.people, label: "Employees reporting",
           tone: "bg-pink-100 text-pink-600 dark:bg-pink-500/20" }
       ]}

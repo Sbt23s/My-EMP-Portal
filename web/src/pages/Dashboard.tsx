@@ -1292,7 +1292,7 @@ function CelebrationsCard({
                       <span className={cn(
                         "mt-1 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide",
                         isBirthday
-                          ? "bg-violet-500/15 text-violet-700 dark:text-violet-300"
+                          ? "bg-green-500/15 text-green-700 dark:text-green-300"
                           : "bg-amber-500/20 text-amber-800 dark:text-amber-300"
                       )}>
                         {today ? "Today" : isBirthday ? "Birthday" : `${c.years} yr`}

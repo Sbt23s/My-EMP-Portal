@@ -215,6 +215,8 @@ export default function LeavePoliciesPage() {
           ) : (
             <Card>
               <CardContent className="p-0">
+                {/* Scrolls itself rather than pushing the page sideways. */}
+                <div className="w-full overflow-x-auto">
                 <table className="data-table">
                   <thead className="bg-muted text-muted-foreground font-semibold uppercase text-xs">
                     <tr>
@@ -270,6 +272,7 @@ export default function LeavePoliciesPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
                 <TablePagination
                   page={typesPaged.page}
                   totalPages={typesPaged.totalPages}
@@ -299,6 +302,8 @@ export default function LeavePoliciesPage() {
           ) : (
             <Card>
               <CardContent className="p-0">
+                {/* Scrolls itself rather than pushing the page sideways. */}
+                <div className="w-full overflow-x-auto">
                 <table className="data-table">
                   <thead className="bg-muted text-muted-foreground font-semibold uppercase text-xs">
                     <tr>
@@ -332,6 +337,7 @@ export default function LeavePoliciesPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
                 <TablePagination
                   page={holidaysPaged.page}
                   totalPages={holidaysPaged.totalPages}

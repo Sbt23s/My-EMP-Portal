@@ -32,7 +32,7 @@ function Field({ label, icon: Icon, isActive, children, error }: { label: string
           'flex items-center gap-2.5 rounded-lg border px-3.5 py-2.5 backdrop-blur-sm',
           'transition-colors duration-300',
           isActive
-            ? 'border-brand-ring bg-white/10 ring-2 ring-brand-ring/50 shadow-[0_0_20px_-4px_rgba(129,140,248,0.6)]'
+            ? 'border-brand-ring bg-white/10 ring-2 ring-brand-ring/50 shadow-[0_0_20px_-4px_rgba(74,222,128,0.6)]'
             : 'border-white/15 bg-white/[0.06]',
           error ? 'border-red-500/50 ring-red-500/20' : ''
         ].join(' ')}
@@ -195,8 +195,8 @@ export default function LoginPage() {
                 onHoverEnd={() => setButtonGlow(false)}
                 animate={{
                   boxShadow: buttonGlow
-                    ? '0 0 0 3px rgba(129,140,248,0.4), 0 14px 30px -10px rgba(79,70,229,0.8)'
-                    : '0 8px 20px -10px rgba(79,70,229,0.6)'}}
+                    ? '0 0 0 3px rgba(74,222,128,0.4), 0 14px 30px -10px rgba(21,128,61,0.8)'
+                    : '0 8px 20px -10px rgba(21,128,61,0.6)'}}
                 transition={{ duration: 0.4 }}
                 className="group relative w-full overflow-hidden rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
               >

@@ -56,49 +56,58 @@ export const TILE_TONE: Record<string, { surface: string; icon: string; value: s
   violet: {
     surface: "bg-teal-50/70 border-teal-200/70 dark:bg-teal-500/10 dark:border-teal-400/20",
     icon: "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300",
-    value: "text-teal-900 dark:text-teal-100"
+    value: "text-teal-700 dark:text-teal-200"
   },
   amber: {
     surface: "bg-amber-50/70 border-amber-200/70 dark:bg-amber-500/10 dark:border-amber-400/20",
     icon: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
-    value: "text-amber-900 dark:text-amber-100"
+    value: "text-amber-700 dark:text-amber-200"
   },
   green: {
     surface: "bg-emerald-50/70 border-emerald-200/70 dark:bg-emerald-500/10 dark:border-emerald-400/20",
     icon: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
-    value: "text-emerald-900 dark:text-emerald-100"
+    value: "text-emerald-700 dark:text-emerald-200"
   },
   red: {
     surface: "bg-rose-50/70 border-rose-200/70 dark:bg-rose-500/10 dark:border-rose-400/20",
     icon: "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300",
-    value: "text-rose-900 dark:text-rose-100"
+    value: "text-rose-700 dark:text-rose-200"
   },
   blue: {
     surface: "bg-sky-50/70 border-sky-200/70 dark:bg-sky-500/10 dark:border-sky-400/20",
     icon: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300",
-    value: "text-sky-900 dark:text-sky-100"
+    value: "text-sky-700 dark:text-sky-200"
   },
   orange: {
     surface: "bg-orange-50/70 border-orange-200/70 dark:bg-orange-500/10 dark:border-orange-400/20",
     icon: "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300",
-    value: "text-orange-900 dark:text-orange-100"
+    value: "text-orange-700 dark:text-orange-200"
   },
   slate: {
     surface: "bg-slate-50 border-slate-200/80 dark:bg-slate-500/10 dark:border-slate-400/20",
     icon: "bg-slate-200 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300",
-    value: "text-slate-900 dark:text-slate-100"
+    value: "text-slate-700 dark:text-slate-200"
   },
   pink: {
     surface: "bg-pink-50/70 border-pink-200/70 dark:bg-pink-500/10 dark:border-pink-400/20",
     icon: "bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-300",
-    value: "text-pink-900 dark:text-pink-100"
+    value: "text-pink-700 dark:text-pink-200"
   },
   yellow: {
     surface: "bg-yellow-50/70 border-yellow-200/70 dark:bg-yellow-500/10 dark:border-yellow-400/20",
     icon: "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300",
-    value: "text-yellow-900 dark:text-yellow-100"
+    value: "text-yellow-700 dark:text-yellow-200"
   }
 };
+
+/*
+  The figure is set at 700, not 900.
+
+  900 is nearly black with a hue mixed into it, which at 30px reads as a muddy
+  neutral rather than as the colour it is: amber-900 looks brown, yellow-900
+  olive, and the tile's own tint says more about its meaning than its number
+  does. 700 is dark enough to carry the weight and still legible as itself.
+*/
 
 /** Anything unrecognised falls back to slate rather than rendering untinted. */
 const toneOf = (fill: string) => TILE_TONE[fill] ?? TILE_TONE.slate;

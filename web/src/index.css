@@ -135,6 +135,31 @@
     color: hsl(var(--foreground));
     font-family: Inter, ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+    /*
+      A backstop, not a fix.
+
+      Tables and charts scroll inside their own containers, which is the right
+      way and is how every table on the site is built. This catches whatever
+      that misses -- one long unbroken employee code, a pasted URL in a
+      comment, a chart that measures itself a few pixels wide of its box -- so
+      a single overflowing element cannot set the whole page sliding sideways
+      on a phone. Nothing legitimate is clipped: anything genuinely wider than
+      the screen already has its own scroller.
+    */
+    overflow-x: hidden;
+  }
+
+  /* An image or a video never widens its column. */
+  img, video, canvas, svg {
+    max-width: 100%;
+  }
+
+  /*
+    Long unbroken strings -- an email, an employee code, a pasted link -- wrap
+    instead of pushing their cell wider than the screen.
+  */
+  p, td, th, dd, dt, li, h1, h2, h3, h4, h5, h6 {
+    overflow-wrap: break-word;
   }
 
   /*

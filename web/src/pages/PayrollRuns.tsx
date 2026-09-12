@@ -234,6 +234,7 @@ export default function PayrollRunsPage() {
                 {staff.length === 0 ? (
                   <div className="p-4 text-sm text-muted-foreground">No employees found.</div>
                 ) : (
+                  <div className="w-full overflow-x-auto">
                   <table className="data-table">
                     <thead className="sticky top-0 bg-muted/60 text-xs">
                       <tr>
@@ -273,6 +274,7 @@ export default function PayrollRunsPage() {
                         })}
                     </tbody>
                   </table>
+                  </div>
                 )}
               </div>
             )}

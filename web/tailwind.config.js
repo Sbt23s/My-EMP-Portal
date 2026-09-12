@@ -46,10 +46,22 @@ export default {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))"
         },
+        /*
+          The brand ramp, in the portal's green.
+
+          These were the old indigo, and they are the reason the login form
+          still glowed indigo after everything else had turned green: the
+          colour change went through index.css and the page classes, and this
+          file was never looked at. bg-brand, text-brand-ring and the rest
+          resolve here, not through the CSS variables.
+
+          Three steps: the fill behind text, a mid tone, and the light one for
+          rings and focus glows on a dark surface like the login screen.
+        */
         brand: {
-          DEFAULT: '#4f46e5',
-          soft: '#6366f1',
-          ring: '#818cf8',
+          DEFAULT: '#15803D',
+          soft: '#22C55E',
+          ring: '#4ADE80',
         }
       },
       fontFamily: {

@@ -488,7 +488,7 @@ export default function LeaveApprovalsPage() {
       ) : (
         <div className="rounded-lg border bg-card">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1400px] table-fixed text-sm">
+            <table className="data-table min-w-[1400px] table-fixed">
               <colgroup>
                 {/* Action first: on a wide table the decision is the reason
                     somebody opened the page, and it was sitting past ten

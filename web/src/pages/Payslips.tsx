@@ -272,7 +272,7 @@ export default function PayslipsPage() {
             <h3 className="font-semibold">Recent Payslips</h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
+            <table className="data-table">
               <thead>
                 <tr className="border-b border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90 text-left text-xs font-semibold text-slate-800 dark:text-slate-200 [&>th]:whitespace-nowrap [&>th]:px-3.5 [&>th]:py-3 [&>th]:border-r [&>th]:border-slate-300 dark:[&>th]:border-slate-700 last:[&>th]:border-r-0">
                   <th>Month & Year</th>

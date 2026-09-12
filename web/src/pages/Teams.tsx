@@ -383,7 +383,7 @@ export default function TeamsPage() {
                         {/* A floor width, so columns keep a sensible size and the
                             scroller takes the overflow rather than the columns
                             being squeezed to nothing. */}
-                        <table className="w-full min-w-[62rem] table-fixed text-sm">
+                        <table className="data-table min-w-[62rem] table-fixed">
                           <colgroup>
                             <col className="w-12" />
                             {d.assignable && canManage && <col className="w-40" />}
@@ -396,22 +396,22 @@ export default function TeamsPage() {
                           </colgroup>
                           <thead>
                             <tr className="border-b text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                              <th className="whitespace-nowrap px-4 py-2 font-medium">#</th>
-                              {d.assignable && canManage && <th className="whitespace-nowrap px-4 py-2 font-medium">Action</th>}
-                              <th className="whitespace-nowrap px-4 py-2 font-medium">Employee</th>
-                              <th className="whitespace-nowrap px-4 py-2 font-medium">Emp ID</th>
-                              <th className="whitespace-nowrap px-4 py-2 font-medium">Email</th>
-                              <th className="whitespace-nowrap px-4 py-2 font-medium">Contact</th>
-                              <th className="whitespace-nowrap px-4 py-2 font-medium">Tech Stack</th>
-                              {d.assignable && canManage && <th className="whitespace-nowrap px-4 py-2 font-medium">Team Lead</th>}
+                              <th className="whitespace-nowrap font-medium">#</th>
+                              {d.assignable && canManage && <th className="whitespace-nowrap font-medium">Action</th>}
+                              <th className="whitespace-nowrap font-medium">Employee</th>
+                              <th className="whitespace-nowrap font-medium">Emp ID</th>
+                              <th className="whitespace-nowrap font-medium">Email</th>
+                              <th className="whitespace-nowrap font-medium">Contact</th>
+                              <th className="whitespace-nowrap font-medium">Tech Stack</th>
+                              {d.assignable && canManage && <th className="whitespace-nowrap font-medium">Team Lead</th>}
                             </tr>
                           </thead>
                           <tbody>
                             {members.map((m, i) => (
                               <tr key={m.id} className="border-b last:border-0 hover:bg-muted/40">
-                                <td className="px-4 py-2 align-middle text-muted-foreground">{i + 1}</td>
+                                <td className="align-middle text-muted-foreground">{i + 1}</td>
                                 {d.assignable && canManage && (
-                                  <td className="px-4 py-2 text-right align-middle">
+                                  <td className="text-right align-middle">
                                     <Button
                                       size="sm"
                                       variant="ghost"
@@ -427,14 +427,14 @@ export default function TeamsPage() {
                                     </Button>
                                   </td>
                                 )}
-                                <td className="px-4 py-2 align-middle">
+                                <td className="align-middle">
                                   <div className="flex min-w-0 items-center gap-2">
                                     <Avatar name={m.name} />
                                     <span className="truncate font-medium" title={m.name}>{m.name}</span>
                                   </div>
                                 </td>
-                                <td className="px-4 py-2 align-middle code-chip text-xs text-muted-foreground">{m.employeeCode}</td>
-                                <td className="max-w-0 px-4 py-2 align-middle text-xs">
+                                <td className="align-middle code-chip text-xs text-muted-foreground">{m.employeeCode}</td>
+                                <td className="max-w-0 align-middle text-xs">
                                   {m.email ? (
                                     <a
                                       href={`mailto:${m.email}`}
@@ -445,12 +445,12 @@ export default function TeamsPage() {
                                     </a>
                                   ) : <span className="text-muted-foreground">—</span>}
                                 </td>
-                                <td className="px-4 py-2 align-middle whitespace-nowrap text-xs">
+                                <td className="align-middle whitespace-nowrap text-xs">
                                   {m.phone ? (
                                     <a href={`tel:${m.phone}`} className="text-primary hover:underline">{m.phone}</a>
                                   ) : <span className="text-muted-foreground">—</span>}
                                 </td>
-                                <td className="px-4 py-2 align-middle">
+                                <td className="align-middle">
                                   <TechStackCell
                                     member={m}
                                     editable={canManage}
@@ -458,7 +458,7 @@ export default function TeamsPage() {
                                   />
                                 </td>
                                 {d.assignable && canManage && (
-                                  <td className="px-4 py-2 align-middle">
+                                  <td className="align-middle">
                                     {(m.roles ?? []).includes("IT_TL") ? (
                                       <button
                                         type="button"

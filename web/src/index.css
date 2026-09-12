@@ -270,13 +270,86 @@
 }
 
 @layer components {
-  /* Signature: faint blueprint grid, used on auth + empty states */
+  /* Signature: a faint grid, used on auth + empty states. The rule colour
+     follows the brand green now rather than the indigo it was drawn in. */
   .blueprint-grid {
     background-color: hsl(var(--secondary));
     background-image:
-      linear-gradient(hsla(243, 75%, 70%, 0.10) 1px, transparent 1px),
-      linear-gradient(90deg, hsla(243, 75%, 70%, 0.10) 1px, transparent 1px);
+      linear-gradient(hsla(142, 71%, 55%, 0.10) 1px, transparent 1px),
+      linear-gradient(90deg, hsla(142, 71%, 55%, 0.10) 1px, transparent 1px);
     background-size: 28px 28px;
+  }
+
+  /*
+    The data table, for the pages that build their own markup.
+
+    Fifteen pages use the Table components and get this styling from there.
+    Another dozen write plain <table> -- because they need a colspan, a
+    rowspan, a sticky first column or a two-level header the components do not
+    model -- and each had invented its own padding and its own borders. Same
+    product, a dozen slightly different tables.
+
+    Applying .data-table to the <table> gives those pages the same surface as
+    the components without asking them to give up the markup they need. One
+    place to change, and every table changes with it.
+
+    The rules deliberately do not set text colour or alignment: a page still
+    says text-right on a money column, or text-muted-foreground on a secondary
+    one, and those have to keep winning.
+  */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  .data-table thead th {
+    height: 3rem;
+    padding: 0 1rem;
+    text-align: left;
+    vertical-align: middle;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: hsl(var(--muted-foreground));
+    background-color: hsl(var(--card));
+    /* The one rule the table keeps: it marks where the data starts. There are
+       no vertical rules, because alignment separates columns without drawing
+       six lines of furniture through every row. */
+    border-bottom: 1px solid hsl(var(--border));
+  }
+
+  .data-table tbody td {
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid hsl(var(--border) / 0.6);
+  }
+
+  .data-table tbody tr {
+    transition: background-color 150ms;
+  }
+
+  /* Tints rather than greys: --muted is the palette's lightest green. */
+  .data-table tbody tr:hover {
+    background-color: hsl(var(--muted) / 0.6);
+  }
+
+  .data-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  /* The shell the Table component draws around itself, as a class the
+     hand-built tables can put on their own wrapper. */
+  .data-table-shell {
+    position: relative;
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 0.75rem;
+    border: 1px solid hsl(var(--border));
+    background-color: hsl(var(--card));
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   }
 
   /*

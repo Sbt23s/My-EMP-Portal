@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 export const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-x-auto rounded-xl border border-slate-300 dark:border-slate-700 shadow-sm bg-white dark:bg-slate-900">
+    <div className="relative w-full overflow-x-auto rounded-xl border border-border shadow-sm bg-card">
       <table ref={ref} className={cn("w-full caption-bottom text-sm border-collapse", className)} {...props} />
     </div>
   )
@@ -14,7 +14,7 @@ export const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn("bg-slate-100/90 dark:bg-slate-800/90 border-b border-slate-300 dark:border-slate-700", className)} {...props} />
+  <thead ref={ref} className={cn("bg-card border-b border-border", className)} {...props} />
 ));
 TableHeader.displayName = "TableHeader";
 
@@ -33,7 +33,10 @@ export const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "border-b border-slate-200 dark:border-slate-800 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50",
+      // muted is the palette's lightest green, so a hovered row tints rather
+      // than greys. 150ms: fast enough to feel like a response, slow enough
+      // to be seen.
+      "border-b border-border/60 transition-colors duration-150 hover:bg-muted/60",
       className
     )}
     {...props}
@@ -71,8 +74,19 @@ export const TableHead = React.forwardRef<
     <th
       ref={ref}
       className={cn(
-        "h-11 px-3.5 py-3 text-left align-middle text-xs font-semibold text-slate-800 dark:text-slate-200 border-r border-b border-slate-300 dark:border-slate-700 last:border-r-0 bg-slate-100/90 dark:bg-slate-800/90 whitespace-nowrap",
-        (sortable || interactive) && "cursor-pointer select-none hover:bg-slate-200/80 dark:hover:bg-slate-700/80",
+        /*
+          No vertical rules.
+
+          Every heading and every cell carried a border-r, so the table was
+          drawn as a grid of boxes -- the eye had to cross a line between one
+          column and the next, and with seven columns that is six lines of
+          furniture per row competing with the data. Alignment and spacing
+          separate columns perfectly well; the only rule left is the one under
+          the header, which marks where the data starts.
+        */
+        "h-12 px-4 text-left align-middle text-[11px] font-semibold uppercase tracking-wider",
+        "text-muted-foreground bg-card whitespace-nowrap",
+        (sortable || interactive) && "cursor-pointer select-none transition-colors hover:text-foreground",
         className
       )}
       aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : undefined}
@@ -94,13 +108,13 @@ export const TableHead = React.forwardRef<
           <span
             className={cn(
               "font-mono text-[10px] leading-none tracking-tighter",
-              active ? "text-slate-700 dark:text-slate-200" : "text-slate-400/60"
+              active ? "text-primary" : "text-muted-foreground/40"
             )}
           >
             {active ? (sortDir === "asc" ? "↑" : "↓") : "↕"}
           </span>
         ) : sortable ? (
-          <span className="font-mono text-[10px] tracking-tighter text-slate-400">↑↓</span>
+          <span className="font-mono text-[10px] tracking-tighter text-muted-foreground/40">↑↓</span>
         ) : null}
       </div>
     </th>
@@ -115,7 +129,10 @@ export const TableCell = React.forwardRef<
   <td
     ref={ref}
     className={cn(
-      "px-3.5 py-3 align-middle text-xs text-slate-700 dark:text-slate-300 border-r border-b border-slate-200 dark:border-slate-800 last:border-r-0",
+      // 14px rather than 12: this is the data, and it was set smaller than
+      // the interface around it. py-3.5 gives a row about 52px, which is what
+      // an avatar and two lines of text need without being cramped.
+      "px-4 py-3.5 align-middle text-sm text-foreground",
       className
     )}
     {...props}

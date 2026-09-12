@@ -234,12 +234,12 @@ export default function PayrollRunsPage() {
                 {staff.length === 0 ? (
                   <div className="p-4 text-sm text-muted-foreground">No employees found.</div>
                 ) : (
-                  <table className="w-full text-sm">
+                  <table className="data-table">
                     <thead className="sticky top-0 bg-muted/60 text-xs">
                       <tr>
-                        <th className="p-2 text-left font-medium">Employee</th>
-                        <th className="p-2 text-right font-medium">Monthly gross</th>
-                        <th className="p-2 text-right font-medium">Action</th>
+                        <th className="text-left font-medium">Employee</th>
+                        <th className="text-right font-medium">Monthly gross</th>
+                        <th className="text-right font-medium">Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -250,16 +250,16 @@ export default function PayrollRunsPage() {
                           const sal = salaryByUser.get(e.id);
                           return (
                             <tr key={e.id} className="border-t">
-                              <td className="p-2">
+                              <td>
                                 <div className="font-medium">{e.name}</div>
                                 <div className="text-xs text-muted-foreground">{e.employeeCode}</div>
                               </td>
-                              <td className="p-2 text-right tabular-nums">
+                              <td className="text-right tabular-nums">
                                 {sal
                                   ? formatMoney(sal.grossSalary)
                                   : <span className="text-amber-600">Not set</span>}
                               </td>
-                              <td className="p-2 text-right">
+                              <td className="text-right">
                                 <Button
                                   variant={sal ? "outline" : "default"}
                                   size="sm"

@@ -182,18 +182,18 @@ export function EmployeeHistoryDialog({ onClose }: { onClose: () => void }) {
           </p>
         ) : (
           <div className="max-h-[62vh] overflow-auto rounded-lg border">
-            <table className="w-full text-sm">
+            <table className="data-table">
               <thead className="sticky top-0 z-10 bg-muted/60 backdrop-blur">
                 <tr className="text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  <th className="w-8 px-2 py-2.5" />
-                  <th className="px-3 py-2.5">Employee</th>
-                  <th className="px-3 py-2.5">Designation</th>
-                  <th className="px-3 py-2.5">Joined</th>
-                  <th className="px-3 py-2.5">Probation end</th>
-                  <th className="px-3 py-2.5">Stage</th>
-                  <th className="px-3 py-2.5">Relieved</th>
-                  <th className="px-3 py-2.5">Tenure</th>
-                  <th className="px-3 py-2.5">Status</th>
+                  <th className="w-8" />
+                  <th>Employee</th>
+                  <th>Designation</th>
+                  <th>Joined</th>
+                  <th>Probation end</th>
+                  <th>Stage</th>
+                  <th>Relieved</th>
+                  <th>Tenure</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -207,33 +207,33 @@ export function EmployeeHistoryDialog({ onClose }: { onClose: () => void }) {
                         className="cursor-pointer border-t hover:bg-muted/30"
                         onClick={() => setOpen(expanded ? null : r.id)}
                       >
-                        <td className="px-2 py-2.5 text-muted-foreground">
+                        <td className="text-muted-foreground">
                           {expanded
                             ? <ChevronDown className="h-4 w-4" />
                             : <ChevronRight className="h-4 w-4" />}
                         </td>
-                        <td className="px-3 py-2.5">
+                        <td>
                           <div className="font-medium">{r.name ?? "—"}</div>
                           <div className="code-chip text-[10px] text-muted-foreground">
                             {r.employeeCode ?? "—"}
                           </div>
                         </td>
-                        <td className="px-3 py-2.5">
+                        <td>
                           <div>{r.designationTitle ?? "—"}</div>
                           {r.departmentName && (
                             <div className="text-[11px] text-muted-foreground">{r.departmentName}</div>
                           )}
                         </td>
-                        <td className="px-3 py-2.5 tabular-nums">{date(r.dateOfJoining)}</td>
-                        <td className="px-3 py-2.5 tabular-nums">{date(r.probationEndDate)}</td>
-                        <td className="px-3 py-2.5">
+                        <td className="tabular-nums">{date(r.dateOfJoining)}</td>
+                        <td className="tabular-nums">{date(r.probationEndDate)}</td>
+                        <td>
                           {r.employmentStatus
                             ? <Badge variant="secondary" className="text-[10px]">{r.employmentStatus}</Badge>
                             : <span className="text-muted-foreground">—</span>}
                         </td>
-                        <td className="px-3 py-2.5 tabular-nums">{date(r.relievingDate)}</td>
-                        <td className="px-3 py-2.5 tabular-nums">{tenure(r.tenureMonths)}</td>
-                        <td className="px-3 py-2.5">
+                        <td className="tabular-nums">{date(r.relievingDate)}</td>
+                        <td className="tabular-nums">{tenure(r.tenureMonths)}</td>
+                        <td>
                           <Badge
                             className={cn(
                               "text-[10px]",
@@ -249,7 +249,7 @@ export function EmployeeHistoryDialog({ onClose }: { onClose: () => void }) {
                       {expanded && (
                         <tr key={`${r.id}-detail`} className="border-t bg-muted/10">
                           <td />
-                          <td colSpan={8} className="px-3 pb-3">
+                          <td colSpan={8} className="pb-3">
                             <div className="grid gap-4 md:grid-cols-2">
                               <div>
                                 <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">

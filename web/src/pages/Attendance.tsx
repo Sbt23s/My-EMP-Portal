@@ -557,7 +557,7 @@ export default function AttendancePage() {
               </TableHeader>
               <TableBody>
                 {historyPaged.pageRows.map((r) => (
-                    <TableRow key={r.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800">
+                    <TableRow key={r.id}>
                       <TableCell className="w-[92px] py-1">
 <ViewButton onClick={() => setDetail(r)} />
                       </TableCell>

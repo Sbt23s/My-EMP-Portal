@@ -461,7 +461,7 @@ export default function LeavePage() {
               </TableHeader>
               <TableBody>
                 {reqPaged.pageRows.map((r, i) => (
-                  <TableRow key={r.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800">
+                  <TableRow key={r.id}>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {r.status === "PENDING" ? (

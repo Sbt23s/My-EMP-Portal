@@ -1500,7 +1500,7 @@ export default function TeamAttendancePage() {
               (Sundays excluded)
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1500px] text-sm">
+              <table className="data-table min-w-[1500px]">
                 <thead>
                   <tr className="border-b bg-muted/20 text-left text-[11px] uppercase tracking-wide text-muted-foreground [&>th]:whitespace-nowrap [&>th]:px-4 [&>th]:py-2.5">
                     <th>Employee</th>
@@ -1521,11 +1521,11 @@ export default function TeamAttendancePage() {
                 <tbody>
                   {summaryPaged.pageRows.map((s) => (
                     <tr key={s.user.id} className="border-b last:border-0 hover:bg-muted/20">
-                      <td className="whitespace-nowrap px-4 py-2.5">
+                      <td className="whitespace-nowrap">
                         <div className="font-medium">{s.user.name}</div>
                         <div className="code-chip text-xs text-muted-foreground">{s.user.employeeCode}</div>
                       </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-muted-foreground">
+                      <td className="whitespace-nowrap text-muted-foreground">
                         {(s.user.designationTitle || "").trim() || "No team"}
                       </td>
 
@@ -1533,7 +1533,7 @@ export default function TeamAttendancePage() {
                           row covers many days, so a single thumbnail can only
                           honestly be the latest one — the date is on the tooltip
                           so nobody reads it as "today". */}
-                      <td className="px-4 py-2.5">
+                      <td>
                         {s.latest?.facePhotoPath ? (
                           <button
                             type="button"
@@ -1564,7 +1564,7 @@ export default function TeamAttendancePage() {
                       </td>
 
 
-                      <td className="whitespace-nowrap px-4 py-2.5 text-right">
+                      <td className="whitespace-nowrap text-right">
                         <span className={cn(
                           "rounded-full px-2 py-0.5 text-xs font-bold tabular-nums",
                           s.percent >= 90 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
@@ -1574,24 +1574,24 @@ export default function TeamAttendancePage() {
                           {s.percent}%
                         </span>
                       </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-right font-semibold tabular-nums text-emerald-600">
+                      <td className="whitespace-nowrap text-right font-semibold tabular-nums text-emerald-600">
                         {s.present}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums text-rose-600">
+                      <td className="whitespace-nowrap text-right tabular-nums text-rose-600">
                         {s.absentDays || "—"}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-right font-medium tabular-nums">
+                      <td className="whitespace-nowrap text-right font-medium tabular-nums">
                         {minutesLabel(s.minutes)}
                       </td>
                       {/* Overtime in green: it is the one figure on this row that
                           is good news, and reading it in the same weight as the
                           absence counts made it disappear among them. */}
-                      <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums">
+                      <td className="whitespace-nowrap text-right tabular-nums">
                         {s.overtimeMinutes > 0
                           ? <span className="font-medium text-emerald-600">{minutesLabel(s.overtimeMinutes)}</span>
                           : <span className="text-muted-foreground">—</span>}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums">
+                      <td className="whitespace-nowrap text-right tabular-nums">
                         <span className="text-rose-600">{s.lateDays}</span>
                         <span className="text-muted-foreground"> / </span>
                         <span className="text-amber-600">{s.earlyOut}</span>
@@ -1599,21 +1599,21 @@ export default function TeamAttendancePage() {
                       {/* Days and hours together. Four fifteen-minute permissions
                           and one four-hour one are different months, and either
                           figure alone reads as the other. */}
-                      <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums">
+                      <td className="whitespace-nowrap text-right tabular-nums">
                         {s.permissionDays > 0 ? (
                           <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
                             {s.permissionDays}d · {s.permissionHours}h
                           </span>
                         ) : <span className="text-muted-foreground">—</span>}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums">
+                      <td className="whitespace-nowrap text-right tabular-nums">
                         {s.missing > 0 ? (
                           <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-bold text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
                             {s.missing}
                           </span>
                         ) : <span className="text-muted-foreground">—</span>}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-2.5">
+                      <td className="whitespace-nowrap">
                         {s.wfh > 0
                           ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-300">
                               {s.wfh}d work from home
@@ -1623,7 +1623,7 @@ export default function TeamAttendancePage() {
 
                       {/* Opens the same dialog the day-by-day view opens, on the
                           most recent punch. Switch to "Day by day" for the rest. */}
-                      <td className="whitespace-nowrap px-4 py-2.5 text-right">
+                      <td className="whitespace-nowrap text-right">
                         {s.latest ? (
                           <ViewButton
                             className="text-[11px]"
@@ -1669,24 +1669,24 @@ export default function TeamAttendancePage() {
           <div className="border-b bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
             {rows.length} record{rows.length === 1 ? "" : "s"} · {dayjs(fromDate).format("DD MMM")} – {dayjs(toDate).format("DD MMM YYYY")}
           </div>
-          <table className="w-full text-sm">
+          <table className="data-table">
             <thead>
               <tr className="border-b bg-muted/20 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                <th className="px-4 py-2.5">Date</th>
-                <th className="px-4 py-2.5">Employee ID</th>
-                <th className="px-4 py-2.5">Employee Name</th>
-                <th className="px-4 py-2.5">Team</th>
-                <th className="px-4 py-2.5">Status</th>
-                <th className="px-4 py-2.5">Punch In</th>
-                <th className="px-4 py-2.5">Punch Out</th>
-                <th className="px-4 py-2.5 text-right">Work hours</th>
-                <th className="px-4 py-2.5 text-right">Late By</th>
-                <th className="px-4 py-2.5 text-right">Overtime</th>
-                <th className="px-4 py-2.5">Permission</th>
-                <th className="px-4 py-2.5">Remarks</th>
-                <th className="px-4 py-2.5">Face</th>
-                <th className="px-4 py-2.5">Location</th>
-                <th className="px-4 py-2.5 text-right">Details</th>
+                <th>Date</th>
+                <th>Employee ID</th>
+                <th>Employee Name</th>
+                <th>Team</th>
+                <th>Status</th>
+                <th>Punch In</th>
+                <th>Punch Out</th>
+                <th className="text-right">Work hours</th>
+                <th className="text-right">Late By</th>
+                <th className="text-right">Overtime</th>
+                <th>Permission</th>
+                <th>Remarks</th>
+                <th>Face</th>
+                <th>Location</th>
+                <th className="text-right">Details</th>
               </tr>
             </thead>
             <tbody>
@@ -1705,13 +1705,13 @@ export default function TeamAttendancePage() {
                       incomplete && "bg-rose-50/60 dark:bg-rose-950/20"
                     )}
                   >
-                    <td className="whitespace-nowrap px-4 py-2.5">{dayjs(row._date).format("DD MMM YYYY")}</td>
-                    <td className="code-chip whitespace-nowrap px-4 py-2.5 text-xs text-muted-foreground">{getUserCode(row.userId)}</td>
-                    <td className="px-4 py-2.5 font-medium">{getUserName(row.userId)}</td>
-                    <td className="whitespace-nowrap px-4 py-2.5">
+                    <td className="whitespace-nowrap">{dayjs(row._date).format("DD MMM YYYY")}</td>
+                    <td className="code-chip whitespace-nowrap text-xs text-muted-foreground">{getUserCode(row.userId)}</td>
+                    <td className="font-medium">{getUserName(row.userId)}</td>
+                    <td className="whitespace-nowrap">
                       <Badge variant="outline" className="text-slate-600 border-slate-300 bg-slate-50">{teamOf(row.userId)}</Badge>
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td>
                       {att ? (
                         <div className="flex flex-col items-start gap-1">
                           <Badge variant="outline" className={getStatusColor(att.status, att.late)}>
@@ -1744,19 +1744,19 @@ export default function TeamAttendancePage() {
                         <Badge variant="outline" className={getStatusColor("ABSENT", false)}>ABSENT</Badge>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2.5">{formatTime(att?.punchInAt)}</td>
-                    <td className="whitespace-nowrap px-4 py-2.5">{formatTime(att?.punchOutAt)}</td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-right font-medium tabular-nums">
+                    <td className="whitespace-nowrap">{formatTime(att?.punchInAt)}</td>
+                    <td className="whitespace-nowrap">{formatTime(att?.punchOutAt)}</td>
+                    <td className="whitespace-nowrap text-right font-medium tabular-nums">
                       {att?.workedMinutes
                         ? minutesLabel(att.workedMinutes)
                         : <span className="font-normal text-muted-foreground">—</span>}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums">
+                    <td className="whitespace-nowrap text-right tabular-nums">
                       {att?.lateMinutes
                         ? <span className="font-medium text-rose-600">{minutesLabel(att.lateMinutes)}</span>
                         : <span className="text-muted-foreground">—</span>}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums">
+                    <td className="whitespace-nowrap text-right tabular-nums">
                       {att?.overtimeMinutes
                         ? <span className="font-medium text-emerald-600">{minutesLabel(att.overtimeMinutes)}</span>
                         : <span className="text-muted-foreground">—</span>}
@@ -1765,7 +1765,7 @@ export default function TeamAttendancePage() {
                         explains. A short day with a permission from three and a
                         short day without one look identical in the punch columns,
                         and only one of them is a question. */}
-                    <td className="whitespace-nowrap px-4 py-2.5">
+                    <td className="whitespace-nowrap">
                       {(() => {
                         const perms = permissionByKey.get(`${row._date}-${row.userId}`);
                         if (!perms || perms.length === 0) {
@@ -1786,7 +1786,7 @@ export default function TeamAttendancePage() {
                         );
                       })()}
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td>
                       {notes.length === 0 ? (
                         <span className="text-xs text-muted-foreground">—</span>
                       ) : (
@@ -1811,7 +1811,7 @@ export default function TeamAttendancePage() {
                     </td>
                     {/* The face the punch was made with. A thumbnail rather than a
                         tick: "verified" is a claim, the photo is the evidence. */}
-                    <td className="px-4 py-2.5">
+                    <td>
                       {!att ? (
                         <span className="text-xs text-muted-foreground">—</span>
                       ) : att.facePhotoPath ? (
@@ -1845,7 +1845,7 @@ export default function TeamAttendancePage() {
                     {/* Where it was made, named. Coordinates are true and
                         unreadable; the office name is the part that answers the
                         question being asked. */}
-                    <td className="px-4 py-2.5">
+                    <td>
                       {!att ? (
                         <span className="text-xs text-muted-foreground">—</span>
                       ) : (
@@ -1880,7 +1880,7 @@ export default function TeamAttendancePage() {
                       )}
                     </td>
 
-                    <td className="whitespace-nowrap px-4 py-2.5 text-right">
+                    <td className="whitespace-nowrap text-right">
                       {att ? (
                         <ViewButton
                           className="text-[11px]"

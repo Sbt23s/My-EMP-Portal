@@ -604,18 +604,18 @@ export default function PayrollPage() {
       ) : (
         <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
+            <table className="data-table">
               <thead className="bg-muted/50 border-b text-xs font-semibold text-muted-foreground uppercase">
                 <tr>
-                  <th className="px-4 py-3">Employee</th>
-                  <th className="px-4 py-3">Employee ID</th>
-                  <th className="px-4 py-3">Department</th>
-                  <th className="px-4 py-3">Gross Pay</th>
-                  <th className="px-4 py-3">Deductions</th>
-                  <th className="px-4 py-3">Net Pay</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Pay Date</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
+                  <th>Employee</th>
+                  <th>Employee ID</th>
+                  <th>Department</th>
+                  <th>Gross Pay</th>
+                  <th>Deductions</th>
+                  <th>Net Pay</th>
+                  <th>Status</th>
+                  <th>Pay Date</th>
+                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -645,25 +645,25 @@ export default function PayrollPage() {
 
                   return (
                     <tr key={e.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-medium whitespace-nowrap">
+                      <td className="font-medium whitespace-nowrap">
                         {displayPersonName(e.name, e.employeeCode)} {e.id === user?.id && <span className="ml-1 text-[10px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded-full">(You)</span>}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground font-mono text-xs">
+                      <td className="text-muted-foreground font-mono text-xs">
                         {e.employeeCode || "—"}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="whitespace-nowrap">
                         {e.designationTitle || industryLabel(e.industry)}
                       </td>
-                      <td className="px-4 py-3 font-bold tabular-nums">
+                      <td className="font-bold tabular-nums">
                         {inr(gross)}
                       </td>
-                      <td className="px-4 py-3 font-bold tabular-nums text-muted-foreground">
+                      <td className="font-bold tabular-nums text-muted-foreground">
                         {isPaid || s ? inr(deds) : "—"}
                       </td>
-                      <td className="px-4 py-3 font-bold tabular-nums">
+                      <td className="font-bold tabular-nums">
                         {isPaid || s ? inr(net) : "—"}
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         {isPaid ? (
                           <div className="flex flex-col items-start gap-1">
                             <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
@@ -688,10 +688,10 @@ export default function PayrollPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground font-medium whitespace-nowrap">
+                      <td className="text-muted-foreground font-medium whitespace-nowrap">
                         {isPaid ? payDate : "—"}
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="text-right">
                         <div className="flex items-center justify-end gap-2 whitespace-nowrap">
                           {isPaid ? (
                             <>
@@ -1122,12 +1122,12 @@ function PayslipsDialog({ employee, canDownload, onClose }: { employee: UserSumm
           <table className="w-full text-left text-xs">
             <thead className="bg-muted/60 border-b text-muted-foreground uppercase font-semibold">
               <tr>
-                <th className="p-3">Month &amp; Year</th>
-                <th className="p-3">Pay Date</th>
-                <th className="p-3">Gross Pay</th>
-                <th className="p-3">Net Pay</th>
-                <th className="p-3">Status</th>
-                <th className="p-3 text-right">Action</th>
+                <th>Month &amp; Year</th>
+                <th>Pay Date</th>
+                <th>Gross Pay</th>
+                <th>Net Pay</th>
+                <th>Status</th>
+                <th className="text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -1135,19 +1135,19 @@ function PayslipsDialog({ employee, canDownload, onClose }: { employee: UserSumm
                 const payDateStr = dayjs(`${p.payYear}-${String(p.payMonth).padStart(2, '0')}-01`).endOf('month').format("DD MMM YYYY");
                 return (
                   <tr key={p.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="p-3 font-semibold text-foreground">
+                    <td className="font-semibold text-foreground">
                       {MONTHS[p.payMonth - 1]} {p.payYear}
                     </td>
-                    <td className="p-3 text-muted-foreground whitespace-nowrap">
+                    <td className="text-muted-foreground whitespace-nowrap">
                       {payDateStr}
                     </td>
-                    <td className="p-3 font-bold tabular-nums">
+                    <td className="font-bold tabular-nums">
                       {p.grossSalary != null ? inr(p.grossSalary) : "—"}
                     </td>
-                    <td className="p-3 font-bold tabular-nums text-emerald-600">
+                    <td className="font-bold tabular-nums text-emerald-600">
                       {inr(p.netPay)}
                     </td>
-                    <td className="p-3">
+                    <td>
                       {/*
                         Was "Paid", unconditionally, on every row -- which said
                         nothing, because a row only exists once the payslip has
@@ -1166,7 +1166,7 @@ function PayslipsDialog({ employee, canDownload, onClose }: { employee: UserSumm
                         />
                       </div>
                     </td>
-                    <td className="p-3 text-right">
+                    <td className="text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <Button variant="outline" size="sm" className="h-8 px-2.5 text-xs" onClick={() => viewPayslipPdf(p.id)}>
                           <Eye className="mr-1 h-3.5 w-3.5" /> View

@@ -254,7 +254,7 @@ export default function AssetsPage() {
           ) : (
             <Card className="mb-8">
               <CardContent className="p-0 overflow-x-auto">
-                <table className="w-full text-sm border-collapse">
+                <table className="data-table">
                   <thead>
                     <tr className="border-b border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90 text-left text-xs font-semibold text-slate-800 dark:text-slate-200 [&>th]:px-3.5 [&>th]:py-3 [&>th]:border-r [&>th]:border-slate-300 dark:[&>th]:border-slate-700 last:[&>th]:border-r-0">
                       <th className="w-14">S.No</th>
@@ -269,23 +269,23 @@ export default function AssetsPage() {
                   <tbody>
                     {minePaged.pageRows.map((a, i) => (
                       <tr key={a.id} className="border-b border-slate-200 dark:border-slate-800 align-top last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors [&>td]:px-3.5 [&>td]:py-3 [&>td]:border-r [&>td]:border-b [&>td]:border-slate-200 dark:[&>td]:border-slate-800 last:[&>td]:border-r-0">
-                        <td className="px-4 py-2.5 text-muted-foreground">
+                        <td className="text-muted-foreground">
                           {minePaged.page * minePaged.pageSize + i + 1}
                         </td>
-                        <td className="px-4 py-2.5 font-medium">{a.assetType || a.category}</td>
-                        <td className="px-4 py-2.5">
+                        <td className="font-medium">{a.assetType || a.category}</td>
+                        <td>
                           <span className="code-chip text-xs text-muted-foreground">{a.assetCode}</span>
                         </td>
-                        <td className="px-4 py-2.5 text-muted-foreground">
+                        <td className="text-muted-foreground">
                           {[a.brand, a.model].filter(Boolean).join(" ") || "—"}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-2.5 text-muted-foreground">
+                        <td className="whitespace-nowrap text-muted-foreground">
                           {warrantyLabel(a.warrantyExpiry)}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-2.5 text-muted-foreground">
+                        <td className="whitespace-nowrap text-muted-foreground">
                           {a.purchaseDate ? dayjs(a.purchaseDate).format("DD MMM YYYY") : "—"}
                         </td>
-                        <td className="px-4 py-2.5 text-right">
+                        <td className="text-right">
                           <Button variant="outline" size="sm" onClick={() => setMyView(a)}>
                             <Eye className="mr-1 h-3.5 w-3.5" /> View
                           </Button>

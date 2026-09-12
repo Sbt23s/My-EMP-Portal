@@ -2860,18 +2860,18 @@ function TodayOnLeaveCard() {
                offsets, so counting them or finding one person meant reading
                every tile. In a table the eye goes down one column. */
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="data-table">
                 <thead>
                   <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
-                    <th className="py-2 pr-4 font-medium">Employee</th>
-                    <th className="py-2 pr-4 font-medium">Code</th>
-                    <th className="py-2 font-medium">Team</th>
+                    <th className="pr-4 font-medium">Employee</th>
+                    <th className="pr-4 font-medium">Code</th>
+                    <th className="font-medium">Team</th>
                   </tr>
                 </thead>
                 <tbody>
                   {absentList.map((u) => (
                     <tr key={u.userId} className="border-b last:border-0 hover:bg-muted/40">
-                      <td className="py-2 pr-4">
+                      <td className="pr-4">
                         <div className="flex items-center gap-2.5">
                           <Avatar name={u.name} className="h-7 w-7 text-[10px]" />
                           <span className="font-medium">{u.name}</span>
@@ -2879,10 +2879,10 @@ function TodayOnLeaveCard() {
                       </td>
                       {/* Codes line up as a column, so tabular figures keep the
                           digits from drifting against each other. */}
-                      <td className="py-2 pr-4 tabular-nums text-muted-foreground">
+                      <td className="pr-4 tabular-nums text-muted-foreground">
                         {u.employeeCode || "—"}
                       </td>
-                      <td className="py-2 text-muted-foreground">{u.team || "No team"}</td>
+                      <td className="text-muted-foreground">{u.team || "No team"}</td>
                     </tr>
                   ))}
                 </tbody>

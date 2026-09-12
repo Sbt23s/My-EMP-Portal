@@ -937,26 +937,26 @@ function MyWorkReports({
                   {rows.length} {rows.length === 1 ? "entry" : "entries"} · {totalHours}h total ·{" "}
                   {dayjs(fromDate).format("DD MMM")} – {dayjs(toDate).format("DD MMM YYYY")}
                 </div>
-                <table className="w-full text-sm border-collapse">
+                <table className="data-table">
                   <thead>
                     <tr className="border-b border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90 text-left text-xs font-semibold text-slate-800 dark:text-slate-200 [&>th]:px-3.5 [&>th]:py-3 [&>th]:border-r [&>th]:border-slate-300 dark:[&>th]:border-slate-700 last:[&>th]:border-r-0">
                       {/* S.No, then Action. The controls sat at the far right
                           of seven columns, which put them off-screen on a laptop
                           the moment the task note ran long. */}
-                      <th className="w-14 px-4 py-2.5">S.No</th>
-                      <th className="w-44 px-4 py-2.5">Action</th>
-                      <th className="px-4 py-2.5">Date</th>
-                      <th className="px-4 py-2.5">Project</th>
-                      <th className="px-4 py-2.5">Hours</th>
-                      <th className="px-4 py-2.5">Task / Module</th>
-                      <th className="w-24 px-4 py-2.5">Files</th>
+                      <th className="w-14">S.No</th>
+                      <th className="w-44">Action</th>
+                      <th>Date</th>
+                      <th>Project</th>
+                      <th>Hours</th>
+                      <th>Task / Module</th>
+                      <th className="w-24">Files</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pageRows.map((r, i) => (
                       <tr key={r.id} className="border-b border-slate-200 dark:border-slate-800 align-top last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors [&>td]:px-3.5 [&>td]:py-3 [&>td]:border-r [&>td]:border-b [&>td]:border-slate-200 dark:[&>td]:border-slate-800 last:[&>td]:border-r-0">
-                        <td className="px-4 py-2.5 text-muted-foreground">{rows.length - (pageSafe * PAGE_SIZE + i)}</td>
-                        <td className="px-4 py-2.5">
+                        <td className="text-muted-foreground">{rows.length - (pageSafe * PAGE_SIZE + i)}</td>
+                        <td>
                           <div className="flex items-center gap-1">
                             <Button variant="ghost" size="sm" onClick={() => setViewing(r)}>
                               <Eye className="h-3.5 w-3.5" /> View
@@ -974,11 +974,11 @@ function MyWorkReports({
                             </Button>
                           </div>
                         </td>
-                        <td className="whitespace-nowrap px-4 py-2.5">{dayjs(r.workDate).format("DD MMM YYYY")}</td>
-                        <td className="px-4 py-2.5 font-medium">{r.projectName}</td>
-                        <td className="whitespace-nowrap px-4 py-2.5">{r.workHours}h</td>
-                        <td className="whitespace-pre-wrap px-4 py-2.5 text-muted-foreground">{r.taskDescription}</td>
-                        <td className="px-4 py-2.5">
+                        <td className="whitespace-nowrap">{dayjs(r.workDate).format("DD MMM YYYY")}</td>
+                        <td className="font-medium">{r.projectName}</td>
+                        <td className="whitespace-nowrap">{r.workHours}h</td>
+                        <td className="whitespace-pre-wrap text-muted-foreground">{r.taskDescription}</td>
+                        <td>
                           {attachmentPaths(r.attachments).length > 0 ? (
                             <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                               <Paperclip className="h-3 w-3" />
@@ -1729,29 +1729,29 @@ function TeamWorkReports({ fromDate, toDate }: { fromDate: string; toDate: strin
               {rows.length} {rows.length === 1 ? "entry" : "entries"} · {totalHours}h total ·{" "}
               {dayjs(fromDate).format("DD MMM")} – {dayjs(toDate).format("DD MMM YYYY")}
             </div>
-            <table className="w-full text-sm">
+            <table className="data-table">
               <thead>
                 <tr className="border-b bg-muted/20 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                  <th className="px-4 py-2.5">Date</th>
-                  <th className="px-4 py-2.5">Employee</th>
-                  <th className="px-4 py-2.5">Project</th>
-                  <th className="px-4 py-2.5">Hours</th>
-                  <th className="px-4 py-2.5">Task / Module</th>
-                  <th className="px-4 py-2.5">Files</th>
+                  <th>Date</th>
+                  <th>Employee</th>
+                  <th>Project</th>
+                  <th>Hours</th>
+                  <th>Task / Module</th>
+                  <th>Files</th>
                 </tr>
               </thead>
               <tbody>
                 {pageRows.map((r) => (
                   <tr key={r.id} className="border-b align-top last:border-0 hover:bg-muted/20">
-                    <td className="whitespace-nowrap px-4 py-2.5">{dayjs(r.workDate).format("DD MMM YYYY")}</td>
-                    <td className="px-4 py-2.5">
+                    <td className="whitespace-nowrap">{dayjs(r.workDate).format("DD MMM YYYY")}</td>
+                    <td>
                       <div className="font-medium">{r.employeeName}</div>
                       <div className="code-chip text-xs text-muted-foreground">{r.employeeCode}</div>
                     </td>
-                    <td className="px-4 py-2.5 font-medium">{r.projectName}</td>
-                    <td className="whitespace-nowrap px-4 py-2.5">{r.workHours}h</td>
-                    <td className="whitespace-pre-wrap px-4 py-2.5 text-muted-foreground">{r.taskDescription}</td>
-                    <td className="px-4 py-2.5">
+                    <td className="font-medium">{r.projectName}</td>
+                    <td className="whitespace-nowrap">{r.workHours}h</td>
+                    <td className="whitespace-pre-wrap text-muted-foreground">{r.taskDescription}</td>
+                    <td>
                       <AttachmentChips raw={r.attachments} />
                     </td>
                   </tr>
@@ -1779,29 +1779,29 @@ function TeamWorkReports({ fromDate, toDate }: { fromDate: string; toDate: strin
             </p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="data-table">
               <thead>
                 <tr className="border-b bg-muted/20 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                  <th className="px-4 py-2.5">Employee</th>
-                  <th className="px-4 py-2.5">Hours</th>
-                  <th className="px-4 py-2.5">Entries</th>
-                  <th className="px-4 py-2.5">Projects</th>
-                  <th className="px-4 py-2.5">Last logged</th>
-                  <th className="px-4 py-2.5">Share of team hours</th>
+                  <th>Employee</th>
+                  <th>Hours</th>
+                  <th>Entries</th>
+                  <th>Projects</th>
+                  <th>Last logged</th>
+                  <th>Share of team hours</th>
                 </tr>
               </thead>
               <tbody>
                 {perEmployee.map((e) => (
                   <tr key={e.code} className="border-b last:border-0 hover:bg-muted/20">
-                    <td className="px-4 py-2.5">
+                    <td>
                       <div className="font-medium">{e.name}</div>
                       <div className="code-chip text-xs text-muted-foreground">{e.code}</div>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 font-semibold tabular-nums">
+                    <td className="whitespace-nowrap font-semibold tabular-nums">
                       {oneDp(e.hours)}h
                     </td>
-                    <td className="px-4 py-2.5 tabular-nums">{e.entries}</td>
-                    <td className="px-4 py-2.5">
+                    <td className="tabular-nums">{e.entries}</td>
+                    <td>
                       {e.projects.length === 0 ? (
                         <span className="text-muted-foreground">—</span>
                       ) : (
@@ -1817,10 +1817,10 @@ function TeamWorkReports({ fromDate, toDate }: { fromDate: string; toDate: strin
                         </div>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-muted-foreground">
+                    <td className="whitespace-nowrap text-muted-foreground">
                       {e.lastDate ? dayjs(e.lastDate).format("DD MMM YYYY") : "Nothing logged"}
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td>
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
                           <div
@@ -2142,33 +2142,33 @@ function EmployeeWorkListSection({ fromDate, toDate, teamById }: { fromDate: str
             <div className="border-b bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
               {rows.length} {rows.length === 1 ? "entry" : "entries"} · {totalHours}h total · {dayjs(fromDate).format("DD MMM")} – {dayjs(toDate).format("DD MMM YYYY")}
             </div>
-            <table className="w-full text-sm">
+            <table className="data-table">
               <thead>
                 <tr className="border-b bg-muted/20 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                  <th className="px-4 py-2.5">Date</th>
-                  <th className="px-4 py-2.5">Employee</th>
-                  <th className="px-4 py-2.5">Team</th>
-                  <th className="px-4 py-2.5">Project</th>
-                  <th className="px-4 py-2.5">Hours</th>
-                  <th className="px-4 py-2.5">Task / Module</th>
-                  <th className="px-4 py-2.5">Files</th>
+                  <th>Date</th>
+                  <th>Employee</th>
+                  <th>Team</th>
+                  <th>Project</th>
+                  <th>Hours</th>
+                  <th>Task / Module</th>
+                  <th>Files</th>
                 </tr>
               </thead>
               <tbody>
                 {pageRows.map((r) => (
                   <tr key={r.id} className="border-b align-top last:border-0 hover:bg-muted/20">
-                    <td className="whitespace-nowrap px-4 py-2.5">{dayjs(r.workDate).format("DD MMM YYYY")}</td>
-                    <td className="px-4 py-2.5">
+                    <td className="whitespace-nowrap">{dayjs(r.workDate).format("DD MMM YYYY")}</td>
+                    <td>
                       <div className="font-medium">{r.employeeName}</div>
                       <div className="code-chip text-xs text-muted-foreground">{r.employeeCode}</div>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2.5">
+                    <td className="whitespace-nowrap">
                       <Badge variant="secondary">{r.team}</Badge>
                     </td>
-                    <td className="px-4 py-2.5 font-medium">{r.projectName}</td>
-                    <td className="whitespace-nowrap px-4 py-2.5">{r.workHours}h</td>
-                    <td className="whitespace-pre-wrap px-4 py-2.5 text-muted-foreground">{r.taskDescription}</td>
-                    <td className="px-4 py-2.5">
+                    <td className="font-medium">{r.projectName}</td>
+                    <td className="whitespace-nowrap">{r.workHours}h</td>
+                    <td className="whitespace-pre-wrap text-muted-foreground">{r.taskDescription}</td>
+                    <td>
                       <AttachmentChips raw={r.attachments} />
                     </td>
                   </tr>

@@ -215,23 +215,23 @@ export default function LeavePoliciesPage() {
           ) : (
             <Card>
               <CardContent className="p-0">
-                <table className="w-full text-sm text-left">
+                <table className="data-table">
                   <thead className="bg-muted text-muted-foreground font-semibold uppercase text-xs">
                     <tr>
-                      <th className="px-4 py-3 font-bold">Name</th>
-                      <th className="px-4 py-3 font-bold">Code</th>
-                      <th className="px-4 py-3 font-bold">Max Days/Year</th>
-                      <th className="px-4 py-3 font-bold">Pay</th>
-                      <th className="px-4 py-3 font-bold text-right">Actions</th>
+                      <th className="font-bold">Name</th>
+                      <th className="font-bold">Code</th>
+                      <th className="font-bold">Max Days/Year</th>
+                      <th className="font-bold">Pay</th>
+                      <th className="font-bold text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {typesPaged.pageRows.map((t) => (
                       <tr key={t.id} className="hover:bg-muted/50">
-                        <td className="px-4 py-3 font-medium">{t.name}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{t.code}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{t.maxDaysPerYear || "Unlimited"}</td>
-                        <td className="px-4 py-3">
+                        <td className="font-medium">{t.name}</td>
+                        <td className="text-muted-foreground">{t.code}</td>
+                        <td className="text-muted-foreground">{t.maxDaysPerYear || "Unlimited"}</td>
+                        <td>
                           {t.paid ? (
                             <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
                               Paid
@@ -242,7 +242,7 @@ export default function LeavePoliciesPage() {
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="text-right">
                           {canManage && (
                             <div className="flex items-center justify-end gap-1">
                               <Button
@@ -299,22 +299,22 @@ export default function LeavePoliciesPage() {
           ) : (
             <Card>
               <CardContent className="p-0">
-                <table className="w-full text-sm text-left">
+                <table className="data-table">
                   <thead className="bg-muted text-muted-foreground font-semibold uppercase text-xs">
                     <tr>
-                      <th className="px-4 py-3 font-bold">Date</th>
-                      <th className="px-4 py-3 font-bold">Holiday Name</th>
-                      <th className="px-4 py-3 font-bold">Type</th>
-                      <th className="px-4 py-3 font-bold text-right">Actions</th>
+                      <th className="font-bold">Date</th>
+                      <th className="font-bold">Holiday Name</th>
+                      <th className="font-bold">Type</th>
+                      <th className="font-bold text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {holidaysPaged.pageRows.map((h) => (
                       <tr key={h.id} className="hover:bg-muted/50">
-                        <td className="px-4 py-3 font-medium">{h.holidayDate || (h as any).date}</td>
-                        <td className="px-4 py-3 font-semibold">{h.name}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{(h as any).type || "National"}</td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="font-medium">{h.holidayDate || (h as any).date}</td>
+                        <td className="font-semibold">{h.name}</td>
+                        <td className="text-muted-foreground">{(h as any).type || "National"}</td>
+                        <td className="text-right">
                           {canManage && (
                             <Button
                               variant="ghost"

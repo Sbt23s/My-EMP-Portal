@@ -673,7 +673,7 @@ export default function PermissionsPage() {
                 </TableHeader>
                 <TableBody>
                   {adminPaged.pageRows.map((r) => (
-                    <TableRow key={r.id} className="border-b align-top last:border-0 hover:bg-muted/30 transition-colors [&>td]:px-3 [&>td]:py-4">
+                    <TableRow key={r.id} className="align-top last:border-0 [&>td]:px-4 [&>td]:py-3.5">
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           {/*
@@ -786,7 +786,7 @@ export default function PermissionsPage() {
                 </TableHeader>
                 <TableBody>
                   {approverPaged.pageRows.map((r) => (
-                    <TableRow key={r.id} className="border-b align-top last:border-0 hover:bg-muted/30 transition-colors [&>td]:px-3 [&>td]:py-4">
+                    <TableRow key={r.id} className="align-top last:border-0 [&>td]:px-4 [&>td]:py-3.5">
                       <TableCell className="text-right">
                         {/*
                           View is always offered, whatever the status.
@@ -875,7 +875,7 @@ export default function PermissionsPage() {
               </TableHeader>
               <TableBody>
                 {myPaged.pageRows.map((r) => (
-                  <TableRow key={r.id} className="border-b border-slate-100 dark:border-slate-800 align-top last:border-0 hover:bg-slate-50/60 dark:hover:bg-slate-800/60 transition-colors [&>td]:px-3 [&>td]:py-4">
+                  <TableRow key={r.id} className="align-top last:border-0 [&>td]:px-4 [&>td]:py-3.5">
                     <TableCell>
                       <ViewButton onClick={() => setViewRow(r)} />
                     </TableCell>

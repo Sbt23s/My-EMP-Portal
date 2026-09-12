@@ -447,22 +447,22 @@ export default function MyTeamPage() {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="data-table">
                   <thead>
                     <tr className="border-b bg-muted/20 text-left text-[10px] uppercase tracking-wide text-muted-foreground">
-                      <th className="w-12 px-5 py-2.5 font-semibold">#</th>
-                      <th className="px-5 py-2.5 font-semibold">Name</th>
-                      <th className="px-5 py-2.5 font-semibold">Employee ID</th>
-                      <th className="px-5 py-2.5 font-semibold">Designation</th>
-                      <th className="px-5 py-2.5 font-semibold">Email</th>
-                      <th className="px-5 py-2.5 font-semibold">Contact</th>
-                      <th className="px-5 py-2.5 font-semibold">Today</th>
+                      <th className="w-12 font-semibold">#</th>
+                      <th className="font-semibold">Name</th>
+                      <th className="font-semibold">Employee ID</th>
+                      <th className="font-semibold">Designation</th>
+                      <th className="font-semibold">Email</th>
+                      <th className="font-semibold">Contact</th>
+                      <th className="font-semibold">Today</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rows.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                        <td colSpan={7} className="text-center text-sm text-muted-foreground">
                           No teammate matches that search.
                         </td>
                       </tr>
@@ -470,8 +470,8 @@ export default function MyTeamPage() {
                       const isMe = m.id === user?.id;
                       return (
                         <tr key={m.id} className={cn("border-b last:border-0 hover:bg-muted/20", isMe && "bg-primary/5")}>
-                          <td className="px-5 py-3 text-muted-foreground tabular-nums">{i + 1}</td>
-                          <td className="px-5 py-3">
+                          <td className="text-muted-foreground tabular-nums">{i + 1}</td>
+                          <td>
                             <div className="flex items-center gap-3">
                               <Avatar name={m.name} src={m.photoPath} className="h-9 w-9 text-xs" />
                               <div className="flex flex-wrap items-center gap-1.5">
@@ -485,19 +485,19 @@ export default function MyTeamPage() {
                               </div>
                             </div>
                           </td>
-                          <td className="whitespace-nowrap px-5 py-3">
+                          <td className="whitespace-nowrap">
                             <span className="code-chip text-xs text-muted-foreground">{m.employeeCode}</span>
                           </td>
-                          <td className="px-5 py-3">{m.designationTitle || "—"}</td>
-                          <td className="px-5 py-3">
+                          <td>{m.designationTitle || "—"}</td>
+                          <td>
                             {m.email
                               ? <a href={`mailto:${m.email}`} className="text-primary hover:underline">{m.email}</a>
                               : <span className="text-muted-foreground">—</span>}
                           </td>
-                          <td className="whitespace-nowrap px-5 py-3 tabular-nums text-muted-foreground">
+                          <td className="whitespace-nowrap tabular-nums text-muted-foreground">
                             {m.phone || "—"}
                           </td>
-                          <td className="whitespace-nowrap px-5 py-3">
+                          <td className="whitespace-nowrap">
                             {isPresent(m.id) ? (
                               <Badge className="border-0 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
                                 Present

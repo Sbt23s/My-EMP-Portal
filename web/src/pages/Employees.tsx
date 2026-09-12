@@ -8,6 +8,7 @@ import { Search, Users, ChevronLeft, ChevronRight, UserPlus, Camera, RefreshCw, 
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,6 +49,16 @@ export default function EmployeesPage() {
 
 
   const [q, setQ] = useState("");
+  /*
+    The box updates as you type; the request waits until the typing stops.
+
+    q is part of the query key below, so each keystroke was a new key and a
+    new /users call across three thousand employees -- six requests to type a
+    name, five of them answers nobody reads. Only the server query is
+    debounced: the local filter and the export still read q directly, because
+    those are instant and a delay there would just be a slower page.
+  */
+  const dq = useDebouncedValue(q);
   const [industry, setIndustry] = useState("");
   const [status, setStatus] = useState<"ACTIVE" | "OFFBOARDED">("ACTIVE");
   const [page, setPage] = useState(0);
@@ -119,12 +130,12 @@ export default function EmployeesPage() {
   };
 
   const directory = useQuery({
-    queryKey: ["employees", q, industry, status, page, pageSize, filters],
+    queryKey: ["employees", dq, industry, status, page, pageSize, filters],
     placeholderData: keepPreviousData,
     queryFn: async () => {
       try {
         const params = new URLSearchParams({ page: String(page), size: String(pageSize) });
-        if (q) params.set("q", q);
+        if (dq) params.set("q", dq);
         if (industry) params.set("industry", industry);
         params.set("status", status);
         Object.entries(filters).forEach(([k, v]) => {

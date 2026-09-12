@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,14 +26,22 @@ export default function OnboardingPage() {
   const { hasPermission } = useAuth();
   const canManage = hasPermission("USER_MANAGE");
   const [q, setQ] = useState("");
+  /*
+    The box updates as you type; the request waits until you stop.
+
+    q is part of the query key below, so every keystroke was a new key and a
+    new call to /users -- six requests to type a name, five of them answers
+    nobody reads.
+  */
+  const dq = useDebouncedValue(q);
   const [selected, setSelected] = useState<UserSummary | null>(null);
 
   const directory = useQuery({
-    queryKey: ["onboarding-employees", q],
+    queryKey: ["onboarding-employees", dq],
     placeholderData: keepPreviousData,
     queryFn: async () => {
       const params = new URLSearchParams({ page: "0", size: "50" });
-      if (q) params.set("q", q);
+      if (dq) params.set("q", dq);
       const res = await api.get<ApiEnvelope<PageEnvelope<UserSummary>>>(
         `/users?${params.toString()}`
       );

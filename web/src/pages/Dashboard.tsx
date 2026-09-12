@@ -560,7 +560,7 @@ function EmployeeListDialog({ kind, onClose, industry = "ALL" }: { kind: "total"
   const users = useQuery({
     queryKey: ["users", "dash-list"],
     queryFn: async () =>
-      (await api.get<ApiEnvelope<PageEnvelope<UserSummary>>>("/users?size=300")).data.data.content
+      (await api.get<ApiEnvelope<PageEnvelope<UserSummary>>>("/users?size=1000")).data.data.content
   });
   const present = useQuery({
     enabled: kind === "present" || kind === "absent",
@@ -777,9 +777,23 @@ function HelpdeskQuickCard({ industry = "ALL" }: { industry?: string }) {
   });
 
   const scoped = !!industry && industry !== "ALL";
+  /*
+    The same roster the tiles above already fetched.
+
+    This asked for /users under its own key, so React Query saw two unrelated
+    questions and made two calls -- the whole company directory downloaded
+    twice on one mount, the second copy read only to map an id to an industry.
+    Sharing the key means the second reader is served from the cache the
+    first one filled.
+
+    size=1000 rather than the 300 the other caller asks for, because this
+    builds a lookup and a missing row would silently produce a blank industry
+    rather than an obvious error. 1000 is the wider of the two, so it is the
+    safe one to standardise on.
+  */
   const staff = useQuery({
     enabled: scoped,
-    queryKey: ["users", "ticket-industry"],
+    queryKey: ["users", "dash-list"],
     retry: false,
     queryFn: async () =>
       (await api.get<ApiEnvelope<PageEnvelope<UserSummary>>>("/users?size=1000")).data.data.content
@@ -1452,7 +1466,10 @@ function ExecutiveDashboardView({
     queryKey: ["users", "dash-list"],
     queryFn: async () => {
       try {
-        const res = await api.get<ApiEnvelope<PageEnvelope<UserSummary>>>("/users?size=300");
+        // size=1000, matching the other readers of ["users","dash-list"]:
+        // they share a cache entry, so the first to mount decides what all
+        // three see, and asking for different sizes made that a race.
+        const res = await api.get<ApiEnvelope<PageEnvelope<UserSummary>>>("/users?size=1000");
         if (res.data?.data?.content) return res.data.data.content;
       } catch {}
       

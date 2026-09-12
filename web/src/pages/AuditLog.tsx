@@ -9,6 +9,7 @@ import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
 import { api } from "@/lib/api";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -94,6 +95,14 @@ export default function AuditLogPage() {
   const [to, setTo] = useState(dayjs().format("YYYY-MM-DD"));
   const [category, setCategory] = useState("ALL");
   const [q, setQ] = useState("");
+  /*
+    The box updates as you type; the request waits until you stop.
+
+    Both places q reaches the server read the settled value -- the summary
+    memo and the log query -- so typing a name is one search of the login
+    history rather than one per letter.
+  */
+  const dq = useDebouncedValue(q);
   const [onlyFailures, setOnlyFailures] = useState(false);
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(50);
@@ -105,9 +114,9 @@ export default function AuditLogPage() {
       onlyFailures: String(onlyFailures)
     });
     if (category !== "ALL") p.set("category", category);
-    if (q.trim()) p.set("q", q.trim());
+    if (dq.trim()) p.set("q", dq.trim());
     return p.toString();
-  }, [from, to, page, size, onlyFailures, category, q]);
+  }, [from, to, page, size, onlyFailures, category, dq]);
 
   const summary = useQuery({
     queryKey: ["audit-summary", from, to],
@@ -130,7 +139,7 @@ export default function AuditLogPage() {
   });
 
   const logins = useQuery({
-    queryKey: ["audit-logins", from, to, q, onlyFailures, page, size],
+    queryKey: ["audit-logins", from, to, dq, onlyFailures, page, size],
     enabled: tab === "logins",
     placeholderData: keepPreviousData,
     queryFn: async () => {
@@ -138,7 +147,7 @@ export default function AuditLogPage() {
         from, to, page: String(page), size: String(size),
         onlyFailures: String(onlyFailures)
       });
-      if (q.trim()) p.set("q", q.trim());
+      if (dq.trim()) p.set("q", dq.trim());
       return (await api.get<ApiEnvelope<{
         content: LoginRow[]; totalElements: number; totalPages: number; failed: number;
       }>>(`/audit/logins?${p.toString()}`)).data.data;

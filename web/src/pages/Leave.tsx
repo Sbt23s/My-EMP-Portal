@@ -98,6 +98,7 @@ export default function LeavePage() {
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors }
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
@@ -117,6 +118,29 @@ export default function LeavePage() {
   */
   const fromV = watch("fromDate");
   const toV = watch("toDate");
+
+  /*
+    Casual and Sick leave are one day at a time.
+
+    The server refuses a range for these two, so the form should not offer
+    one -- being told after filling in the whole thing that the second date
+    was never allowed is a worse way to learn it. The To field follows From
+    and is locked, and the code comes from the selected type rather than a
+    hardcoded id, because ids differ between installations and codes do not.
+  */
+  const selectedTypeId = watch("leaveTypeId");
+  const selectedCode = (types.data ?? []).find(
+    (t: any) => String(t.id) === String(selectedTypeId)
+  )?.code;
+  const singleDayOnly = selectedCode === "CL" || selectedCode === "SL";
+
+  useEffect(() => {
+    // Keep them equal while the type is a single-day one, including when
+    // somebody picks the type after already choosing a range.
+    if (singleDayOnly && fromV && toV !== fromV) {
+      setValue("toDate", fromV, { shouldValidate: true });
+    }
+  }, [singleDayOnly, fromV, toV, setValue]);
   const dayCount = useMemo(() => {
     if (!fromV || !toV) return 1;
     const from = dayjs(fromV);
@@ -677,7 +701,19 @@ export default function LeavePage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="toDate">To<Req /></Label>
-              <Input id="toDate" type="date" min={watch("fromDate") || todayIso()} max={FUTURE_DATE_MAX} {...register("toDate")} />
+              <Input
+                id="toDate"
+                type="date"
+                min={singleDayOnly ? (fromV || todayIso()) : (watch("fromDate") || todayIso())}
+                max={singleDayOnly ? (fromV || FUTURE_DATE_MAX) : FUTURE_DATE_MAX}
+                readOnly={singleDayOnly}
+                title={singleDayOnly ? "This leave type is one day at a time" : undefined}
+                className={singleDayOnly ? "bg-muted/50" : undefined}
+                {...register("toDate")}
+              />
+              {singleDayOnly && (
+                <p className="text-[11px] text-muted-foreground">One day at a time</p>
+              )}
               {errors.toDate && (
                 <p className="text-xs text-destructive">{errors.toDate.message}</p>
               )}

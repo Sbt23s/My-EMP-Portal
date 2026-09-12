@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { resolveNotificationLink } from "@/lib/notificationLink";
 import { useState } from "react";
+import { MessagesSquare, Bell } from "lucide-react";
+import { CommentsInbox } from "@/components/CommentsInbox";
 import { AlertCircle, BellRing, CheckCheck, Trash2 } from "lucide-react";
 import dayjs from "dayjs";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,6 +35,15 @@ export default function NotificationsPage() {
   */
   const [confirmClear, setConfirmClear] = useState(false);
 
+  /*
+    Comments live here rather than in their own sidebar entry.
+
+    They are the same kind of thing as a notification -- something somebody
+    else did that you need to see -- and they arrive as notifications. Two
+    separate places to check for "did anyone say anything" is one too many.
+  */
+  const [tab, setTab] = useState<"alerts" | "comments">("alerts");
+
   return (
     <div>
       <PageHeader
@@ -40,12 +51,12 @@ export default function NotificationsPage() {
         subtitle="Everything that needs your attention, in one place."
         actions={
           <div className="flex gap-2">
-            {unreadCount > 0 && (
+            {tab === "alerts" && unreadCount > 0 && (
               <Button variant="outline" onClick={() => markAllRead()}>
                 <CheckCheck className="h-4 w-4" /> Mark all read
               </Button>
             )}
-            {notifications.length > 0 && (
+            {tab === "alerts" && notifications.length > 0 && (
               <Button
                 variant="outline"
                 className="text-destructive hover:bg-destructive/10 hover:text-destructive"
@@ -74,7 +85,36 @@ export default function NotificationsPage() {
         onCancel={() => setConfirmClear(false)}
       />
 
-      {loading ? (
+      {/* Alerts or comments -- one question, two lists. */}
+      <div className="mb-4 flex gap-1 rounded-lg border border-border bg-muted/40 p-1 w-fit">
+        {([["alerts", "Notifications", Bell], ["comments", "Comments", MessagesSquare]] as const).map(
+          ([key, label, Icon]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setTab(key)}
+              className={
+                "inline-flex items-center gap-1.5 rounded-md px-4 py-1.5 text-sm font-semibold transition-colors " +
+                (tab === key
+                  ? "bg-card text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-foreground")
+              }
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+              {key === "alerts" && unreadCount > 0 && (
+                <span className="ml-1 rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+          )
+        )}
+      </div>
+
+      {tab === "comments" ? (
+        <CommentsInbox />
+      ) : loading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-16" />

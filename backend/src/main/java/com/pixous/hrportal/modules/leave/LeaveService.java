@@ -104,22 +104,44 @@ public class LeaveService {
         typeRepository.save(t);
     }
 
+    /**
+     * Apply a request to a leave type, changing only what it actually carries.
+     *
+     * <p>This wrote every field unconditionally, including the ones the caller
+     * had not sent. The edit form sends four -- name, code, max days, paid --
+     * so renaming a leave type silently cleared the rest: Casual Leave's
+     * monthlyLimit of 1 became null, and with it the "one every three months"
+     * rule; minNoticeDays, accrualType, carryForward and the gender
+     * restriction went the same way. The save succeeded and the damage was
+     * invisible until somebody applied for leave that should have been
+     * refused.
+     *
+     * <p>Null now means "leave this as it is", which is what an omitted field
+     * has always meant. Creation is unaffected: a new type starts from a blank
+     * record, so a field nobody sent stays at its default either way.
+     *
+     * <p>Name and code are required by validation, so they are always present
+     * and always applied.
+     */
     private void updateTypeFromReq(LeaveType t, LeaveTypeRequest req) {
         t.setName(req.name());
         t.setCode(req.code());
-        t.setMaxDaysPerYear(req.maxDaysPerYear());
-        t.setCarryForward(req.carryForward());
-        t.setEncashable(req.encashable());
-        t.setGenderRestriction(
-    req.genderRestriction() != null && !req.genderRestriction().isBlank()
-        ? req.genderRestriction().charAt(0)
-        : null
-);
-        t.setAllowPastDates(req.allowPastDates());
-        t.setAccrualType(req.accrualType());
-        t.setMinNoticeDays(req.minNoticeDays());
-        t.setMonthlyLimit(req.monthlyLimit());
-        t.setPaid(req.paid());
+
+        if (req.maxDaysPerYear() != null) t.setMaxDaysPerYear(req.maxDaysPerYear());
+        if (req.carryForward() != null) t.setCarryForward(req.carryForward());
+        if (req.encashable() != null) t.setEncashable(req.encashable());
+        if (req.allowPastDates() != null) t.setAllowPastDates(req.allowPastDates());
+        if (req.accrualType() != null) t.setAccrualType(req.accrualType());
+        if (req.minNoticeDays() != null) t.setMinNoticeDays(req.minNoticeDays());
+        if (req.monthlyLimit() != null) t.setMonthlyLimit(req.monthlyLimit());
+        if (req.paid() != null) t.setPaid(req.paid());
+
+        // A blank string here is a deliberate "no restriction", which is not
+        // the same as not sending the field at all.
+        if (req.genderRestriction() != null) {
+            t.setGenderRestriction(
+                    req.genderRestriction().isBlank() ? null : req.genderRestriction().charAt(0));
+        }
     }
 
     /**
@@ -400,6 +422,27 @@ public class LeaveService {
             throw ApiException.business(
                     "That range has no working days in it — every day in it is a "
                             + "weekend or a public holiday.");
+        }
+
+        /*
+          One day, for Casual and Sick leave.
+
+          The quarterly cap below counts requests, not days, so "one leave
+          every three months" was satisfied by a single request covering a
+          whole week -- three days went through on one Casual Leave and the
+          rule saw one request and was content. These two are single-day
+          allowances, so the length has to be checked as well as the count.
+
+          Checked on the dates rather than on workingDays: a Friday-to-Monday
+          range is two working days but four calendar days, and asking for a
+          span at all is the thing being refused here.
+        */
+        if ("CL".equalsIgnoreCase(type.getCode()) || "SL".equalsIgnoreCase(type.getCode())) {
+            if (!req.fromDate().equals(req.toDate())) {
+                throw ApiException.business(
+                        type.getName() + " is one day at a time. Choose the same date for "
+                                + "both From and To, or apply for a different type of leave.");
+            }
         }
 
         // Quarterly cap: Casual & Sick leave are limited to 1 per 3-month quarter

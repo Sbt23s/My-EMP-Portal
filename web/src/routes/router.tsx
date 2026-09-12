@@ -104,7 +104,6 @@ const AppreciationPage = safeLazy(() => import("@/pages/Appreciation"));
 const ProfilePage = safeLazy(() => import("@/pages/Profile"));
 const NotificationsPage = safeLazy(() => import("@/pages/Notifications"));
 const RequestThreadPage = safeLazy(() => import("@/pages/RequestThreadPage"));
-const CommentsInboxPage = safeLazy(() => import("@/pages/CommentsInbox"));
 const TaExpensesPage = safeLazy(() => import("@/pages/TaExpenses"));
 const ClaimEntryPage = safeLazy(() => import("@/pages/ClaimEntry"));
 const ReportsPage = safeLazy(() => import("@/pages/Reports"));
@@ -254,13 +253,12 @@ export const router = createBrowserRouter([
       */
       { path: "requests/:type/:id/thread", element: page(<RequestThreadPage />) },
       /*
-        Every comment written to this person, in one list.
+        Comments are a tab inside Notifications now, not a page of their own.
 
-        No permission gate, for the same reason the thread has none: the
-        endpoint only returns comments on requests where the reader is the
-        applicant or the approver, so the data decides who sees what.
+        The path stays so nothing that already points here breaks -- a stale
+        notification link, a bookmark -- and lands on the page that holds them.
       */
-      { path: "comments", element: page(<CommentsInboxPage />) },
+      { path: "comments", element: <Navigate to="/notifications" replace /> },
       { path: "profile", element: page(<ProfilePage />) },
       { path: "ta-expenses", element: page(<TaExpensesPage />) },
       { path: "ta-expenses/new", element: page(<ClaimEntryPage />) },

@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { MessageSquare, Search, FilterX } from "lucide-react";
 import dayjs from "dayjs";
 import { api } from "@/lib/api";
-import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -51,7 +50,7 @@ function statusTone(status?: string | null) {
  * it -- because in a single list there is no surrounding page to say so.
  * Clicking one opens that request's full thread.
  */
-export default function CommentsInbox() {
+export function CommentsInbox() {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [kind, setKind] = useState<"ALL" | "LEAVE" | "PERMISSION">("ALL");
@@ -89,11 +88,6 @@ export default function CommentsInbox() {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Comments"
-        subtitle="Everything written to you about your requests, and the ones you approve."
-      />
-
       <div className="rounded-xl border border-border bg-card/60 p-2.5 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[15rem] flex-1">

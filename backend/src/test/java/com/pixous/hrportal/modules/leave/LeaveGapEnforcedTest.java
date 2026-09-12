@@ -105,7 +105,7 @@ class LeaveGapEnforcedTest {
         when(requests.countRequestsInRange(anyLong(), anyLong(), any(), any())).thenReturn(1L);
 
         assertThatThrownBy(() -> service.apply(7L, request(
-                LocalDate.of(2026, 9, 28), LocalDate.of(2026, 9, 29))))
+                LocalDate.of(2026, 9, 28), LocalDate.of(2026, 9, 28))))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("per 3 months");
     }
@@ -117,7 +117,7 @@ class LeaveGapEnforcedTest {
         when(requests.countRequestsInRange(anyLong(), anyLong(), any(), any())).thenReturn(1L);
 
         assertThatThrownBy(() -> service.apply(7L, request(
-                LocalDate.of(2026, 9, 28), LocalDate.of(2026, 9, 29))))
+                LocalDate.of(2026, 9, 28), LocalDate.of(2026, 9, 28))))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("per 3 months");
     }
@@ -133,9 +133,69 @@ class LeaveGapEnforcedTest {
                 .thenReturn(LocalDate.of(2026, 9, 30));
 
         assertThatThrownBy(() -> service.apply(7L, request(
-                LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 2))))
+                LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 1))))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("once every three months");
+    }
+
+    @Test
+    @DisplayName("A two-day casual leave is refused: these are one day at a time")
+    void casualLeaveIsOneDayOnly() {
+        when(types.findById(1L)).thenReturn(Optional.of(typeOf("CL", "Casual Leave")));
+        when(requests.countRequestsInRange(anyLong(), anyLong(), any(), any())).thenReturn(0L);
+        when(requests.findLatestDayTaken(anyLong(), anyLong())).thenReturn(null);
+
+        // The quarterly cap counts requests, so a single request spanning a
+        // week satisfied it. The length is a separate question.
+        assertThatThrownBy(() -> service.apply(7L, request(
+                LocalDate.of(2026, 9, 16), LocalDate.of(2026, 9, 18))))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("one day at a time");
+    }
+
+    @Test
+    @DisplayName("Sick leave is one day at a time as well")
+    void sickLeaveIsOneDayOnly() {
+        when(types.findById(1L)).thenReturn(Optional.of(typeOf("SL", "Sick Leave")));
+        when(requests.countRequestsInRange(anyLong(), anyLong(), any(), any())).thenReturn(0L);
+        when(requests.findLatestDayTaken(anyLong(), anyLong())).thenReturn(null);
+
+        assertThatThrownBy(() -> service.apply(7L, request(
+                LocalDate.of(2026, 9, 16), LocalDate.of(2026, 9, 17))))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("one day at a time");
+    }
+
+    @Test
+    @DisplayName("A single-day casual leave passes the length check")
+    void oneDayIsAllowed() {
+        when(types.findById(1L)).thenReturn(Optional.of(typeOf("CL", "Casual Leave")));
+        when(requests.countRequestsInRange(anyLong(), anyLong(), any(), any())).thenReturn(0L);
+        when(requests.findLatestDayTaken(anyLong(), anyLong())).thenReturn(null);
+
+        Throwable t = org.assertj.core.api.Assertions.catchThrowable(
+                () -> service.apply(7L, request(
+                        LocalDate.of(2026, 9, 16), LocalDate.of(2026, 9, 16))));
+        if (t != null) {
+            assertThat(t.getMessage()).doesNotContain("one day at a time");
+        }
+    }
+
+    @Test
+    @DisplayName("Leave with no such limit may still span days")
+    void otherTypesMaySpanDays() {
+        // Earned leave is taken a week at a time; the one-day rule names CL
+        // and SL only and must not reach anything else.
+        when(types.findById(1L)).thenReturn(Optional.of(typeOf("EL", "Earned Leave")));
+        when(requests.countRequestsInRange(anyLong(), anyLong(), any(), any())).thenReturn(0L);
+        when(requests.findLatestDayTaken(anyLong(), anyLong())).thenReturn(null);
+
+        Throwable t = org.assertj.core.api.Assertions.catchThrowable(
+                () -> service.apply(7L, request(
+                        LocalDate.of(2026, 9, 16), LocalDate.of(2026, 9, 18))));
+        if (t != null) {
+            assertThat(t.getMessage()).doesNotContain("one day at a time");
+        }
     }
 
     @Test
@@ -151,7 +211,7 @@ class LeaveGapEnforcedTest {
         // rule (a balance, an approver) and not the concern of this test.
         Throwable t = org.assertj.core.api.Assertions.catchThrowable(
                 () -> service.apply(7L, request(
-                        LocalDate.of(2026, 9, 28), LocalDate.of(2026, 9, 29))));
+                        LocalDate.of(2026, 9, 28), LocalDate.of(2026, 9, 28))));
         if (t != null) {
             assertThat(t.getMessage()).doesNotContain("per 3 months");
             assertThat(t.getMessage()).doesNotContain("once every three months");

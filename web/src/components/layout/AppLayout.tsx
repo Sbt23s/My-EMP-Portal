@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
   LayoutDashboard, Clock, Home, CalendarCheck, CheckSquare, Wallet, Users, Boxes,
-  LifeBuoy, User, Bell, Menu, X, Moon, Sun, LogOut, PanelLeftClose, PanelLeftOpen, MessagesSquare,
+  LifeBuoy, User, Bell, Menu, X, Moon, Sun, LogOut, PanelLeftClose, PanelLeftOpen,
   FileBarChart, ClipboardList, Map, MessageSquareWarning, FileText,
   FolderOpen, ListTodo, FileArchive, CalendarDays, ChevronDown, Bot, Users2, Eraser, ScrollText,
   PartyPopper, MessageSquare, Building2, FolderGit2, History, ShieldAlert, Lock, Award, SlidersHorizontal
@@ -139,14 +139,6 @@ const NAV: NavEntry[] = [
   // same people, and the counterweight to it.
   { to: "/appreciation", label: "Appreciation", icon: Award, moduleCode: "HELPDESK" },
   { to: "/reports", label: "Reports", icon: FileBarChart, anyPermission: ["REPORT_VIEW"], excludeRole: ["SUPER_ADMIN", "COMPANY_ADMIN"], moduleCode: "REPORTS" },
-  /*
-    No permission and no module: everybody raises leave or permission
-    requests, so everybody can be commented on. What the page shows is decided
-    by the data -- only comments on requests where you are the applicant or
-    the approver -- so an empty list is the honest answer for somebody with
-    nothing waiting, not a page they should not have found.
-  */
-  { to: "/comments", label: "Comments", icon: MessagesSquare },
   { to: "/chat", label: "Chat", icon: MessageSquareWarning, moduleCode: "CHAT" },
   /*
     HR runs their own groups here as well as the administrator, so this
@@ -324,6 +316,26 @@ function AppShell() {
     try { return localStorage.getItem("hrp.sidebar.collapsed") === "1"; }
     catch { return false; }
   });
+
+  /*
+    Choosing a page folds the menu away.
+
+    The sidebar is for getting somewhere; once you are there it is 16rem of
+    the screen doing nothing. Folding it on navigation gives the page the
+    whole width without anybody having to ask, and the toggle in the header
+    brings it straight back.
+
+    Only on a wide screen: the phone drawer already closes on navigation, and
+    it closes rather than folds because there is no layout for it to leave.
+  */
+  const foldAfterNavigate = () => {
+    setSidebarOpen(false);
+    if (window.matchMedia("(min-width: 1024px)").matches) {
+      setCollapsed(true);
+      try { localStorage.setItem("hrp.sidebar.collapsed", "1"); }
+      catch { /* the preference is a convenience */ }
+    }
+  };
 
   const toggleCollapsed = () => {
     setCollapsed((v) => {
@@ -566,7 +578,7 @@ function AppShell() {
                           key={child.to}
                           to={child.to}
                           end={child.end ?? true}
-                          onClick={() => setSidebarOpen(false)}
+                          onClick={foldAfterNavigate}
                           className={({ isActive }) =>
                             cn(
                               "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
@@ -592,7 +604,7 @@ function AppShell() {
                 key={item.to}
                 to={item.to}
                 end={item.end}
-                onClick={() => setSidebarOpen(false)}
+                onClick={foldAfterNavigate}
                 className={({ isActive }) =>
                   cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-semibold transition-colors",
@@ -650,7 +662,7 @@ function AppShell() {
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
+          onClick={foldAfterNavigate}
         />
       )}
 
@@ -868,7 +880,15 @@ function AppShell() {
 
         {/* Routed content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          <div className="mx-auto max-w-7xl">
+          {/*
+            The full width, not a 1280px column inside it.
+
+            With the sidebar folded away there was as much empty margin either
+            side as there was page, which defeats the point of folding it. The
+            cap is lifted and the padding on <main> keeps the content off the
+            edges.
+          */}
+          <div className="w-full">
             {/*
               A module switched off for this person closes the page, not just
               the sidebar link. Hiding the link left the page reachable by

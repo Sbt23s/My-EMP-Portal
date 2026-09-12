@@ -1264,7 +1264,11 @@ export default function TeamAttendancePage() {
       ...dates.map((d) => dayjs(d).format("D MMM")),
       "Present",
       "Absent",
-      "Leave",
+      // No Leave column. An approved leave is a day the person was not at
+      // work, and the Absent count already says how many of those there were
+      // -- a second column splitting them off was a distinction the reader
+      // had not asked for. The grid still marks the day "L", so which absences
+      // were approved is on the sheet; it is only the total that has gone.
       "WFH"
     ];
 
@@ -1295,7 +1299,9 @@ export default function TeamAttendancePage() {
         m.name ?? "",
         (m.designationTitle || "").trim() || "No team",
         ...cs.map((c) => c.text),
-        present, absent, leaveDays, wfhDays
+        // Leave counts toward Absent: both are days not worked, and the sheet
+        // now reports one number for that rather than two.
+        present, absent + leaveDays, wfhDays
       ]);
     });
 
@@ -1332,7 +1338,7 @@ export default function TeamAttendancePage() {
         const ref = at(r, firstDateCol + i);
         if (ms[ref]) ms[ref].s = cellStyle(cell.tone);
       });
-      const counts = [FILL.present, FILL.absent, FILL.leave, FILL.wfh];
+      const counts = [FILL.present, FILL.absent, FILL.wfh];
       counts.forEach((tone, i) => {
         const ref = at(r, countCols + i);
         if (ms[ref]) ms[ref].s = COUNT_STYLE(tone);
@@ -1342,7 +1348,7 @@ export default function TeamAttendancePage() {
     ms["!cols"] = [
       { wch: 13 }, { wch: 26 }, { wch: 20 },
       ...dates.map(() => ({ wch: 6 })),
-      { wch: 9 }, { wch: 9 }, { wch: 8 }, { wch: 7 }
+      { wch: 9 }, { wch: 9 }, { wch: 7 }
     ];
     ms["!rows"] = [{ hpt: 20 }, { hpt: 14 }, { hpt: 6 }, { hpt: 30 }];
     // Freeze the identity columns and everything above the first employee, so

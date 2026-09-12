@@ -15,6 +15,18 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     List<Attendance> findByWorkDate(LocalDate workDate);
 
+    /**
+     * Every row for these people across a span of days, in one query.
+     *
+     * <p>The range report used to walk the span a day at a time, asking
+     * findByWorkDate for each one and throwing away the people it had not asked
+     * about in Java -- thirty-one queries for a month, each returning the whole
+     * company's rows for that day. This asks the database the question that was
+     * actually being asked, and lets the (work_date, user_id) index answer it.
+     */
+    List<Attendance> findByWorkDateBetweenAndUserIdIn(
+            LocalDate from, LocalDate to, java.util.Collection<Long> userIds);
+
     long countByUserIdAndWorkDateBetweenAndStatus(
             Long userId, LocalDate from, LocalDate to, String status);
 

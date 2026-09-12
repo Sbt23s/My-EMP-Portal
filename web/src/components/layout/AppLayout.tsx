@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useBranding } from "@/hooks/useBranding";
-import { useNotifications } from "@/hooks/useNotifications";
+import { useNotifications, NotificationProvider } from "@/hooks/useNotifications";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -846,15 +846,26 @@ function AppShell() {
  * looking at their payslip.
  */
 export function AppLayout() {
+  const { user } = useAuth();
   return (
     <CallProvider>
       <GroupCallProvider>
+        {/*
+          One notification feed, above everything that reads it.
+
+          The shell shows the bell and the Notifications page shows the list,
+          and both used to call the hook directly -- two WebSocket connections
+          to the same topic, two polls, and two toasts for every notification
+          while that page was open.
+        */}
+        <NotificationProvider userId={user?.id}>
         <AppShell />
         {/* No fallback: there is nothing on screen to hold a place for until
             a call actually starts. */}
         <Suspense fallback={null}>
           <GroupCallOverlay />
         </Suspense>
+        </NotificationProvider>
       </GroupCallProvider>
     </CallProvider>
   );

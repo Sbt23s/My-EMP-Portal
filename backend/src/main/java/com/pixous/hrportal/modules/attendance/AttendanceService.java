@@ -360,15 +360,29 @@ public class AttendanceService {
     /** The same rows as teamForDate, across a range â€” for downloadable reports. */
     @Transactional(readOnly = true)
     public List<AttendanceResponse> teamForRange(List<Long> memberIds, LocalDate from, LocalDate to) {
-        java.util.Set<Long> ids = new java.util.HashSet<>(memberIds);
-        List<AttendanceResponse> out = new java.util.ArrayList<>();
-        for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
-            attendanceRepository.findByWorkDate(d).stream()
-                    .filter(a -> ids.contains(a.getUserId()))
-                    .map(this::toResponse)
-                    .forEach(out::add);
-        }
-        return out;
+        // Nobody to report on. Asked first because an empty IN () is not
+        // valid SQL, and the answer is the empty list either way.
+        if (memberIds == null || memberIds.isEmpty()) return List.of();
+
+        /*
+          One query, not one per day.
+
+          This walked the range a day at a time, and each step asked for every
+          attendance row in the company for that date and then dropped the
+          people it had not asked about in Java. A month of it was thirty-one
+          round trips reading the whole day each time. The database can answer
+          both halves of the question at once.
+
+          Day order is kept, because the matrix downstream reads these in
+          sequence and a report that jumps about is a report people re-sort by
+          hand.
+        */
+        return attendanceRepository
+                .findByWorkDateBetweenAndUserIdIn(from, to, new java.util.HashSet<>(memberIds))
+                .stream()
+                .sorted(java.util.Comparator.comparing(Attendance::getWorkDate))
+                .map(this::toResponse)
+                .toList();
     }
 
     // ---- helpers ----

@@ -116,11 +116,17 @@ export function TechAdminLayout() {
       
       {/* Global Cyber Background */}
       {isDark ? (
-        <div className="absolute inset-0 z-[-1]">
-          <video autoPlay loop muted playsInline className="w-full h-full object-cover">
-            <source src="/@fs/C:/Users/balas/Downloads/Use_the_uploaded_image_as_the (3).mp4" type="video/mp4" />
-          </video>
-          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-[2px]"></div>
+        /*
+          A painted background, not a video off somebody's Downloads folder.
+
+          The source here was "/@fs/C:/Users/balas/Downloads/...mp4" -- a path
+          Vite's dev server rewrites to a file on one developer's machine. In
+          production it resolved to nothing, so this decoded no video and the
+          slate overlay below was doing all the work anyway. A gradient says
+          the same thing, weighs nothing, and exists on every machine.
+        */
+        <div className="absolute inset-0 z-[-1] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px]"></div>
         </div>
       ) : (
         <div className="absolute inset-0 z-[-1] bg-[url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center bg-no-repeat">

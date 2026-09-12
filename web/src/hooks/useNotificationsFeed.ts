@@ -51,7 +51,19 @@ function toastIcon(type?: string): string {
   }
 }
 
-export function useNotifications(userId?: number) {
+/**
+ * The feed, the socket and the toasts -- one copy of each.
+ *
+ * <p>Not exported. This ran as a plain hook mounted in two places at once --
+ * the app shell and the Notifications page -- and each mount opened its own
+ * SockJS connection, subscribed to the same topic and raised its own toast, so
+ * a single notification arrived on screen twice while the page was open, and
+ * both copies polled the feed every thirty seconds.
+ *
+ * <p>{@link NotificationProvider} runs this exactly once and hands the result
+ * down, so both consumers read one connection. See useNotifications.tsx.
+ */
+export function useNotificationsInternal(userId?: number) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { hasModule } = useAuth();
@@ -382,3 +394,5 @@ export function useNotifications(userId?: number) {
     clearAll
   };
 }
+
+export type NotificationsApi = ReturnType<typeof useNotificationsInternal>;

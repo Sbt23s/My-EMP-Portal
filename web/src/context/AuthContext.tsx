@@ -9,6 +9,7 @@ import {
 } from "react";
 import { api, tokenStore, tokenExpired } from "@/lib/api";
 import { parseBranding, type BrandingDoc } from "@/lib/branding";
+import { queryClient } from "@/lib/queryClient";
 import type { AuthUser, ApiEnvelope, LoginResponse } from "@/types";
 
 const USER_KEY = "hrp.user";
@@ -206,6 +207,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       const payload = res.data.data;
+
+      /*
+        Cleared here too, before the new token goes in.
+
+        Signing out is not the only way to reach this form: a session can
+        expire, a link can land on /login, and a second person can sit down at
+        the same browser -- and on none of those paths did logout() run. The
+        identity changes here, so this is where the previous one's cache has to
+        go, whatever happened before it.
+      */
+      queryClient.clear();
       tokenStore.set(payload.tokens.accessToken, payload.tokens.refreshToken);
       sessionStorage.setItem("just_logged_in", "true");
       setUser(payload.user);
@@ -238,6 +250,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     tokenStore.clear();
     localStorage.removeItem(USER_KEY);
     setUser(null);
+
+    /*
+      And throw away everything the last person looked at.
+
+      Signing out did not reload the page -- it is a route change -- so the
+      QueryClient survived it, still holding the previous user's dashboard,
+      employee list and notifications. None of those keys carry a user id, so
+      the next person to sign in mounted the same screens, asked for the same
+      keys, and was handed the last user's data straight out of cache. Within
+      thirty seconds of the handover nothing was even stale enough to trigger
+      a refetch, so no request went out to correct it.
+
+      clear() rather than invalidateQueries(): invalidate refetches only the
+      queries that happen to be mounted and leaves the stored payloads behind,
+      which is the half-measure that left this open.
+    */
+    queryClient.clear();
   }, []);
 
   /**

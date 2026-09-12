@@ -35,7 +35,16 @@
   <link rel="preload" as="style" href="/fonts/fonts.css" />
   <link rel="stylesheet" href="/fonts/fonts.css" />
   <title>My EMP Portal</title>
-  <script src="https://js.puter.com/v2/"></script>
+  <!--
+    js.puter.com was loaded here, synchronously, in the head.
+
+    Nothing used it. The assistant talks to our own /api/chatbot/* and keeps
+    every provider key on the backend, so this was left over from an approach
+    that was abandoned. Being synchronous and in the head, it blocked HTML
+    parsing on a DNS lookup, TLS handshake and download to an unrelated host
+    before the page body was read -- paid on every cold load, by every user,
+    for a script whose name appears nowhere in the source.
+  -->
 </head>
 
 <body class="h-full">

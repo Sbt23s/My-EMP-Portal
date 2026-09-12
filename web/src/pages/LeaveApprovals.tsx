@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, X, CheckCheck, Inbox, ListTodo, Clock, Search, CalendarDays, FilterX } from "lucide-react";
 import { ViewButton } from "@/components/ui/view-button";
 import dayjs from "dayjs";
+import * as XLSX from "xlsx";
+import { ExportExcelButton } from "@/components/ui/export-excel-button";
 import toast from "react-hot-toast";
 import { api, apiMessage } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
@@ -258,6 +260,44 @@ export default function LeaveApprovalsPage() {
     setRejecting(null);
   };
 
+  /**
+   * The rows as the table has them.
+   *
+   * <p>Reads `list` rather than re-querying, so the file matches the screen it
+   * came from: the same search, the same date window, the same team and the
+   * same column sort. An export that quietly ignored the filters above it
+   * would be a different report wearing this page's name.
+   */
+  const exportExcel = () => {
+    if (list.length === 0) {
+      toast.error("Nothing to export.");
+      return;
+    }
+    const sheet = list.map((r: any, i: number) => ({
+      "#": i + 1,
+      Employee: r.employeeName ?? "",
+      "Employee ID": r.employeeCode ?? "",
+      Team: r.team ?? "",
+      "Leave type": r.leaveTypeName ?? "",
+      "Working days": r.workingDays ?? "",
+      From: r.fromDate ? dayjs(r.fromDate).format("DD MMM YYYY") : "",
+      To: r.toDate ? dayjs(r.toDate).format("DD MMM YYYY") : "",
+      Reason: r.reason ?? "",
+      "Sent to": r.requestedToName ?? "",
+      "Decided by": r.decidedByName ?? "",
+      "Applied on": r.createdAt ? dayjs(r.createdAt).format("DD MMM YYYY") : "",
+      Status: r.status ?? "",
+    }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheet), "Leave approvals");
+    // The window in the name, so two exports taken on the same day and
+    // covering different spans do not overwrite one another.
+    const tag = fromDate || toDate
+      ? `${fromDate || "start"}_to_${toDate || "end"}`
+      : dayjs().format("YYYY-MM-DD");
+    XLSX.writeFile(wb, `Leave_Approvals_${tab.toLowerCase()}_${tag}.xlsx`);
+  };
+
   return (
     <div>
       <PageHeader
@@ -272,17 +312,26 @@ export default function LeaveApprovalsPage() {
                 : "Requests waiting on your decision."
         }
         actions={
-          selected.size > 0 ? (
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled={bulk.isPending} onClick={rejectBulk}>
-                <X className="h-4 w-4" /> Reject {selected.size}
-              </Button>
-              <Button size="sm" disabled={bulk.isPending} onClick={() => bulk.mutate({ decision: "APPROVED" })}>
-                {bulk.isPending ? <PixousLoader size="xs" /> : <CheckCheck className="h-4 w-4" />}
-                Approve {selected.size}
-              </Button>
-            </div>
-          ) : null
+          /* Export sits with the page's other actions, and stays put when a
+             selection brings the bulk buttons out beside it. */
+          <div className="flex flex-wrap items-center gap-2">
+            {selected.size > 0 && (
+              <>
+                <Button variant="outline" size="sm" disabled={bulk.isPending} onClick={rejectBulk}>
+                  <X className="h-4 w-4" /> Reject {selected.size}
+                </Button>
+                <Button size="sm" disabled={bulk.isPending} onClick={() => bulk.mutate({ decision: "APPROVED" })}>
+                  {bulk.isPending ? <PixousLoader size="xs" /> : <CheckCheck className="h-4 w-4" />}
+                  Approve {selected.size}
+                </Button>
+              </>
+            )}
+            <ExportExcelButton
+              disabled={list.length === 0}
+              title={list.length ? "Download these requests as a spreadsheet" : "Nothing to export"}
+              onClick={exportExcel}
+            />
+          </div>
         }
       />
 

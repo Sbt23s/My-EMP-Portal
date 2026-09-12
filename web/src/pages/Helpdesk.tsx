@@ -423,24 +423,31 @@ export default function HelpdeskPage() {
         </h3>
       )}
 
-      {/* Status counts over the chosen period — each tile is also its filter. */}
-      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-        {TICKET_TILES.map((t) => (
-          <StatTile
-            key={t.key}
-            label={t.label}
-            value={statusCounts[t.key] ?? 0}
-            hint={t.hint}
-            icon={t.icon}
-            fill={t.fill}
-            active={statusTab === t.key}
-            onClick={() => setStatusTab(t.key)}
-          />
-        ))}
-      </div>
+      {/*
+        Filters above the numbers they change.
 
-      {/* Look back by year, month or an exact date. */}
-      <div className="mb-4 flex flex-wrap items-end gap-3">
+        These sat under the six count tiles, which put the cause below the
+        effect: choosing a month moved figures the reader had already scrolled
+        past. Search first, then the ways of narrowing by time, then priority
+        and type. Nothing about the filtering itself changed.
+      */}
+      <div className="mb-4 rounded-xl border bg-card/60 p-2.5 shadow-sm backdrop-blur-sm">
+      <div className="flex flex-wrap items-end gap-3">
+        {/* Search leads the row: it is the filter people reach for first, and
+            the one most likely to answer the question on its own. */}
+        <div className="min-w-[16rem] flex-1 space-y-1">
+          <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Search</label>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="w-full pl-9"
+              placeholder="Ticket, subject, employee or category…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              aria-label="Search tickets"
+            />
+          </div>
+        </div>
         <div className="space-y-1">
           <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Year</label>
           <Select value={year} onChange={(e) => { setYear(e.target.value); setDay(""); }} className="w-28">
@@ -504,18 +511,6 @@ export default function HelpdeskPage() {
             ))}
           </Select>
         </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Search</label>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="w-64 pl-9"
-              placeholder="Ticket, subject, employee or category…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-          </div>
-        </div>
         {(filtersOn || priority !== "all" || type !== "all" || q.trim()) && (
           <Button
             variant="outline"
@@ -530,6 +525,23 @@ export default function HelpdeskPage() {
         <span className="ml-auto text-xs text-muted-foreground">
           {list.length} of {rawList.length} ticket{rawList.length === 1 ? "" : "s"}
         </span>
+      </div>
+      </div>
+
+      {/* Status counts over the chosen period — each tile is also its filter. */}
+      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+        {TICKET_TILES.map((t) => (
+          <StatTile
+            key={t.key}
+            label={t.label}
+            value={statusCounts[t.key] ?? 0}
+            hint={t.hint}
+            icon={t.icon}
+            fill={t.fill}
+            active={statusTab === t.key}
+            onClick={() => setStatusTab(t.key)}
+          />
+        ))}
       </div>
 
       {loading ? (

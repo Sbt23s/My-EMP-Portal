@@ -638,13 +638,6 @@ export default function PermissionsPage() {
                   (employees, Team Leaders and HR)
                 </span>
               </span>
-              <ExportExcelButton
-                onClick={() => exportPermissions(
-                  adminList,
-                  `history_${tab.toLowerCase()}`,
-                  `Permission history — ${tab === "ALL" ? "all requests" : tab.toLowerCase()}`
-                )}
-              />
             </div>
             {all.isLoading ? (
               <Skeleton className="h-32" />
@@ -754,12 +747,6 @@ export default function PermissionsPage() {
             <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
               <span className="text-sm font-semibold">Assigned to me</span>
               <div className="flex flex-wrap items-center gap-2">
-              <ExportExcelButton
-                onClick={() => exportPermissions(
-                  (pending.data ?? []).filter((r) => tab === "ALL" || r.status === tab),
-                  tab.toLowerCase()
-                )}
-              />
               {/* For a Team Leader the tiles above are the status filter already. */}
               <div className={cn("flex gap-1 rounded-full border bg-muted/60 p-1", tiled && "hidden")}>
                 {(["ALL", "PENDING", "APPROVED", "REJECTED", "CANCELLED"] as const).map((t) => (

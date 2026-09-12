@@ -177,8 +177,17 @@ export default function WorkFromHomePage() {
     is made -- the same fault the Leave page had. The pickers narrow it to
     whatever somebody actually wants.
   */
-  const [fromMonth, setFromMonth] = useState(dayjs().startOf("year").format("YYYY-MM"));
-  const [toMonth, setToMonth] = useState(dayjs().add(1, "year").format("YYYY-MM"));
+  /*
+    A date window, not a month one.
+
+    These were month pickers, so "1 to 15 March" could not be asked for at
+    all: the narrowest question the page accepted was a whole month. The
+    default span is unchanged -- the start of this year to a year out, which
+    covers the requests people have and the ones they are booking ahead --
+    only now it is expressed in days and can be narrowed to one.
+  */
+  const [fromDate, setFromDate] = useState(dayjs().startOf("year").format("YYYY-MM-DD"));
+  const [toDate, setToDate] = useState(dayjs().add(1, "year").endOf("month").format("YYYY-MM-DD"));
 
   const today = useQuery({
     queryKey: ["wfh", "active", boardDate, boardTo],
@@ -228,15 +237,20 @@ export default function WorkFromHomePage() {
     const ranged = tab === "today"
       ? rows
       : rows.filter((r) => {
-          const m = String(r.fromDate).slice(0, 7);
-          return m >= fromMonth && m <= toMonth;
+          // The request's own start day, trimmed off any timestamp so a date
+          // cannot fall outside a window that should contain it.
+          const d = String(r.fromDate).slice(0, 10);
+          if (!d) return false;
+          if (fromDate && d < fromDate) return false;
+          if (toDate && d > toDate) return false;
+          return true;
         });
     if (!needle) return ranged;
     return ranged.filter((r) =>
       [r.employeeName, r.employeeCode, r.team, r.reason, r.remarks, r.requestedToName]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(needle)));
-  }, [rows, q, tab, fromMonth, toMonth]);
+  }, [rows, q, tab, fromDate, toDate]);
 
   const sort = useTableSort<any>(filtered, (row, key) => {
     switch (key) {
@@ -253,7 +267,7 @@ export default function WorkFromHomePage() {
   });
   const sortedRows = sort.sorted;
 
-  const paged = usePagedRows(sortedRows, 15, [tab, q, rows, fromMonth, toMonth, sort.key, sort.dir]);
+  const paged = usePagedRows(sortedRows, 15, [tab, q, rows, fromDate, toDate, sort.key, sort.dir]);
 
   /*
     The tiles follow the filters.
@@ -336,7 +350,7 @@ export default function WorkFromHomePage() {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheet), "Work From Home");
     const tag = tab === "today"
       ? (boardDate === boardTo ? boardDate : `${boardDate}_to_${boardTo}`)
-      : `${fromMonth}_to_${toMonth}`;
+      : `${fromDate}_to_${toDate}`;
     XLSX.writeFile(wb, `Work_From_Home_${tab}_${tag}.xlsx`);
   };
 
@@ -428,23 +442,31 @@ export default function WorkFromHomePage() {
         These sat under the four tiles, so narrowing by name or by date
         moved figures the reader had already scrolled past.
       */}
-      <div className="mb-3 flex flex-wrap items-end gap-3">
-        <div className="max-w-sm flex-1">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="mb-3 rounded-xl border bg-card/60 p-2.5 shadow-sm backdrop-blur-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Search takes the room going spare, so it grows on a wide screen
+              and wraps last on a narrow one. */}
+          <div className="relative min-w-[15rem] flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              className="pl-8"
+              className="h-[38px] w-full border-transparent bg-muted/40 pl-9 focus-visible:border-input focus-visible:bg-background"
               placeholder="Name, employee ID, team or reason…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
+              aria-label="Search work from home requests"
             />
+            {q && (
+              <button
+                type="button"
+                onClick={() => setQ("")}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <XCircle className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
-        </div>
-        {/*
-          The board answers "who is at home", and the day is part of the
-          question -- yesterday and next Monday are both worth asking. Only
-          shown on that tab, because the other three are not about one day.
-        */}
+
         {tab === "today" && (
           <>
             <div className="space-y-1">
@@ -492,41 +514,40 @@ export default function WorkFromHomePage() {
           </>
         )}
 
-        {/* A month range on the lists, so a period can be looked at and exported. */}
+        {/* The lists take a date window. It reads as one control because it
+            is one: a span, not two unrelated fields. */}
         {tab !== "today" && (
-          <>
-            <div className="space-y-1">
-              <Label htmlFor="wfh-from-m" className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                From
-              </Label>
-              <Input
-                id="wfh-from-m"
-                type="month"
-                className="w-40"
-                value={fromMonth}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (!v) return;
-                  setFromMonth(v);
-                  if (v > toMonth) setToMonth(v);
-                }}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="wfh-to-m" className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                To
-              </Label>
-              <Input
-                id="wfh-to-m"
-                type="month"
-                className="w-40"
-                min={fromMonth}
-                value={toMonth}
-                onChange={(e) => e.target.value && setToMonth(e.target.value)}
-              />
-            </div>
-          </>
+          <div className="flex items-center gap-1.5 rounded-lg bg-muted/40 px-2 py-1">
+            <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <Input
+              id="wfh-from"
+              type="date"
+              aria-label="From date"
+              className="h-[30px] w-[9.5rem] border-transparent bg-transparent px-1.5 text-xs focus-visible:border-input focus-visible:bg-background"
+              max={toDate || undefined}
+              value={fromDate}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (!v) return;
+                setFromDate(v);
+                // Keep the end on or after the start, rather than letting an
+                // impossible window be typed and silently corrected later.
+                if (v > toDate) setToDate(v);
+              }}
+            />
+            <span className="text-xs text-muted-foreground">to</span>
+            <Input
+              id="wfh-to"
+              type="date"
+              aria-label="To date"
+              className="h-[30px] w-[9.5rem] border-transparent bg-transparent px-1.5 text-xs focus-visible:border-input focus-visible:bg-background"
+              min={fromDate || undefined}
+              value={toDate}
+              onChange={(e) => e.target.value && setToDate(e.target.value)}
+            />
+          </div>
         )}
+        </div>
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4">

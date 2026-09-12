@@ -24,6 +24,22 @@ public class LeaveController {
         return ApiResponse.ok(service.types());
     }
 
+    /**
+     * Every type, switched off ones included -- for the configuration screen.
+     *
+     * <p>Deleting a leave type switches it off rather than removing it, because
+     * leave already taken points at it. But the only listing was the active
+     * one, so a type switched off disappeared from the screen that switched it
+     * off, and there was no way to switch it back on. Behind ORG_MANAGE: this
+     * is for configuring, and the applicant's list must keep showing only the
+     * types they can actually ask for.
+     */
+    @GetMapping("/types/all")
+    @PreAuthorize("hasAuthority('ORG_MANAGE')")
+    public ApiResponse<List<LeaveTypeResponse>> allTypes() {
+        return ApiResponse.ok(service.allTypes());
+    }
+
     @PostMapping("/types")
     @PreAuthorize("hasAuthority('ORG_MANAGE')")
     public ApiResponse<LeaveTypeResponse> createType(@Valid @RequestBody LeaveTypeRequest req) {

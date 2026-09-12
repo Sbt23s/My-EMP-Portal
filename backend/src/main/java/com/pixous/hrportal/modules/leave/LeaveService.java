@@ -64,6 +64,22 @@ public class LeaveService {
                 .map(LeaveTypeResponse::from).toList();
     }
 
+    /**
+     * Every type this company has, active or not.
+     *
+     * <p>Same company scoping as {@link #types()}; only the active filter is
+     * dropped, so the configuration screen can show what it switched off and
+     * offer to switch it back on.
+     */
+    public List<LeaveTypeResponse> allTypes() {
+        Long mine = com.pixous.hrportal.security.SecurityUtils.currentCompanyId();
+        return typeRepository.findAll().stream()
+                .filter(t -> mine == null || t.getCompanyId() == null || mine.equals(t.getCompanyId()))
+                .sorted(java.util.Comparator.comparing(
+                        LeaveType::getName, java.util.Comparator.nullsLast(String::compareToIgnoreCase)))
+                .map(LeaveTypeResponse::from).toList();
+    }
+
     @Transactional
     public LeaveTypeResponse createType(LeaveTypeRequest req) {
         LeaveType existing = req.code() == null ? null
@@ -135,6 +151,15 @@ public class LeaveService {
         if (req.minNoticeDays() != null) t.setMinNoticeDays(req.minNoticeDays());
         if (req.monthlyLimit() != null) t.setMonthlyLimit(req.monthlyLimit());
         if (req.paid() != null) t.setPaid(req.paid());
+
+        /*
+          Active is editable, which is the other half of deleting.
+
+          deleteType() sets this false, and until now nothing could set it
+          back except creating a type with the same code again. An
+          administrator who switched one off had no way to switch it on.
+        */
+        if (req.active() != null) t.setActive(req.active());
 
         // A blank string here is a deliberate "no restriction", which is not
         // the same as not sending the field at all.

@@ -51,7 +51,7 @@ class LeaveTypeEditTest {
     /** Exactly what the edit dialog sends: four fields, the rest absent. */
     private LeaveTypeRequest formSends(String name, String code, Integer maxDays, Boolean paid) {
         return new LeaveTypeRequest(name, code, maxDays,
-                null, null, null, null, null, null, null, paid);
+                null, null, null, null, null, null, null, paid, null);
     }
 
     @BeforeEach
@@ -118,6 +118,37 @@ class LeaveTypeEditTest {
     }
 
     @Test
+    @DisplayName("Switching a type off, and back on again")
+    void activeIsEditableBothWays() {
+        LeaveType stored = casualLeave();
+        when(types.findById(1L)).thenReturn(Optional.of(stored));
+        when(types.findByCodeIgnoreCase("CL")).thenReturn(Optional.of(stored));
+        when(types.save(any(LeaveType.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Deleting is switching off. Until now nothing could set it back, so
+        // an administrator who switched a type off had no way to undo it.
+        service.deleteType(1L);
+        assertThat(stored.isActive()).isFalse();
+
+        service.updateType(1L, new LeaveTypeRequest(
+                "Casual Leave", "CL", 4, null, null, null, null, null, null, null, true, true));
+        assertThat(stored.isActive()).isTrue();
+    }
+
+    @Test
+    @DisplayName("An edit that does not mention active leaves it alone")
+    void activeSurvivesAnOrdinaryEdit() {
+        LeaveType stored = casualLeave();
+        stored.setActive(false);
+        when(types.findById(1L)).thenReturn(Optional.of(stored));
+        when(types.findByCodeIgnoreCase("CL")).thenReturn(Optional.of(stored));
+        when(types.save(any(LeaveType.class))).thenAnswer(i -> i.getArgument(0));
+
+        service.updateType(1L, formSends("Casual Leave", "CL", 4, true));
+        assertThat(stored.isActive()).isFalse();
+    }
+
+    @Test
     @DisplayName("A blank gender restriction clears it; an absent one does not")
     void blankIsDeliberateAndAbsentIsNot() {
         LeaveType stored = casualLeave();
@@ -128,7 +159,7 @@ class LeaveTypeEditTest {
         // Sending "" is somebody choosing "no restriction" in a form that has
         // the field. Not sending it at all is a form that does not.
         service.updateType(1L, new LeaveTypeRequest(
-                "Casual Leave", "CL", 4, null, null, "", null, null, null, null, true));
+                "Casual Leave", "CL", 4, null, null, "", null, null, null, null, true, null));
         assertThat(stored.getGenderRestriction()).isNull();
     }
 }

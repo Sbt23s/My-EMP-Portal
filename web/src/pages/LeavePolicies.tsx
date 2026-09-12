@@ -14,6 +14,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogHeader } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import type { ApiEnvelope, LeaveType, HolidayResponse } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
@@ -48,10 +50,27 @@ export default function LeavePoliciesPage() {
   const numYear = Number(allocYearStr);
   const isInvalidYear = allocYearStr.length > 0 && numYear !== thisYear;
 
+  // Declared before the query below, which reads it to decide which listing
+  // to ask for. const is not hoisted, so its old position further down would
+  // have been a runtime error rather than a mistake tsc could see.
+  const canManage = hasPermission("ORG_MANAGE");
+
   // Fetch Leave Types
   const leaveTypes = useQuery({
-    queryKey: ["leave-types"],
-    queryFn: async () => (await api.get<ApiEnvelope<LeaveType[]>>("/leave/types")).data.data
+    queryKey: ["leave-types", canManage],
+    /*
+      The configuration screen asks for everything, switched-off types
+      included; everybody else asks for what can be applied for.
+
+      Deleting switches a type off rather than removing it, because leave
+      already taken points at it. But this screen only ever listed the active
+      ones, so a type vanished from the page that switched it off and there
+      was no way back -- which is why deleting looked broken even though the
+      row had changed.
+    */
+    queryFn: async () =>
+      (await api.get<ApiEnvelope<LeaveType[]>>(
+        canManage ? "/leave/types/all" : "/leave/types")).data.data
   });
 
   // Fetch Holidays
@@ -97,8 +116,6 @@ export default function LeavePoliciesPage() {
     },
     onError: (err) => toast.error(apiMessage(err, "Failed to allocate leave balances"))
   });
-
-  const canManage = hasPermission("ORG_MANAGE");
 
   const filteredTypes = (leaveTypes.data ?? []).filter((t) => {
     const needle = typeQuery.trim().toLowerCase();
@@ -223,16 +240,26 @@ export default function LeavePoliciesPage() {
                       <th className="font-bold">Name</th>
                       <th className="font-bold">Code</th>
                       <th className="font-bold">Max Days/Year</th>
+                      <th className="font-bold">Per 3 months</th>
                       <th className="font-bold">Pay</th>
+                      {canManage && <th className="font-bold">Status</th>}
                       <th className="font-bold text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {typesPaged.pageRows.map((t) => (
-                      <tr key={t.id} className="hover:bg-muted/50">
+                      <tr
+                        key={t.id}
+                        /* A switched-off type is dimmed rather than hidden:
+                           it is still here, and can be switched back on. */
+                        className={cn("hover:bg-muted/50", t.active === false && "opacity-55")}
+                      >
                         <td className="font-medium">{t.name}</td>
                         <td className="text-muted-foreground">{t.code}</td>
                         <td className="text-muted-foreground">{t.maxDaysPerYear || "Unlimited"}</td>
+                        <td className="text-muted-foreground">
+                          {t.monthlyLimit ? t.monthlyLimit : "—"}
+                        </td>
                         <td>
                           {t.paid ? (
                             <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
@@ -244,6 +271,19 @@ export default function LeavePoliciesPage() {
                             </span>
                           )}
                         </td>
+                        {canManage && (
+                          <td>
+                            {t.active === false ? (
+                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                Switched off
+                              </span>
+                            ) : (
+                              <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                Active
+                              </span>
+                            )}
+                          </td>
+                        )}
                         <td className="text-right">
                           {canManage && (
                             <div className="flex items-center justify-end gap-1">
@@ -460,17 +500,51 @@ function CreateTypeDialog({ onClose }: { onClose: () => void }) {
 function EditTypeDialog({ type, onClose }: { type: LeaveType; onClose: () => void }) {
   const queryClient = useQueryClient();
   const { register, handleSubmit } = useForm({
+    /*
+      Every setting the type actually has, not the four this form used to show.
+
+      The other seven were still stored and still enforced -- monthlyLimit is
+      what the three-month rule reads -- but there was no way to see or change
+      them from here. A policy you cannot read is a policy nobody can
+      maintain.
+    */
     defaultValues: {
       name: type.name,
       code: type.code,
-      maxDaysPerYear: type.maxDaysPerYear,
-      paid: type.paid
+      maxDaysPerYear: type.maxDaysPerYear ?? "",
+      monthlyLimit: type.monthlyLimit ?? "",
+      minNoticeDays: type.minNoticeDays ?? "",
+      accrualType: type.accrualType ?? "ANNUAL",
+      genderRestriction: type.genderRestriction ?? "",
+      carryForward: type.carryForward ?? false,
+      encashable: type.encashable ?? false,
+      allowPastDates: type.allowPastDates ?? false,
+      paid: type.paid ?? false,
+      active: type.active ?? true
     }
   });
 
   const editMutation = useMutation({
     mutationFn: async (data: any) => {
-      await api.put(`/leave/types/${type.id}`, data);
+      /*
+        Numbers arrive from the form as strings, and an empty field as "".
+
+        Sent as they are, "" became null on the server and cleared the
+        setting, which is right for a field somebody emptied on purpose and
+        wrong for nothing else. Converted here so a number is a number and a
+        cleared field is an explicit null.
+      */
+      const num = (v: any) =>
+        v === "" || v === null || v === undefined ? null : Number(v);
+      await api.put(`/leave/types/${type.id}`, {
+        ...data,
+        maxDaysPerYear: num(data.maxDaysPerYear),
+        minNoticeDays: num(data.minNoticeDays),
+        monthlyLimit: num(data.monthlyLimit),
+        // "" is the "no restriction" option in the select, and the server
+        // reads a blank string as exactly that.
+        genderRestriction: data.genderRestriction ?? ""
+      });
     },
     onSuccess: () => {
       toast.success("Leave type updated");
@@ -492,13 +566,56 @@ function EditTypeDialog({ type, onClose }: { type: LeaveType; onClose: () => voi
           <Label htmlFor="code">Code</Label>
           <Input id="code" {...register("code", { required: true })} />
         </div>
-        <div>
-          <Label htmlFor="maxDaysPerYear">Max Days Per Year</Label>
-          <Input id="maxDaysPerYear" type="number" {...register("maxDaysPerYear")} />
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label htmlFor="maxDaysPerYear">Max days per year</Label>
+            <Input id="maxDaysPerYear" type="number" min={0} {...register("maxDaysPerYear")} />
+            <p className="mt-1 text-[11px] text-muted-foreground">Blank means no yearly cap.</p>
+          </div>
+          <div>
+            <Label htmlFor="monthlyLimit">Allowed per 3 months</Label>
+            <Input id="monthlyLimit" type="number" min={0} {...register("monthlyLimit")} />
+            {/* Naming what this actually governs. It is read by the quarterly
+                cap, and "monthly limit" was a name from an earlier rule. */}
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              1 means one every three months. Blank means no such limit.
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <input type="checkbox" id="paid" {...register("paid")} className="h-4 w-4 rounded border-gray-300 accent-primary" />
-          <Label htmlFor="paid">Paid Leave</Label>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label htmlFor="minNoticeDays">Minimum notice (days)</Label>
+            <Input id="minNoticeDays" type="number" min={0} {...register("minNoticeDays")} />
+          </div>
+          <div>
+            <Label htmlFor="accrualType">Accrual</Label>
+            <Select id="accrualType" {...register("accrualType")}>
+              <option value="ANNUAL">Annual — the whole allowance at once</option>
+              <option value="MONTHLY">Monthly — accrues through the year</option>
+              <option value="QUARTERLY">Quarterly</option>
+              <option value="NONE">None — no allocation</option>
+            </Select>
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="genderRestriction">Who can apply</Label>
+          <Select id="genderRestriction" {...register("genderRestriction")}>
+            <option value="">Everyone</option>
+            <option value="F">Female employees only</option>
+            <option value="M">Male employees only</option>
+          </Select>
+        </div>
+
+        <div className="space-y-2 rounded-[10px] border border-border p-3">
+          <CheckboxRow id="paid" label="Paid leave" hint="Unpaid types are treated as loss of pay." register={register} />
+          <CheckboxRow id="carryForward" label="Carry forward" hint="Unused days roll into next year." register={register} />
+          <CheckboxRow id="encashable" label="Encashable" hint="Unused days can be paid out." register={register} />
+          <CheckboxRow id="allowPastDates" label="Allow past dates" hint="For sick leave, applied after the fact." register={register} />
+          {/* The other half of deleting: a type switched off can be switched
+              back on from the same form that switched it off. */}
+          <CheckboxRow id="active" label="Active" hint="Switch off to stop offering this type. Leave already taken is kept." register={register} />
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
@@ -567,5 +684,36 @@ function CreateHolidayDialog({ onClose }: { onClose: () => void }) {
         </div>
       </form>
     </Dialog>
+  );
+}
+
+/**
+ * One policy switch, with the sentence that says what it does.
+ *
+ * <p>"Carry forward" and "Encashable" mean nothing to somebody who has not
+ * met them before, and this form is where a leave policy is decided -- so the
+ * explanation belongs beside the box rather than in a manual.
+ */
+function CheckboxRow({
+  id, label, hint, register
+}: {
+  id: string;
+  label: string;
+  hint: string;
+  register: any;
+}) {
+  return (
+    <label htmlFor={id} className="flex cursor-pointer items-start gap-2.5">
+      <input
+        type="checkbox"
+        id={id}
+        {...register(id)}
+        className="mt-0.5 h-4 w-4 shrink-0 rounded border-input accent-primary"
+      />
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-foreground">{label}</span>
+        <span className="block text-[11px] text-muted-foreground">{hint}</span>
+      </span>
+    </label>
   );
 }

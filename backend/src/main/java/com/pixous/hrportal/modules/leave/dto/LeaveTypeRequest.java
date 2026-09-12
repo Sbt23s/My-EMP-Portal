@@ -22,5 +22,10 @@ public record LeaveTypeRequest(
         String accrualType,
         Integer minNoticeDays,
         Integer monthlyLimit,
-        Boolean paid
+        Boolean paid,
+        /**
+         * Whether the type is offered. Null leaves it as it is, so the create
+         * form -- which has no such field -- keeps producing active types.
+         */
+        Boolean active
 ) {}

@@ -277,6 +277,8 @@ export interface LeaveType {
   monthlyLimit?: number;
   accrualType?: string;
   paid?: boolean;
+  /** Whether the type is offered. False means it was switched off, not removed. */
+  active?: boolean;
 }
 
 export interface LeaveBalance {

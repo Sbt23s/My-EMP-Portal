@@ -312,10 +312,20 @@ public class LeaveService {
             throw ApiException.business("This leave type cannot be applied for past dates");
         }
 
-        // Note: the per-month cap for CL/SL is enforced below via
-        // leave_types.monthly_limit + countMonthlyConsuming (1 CL + 1 SL / month).
-        // A separate 3-month-gap rule used to live here; it contradicted the
-        // monthly cap (blocking the 2nd allowed month) and has been removed.
+        /*
+          Casual and Sick leave: one every three months, enforced further down
+          by two rules working together.
+          
+          The first reads leave_types.monthly_limit (1) as a per-calendar-quarter
+          allowance. The second requires three months to have passed since the
+          last day actually taken, which is what closes the gap the first one
+          leaves -- 31 March and 1 April are different quarters and one day
+          apart.
+          
+          This note used to say the three-month rule "has been removed". It was
+          not; both are still here, a few dozen lines below, and
+          LeaveGapEnforcedTest asks the service itself to prove it.
+        */
 
         // Minimum-notice guard (civil min-notice rule)
         if (type.getMinNoticeDays() != null && type.getMinNoticeDays() > 0) {

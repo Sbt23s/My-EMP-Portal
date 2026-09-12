@@ -383,15 +383,24 @@
       travelling edge, not a slow tint change, so the movement is obvious
       at this size without the text ever becoming hard to read.
     */
+    /*
+      Greens, and the highlight is the light one rather than white.
+
+      This ran indigo with a white flash through the middle, which was built
+      for a dark sidebar. The sidebar is white now, so the white stop was
+      invisible and the indigo was the last of the old identity still on
+      screen. Dark green at the ends, the brand green through the travelling
+      edge -- the same effect, readable on a light surface.
+    */
     background-image: linear-gradient(
       100deg,
-      #818cf8 0%,
-      #818cf8 28%,
-      #ffffff 42%,
-      #5eead4 50%,
-      #34d399 58%,
-      #818cf8 74%,
-      #818cf8 100%
+      #166534 0%,
+      #166534 28%,
+      #22C55E 42%,
+      #15803D 50%,
+      #166534 58%,
+      #166534 74%,
+      #166534 100%
     );
     background-size: 320% 100%;
     background-position: 100% 0;
@@ -489,7 +498,8 @@
     font-size: 0.6875rem;
     letter-spacing: 0.09em;
     text-transform: uppercase;
-    color: rgb(203 213 225);
+    /* Was a pale slate, for a dark sidebar. On white it was barely there. */
+    color: hsl(var(--muted-foreground));
   }
 
   @keyframes identity-sweep {
@@ -509,7 +519,8 @@
       background-image: none;
       -webkit-background-clip: border-box;
       background-clip: border-box;
-      color: rgb(203 213 225);
+      /* The reduced-motion fallback, on the same light surface. */
+      color: hsl(var(--primary));
     }
   }
 

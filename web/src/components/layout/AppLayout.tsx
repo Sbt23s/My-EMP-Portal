@@ -458,26 +458,30 @@ function AppShell() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-slate-900 text-white transition-transform duration-200 lg:static lg:translate-x-0",
+          // White, per the enterprise brief: the sidebar is a surface, not a
+          // slab of colour. bg-card rather than a literal white so the dark
+          // theme still gets its own near-black and the border still reads.
+          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-card text-foreground",
+          "border-r border-border transition-transform duration-200 lg:static lg:translate-x-0",
           !sidebarOpen && "-translate-x-full"
         )}
       >
         {/* Company Header */}
-        <div className="flex h-16 items-center gap-3 border-b border-white/10 px-4">
+        <div className="flex h-16 items-center gap-3 border-b border-border px-4">
           <img
             src="/pixous-logo.png"
             alt="Logo"
-            className="h-10 w-auto object-contain bg-white rounded p-1"
+            className="h-10 w-auto object-contain rounded"
             onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
           />
           <div className="flex-1 min-w-0">
-            <div className="font-extrabold text-[11px] leading-tight tracking-wide text-white uppercase break-words" title={user?.companyName}>
+            <div className="font-extrabold text-[11px] leading-tight tracking-wide text-foreground uppercase break-words" title={user?.companyName}>
               {(() => {
                 if (user?.companyName) return user.companyName.toUpperCase();
                 return "PIXOUS TECHNOLOGIES";
               })()}
             </div>
-            <div className="text-[9px] leading-tight text-white/60 uppercase tracking-wider font-bold break-words mt-0.5">
+            <div className="text-[9px] leading-tight text-muted-foreground uppercase tracking-wider font-bold break-words mt-0.5">
               {brand?.productName || "EMPLOYEE MANAGEMENT SYSTEM"}
             </div>
           </div>
@@ -500,22 +504,22 @@ function AppShell() {
                     className={cn(
                       "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                       isOnGroup
-                        ? "bg-primary/20 text-white"
-                        : "text-white/70 hover:bg-white/10 hover:text-white"
+                        ? "bg-muted text-primary"
+                        : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                     )}
                   >
                     <grp.icon className="h-[18px] w-[18px] shrink-0" />
                     <span className="flex-1 text-left">{grp.label}</span>
                     <ChevronDown
                       className={cn(
-                        "h-4 w-4 shrink-0 text-white/50 transition-transform duration-200",
+                        "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
                         isOpen && "rotate-180"
                       )}
                     />
                   </button>
 
                   {isOpen && (
-                    <div className="ml-4 mt-0.5 space-y-0.5 border-l border-white/10 pl-3">
+                    <div className="ml-4 mt-0.5 space-y-0.5 border-l border-border pl-3">
                       {grp.children.map((child) => (
                         <NavLink
                           key={child.to}
@@ -526,8 +530,8 @@ function AppShell() {
                             cn(
                               "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
                               isActive
-                                ? "bg-primary text-primary-foreground"
-                                : "text-white/60 hover:bg-white/10 hover:text-white"
+                                ? "bg-muted text-primary font-semibold"
+                                : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                             )
                           }
                         >
@@ -551,9 +555,15 @@ function AppShell() {
                 className={({ isActive }) =>
                   cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-semibold transition-colors",
+                    /*
+                      Light green behind the active item, green text and icon,
+                      rather than a solid green bar with white on it. On a white
+                      sidebar a filled row is the loudest thing on the screen,
+                      and it is a position indicator, not the page's main action.
+                    */
                     isActive
-                      ? "bg-primary text-primary-foreground font-bold shadow-sm"
-                      : "text-slate-200 hover:bg-white/15 hover:text-white"
+                      ? "bg-muted text-primary font-bold"
+                      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                   )
                 }
               >
@@ -565,21 +575,21 @@ function AppShell() {
         </nav>
 
         {/* User Profile Footer */}
-        <div className="shrink-0 border-t border-white/10 p-3">
+        <div className="shrink-0 border-t border-border p-3">
           <button
             onClick={() => { setSidebarOpen(false); navigate("/profile"); }}
-            className="flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-white/10 group"
+            className="flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-muted/70 group"
           >
             <div className="relative shrink-0">
               <Avatar
                 name={userName}
                 src={user?.photoPath}
-                className="h-10 w-10 ring-2 ring-white/20 shadow-md"
+                className="h-10 w-10 ring-2 ring-border shadow-sm"
               />
-              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-secondary" />
+              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 ring-2 ring-card" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="identity-name truncate text-white">
+              <div className="identity-name truncate text-foreground">
                 {userName}
               </div>
               <div

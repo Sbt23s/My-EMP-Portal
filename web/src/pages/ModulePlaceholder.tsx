@@ -25,7 +25,7 @@ export function ModulePlaceholder({
       <Card>
         <CardContent className="p-8">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent/20">
-            <Construction className="h-6 w-6 text-accent-foreground" />
+            <Construction className="h-6 w-6 text-primary" />
           </div>
           <h2 className="font-display text-lg font-semibold">Scaffolded module</h2>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">

@@ -5,7 +5,15 @@ export const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDi
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("rounded-lg border bg-card text-card-foreground shadow-sm", className)}
+      className={cn(
+        // 14px rather than 8: the brief asks for a softer corner, and it reads
+        // as a panel rather than a box at this size. The border stays a single
+        // hairline and the shadow stays faint -- a card should sit on the page,
+        // not float above it.
+        "rounded-[14px] border border-border bg-card text-card-foreground",
+        "shadow-[0_1px_2px_0_rgb(0_0_0/0.04)]",
+        className
+      )}
       {...props}
     />
   )

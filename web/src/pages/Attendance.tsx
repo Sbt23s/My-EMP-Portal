@@ -375,7 +375,7 @@ export default function AttendancePage() {
                       note: summary.data.totalLateMinutes > 0
                         ? `${minutesToHours(summary.data.totalLateMinutes)} late in total`
                         : "on time every day",
-                      tone: "text-accent-foreground"
+                      tone: "text-amber-600 dark:text-amber-400"
                     },
                     {
                       label: "Absent",
@@ -424,8 +424,17 @@ export default function AttendancePage() {
                       label: "Attendance",
                       value: `${summary.data.attendancePercent}%`,
                       note: `${summary.data.presentDays} of ${summary.data.workingDays} so far`,
+                      /*
+                        Three bands, three colours, and the middle one has to
+                        be amber. It was text-accent-foreground, which was
+                        readable when the accent was amber and is white now
+                        that the accent is the brand green -- so a 70% month
+                        rendered as white text on a white card, and a 95% month
+                        and a 70% month were no longer distinguishable at all.
+                        Status colour is separate from brand colour.
+                      */
                       tone: summary.data.attendancePercent >= 90 ? "text-success"
-                        : summary.data.attendancePercent >= 70 ? "text-accent-foreground"
+                        : summary.data.attendancePercent >= 70 ? "text-amber-600 dark:text-amber-400"
                         : "text-destructive"
                     }
                   ].map((s) => (

@@ -41,7 +41,10 @@ export function Dialog({ open, onClose, children, className, hideCloseButton }: 
         role="dialog"
         aria-modal="true"
         className={cn(
-          "relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border bg-card p-6 shadow-xl animate-fade-in",
+          // A dialog sits above the page, so it keeps a real shadow -- but a
+          // softer one, and the same 14px corner the cards use.
+          "relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[14px] border border-border bg-card p-6",
+          "shadow-[0_16px_48px_-12px_rgb(0_0_0/0.18)] animate-fade-in",
           className
         )}
       >

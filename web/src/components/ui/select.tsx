@@ -10,8 +10,11 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
       <select
         ref={ref}
         className={cn(
-          "h-10 w-full appearance-none rounded-md border border-input bg-background px-3 py-2 pr-9 text-sm",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
+          "h-10 w-full appearance-none rounded-[10px] border border-input bg-background px-3 py-2 pr-9 text-sm",
+          // The same focus treatment as Input: a select is a field, and two
+          // fields in one row should not light up differently.
+          "transition-colors focus-visible:outline-none focus-visible:border-primary",
+          "focus-visible:ring-2 focus-visible:ring-primary/25 disabled:opacity-50",
           className
         )}
         {...props}

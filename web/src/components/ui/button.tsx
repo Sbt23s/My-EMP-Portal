@@ -8,15 +8,24 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/90",
+        /*
+          White with a border and dark text, per the brief's second tier. This
+          was a dark fill, which made it compete with the primary button
+          instead of sitting behind it -- two solid buttons side by side and no
+          hierarchy between them. One caller uses it, so this is a small change
+          with a clear reason.
+        */
+        secondary: "border border-border bg-card text-foreground hover:bg-muted hover:border-primary/40",
         accent: "bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline: "border border-input bg-background hover:bg-muted",
         ghost: "hover:bg-muted",
-        link: "text-primary underline-offset-4 hover:underline"
+        link: "text-primary underline-offset-4 hover:underline",
+        /* The third tier: green text, no fill, no border. */
+        tertiary: "text-primary hover:bg-muted"
       },
       size: {
-        default: "h-10 px-4 py-2",
+        default: "h-10 rounded-[10px] px-4 py-2",
         // Smaller than sm, for an action sitting inside a table row where a
         // full-height button would set the row height.
         xs: "h-7 rounded px-2 text-[11px]",

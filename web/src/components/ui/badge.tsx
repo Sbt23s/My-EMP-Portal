@@ -10,7 +10,13 @@ const badgeVariants = cva(
         default: "border-transparent bg-primary/10 text-primary",
         secondary: "border-transparent bg-muted text-muted-foreground",
         success: "border-transparent bg-success/15 text-success",
-        warning: "border-transparent bg-accent/20 text-accent-foreground",
+        /*
+          Amber, not --accent. The accent token is the brand colour, and the
+          brand is green now -- so "warning" was rendering in the same hue as
+          "success", which is the one thing a status colour must never do.
+          Status colour is separate from brand colour, and stays literal.
+        */
+        warning: "border-transparent bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300",
         destructive: "border-transparent bg-destructive/15 text-destructive",
         outline: "text-foreground"
       }

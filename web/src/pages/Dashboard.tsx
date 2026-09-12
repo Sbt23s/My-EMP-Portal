@@ -136,7 +136,7 @@ function StatCard({
     success: "bg-success/15 text-success group-hover:bg-success group-hover:text-success-foreground",
     warning: "bg-warning/20 text-warning group-hover:bg-warning group-hover:text-warning-foreground",
     destructive: "bg-destructive/15 text-destructive group-hover:bg-destructive group-hover:text-destructive-foreground",
-    accent: "bg-accent/20 text-accent-foreground group-hover:bg-accent group-hover:text-accent-foreground"
+    accent: "bg-accent/20 text-primary group-hover:bg-accent group-hover:text-accent-foreground"
   };
 
   const body = (

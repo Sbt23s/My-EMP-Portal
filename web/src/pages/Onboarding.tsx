@@ -181,7 +181,7 @@ function OnboardingDetail({
       <Card>
         <CardContent className="p-8 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent/20">
-            <UserCheck className="h-6 w-6 text-accent-foreground" />
+            <UserCheck className="h-6 w-6 text-primary" />
           </div>
           <h2 className="font-display text-lg font-semibold">
             No onboarding checklist for {user.name}

@@ -53,37 +53,6 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
                               @Param("endDate") java.time.LocalDate endDate);
 
     /**
-     * The same count, across several leave types at once.
-     *
-     * <p>Casual and Sick leave share one allowance -- one of either per three
-     * months, not one of each -- so the cap has to be counted over the pair
-     * rather than per type. Counting them separately let somebody take a
-     * Casual on Monday and a Sick on Tuesday and stay inside both limits.
-     */
-    @Query("""
-            SELECT COUNT(r) FROM LeaveRequest r
-            WHERE r.userId = :userId
-              AND r.leaveTypeId IN :leaveTypeIds
-              AND r.status IN ('PENDING','APPROVED')
-              AND r.fromDate >= :startDate AND r.fromDate <= :endDate
-            """)
-    long countRequestsInRangeForTypes(@Param("userId") Long userId,
-                                      @Param("leaveTypeIds") java.util.Collection<Long> leaveTypeIds,
-                                      @Param("startDate") java.time.LocalDate startDate,
-                                      @Param("endDate") java.time.LocalDate endDate);
-
-    /** The latest day taken across several types, for the shared rolling gap. */
-    @Query("""
-            SELECT MAX(r.toDate) FROM LeaveRequest r
-            WHERE r.userId = :userId
-              AND r.leaveTypeId IN :leaveTypeIds
-              AND r.status IN ('PENDING','APPROVED')
-            """)
-    java.time.LocalDate findLatestDayTakenForTypes(
-            @Param("userId") Long userId,
-            @Param("leaveTypeIds") java.util.Collection<Long> leaveTypeIds);
-
-    /**
      * The latest day of leave of this type the employee has taken or asked for,
      * so a minimum gap between two of them can be enforced. A rejected or
      * cancelled request does not count — nothing was taken.

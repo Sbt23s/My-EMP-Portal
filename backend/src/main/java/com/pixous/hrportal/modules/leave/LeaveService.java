@@ -402,31 +402,20 @@ public class LeaveService {
                             + "weekend or a public holiday.");
         }
 
-        /*
-          One short leave per three months, counted over Casual and Sick
-          together rather than one of each.
-
-          This counted per type, so the allowance was really two: a Casual on
-          Monday and a Sick on Tuesday each saw an empty quarter of their own
-          and both went through. They are one allowance -- "one leave every
-          three months" -- so they are counted as one.
-
-          Every other type is unaffected: the pair is named explicitly, and a
-          type outside it counts over itself exactly as before.
-        */
+        // Quarterly cap: Casual & Sick leave are limited to 1 per 3-month quarter
+        // (so 4 per year). monthly_limit (=1) is used as the per-quarter allowance.
         if (type.getMonthlyLimit() != null && type.getMonthlyLimit() > 0) {
-            java.util.List<Long> capTypeIds = sharedAllowanceTypeIds(type);
             LocalDate d = req.fromDate();
             int qStartMonth = ((d.getMonthValue() - 1) / 3) * 3 + 1;
             LocalDate qStart = LocalDate.of(d.getYear(), qStartMonth, 1);
             LocalDate qEnd = qStart.plusMonths(3).minusDays(1);
-            long usedThisQuarter = requestRepository.countRequestsInRangeForTypes(
-                    userId, capTypeIds, qStart, qEnd);
+            long usedThisQuarter = requestRepository.countRequestsInRange(
+                    userId, type.getId(), qStart, qEnd);
             if (usedThisQuarter >= type.getMonthlyLimit()) {
                 throw ApiException.business(
-                        sharedAllowanceLabel(type) + ": only " + type.getMonthlyLimit()
-                                + " allowed per 3 months, and one is already booked in this "
-                                + "quarter. Next available from " + qEnd.plusDays(1) + ".");
+                        "No " + type.getName() + " left: only " + type.getMonthlyLimit()
+                                + " " + type.getName() + " allowed per 3 months. "
+                                + "Next available from " + qEnd.plusDays(1) + ".");
             }
         }
 
@@ -443,13 +432,12 @@ public class LeaveService {
          * no reason for them to be enforced differently.
          */
         if ("CL".equalsIgnoreCase(type.getCode()) || "SL".equalsIgnoreCase(type.getCode())) {
-            LocalDate lastTaken = requestRepository.findLatestDayTakenForTypes(
-                    userId, sharedAllowanceTypeIds(type));
+            LocalDate lastTaken = requestRepository.findLatestDayTaken(userId, type.getId());
             if (lastTaken != null) {
                 LocalDate availableFrom = lastTaken.plusMonths(3).plusDays(1);
                 if (req.fromDate().isBefore(availableFrom)) {
                     throw ApiException.business(
-                            sharedAllowanceLabel(type) + " can only be taken once every three months. "
+                            type.getName() + " can only be taken once every three months. "
                                     + "Your last one ran to "
                                     + lastTaken.format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy"))
                                     + ", so the next can start on or after "
@@ -519,34 +507,6 @@ public class LeaveService {
     }
 
     @Transactional(readOnly = true)
-    /**
-     * The leave types that share this one's allowance.
-     *
-     * <p>Casual and Sick are one allowance between them -- "one leave every
-     * three months" means one, not one of each. Anything else stands alone,
-     * so the list is just itself and every other type's cap behaves exactly
-     * as it did.
-     */
-    private java.util.List<Long> sharedAllowanceTypeIds(LeaveType type) {
-        if (!("CL".equalsIgnoreCase(type.getCode()) || "SL".equalsIgnoreCase(type.getCode()))) {
-            return java.util.List.of(type.getId());
-        }
-        java.util.List<Long> ids = new java.util.ArrayList<>();
-        for (String code : java.util.List.of("CL", "SL")) {
-            typeRepository.findByCodeIgnoreCase(code).map(LeaveType::getId).ifPresent(ids::add);
-        }
-        // Never empty: if the pair could not be resolved, fall back to this
-        // type alone rather than counting over nothing and letting it through.
-        return ids.isEmpty() ? java.util.List.of(type.getId()) : ids;
-    }
-
-    /** How to name the allowance in a refusal, so the message matches the rule. */
-    private String sharedAllowanceLabel(LeaveType type) {
-        return ("CL".equalsIgnoreCase(type.getCode()) || "SL".equalsIgnoreCase(type.getCode()))
-                ? "Casual and Sick Leave share one allowance"
-                : type.getName();
-    }
-
     public PageResponse<LeaveRequestResponse> myRequests(Long userId, int page, int size) {
         Map<Long, String> typeNames = typeNameMap();
         String name = userRepository.findById(userId).map(User::getName).orElse("?");

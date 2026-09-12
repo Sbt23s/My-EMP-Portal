@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
   LayoutDashboard, Clock, Home, CalendarCheck, CheckSquare, Wallet, Users, Boxes,
-  LifeBuoy, User, Bell, Menu, X, Moon, Sun, LogOut,
+  LifeBuoy, User, Bell, Menu, X, Moon, Sun, LogOut, PanelLeftClose, PanelLeftOpen,
   FileBarChart, ClipboardList, Map, MessageSquareWarning, FileText,
   FolderOpen, ListTodo, FileArchive, CalendarDays, ChevronDown, Bot, Users2, Eraser, ScrollText,
   PartyPopper, MessageSquare, Building2, FolderGit2, History, ShieldAlert, Lock, Award, SlidersHorizontal
@@ -297,6 +297,33 @@ function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  /*
+    Collapsed on a wide screen — a different question from the mobile drawer.
+
+    sidebarOpen is the drawer sliding over the page on a phone; this is the
+    sidebar being folded away on a desktop to give the content the full width.
+    One flag could not answer both: on a phone "open" is the exception and on
+    a desktop it is the rule.
+
+    Remembered per browser, because it is a working preference rather than
+    application state -- somebody who folds it away wants it folded away
+    tomorrow as well. localStorage can throw in a private window or with site
+    data blocked, so a failure here just means the default.
+  */
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem("hrp.sidebar.collapsed") === "1"; }
+    catch { return false; }
+  });
+
+  const toggleCollapsed = () => {
+    setCollapsed((v) => {
+      const next = !v;
+      try { localStorage.setItem("hrp.sidebar.collapsed", next ? "1" : "0"); }
+      catch { /* the preference is a convenience; losing it is not an error */ }
+      return next;
+    });
+  };
   const [bellOpen, setBellOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { notifications, unreadCount, markAllRead, markRead } = useNotifications(user?.id);
@@ -461,9 +488,14 @@ function AppShell() {
           // White, per the enterprise brief: the sidebar is a surface, not a
           // slab of colour. bg-card rather than a literal white so the dark
           // theme still gets its own near-black and the border still reads.
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-card text-foreground",
-          "border-r border-border transition-transform duration-200 lg:static lg:translate-x-0",
-          !sidebarOpen && "-translate-x-full"
+          "fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col bg-card text-foreground",
+          "border-r border-border lg:static lg:translate-x-0",
+          // Width as well as position, because on a wide screen the sidebar is
+          // in the layout flow -- sliding it away would leave a 16rem hole.
+          "transition-[transform,width] duration-200",
+          !sidebarOpen && "-translate-x-full",
+          // Folded: no width, no border, and nothing inside can spill out.
+          collapsed && "lg:w-0 lg:overflow-hidden lg:border-r-0"
         )}
       >
         {/* Company Header */}
@@ -617,12 +649,25 @@ function AppShell() {
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Topbar */}
         <header className="flex h-16 shrink-0 items-center gap-3 border-b bg-card px-4 lg:px-6">
+          {/*
+            One control, two jobs, because to the person clicking it they are
+            the same job: show me the menu, or get it out of the way.
+          */}
           <button
-            className="rounded-md p-2 hover:bg-muted lg:hidden"
+            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
             onClick={() => setSidebarOpen(true)}
             aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
+          </button>
+          <button
+            className="hidden rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:block"
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? "Show the menu" : "Hide the menu"}
+            aria-expanded={!collapsed}
+            title={collapsed ? "Show the menu" : "Hide the menu"}
+          >
+            {collapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
           </button>
 
 

@@ -634,7 +634,7 @@ export function ChatBotWidget() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 space-y-4 overflow-y-auto bg-slate-50/60 p-4 dark:bg-zinc-950/20">
+          <div className="flex-1 space-y-4 overflow-y-auto bg-card p-4 dark:bg-zinc-950/20">
             {messages.map((msg) => (
               <div
                 key={msg.id}

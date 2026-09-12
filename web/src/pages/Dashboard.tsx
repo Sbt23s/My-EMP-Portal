@@ -2392,7 +2392,9 @@ export default function DashboardPage() {
 
       {/* Dynamic Welcome Banner — the organisation view above already greets HR. */}
       <div className={cn(
-        "group relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white p-8 shadow-lg",
+        // A banner sitting on the page, not floating above it: it keeps the
+        // hairline every other surface has rather than a drop shadow.
+        "group relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white p-8 shadow-sm",
         isHrOrg && "hidden"
       )}>
         {/*

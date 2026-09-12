@@ -274,7 +274,7 @@ export default function PayslipsPage() {
           <div className="overflow-x-auto">
             <table className="data-table">
               <thead>
-                <tr className="border-b border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90 text-left text-xs font-semibold text-slate-800 dark:text-slate-200 [&>th]:whitespace-nowrap [&>th]:px-3.5 [&>th]:py-3 [&>th]:border-r [&>th]:border-slate-300 dark:[&>th]:border-slate-700 last:[&>th]:border-r-0">
+                <tr className="border-b border-slate-300 dark:border-slate-700 bg-card text-left text-xs font-semibold text-slate-800 dark:text-slate-200 [&>th]:whitespace-nowrap [&>th]:px-3.5 [&>th]:py-3 [&>th]:border-r [&>th]:border-slate-300 dark:[&>th]:border-slate-700 last:[&>th]:border-r-0">
                   <th>Month & Year</th>
                   <th>Pay Date</th>
                   <th>Gross Pay</th>
@@ -290,7 +290,7 @@ export default function PayslipsPage() {
                   const payDate = dayjs(`${p.payYear}-${p.payMonth}-01`).endOf('month').format("DD MMM YYYY");
                   
                   return (
-                    <tr key={p.id} className="border-b border-slate-200 dark:border-slate-800 align-middle last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors [&>td]:px-3.5 [&>td]:py-3 [&>td]:border-r [&>td]:border-b [&>td]:border-slate-200 dark:[&>td]:border-slate-800 last:[&>td]:border-r-0">
+                    <tr key={p.id} className="border-b border-slate-200 dark:border-slate-800 align-middle last:border-0 hover:bg-muted/60 transition-colors [&>td]:px-3.5 [&>td]:py-3 [&>td]:border-r [&>td]:border-b [&>td]:border-slate-200 dark:[&>td]:border-slate-800 last:[&>td]:border-r-0">
                       <td className="font-medium">
                         {monthName(p.payMonth).slice(0, 3)} {p.payYear}
                       </td>

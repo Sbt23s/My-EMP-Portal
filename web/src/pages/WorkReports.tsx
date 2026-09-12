@@ -940,7 +940,7 @@ function MyWorkReports({
                 </div>
                 <table className="data-table">
                   <thead>
-                    <tr className="border-b border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90 text-left text-xs font-semibold text-slate-800 dark:text-slate-200 [&>th]:px-3.5 [&>th]:py-3 [&>th]:border-r [&>th]:border-slate-300 dark:[&>th]:border-slate-700 last:[&>th]:border-r-0">
+                    <tr className="border-b border-slate-300 dark:border-slate-700 bg-card text-left text-xs font-semibold text-slate-800 dark:text-slate-200 [&>th]:px-3.5 [&>th]:py-3 [&>th]:border-r [&>th]:border-slate-300 dark:[&>th]:border-slate-700 last:[&>th]:border-r-0">
                       {/* S.No, then Action. The controls sat at the far right
                           of seven columns, which put them off-screen on a laptop
                           the moment the task note ran long. */}
@@ -955,7 +955,7 @@ function MyWorkReports({
                   </thead>
                   <tbody>
                     {pageRows.map((r, i) => (
-                      <tr key={r.id} className="border-b border-slate-200 dark:border-slate-800 align-top last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors [&>td]:px-3.5 [&>td]:py-3 [&>td]:border-r [&>td]:border-b [&>td]:border-slate-200 dark:[&>td]:border-slate-800 last:[&>td]:border-r-0">
+                      <tr key={r.id} className="border-b border-slate-200 dark:border-slate-800 align-top last:border-0 hover:bg-muted/60 transition-colors [&>td]:px-3.5 [&>td]:py-3 [&>td]:border-r [&>td]:border-b [&>td]:border-slate-200 dark:[&>td]:border-slate-800 last:[&>td]:border-r-0">
                         <td className="text-muted-foreground">{rows.length - (pageSafe * PAGE_SIZE + i)}</td>
                         <td>
                           <div className="flex items-center gap-1">

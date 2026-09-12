@@ -646,7 +646,7 @@ export default function PermissionsPage() {
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50/80 dark:bg-slate-900/80">
+                  <TableRow>
                     {/*
                       Always present, not only for an approver.
 
@@ -772,7 +772,7 @@ export default function PermissionsPage() {
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50/80 dark:bg-slate-900/80">
+                  <TableRow>
                     <TableHead className="text-right">Action</TableHead>
                     <TableHead sortable>Employee</TableHead>
                     <TableHead sortable>Team</TableHead>

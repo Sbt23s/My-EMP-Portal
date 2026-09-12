@@ -73,7 +73,7 @@ export function TablePagination({
   );
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 px-4 pr-20 sm:pr-24 py-3 text-sm">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border bg-card px-4 pr-20 sm:pr-24 py-3 text-sm">
       {onPageSizeChange && (
         <div className="flex items-center gap-2">
           <select
@@ -129,7 +129,7 @@ export function TablePagination({
                   "h-8 min-w-[2rem] rounded-md border px-2 text-xs font-semibold tabular-nums transition-all shadow-sm",
                   p === page
                     ? "border-primary bg-primary text-primary-foreground font-bold shadow"
-                    : "border-slate-200 dark:border-slate-800 bg-background text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    : "border-slate-200 dark:border-slate-800 bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
                 {p + 1}

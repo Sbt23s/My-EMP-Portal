@@ -18,7 +18,16 @@
 */
 @layer base {
   :root {
-    --background: 210 40% 98%;
+    /*
+      Pure white, not the faint blue-grey this was.
+
+      210 40% 98% is two points off white with a blue cast in it, and cards
+      sit at 100% on top -- so every card was outlined by a tint the page
+      never asked for, and the whole app read slightly cold. The separation
+      between a card and the page comes from the border and the hairline
+      shadow, which is enough and is what they are for.
+    */
+    --background: 0 0% 100%;
     --foreground: 144 18% 11%;       /* #17211B */
 
     --card: 0 0% 100%;

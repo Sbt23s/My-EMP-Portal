@@ -186,7 +186,7 @@ function CommunityCard({
           <h4 className="font-semibold text-sm mb-3 text-muted-foreground">
             Add Employees <span className="text-[10px] font-normal text-primary">(onboarding &amp; active)</span>
           </h4>
-          <div className="max-h-64 overflow-y-auto space-y-2 border rounded-lg p-3 bg-slate-50/50">
+          <div className="max-h-64 overflow-y-auto space-y-2 border rounded-lg p-3 bg-muted/40">
             {availableUsers?.map(u => (
               <div key={u.id} className="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0 border-slate-100">
                 <div>
@@ -217,7 +217,7 @@ function CommunityCard({
           <h4 className="font-semibold text-sm mb-3 text-muted-foreground">
             Group Members ({members?.length || 0})
           </h4>
-          <div className="max-h-64 overflow-y-auto space-y-2 border rounded-lg p-3 bg-slate-50/50">
+          <div className="max-h-64 overflow-y-auto space-y-2 border rounded-lg p-3 bg-muted/40">
             {isLoading ? (
               <div className="flex justify-center py-4">
                 <PixousLoader size="sm" />
